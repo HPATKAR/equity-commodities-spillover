@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_ilian() -> None:
     _about_page_styles()
-    _f = "font-family:var(--font-sans);"
+    _f = "font-family:'DM Sans',sans-serif;"
 
     photo = _photo_html("photo_ilian.jpeg", "Ilian Zalomai")
 
@@ -38,10 +38,11 @@ def page_about_ilian() -> None:
         "<div class='hero-body'>"
         "<p class='overline'>About the Author</p>"
         "<h1>Ilian Zalomai</h1>"
-        "<p class='subtitle'>MSF Candidate &middot; Purdue Daniels School of Business</p>"
-        "<p class='tagline'>Finance professional with interests in global markets, "
-        "institutional research, and quantitative strategies. Committed to rigorous "
-        "analytical work that bridges theory and real-world market dynamics.</p>"
+        "<p class='subtitle'>MSF Candidate &middot; Purdue Daniels School of Business"
+        " &middot; Payment Systems &amp; Fraud | Former Deloitte</p>"
+        "<p class='tagline'>Fintech and banking professional with 4+ years leading payment "
+        "systems and fraud operations at scale, combined with consulting experience at Deloitte "
+        "across Frankfurt and Leipzig. Bridging operational finance and quantitative analytics.</p>"
         "<div class='links'>"
         "<a href='https://www.linkedin.com/in/ilian-zalomai-55iz/' target='_blank'>LinkedIn</a>"
         "</div></div>"
@@ -53,21 +54,24 @@ def page_about_ilian() -> None:
     col_main, col_side = st.columns([1.55, 1], gap="large")
 
     with col_main:
+        # bio
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
             f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 10px 0;'>"
-            "Deeply interested in how macro forces and geopolitical dynamics shape financial markets. "
-            "Brings a research-oriented mindset to quantitative projects, with a focus on "
-            "translating complex datasets into actionable investment insights.</p>"
+            "Experienced in payment systems, fraud prevention, and banking technology consulting. "
+            "I have spent four years building and managing risk and security operations across "
+            "high-volume travel fintech platforms, and have contributed to banking transformation "
+            "initiatives at Deloitte across Germany.</p>"
             f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0;'>"
-            "Collaborative by nature and motivated by intellectually challenging problems, "
-            "always looking to build connections at the intersection of finance, data, "
-            "and global economic thinking.</p>"
+            "The MSF at Purdue's Financial Analytics track is deepening my foundation in "
+            "quantitative methods and derivatives — bringing rigor to the intersection of "
+            "risk management, data analytics, and financial markets.</p>"
             "</div>",
             unsafe_allow_html=True,
         )
 
+        # project
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
@@ -85,53 +89,103 @@ def page_about_ilian() -> None:
             unsafe_allow_html=True,
         )
 
+        # experience
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Experience</p>"
 
             "<div class='exp-item'>"
-            "<p class='exp-role'>MSF Candidate</p>"
-            "<p class='exp-org'>Purdue University — Daniels School of Business</p>"
-            "<p class='exp-meta'>2025 &ndash; 2026 &middot; West Lafayette, IN</p>"
-            "<p class='exp-desc'>Graduate coursework spanning portfolio management, "
-            "international finance, derivatives, and macroeconomic analysis. "
-            "Actively engaged in applied research connecting geopolitical risk to asset pricing.</p></div>"
+            "<p class='exp-role'>Payment Systems, Fraud &amp; Security Supervisor</p>"
+            "<p class='exp-org'>Firebird Tours (Rail.Ninja &middot; Firebirdtours &middot; Triptile)</p>"
+            "<p class='exp-meta'>Jan 2024 &ndash; Present &middot; Full-time</p>"
+            "<p class='exp-desc'>Managing payment systems, risk, and security across high-volume "
+            "travel platforms. Overseeing fraud monitoring, optimizing anti-fraud rules and "
+            "customer verification, and building analytical reports and models. Implemented "
+            "outbound-chargeback processes and increased chargeback win rate while reducing "
+            "average document preparation time by 70%.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Banking Technology Strategy &amp; Transformation Analyst</p>"
+            "<p class='exp-org'>Deloitte</p>"
+            "<p class='exp-meta'>Apr 2024 &ndash; Aug 2024 &middot; Frankfurt, Germany</p>"
+            "<p class='exp-desc'>Supported Privileged Access Management assessment implementation. "
+            "Conducted comprehensive research on compliance trends with internal and external "
+            "regulators. Prepared management sales deck materials and participated in team "
+            "coordination across initiative workstreams.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Banking Operations Analyst</p>"
+            "<p class='exp-org'>Deloitte</p>"
+            "<p class='exp-meta'>Apr 2023 &ndash; Jul 2023 &middot; Leipzig, Germany</p>"
+            "<p class='exp-desc'>Supported banking initiatives in Credit, Cloud, and Web 3.0/Metaverse. "
+            "Researched current market trends including platformification, cloud hyperscaler "
+            "sustainability, and metaverse applications in banking. Prepared and presented "
+            "management decks across initiative workstreams.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Payment Systems, Fraud &amp; Security Team Lead</p>"
+            "<p class='exp-org'>Firebird Tours</p>"
+            "<p class='exp-meta'>Mar 2022 &ndash; Dec 2023 &middot; 1 yr 10 mos</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Credit Department Analyst</p>"
+            "<p class='exp-org'>Volksbanken Raiffeisenbanken &middot; Part-time</p>"
+            "<p class='exp-meta'>May 2022 &ndash; Jul 2022 &middot; Mittweida, Germany</p>"
+            "<p class='exp-desc'>Collected, verified, and organized credit documentation. "
+            "Supported research on cost-of-living trends and banking approach "
+            "plausibility assessments.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>MUN Security Council Chairman &amp; Organising Committee</p>"
+            "<p class='exp-org'>United Nations in Belarus (FIRMUN / OctoMUN)</p>"
+            "<p class='exp-meta'>Oct 2018 &ndash; Mar 2022 &middot; Minsk, Belarus</p>"
+            "<p class='exp-desc'>Served as Security Council Chairman and President of General "
+            "Assembly across multiple Model UN conferences. Co-chaired EcoFin committee and "
+            "led the organizing committee for FIRMUN and OctoMUN editions.</p></div>"
 
             "</div>",
             unsafe_allow_html=True,
         )
 
     with col_side:
+        # education
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Education</p>"
             "<div class='edu-item'>"
             "<p class='edu-school'>Purdue University</p>"
             "<p class='edu-dept'>Mitchell E. Daniels, Jr. School of Business</p>"
-            "<p class='edu-degree'>Master of Science in Finance</p>"
-            "<p class='edu-year'>2025 &ndash; 2026</p></div>"
+            "<p class='edu-degree'>M.S. Finance &middot; Financial Analytics Track</p>"
+            "<p class='edu-year'>Jul 2025 &ndash; May 2026</p></div>"
+            "<div class='edu-item'>"
+            "<p class='edu-school'>Hochschule Mittweida</p>"
+            "<p class='edu-dept'>Germany</p>"
+            "<p class='edu-degree'>B.A. Business Administration</p>"
+            "<p class='edu-year'>Mar 2022 &ndash; Apr 2024</p></div>"
             "</div>",
             unsafe_allow_html=True,
         )
 
+        # interests
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Interests</p>"
             "<div>"
-            "<span class='interest-tag interest-gold'>Global Macro</span>"
-            "<span class='interest-tag interest-neutral'>Geopolitical Risk</span>"
-            "<span class='interest-tag interest-gold'>Institutional Research</span>"
-            "<span class='interest-tag interest-neutral'>Portfolio Strategy</span>"
-            "<span class='interest-tag interest-gold'>Emerging Markets</span>"
+            "<span class='interest-tag interest-gold'>Fintech &amp; Risk</span>"
+            "<span class='interest-tag interest-neutral'>Payment Systems</span>"
+            "<span class='interest-tag interest-gold'>Financial Analytics</span>"
+            "<span class='interest-tag interest-neutral'>Fraud Prevention</span>"
+            "<span class='interest-tag interest-gold'>Banking Strategy</span>"
             "</div></div>",
             unsafe_allow_html=True,
         )
 
+        # acknowledgments
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Acknowledgments</p>"
             "<p class='ack-text'><strong>Prof. Cinder Zhang</strong>, MGMT 69000: "
-            "Connecting geopolitical events to systematic regime-based analysis</p>"
+            "Connecting geopolitical events to systematic regime-based market analysis</p>"
             "</div>",
             unsafe_allow_html=True,
         )
