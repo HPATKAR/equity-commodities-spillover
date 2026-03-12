@@ -15,6 +15,9 @@ from src.data.config import GEOPOLITICAL_EVENTS, EQUITY_REGIONS, COMMODITY_GROUP
 from src.analysis.correlations import (
     cross_asset_corr, average_cross_corr_series, detect_correlation_regime,
 )
+from src.analysis.risk_score import (
+    compute_risk_score, risk_score_history, plot_risk_gauge, plot_risk_history,
+)
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion,
@@ -102,6 +105,115 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
               delta=f"{recent_eq[worst_eq]*100:+.1f}%")
     k5.metric(f"Best Commodity (1M)", best_cmd,
               delta=f"{recent_cmd[best_cmd]*100:+.1f}%")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Geopolitical Risk Score ────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("Geopolitical Risk Score")
+    _definition_block(
+        "Composite Risk Index (0–100)",
+        "Weighted blend of four real-time signals: "
+        "<b>Cross-asset correlation percentile</b> (40%) — how elevated is current correlation vs history; "
+        "<b>Commodity vol z-score</b> (30%) — energy + metals volatility vs 1-year mean; "
+        "<b>VIX level</b> (20%) — equity fear gauge mapped to 0-100; "
+        "<b>Active events</b> (10%) — count of ongoing geopolitical events. "
+        "Bands: 0-25 Low · 25-50 Moderate · 50-75 Elevated · 75-100 High/Crisis.",
+    )
+
+    with st.spinner("Computing risk score…"):
+        risk_result = compute_risk_score(avg_corr, cmd_r)
+        score_hist  = risk_score_history(avg_corr, cmd_r)
+
+    gc1, gc2 = st.columns([1, 2])
+    with gc1:
+        _chart(plot_risk_gauge(risk_result, height=260))
+        # Component breakdown
+        comp = risk_result["components"]
+        for name, val in comp.items():
+            col_c = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
+            st.markdown(
+                f'<div style="display:flex;justify-content:space-between;'
+                f'padding:3px 0;border-bottom:1px solid #F0EDEA;font-size:0.68rem">'
+                f'<span style="color:#555960">{name}</span>'
+                f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;'
+                f'color:{col_c}">{val:.0f}</span></div>',
+                unsafe_allow_html=True,
+            )
+    with gc2:
+        if not score_hist.empty:
+            _chart(plot_risk_history(score_hist, height=300))
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── LLM Market Narrative ──────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("AI Market Narrative")
+    _section_note(
+        "Claude generates a 2-paragraph quantitative market commentary based on current "
+        "regime, risk score, top movers, and active geopolitical events. "
+        "Powered by the Anthropic API."
+    )
+
+    anthropic_key = ""
+    try:
+        anthropic_key = st.secrets.get("keys", {}).get("anthropic_api_key", "") or ""
+    except Exception:
+        pass
+
+    if not anthropic_key:
+        st.info(
+            "Add your `anthropic_api_key` to `.streamlit/secrets.toml` to enable AI narratives.",
+            icon="🤖",
+        )
+    else:
+        if st.button("Generate Market Narrative", type="primary", key="gen_narrative"):
+            active_events = [
+                e["label"] for e in GEOPOLITICAL_EVENTS if e["end"] >= __import__("datetime").date.today()
+            ]
+            prompt = (
+                f"You are a quantitative cross-asset analyst at a macro hedge fund. "
+                f"Write a concise, professional 2-paragraph market narrative (150-200 words total) "
+                f"based on the following live dashboard data:\n\n"
+                f"Date: {__import__('datetime').date.today()}\n"
+                f"Correlation Regime: {regime_name} (avg 60d corr: {current_avg_corr:.3f})\n"
+                f"Geopolitical Risk Score: {risk_result['score']}/100 ({risk_result['label']})\n"
+                f"Best equity (1M): {best_eq} ({recent_eq[best_eq]*100:+.1f}%)\n"
+                f"Worst equity (1M): {worst_eq} ({recent_eq[worst_eq]*100:+.1f}%)\n"
+                f"Best commodity (1M): {best_cmd} ({recent_cmd[best_cmd]*100:+.1f}%)\n"
+                f"Worst commodity (1M): {worst_cmd} ({recent_cmd[worst_cmd]*100:+.1f}%)\n"
+                f"Active geopolitical events: {', '.join(active_events) if active_events else 'None'}\n\n"
+                f"Paragraph 1: Describe the current cross-asset correlation regime and what it implies "
+                f"for equity-commodity spillover dynamics. Use specific numbers.\n"
+                f"Paragraph 2: Identify the key risk factor driving the risk score and name 1-2 "
+                f"specific trade implications. Be precise and analytical. No disclaimers."
+            )
+            try:
+                import anthropic as _anthropic
+                client = _anthropic.Anthropic(api_key=anthropic_key)
+                with st.spinner("Generating narrative…"):
+                    msg = client.messages.create(
+                        model="claude-opus-4-6",
+                        max_tokens=400,
+                        messages=[{"role": "user", "content": prompt}],
+                    )
+                narrative = msg.content[0].text
+                regime_col_narrative = regime_color
+                st.markdown(
+                    f"""<div style="border-left:4px solid {regime_col_narrative};
+                    padding:1rem 1.2rem;background:#fafaf8;margin:0.8rem 0;
+                    border-radius:0 4px 4px 0">
+                    <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
+                    text-transform:uppercase;color:{regime_col_narrative};margin-bottom:0.5rem">
+                    AI MARKET COMMENTARY · {__import__('datetime').datetime.now().strftime('%d %b %Y %H:%M')} UTC
+                    </div>
+                    <div style="font-size:0.78rem;color:#2A2A2A;line-height:1.75;
+                    font-family:'DM Sans',sans-serif">{narrative.replace(chr(10), '<br>')}</div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+            except Exception as e:
+                st.error(f"Narrative generation failed: {e}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 

@@ -333,6 +333,7 @@ with st.sidebar:
         ("correlation",    "⟳   Correlation Analysis"),
         ("spillover",      "→   Spillover Analytics"),
         ("watchlist",      "👁  Commodities to Watch"),
+        ("stress_test",    "⚡  Portfolio Stress Test"),
         ("trade_ideas",    "◈   Trade Ideas"),
     ]
 
@@ -385,6 +386,7 @@ from src.pages.geopolitical import page_geopolitical
 from src.pages.correlation  import page_correlation
 from src.pages.spillover    import page_spillover
 from src.pages.watchlist    import page_watchlist
+from src.pages.stress_test  import page_stress_test
 from src.pages.trade_ideas  import page_trade_ideas
 
 _start = str(start_date)
@@ -396,6 +398,7 @@ _PAGE_MAP = {
     "correlation":  lambda: page_correlation(_start, _end, _FRED_KEY),
     "spillover":    lambda: page_spillover(_start, _end, _FRED_KEY),
     "watchlist":    lambda: page_watchlist(_start, _end, _FRED_KEY),
+    "stress_test":  lambda: page_stress_test(_start, _end, _FRED_KEY),
     "trade_ideas":  lambda: page_trade_ideas(_start, _end, _FRED_KEY),
 }
 

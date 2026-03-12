@@ -15,6 +15,7 @@ from src.data.loader import (
     load_commodity_prices, load_returns, load_live_snapshot,
     load_hourly_commodity_prices, load_hourly_returns,
 )
+from src.analysis.cot import load_cot_data, plot_cot_overlay, cot_extremes_table
 from src.data.config import (
     WATCHLIST, COMMODITY_TICKERS, COMMODITY_GROUPS,
     GEOPOLITICAL_EVENTS, PALETTE,
@@ -382,9 +383,61 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 "conditions (growth proxy) but decouple sharply during supply shocks."
             )
 
+    # ── CFTC COT Positioning ──────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("CFTC Commitments of Traders — Speculative Positioning")
+    _definition_block(
+        "COT Report (CFTC)",
+        "The CFTC publishes weekly Commitments of Traders reports showing how "
+        "non-commercial (speculative) traders are positioned in commodity futures. "
+        "<b>Net Spec % OI</b> = (Long − Short) ÷ Open Interest × 100. "
+        "Readings above +25% signal crowded longs (contrarian sell); "
+        "below −25% signal crowded shorts (contrarian buy). "
+        "Data sourced from CFTC's public disaggregated futures files.",
+    )
+
+    with st.spinner("Loading COT data from CFTC… (first load may take ~10s)"):
+        cot_df = load_cot_data(years=3)
+
+    if cot_df.empty:
+        st.warning("COT data unavailable. Check internet connectivity to www.cftc.gov.")
+    else:
+        # Extremes summary table
+        st.markdown("##### Current Positioning Extremes")
+        ext_tbl = cot_extremes_table(cot_df)
+        if not ext_tbl.empty:
+            def _sig_col(val):
+                if "Crowded Long"  in str(val): return "color:#c0392b;font-weight:700"
+                if "Crowded Short" in str(val): return "color:#2e7d32;font-weight:700"
+                return ""
+            styled_cot = ext_tbl.style.applymap(_sig_col, subset=["Signal"])
+            st.dataframe(styled_cot, use_container_width=True, hide_index=True)
+
+        # Per-commodity overlay chart
+        st.markdown("##### Positioning Detail + Price Overlay")
+        cot_markets = sorted(cot_df["market"].unique().tolist())
+        cot_sel = st.selectbox(
+            "Select commodity",
+            cot_markets,
+            index=cot_markets.index("WTI Crude Oil") if "WTI Crude Oil" in cot_markets else 0,
+            key="wl_cot_sel",
+        )
+
+        price_s = cmd_p[cot_sel].dropna() if cot_sel in cmd_p.columns else None
+        _chart(plot_cot_overlay(cot_df, cot_sel, price_s, height=420))
+
+        _takeaway_block(
+            "Extreme speculative positioning is a powerful contrarian indicator. "
+            "When non-commercial traders are maximally long (>+25% of OI) — typically near "
+            "commodity price peaks — a reversal often follows as longs are forced to unwind. "
+            "The reverse applies for crowded shorts. Use alongside the correlation regime "
+            "to distinguish supply-driven moves from speculative crowding."
+        )
+
     _section_note(
         "Daily prices from Yahoo Finance. Daily vol: σ × √252. "
         "Hourly vol: σ_hourly × √(252 × 23) — commodity futures trade ~23h/day. "
-        "Hourly lookback capped at 730 days by yfinance."
+        "Hourly lookback capped at 730 days by yfinance. "
+        "COT data: CFTC disaggregated futures-only, updated weekly (Tuesday releases)."
     )
     _page_footer()
