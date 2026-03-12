@@ -439,6 +439,11 @@ with st.sidebar:
             ("model_accuracy", "Performance Review"),
             ("ai_chat",        "AI Analyst"),
         ]),
+        ("Team", [
+            ("about_heramb", "Heramb S. Patkar"),
+            ("about_jiahe",  "Jiahe Miao"),
+            ("about_ilian",  "Ilian Zalomai"),
+        ]),
     ]
 
     if "current_page" not in st.session_state:
@@ -515,6 +520,9 @@ from src.pages.trade_ideas     import page_trade_ideas
 from src.pages.stress_test     import page_stress_test
 from src.pages.model_accuracy  import page_model_accuracy
 from src.pages.ai_chat         import page_ai_chat
+from src.pages.about_heramb    import page_about_heramb
+from src.pages.about_jiahe     import page_about_jiahe
+from src.pages.about_ilian     import page_about_ilian
 
 _start = str(start_date)
 _end   = str(end_date)
@@ -530,6 +538,9 @@ _PAGE_MAP = {
     "stress_test":     lambda: page_stress_test(_start, _end, _FRED_KEY),
     "model_accuracy":  lambda: page_model_accuracy(_start, _end, _FRED_KEY),
     "ai_chat":         lambda: page_ai_chat(_start, _end),
+    "about_heramb":    page_about_heramb,
+    "about_jiahe":     page_about_jiahe,
+    "about_ilian":     page_about_ilian,
 }
 
 current = st.session_state.get("current_page", "overview")

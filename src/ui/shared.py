@@ -202,6 +202,315 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
     )
 
 
+# ── About page styles ───────────────────────────────────────────────────────
+
+def _about_page_styles():
+    """Inject CSS for About pages (hero banner, cards, timelines, etc.)."""
+    st.markdown("""<style>
+    /* ── Hero banner ───────────────────────────────────── */
+    .about-hero {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 1.2rem;
+        overflow: hidden;
+        border: 1px solid #e8e5e2;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .about-hero-inner {
+        display: flex;
+        align-items: stretch;
+    }
+    .about-hero .hero-photo {
+        flex-shrink: 0;
+        width: 200px;
+        overflow: hidden;
+    }
+    .about-hero .hero-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .about-hero .hero-body {
+        flex: 1;
+        padding: 1.6rem 1.8rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        border-left: 3px solid #CFB991;
+    }
+    .about-hero h1 {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: 2.0rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 0.15rem 0;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+    }
+    .about-hero .overline {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-tiny, 0.56rem);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: #8E6F3E;
+        margin: 0 0 0.4rem 0;
+    }
+    .about-hero .subtitle {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-xl, 0.82rem);
+        color: #555;
+        margin: 0 0 0.6rem 0;
+        font-weight: 500;
+    }
+    .about-hero .tagline {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-lg, 0.78rem);
+        color: #777;
+        margin: 0 0 0.8rem 0;
+        line-height: 1.6;
+    }
+    .about-hero .links {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+    .about-hero .links a {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-sm, 0.65rem);
+        font-weight: 600;
+        color: #8E6F3E;
+        text-decoration: none;
+        padding: 0.25rem 0.8rem;
+        border: 1px solid rgba(142,111,62,0.3);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        letter-spacing: 0.02em;
+    }
+    .about-hero .links a:hover {
+        background: rgba(207,185,145,0.1);
+        border-color: #8E6F3E;
+    }
+
+    /* ── Cards ─────────────────────────────────────────── */
+    .about-card {
+        background: #fff;
+        border: 1px solid #e8e5e2;
+        border-radius: 12px;
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        transition: all 0.2s ease;
+    }
+    .about-card:hover {
+        border-color: #CFB991;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .about-card-title {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-base, 0.70rem);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: #8E6F3E;
+        margin: 0 0 0.7rem 0;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid #f0eeeb;
+    }
+
+    /* ── Experience timeline ───────────────────────────── */
+    .exp-item {
+        border-left: 2px solid #e8e5e2;
+        padding-left: 1rem;
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.4rem;
+        transition: border-color 0.2s ease;
+    }
+    .exp-item:hover { border-color: #CFB991; }
+    .exp-role {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-2xl, 0.88rem);
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 0.1rem 0;
+    }
+    .exp-org {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-xl, 0.82rem);
+        font-weight: 600;
+        color: #8E6F3E;
+        margin: 0 0 0.15rem 0;
+    }
+    .exp-meta {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-base, 0.70rem);
+        color: #888;
+        margin: 0 0 0.3rem 0;
+    }
+    .exp-desc {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-lg, 0.78rem);
+        color: #444;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* ── Education ─────────────────────────────────────── */
+    .edu-item {
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f0eeeb;
+    }
+    .edu-item:last-child { border-bottom: none; }
+    .edu-school {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-2xl, 0.88rem);
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 0.1rem 0;
+    }
+    .edu-dept {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-lg, 0.78rem);
+        color: #8E6F3E;
+        margin: 0 0 0.1rem 0;
+        font-weight: 500;
+    }
+    .edu-degree {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-lg, 0.78rem);
+        color: #444;
+        margin: 0 0 0.1rem 0;
+    }
+    .edu-year {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-base, 0.70rem);
+        color: #999;
+        margin: 0;
+    }
+
+    /* ── Publication ───────────────────────────────────── */
+    .pub-item {
+        padding: 0.4rem 0;
+        font-size: var(--fs-lg, 0.78rem);
+    }
+    .pub-title {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-xl, 0.82rem);
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0 0 0.25rem 0;
+        line-height: 1.45;
+    }
+    .pub-authors {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-lg, 0.78rem);
+        color: #555;
+        margin: 0 0 0.15rem 0;
+    }
+    .pub-journal {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-md, 0.74rem);
+        color: #8E6F3E;
+        font-style: italic;
+        margin: 0 0 0.1rem 0;
+    }
+    .pub-detail {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-base, 0.70rem);
+        color: #999;
+        margin: 0 0 0.4rem 0;
+    }
+    .pub-link {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-md, 0.74rem);
+        font-weight: 600;
+        color: #CFB991;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(207,185,145,0.3);
+        transition: border-color 0.2s;
+    }
+    .pub-link:hover { border-color: #CFB991; }
+
+    /* ── Certifications ────────────────────────────────── */
+    .cert-item {
+        padding: 0.4rem 0;
+        border-bottom: 1px solid #f5f4f2;
+    }
+    .cert-item:last-child { border-bottom: none; }
+    .cert-name {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-xl, 0.82rem);
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0 0 0.1rem 0;
+    }
+    .cert-issuer {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-base, 0.70rem);
+        color: #999;
+        margin: 0;
+    }
+
+    /* ── Interest tags ─────────────────────────────────── */
+    .interest-tag {
+        display: inline-block;
+        border-radius: 20px;
+        padding: 0.25rem 0.75rem;
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-base, 0.70rem);
+        font-weight: 600;
+        margin: 0.15rem;
+    }
+    .interest-gold {
+        background: rgba(207,185,145,0.12);
+        color: #8E6F3E;
+        border: 1px solid rgba(207,185,145,0.25);
+    }
+    .interest-neutral {
+        background: #f5f4f2;
+        color: #555;
+        border: 1px solid #e8e5e2;
+    }
+
+    /* ── Acknowledgments ───────────────────────────────── */
+    .ack-text {
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-size: var(--fs-lg, 0.78rem);
+        color: #555;
+        line-height: 1.6;
+        margin: 0;
+    }
+    .ack-text strong { color: #1a1a1a; }
+
+    /* ── Stats row ─────────────────────────────────────── */
+    .stat-row {
+        display: flex;
+        justify-content: space-around;
+        padding: 0.6rem 0;
+        border-top: 1px solid rgba(207,185,145,0.15);
+        margin-top: 0.5rem;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+        font-size: var(--fs-h1, 1.25rem);
+        font-weight: 700;
+        color: #CFB991;
+        font-family: var(--font-mono, monospace);
+        margin: 0;
+    }
+    .stat-label {
+        font-size: var(--fs-xs, 0.60rem);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #888;
+        margin: 2px 0 0 0;
+        font-family: var(--font-sans, 'DM Sans', sans-serif);
+    }
+    </style>""", unsafe_allow_html=True)
+
+
 # ── Footer ─────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=86400)
