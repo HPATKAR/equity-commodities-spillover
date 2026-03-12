@@ -15,6 +15,10 @@ from src.data.config import PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.analysis.spillover import (
     granger_grid, transfer_entropy_matrix, net_flow_matrix, diebold_yilmaz,
 )
+from src.analysis.network import (
+    build_dy_graph, build_granger_graph,
+    plot_dy_network, plot_granger_network, plot_net_transmitter_bar,
+)
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
@@ -43,8 +47,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         return
 
     st.markdown("---")
-    tab1, tab2, tab3 = st.tabs([
-        "Granger Causality", "Transfer Entropy", "Diebold-Yilmaz Index"
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Granger Causality", "Transfer Entropy", "Diebold-Yilmaz Index", "Spillover Network"
     ])
 
     # ══════════════════════════════════════════════════════════════════════
@@ -282,5 +286,116 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         "typical of crisis periods. "
                         "Off-diagonal entries show the largest net transmitters and receivers."
                     )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 4 — Spillover Network
+    # ══════════════════════════════════════════════════════════════════════
+    with tab4:
+        st.subheader("Spillover Network Graph")
+        _definition_block(
+            "Network Interpretation",
+            "<b>DY Network:</b> Nodes = assets. Directed edge j → i = j's shocks explain "
+            "a significant share of i's forecast error variance. "
+            "Node size ∝ |net spillover score| (Transmit − Receive). "
+            "Large nodes = strong net transmitters (positive) or receivers (negative).<br><br>"
+            "<b>Granger Network:</b> Edge cause → effect = cause significantly Granger-causes effect. "
+            "Red = commodity → equity flow. Blue = equity → commodity flow.",
+        )
+
+        # ── Controls ──
+        all_cols = list(eq_r.columns) + list(cmd_r.columns)
+        c1, c2, c3 = st.columns([2, 1, 1])
+
+        net_assets = c1.multiselect(
+            "Assets (max 10 recommended)",
+            all_cols,
+            default=["S&P 500", "DAX", "Nikkei 225", "Shanghai Comp", "Sensex",
+                     "WTI Crude Oil", "Gold", "Wheat", "Copper", "Natural Gas"],
+            key="net_assets",
+        )
+        layout_opt = c2.selectbox(
+            "Layout",
+            ["bipartite", "spring", "circular"],
+            key="net_layout",
+        )
+        dy_thresh = c3.slider(
+            "DY edge threshold (%)",
+            min_value=1, max_value=15, value=4,
+            help="Minimum % FEVD for an edge to appear",
+            key="net_thresh",
+        )
+
+        if st.button("Build Network Graphs", type="primary", key="net_build"):
+            net_valid = [c for c in net_assets if c in eq_r.columns or c in cmd_r.columns]
+            if len(net_valid) < 3:
+                st.warning("Select at least 3 assets.")
+            else:
+                combined = pd.concat([eq_r, cmd_r], axis=1)[net_valid].dropna()
+
+                # ── DY Network ──────────────────────────────────────────
+                with st.spinner("Fitting VAR for Diebold-Yilmaz…"):
+                    dy_result = diebold_yilmaz(combined, top_n=len(net_valid))
+
+                dy_table = dy_result["spillover_table"]
+                total_sp = dy_result["total_spillover"]
+
+                if not dy_table.empty:
+                    st.markdown("---")
+                    st.markdown("#### Diebold-Yilmaz Spillover Network")
+
+                    m1, m2 = st.columns(2)
+                    m1.metric("Total Spillover Index", f"{total_sp:.1f}%")
+                    m2.metric("Assets", len(net_valid))
+
+                    G_dy = build_dy_graph(dy_table, threshold=dy_thresh)
+                    st.session_state["_dy_graph"] = G_dy
+
+                    # Net transmitter bar
+                    _chart(plot_net_transmitter_bar(G_dy, height=max(280, len(net_valid) * 24)))
+
+                    _section_note(
+                        "Green bars = net transmitters (their shocks spill INTO other assets). "
+                        "Red bars = net receivers (absorb shocks from others). "
+                        "Energy commodities and the S&P 500 are typically the largest net transmitters."
+                    )
+
+                    # Network graph
+                    _chart(plot_dy_network(
+                        G_dy,
+                        title=f"DY Spillover Network · Total Index {total_sp:.1f}%",
+                        layout=layout_opt,
+                        top_edges=min(len(net_valid) * 4, 32),
+                    ))
+
+                # ── Granger Network ─────────────────────────────────────
+                st.markdown("---")
+                st.markdown("#### Granger Causality Network")
+
+                eq_net  = [c for c in net_valid if c in eq_r.columns]
+                cmd_net = [c for c in net_valid if c in cmd_r.columns]
+
+                if eq_net and cmd_net:
+                    with st.spinner("Running Granger tests for network…"):
+                        g_df = granger_grid(eq_r[eq_net], cmd_r[cmd_net], max_lag=5)
+
+                    sig_count = g_df["significant"].sum() if not g_df.empty else 0
+                    st.metric("Significant Granger links", int(sig_count))
+
+                    if sig_count > 0:
+                        G_gr = build_granger_graph(g_df)
+                        st.session_state["_granger_graph"] = G_gr
+                        _chart(plot_granger_network(
+                            G_gr,
+                            title="Granger Causality Network (p < 0.05)",
+                            layout=layout_opt,
+                        ))
+                        _takeaway_block(
+                            "Node size = number of assets it Granger-causes. "
+                            "Red arrows = commodity information flowing into equity markets. "
+                            "Blue arrows = equity-driven flows back into commodities. "
+                            "Energy commodities typically dominate outbound red arrows."
+                        )
+                    else:
+                        st.info("No significant Granger links found. Try a longer date range or looser lag settings.")
 
     _page_footer()

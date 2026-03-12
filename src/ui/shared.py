@@ -245,7 +245,7 @@ def _page_footer() -> None:
         f"<div><a href='https://business.purdue.edu/' target='_blank'>{logo_html}</a>"
         "<p style='font-size:var(--fs-base);color:rgba(255,255,255,0.7);line-height:1.65;"
         "margin:0 0 16px 0;max-width:260px;'>"
-        "MGMT 69000-119 &middot; AI for Finance<br/>West Lafayette, Indiana</p>"
+        "MGMT 69000-120 &middot; AI for Finance<br/>West Lafayette, Indiana</p>"
         f"<p style='font-size:var(--fs-xs);color:rgba(207,185,145,0.6);margin:0;"
         f"font-weight:600;letter-spacing:var(--ls-wide);'>Last updated {ts}</p>"
         "</div>"
