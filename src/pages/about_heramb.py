@@ -65,8 +65,8 @@ def page_about_heramb() -> None:
             "and creativity intersect to solve complex problems and deliver meaningful value.</p>"
             f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0;'>"
             "Beyond work, I enjoy exploring new places, listening to Carnatic music, "
-            "and learning from different cultures and perspectives. Always open to connecting "
-            "— feel free to reach out.</p>"
+            "and learning from different cultures and perspectives. Always open to connecting"
+            ", feel free to reach out.</p>"
             "</div>",
             unsafe_allow_html=True,
         )
@@ -217,7 +217,7 @@ def page_about_heramb() -> None:
             "<p class='ack-text'><strong>Prof. Cinder Zhang</strong>, MGMT 69000: "
             "Framework-first thinking behind regime and spillover design</p>"
             "<p class='ack-text' style='margin-top:8px;'><strong>Prof. Adem Atmaz</strong>, "
-            "MGMT 511: Fixed income intuition and quantitative modeling foundations</p>"
+            "MGMT 511: Fixed income intuition behind DCC-GARCH and transfer entropy approaches</p>"
             "</div>",
             unsafe_allow_html=True,
         )
