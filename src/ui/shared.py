@@ -223,7 +223,7 @@ def _about_page_styles():
     }
     .about-hero .hero-photo {
         flex-shrink: 0;
-        width: 200px;
+        width: 190px;
         overflow: hidden;
     }
     .about-hero .hero-photo img {
@@ -234,15 +234,15 @@ def _about_page_styles():
     }
     .about-hero .hero-body {
         flex: 1;
-        padding: 1.6rem 1.8rem;
+        padding: 1.4rem 1.6rem;
         display: flex;
         flex-direction: column;
         justify-content: center;
         border-left: 3px solid #CFB991;
     }
     .about-hero h1 {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: 1.45rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 1.40rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.15rem 0;
@@ -250,40 +250,40 @@ def _about_page_styles():
         line-height: 1.15;
     }
     .about-hero .overline {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-family: 'DM Sans', sans-serif;
         font-size: 0.56rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.18em;
         color: #8E6F3E;
-        margin: 0 0 0.4rem 0;
+        margin: 0 0 0.35rem 0;
     }
     .about-hero .subtitle {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: 0.78rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.76rem;
         color: #555;
-        margin: 0 0 0.5rem 0;
+        margin: 0 0 0.45rem 0;
         font-weight: 500;
     }
     .about-hero .tagline {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-family: 'DM Sans', sans-serif;
         font-size: 0.72rem;
         color: #777;
-        margin: 0 0 0.7rem 0;
+        margin: 0 0 0.65rem 0;
         line-height: 1.6;
     }
     .about-hero .links {
         display: flex;
-        gap: 0.6rem;
+        gap: 0.5rem;
         flex-wrap: wrap;
     }
     .about-hero .links a {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: 0.62rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.60rem;
         font-weight: 600;
         color: #8E6F3E;
         text-decoration: none;
-        padding: 0.25rem 0.8rem;
+        padding: 0.22rem 0.7rem;
         border: 1px solid rgba(142,111,62,0.3);
         border-radius: 4px;
         transition: all 0.2s ease;
@@ -299,8 +299,8 @@ def _about_page_styles():
         background: #fff;
         border: 1px solid #e8e5e2;
         border-radius: 12px;
-        padding: 1.2rem 1.4rem;
-        margin-bottom: 0.8rem;
+        padding: 1.1rem 1.3rem;
+        margin-bottom: 0.75rem;
         box-shadow: 0 1px 4px rgba(0,0,0,0.03);
         transition: all 0.2s ease;
     }
@@ -309,13 +309,13 @@ def _about_page_styles():
         box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
     .about-card-title {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-base, 0.70rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.60rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
+        letter-spacing: 0.16em;
         color: #8E6F3E;
-        margin: 0 0 0.7rem 0;
+        margin: 0 0 0.65rem 0;
         padding-bottom: 0.4rem;
         border-bottom: 1px solid #f0eeeb;
     }
@@ -324,34 +324,34 @@ def _about_page_styles():
     .exp-item {
         border-left: 2px solid #e8e5e2;
         padding-left: 1rem;
-        margin-bottom: 0.8rem;
-        padding-bottom: 0.4rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.35rem;
         transition: border-color 0.2s ease;
     }
     .exp-item:hover { border-color: #CFB991; }
     .exp-role {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-2xl, 0.88rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.82rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.1rem 0;
     }
     .exp-org {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-xl, 0.82rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.76rem;
         font-weight: 600;
         color: #8E6F3E;
-        margin: 0 0 0.15rem 0;
+        margin: 0 0 0.12rem 0;
     }
     .exp-meta {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-base, 0.70rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.66rem;
         color: #888;
-        margin: 0 0 0.3rem 0;
+        margin: 0 0 0.28rem 0;
     }
     .exp-desc {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-lg, 0.78rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.72rem;
         color: #444;
         line-height: 1.6;
         margin: 0;
@@ -359,33 +359,33 @@ def _about_page_styles():
 
     /* ── Education ─────────────────────────────────────── */
     .edu-item {
-        padding: 0.6rem 0;
+        padding: 0.55rem 0;
         border-bottom: 1px solid #f0eeeb;
     }
     .edu-item:last-child { border-bottom: none; }
     .edu-school {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-2xl, 0.88rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.84rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.1rem 0;
     }
     .edu-dept {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-lg, 0.78rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.72rem;
         color: #8E6F3E;
         margin: 0 0 0.1rem 0;
         font-weight: 500;
     }
     .edu-degree {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-lg, 0.78rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.72rem;
         color: #444;
         margin: 0 0 0.1rem 0;
     }
     .edu-year {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-base, 0.70rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.64rem;
         color: #999;
         margin: 0;
     }
@@ -393,38 +393,37 @@ def _about_page_styles():
     /* ── Publication ───────────────────────────────────── */
     .pub-item {
         padding: 0.4rem 0;
-        font-size: var(--fs-lg, 0.78rem);
     }
     .pub-title {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-xl, 0.82rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.76rem;
         font-weight: 600;
         color: #1a1a1a;
-        margin: 0 0 0.25rem 0;
+        margin: 0 0 0.22rem 0;
         line-height: 1.45;
     }
     .pub-authors {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-lg, 0.78rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.70rem;
         color: #555;
-        margin: 0 0 0.15rem 0;
+        margin: 0 0 0.12rem 0;
     }
     .pub-journal {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-md, 0.74rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.68rem;
         color: #8E6F3E;
         font-style: italic;
         margin: 0 0 0.1rem 0;
     }
     .pub-detail {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-base, 0.70rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.64rem;
         color: #999;
-        margin: 0 0 0.4rem 0;
+        margin: 0 0 0.35rem 0;
     }
     .pub-link {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-md, 0.74rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.68rem;
         font-weight: 600;
         color: #CFB991;
         text-decoration: none;
@@ -435,20 +434,20 @@ def _about_page_styles():
 
     /* ── Certifications ────────────────────────────────── */
     .cert-item {
-        padding: 0.4rem 0;
+        padding: 0.38rem 0;
         border-bottom: 1px solid #f5f4f2;
     }
     .cert-item:last-child { border-bottom: none; }
     .cert-name {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-xl, 0.82rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.76rem;
         font-weight: 600;
         color: #1a1a1a;
-        margin: 0 0 0.1rem 0;
+        margin: 0 0 0.08rem 0;
     }
     .cert-issuer {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-base, 0.70rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.64rem;
         color: #999;
         margin: 0;
     }
@@ -457,11 +456,11 @@ def _about_page_styles():
     .interest-tag {
         display: inline-block;
         border-radius: 20px;
-        padding: 0.25rem 0.75rem;
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-base, 0.70rem);
+        padding: 0.22rem 0.65rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.64rem;
         font-weight: 600;
-        margin: 0.15rem;
+        margin: 0.12rem;
     }
     .interest-gold {
         background: rgba(207,185,145,0.12);
@@ -476,8 +475,8 @@ def _about_page_styles():
 
     /* ── Acknowledgments ───────────────────────────────── */
     .ack-text {
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-lg, 0.78rem);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.72rem;
         color: #555;
         line-height: 1.6;
         margin: 0;
@@ -488,28 +487,27 @@ def _about_page_styles():
     .stat-row {
         display: flex;
         justify-content: space-around;
-        padding: 0.6rem 0;
+        padding: 0.55rem 0;
         border-top: 1px solid rgba(207,185,145,0.15);
         margin-top: 0.5rem;
     }
     .stat-item { text-align: center; }
     .stat-num {
-        font-size: var(--fs-h1, 1.25rem);
+        font-size: 1.10rem;
         font-weight: 700;
         color: #CFB991;
-        font-family: var(--font-mono, monospace);
+        font-family: 'JetBrains Mono', monospace;
         margin: 0;
     }
     .stat-label {
-        font-size: var(--fs-xs, 0.60rem);
+        font-size: 0.56rem;
         text-transform: uppercase;
         letter-spacing: 0.12em;
         color: #888;
         margin: 2px 0 0 0;
-        font-family: var(--font-sans, 'DM Sans', sans-serif);
+        font-family: 'DM Sans', sans-serif;
     }
     </style>""", unsafe_allow_html=True)
-
 
 # ── Footer ─────────────────────────────────────────────────────────────────
 

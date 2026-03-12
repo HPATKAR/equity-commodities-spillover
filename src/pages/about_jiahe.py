@@ -56,11 +56,11 @@ def page_about_jiahe() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0 0 10px 0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 10px 0;'>"
             "Passionate about the intersection of quantitative finance and global macro markets. "
             "With strong analytical skills and a rigorous academic foundation, I enjoy dissecting "
             "complex financial relationships and building systematic frameworks for investment decisions.</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0;'>"
             "Committed to continuous learning and collaborative research, I thrive in environments "
             "that demand both technical precision and strategic thinking. Always eager to connect "
             "and exchange ideas on markets, modeling, and finance.</p>"
@@ -71,7 +71,7 @@ def page_about_jiahe() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0 0 12px 0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 12px 0;'>"
             "Contributed to the Equity &amp; Commodities Spillover Monitor as Course Project 3 for "
             "Prof. Cinder Zhang's MGMT 69000-120. Focused on the quantitative architecture behind "
             "correlation regime detection, spillover analytics, and cross-asset trade idea generation.</p>"

@@ -56,11 +56,11 @@ def page_about_ilian() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0 0 10px 0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 10px 0;'>"
             "Deeply interested in how macro forces and geopolitical dynamics shape financial markets. "
             "Brings a research-oriented mindset to quantitative projects, with a focus on "
             "translating complex datasets into actionable investment insights.</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0;'>"
             "Collaborative by nature and motivated by intellectually challenging problems, "
             "always looking to build connections at the intersection of finance, data, "
             "and global economic thinking.</p>"
@@ -71,7 +71,7 @@ def page_about_ilian() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0 0 12px 0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 12px 0;'>"
             "Contributed to the Equity &amp; Commodities Spillover Monitor as Course Project 3 for "
             "Prof. Cinder Zhang's MGMT 69000-120. Focused on geopolitical context analysis, "
             "war impact mapping, and the narrative framework connecting macro events to market regimes.</p>"
