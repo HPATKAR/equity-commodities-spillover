@@ -1,0 +1,3 @@
+build-essential
+libfreetype6-dev
+libpng-dev
