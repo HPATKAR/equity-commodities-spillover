@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_heramb() -> None:
     _about_page_styles()
-    _f = "font-family:var(--font-sans);"
+    _f = "font-family:'DM Sans',sans-serif;"
 
     photo = _photo_html("photo_heramb.jpeg", "Heramb S. Patkar")
 
