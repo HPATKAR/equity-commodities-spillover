@@ -65,7 +65,7 @@ def page_about_ilian() -> None:
             "initiatives at Deloitte across Germany.</p>"
             f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0;'>"
             "The MSF at Purdue's Financial Analytics track is deepening my foundation in "
-            "quantitative methods and derivatives — bringing rigor to the intersection of "
+            "quantitative methods and derivatives - bringing rigor to the intersection of "
             "risk management, data analytics, and financial markets.</p>"
             "</div>",
             unsafe_allow_html=True,

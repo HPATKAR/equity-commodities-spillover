@@ -1,5 +1,5 @@
 """
-Page 4 — Spillover Analytics
+Page 4 - Spillover Analytics
 Granger causality grid, transfer entropy flows, Diebold-Yilmaz spillover index.
 """
 
@@ -52,7 +52,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     ])
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 1 — Granger Causality
+    # TAB 1 - Granger Causality
     # ══════════════════════════════════════════════════════════════════════
     with tab1:
         st.subheader("Granger Causality: Commodity → Equity & Equity → Commodity")
@@ -60,7 +60,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             "Granger Causality",
             "Series X Granger-causes series Y if past values of X significantly "
             "improve forecasts of Y beyond Y's own history. "
-            "This is a predictive (not structural) test — "
+            "This is a predictive (not structural) test - "
             "it identifies statistical lead-lag relationships, not economic causation. "
             "p < 0.05 → significant at 5% level.",
         )
@@ -148,7 +148,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 2 — Transfer Entropy
+    # TAB 2 - Transfer Entropy
     # ══════════════════════════════════════════════════════════════════════
     with tab2:
         st.subheader("Transfer Entropy: Information Flow Direction")
@@ -217,13 +217,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
         _takeaway_block(
             "Energy commodities (WTI, Brent, Natural Gas) typically show the strongest "
-            "net transfer entropy INTO equities — particularly for Europe (DAX, Eurostoxx) "
+            "net transfer entropy INTO equities - particularly for Europe (DAX, Eurostoxx) "
             "which has high energy import dependency. Gold's TE often flows FROM equities "
             "during risk-off, reflecting reactive safe-haven demand rather than a leading signal."
         )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 3 — Diebold-Yilmaz
+    # TAB 3 - Diebold-Yilmaz
     # ══════════════════════════════════════════════════════════════════════
     with tab3:
         st.subheader("Diebold-Yilmaz Spillover Index")
@@ -282,13 +282,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
                     _takeaway_block(
                         f"Total spillover index: <b>{total:.1f}%</b>. "
-                        f"Values above 50% indicate high systemic interconnectedness — "
+                        f"Values above 50% indicate high systemic interconnectedness - "
                         "typical of crisis periods. "
                         "Off-diagonal entries show the largest net transmitters and receivers."
                     )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 4 — Spillover Network
+    # TAB 4 - Spillover Network
     # ══════════════════════════════════════════════════════════════════════
     with tab4:
         st.subheader("Spillover Network Graph")

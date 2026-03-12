@@ -1,5 +1,5 @@
 """
-Shared UI helpers — Purdue theme, chart styling, text components.
+Shared UI helpers - Purdue theme, chart styling, text components.
 Mirrors the JGB dashboard's shared.py adapted for cross-asset use.
 """
 
@@ -548,7 +548,7 @@ def _page_footer() -> None:
         "<div style='background:#000000;padding:44px 0 40px 0;'>"
         "<div style='display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;"
         "gap:28px;max-width:1280px;margin:0 auto;padding:0 48px;'>"
-        # Col 1 — brand
+        # Col 1 - brand
         f"<div><a href='https://business.purdue.edu/' target='_blank'>{logo_html}</a>"
         "<p style='font-size:var(--fs-base);color:rgba(255,255,255,0.7);line-height:1.65;"
         "margin:0 0 16px 0;max-width:260px;'>"
@@ -556,7 +556,7 @@ def _page_footer() -> None:
         f"<p style='font-size:var(--fs-xs);color:rgba(207,185,145,0.6);margin:0;"
         f"font-weight:600;letter-spacing:var(--ls-wide);'>Last updated {ts}</p>"
         "</div>"
-        # Col 2 — navigate
+        # Col 2 - navigate
         f"<div><p style='{_g}'>Navigate</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
         f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Overview</a></li>"
@@ -566,7 +566,7 @@ def _page_footer() -> None:
         f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Commodities to Watch</a></li>"
         f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Trade Ideas</a></li>"
         "</ul></div>"
-        # Col 3 — about
+        # Col 3 - about
         f"<div><p style='{_g}'>About</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
         f"<li style='margin-bottom:8px;'><a href='?page=about_heramb' style='{_w}'>Heramb S. Patkar</a></li>"
@@ -574,13 +574,13 @@ def _page_footer() -> None:
         f"<li style='margin-bottom:8px;'><a href='?page=about_ilian' style='{_w}'>Ilian Zalomai</a></li>"
         f"<li><a href='https://business.purdue.edu/' target='_blank' style='{_w}'>Daniels School of Business</a></li>"
         "</ul></div>"
-        # Col 4 — connect
+        # Col 4 - connect
         f"<div><p style='{_g}'>Connect</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
         f"<li style='margin-bottom:8px;'><a href='https://www.linkedin.com/in/heramb-patkar/' target='_blank' style='{_w}'>LinkedIn</a></li>"
         f"<li><a href='https://github.com/HPATKAR' target='_blank' style='{_w}'>GitHub</a></li>"
         "</ul></div>"
-        # Col 5 — data sources
+        # Col 5 - data sources
         f"<div><p style='{_g}'>Data Sources</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
         f"<li style='margin-bottom:8px;'><a href='https://finance.yahoo.com' target='_blank' style='{_w}'>Yahoo Finance</a></li>"

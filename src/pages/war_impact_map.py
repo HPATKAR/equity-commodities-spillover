@@ -1,5 +1,5 @@
 """
-War Impact Map — Geopolitical Equity Risk
+War Impact Map - Geopolitical Equity Risk
 Choropleth map (flat or 3-D globe) showing equity-market exposure to active wars.
 """
 
@@ -151,7 +151,7 @@ _WAR_DATA: list[dict] = [
 ]
 
 
-# ── Indian administered disputed territories — centroid hover markers ────────
+# ── Indian administered disputed territories - centroid hover markers ────────
 # These regions appear blank on Plotly's Natural Earth base map (not part of IND ISO polygon).
 # We drop invisible centroid markers so hovering over the blank shows the correct attribution.
 
@@ -239,7 +239,7 @@ def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
         scored_iso.update(w["scores"].keys())
 
     rows = []
-    # All countries in the world — unscored get 0 (renders as cream)
+    # All countries in the world - unscored get 0 (renders as cream)
     all_iso = set(_ALL_COUNTRIES) | scored_iso
     for iso in all_iso:
         u = _WAR_DATA[0]["scores"].get(iso, 0)
@@ -258,7 +258,7 @@ def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
             "ukraine_score": u,
             "hamas_score":   h,
             "primary_war":   _WAR_DATA[0]["label"] if u >= h else _WAR_DATA[1]["label"],
-            "indices":       ", ".join(indices) if indices else "—",
+            "indices":       ", ".join(indices) if indices else "-",
             "ret_text":      " · ".join(ret_lines),
         })
     return pd.DataFrame(rows)
@@ -327,11 +327,11 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     )
 
     if war_filter == "Ukraine War only":
-        score_col, title_sfx = "ukraine_score", "— Russia-Ukraine War"
+        score_col, title_sfx = "ukraine_score", "- Russia-Ukraine War"
     elif war_filter == "Israel-Hamas only":
-        score_col, title_sfx = "hamas_score", "— Israel-Hamas War"
+        score_col, title_sfx = "hamas_score", "- Israel-Hamas War"
     else:
-        score_col, title_sfx = "score", "— Combined (worst of both conflicts)"
+        score_col, title_sfx = "score", "- Combined (worst of both conflicts)"
 
     is_globe = (view_mode == "3D Globe")
 
@@ -341,7 +341,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     for _, row in df.iterrows():
         s = int(row[score_col])
         if s == 0:
-            # Unscored country — minimal hover
+            # Unscored country - minimal hover
             hover_texts.append(f"<b>{row['country']}</b><br>No significant direct exposure")
             continue
         lv = _impact_label(s)
@@ -355,11 +355,11 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
               if row["iso3"] in hometurf_iso else "")
         tip = (
             f"<b>{row['country']}</b>{hw}<br>"
-            f"<span style='color:{lv_color}'><b>{s}/100 — {lv}</b></span><br><br>"
+            f"<span style='color:{lv_color}'><b>{s}/100 - {lv}</b></span><br><br>"
             f"Ukraine War: {int(row['ukraine_score'])}/100<br>"
             f"Israel-Hamas: {int(row['hamas_score'])}/100"
         )
-        if row["indices"] != "—":
+        if row["indices"] != "-":
             tip += f"<br><br><b>Tracked index:</b> {row['indices']}"
         if row["ret_text"]:
             tip += f"<br><b>War-period returns:</b><br>{row['ret_text']}"
@@ -439,7 +439,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     ))
 
     # ── Layout ────────────────────────────────────────────────────────────────
-    # showland=False everywhere — choropleth covers all land.
+    # showland=False everywhere - choropleth covers all land.
     # bgcolor=ocean colour so the globe "sphere" exterior looks like water.
     if is_globe:
         geo_cfg = dict(
@@ -459,7 +459,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             showlakes=True,
             lakecolor="#1a3f5c",
             showframe=False,
-            bgcolor="#000000",   # space black — fills area outside the globe sphere
+            bgcolor="#000000",   # space black - fills area outside the globe sphere
             lataxis=dict(showgrid=True,  gridcolor="rgba(255,255,255,0.12)", gridwidth=0.5),
             lonaxis=dict(showgrid=True,  gridcolor="rgba(255,255,255,0.12)", gridwidth=0.5),
             resolution=50,
@@ -558,7 +558,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Tracked equity performance table ─────────────────────────────────────
     st.markdown("---")
-    st.subheader("Tracked Equity Markets — War-Period Performance")
+    st.subheader("Tracked Equity Markets - War-Period Performance")
     _section_note(
         "Cumulative returns for each tracked equity index since each conflict's start date."
     )
@@ -586,7 +586,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
 
         def _fmt(v):
             if v is None or (isinstance(v, float) and np.isnan(v)):
-                return "—"
+                return "-"
             return f"{v:+.1f}%"
 
         def _sty(v):

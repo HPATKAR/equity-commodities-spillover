@@ -1,5 +1,5 @@
 """
-Page 1 — Overview
+Page 1 - Overview
 KPIs, cross-asset correlation heatmap snapshot, regime status, recent events.
 """
 
@@ -114,10 +114,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _definition_block(
         "Composite Risk Index (0–100)",
         "Weighted blend of four real-time signals: "
-        "<b>Cross-asset correlation percentile</b> (40%) — how elevated is current correlation vs history; "
-        "<b>Commodity vol z-score</b> (30%) — energy + metals volatility vs 1-year mean; "
-        "<b>VIX level</b> (20%) — equity fear gauge mapped to 0-100; "
-        "<b>Active events</b> (10%) — count of ongoing geopolitical events. "
+        "<b>Cross-asset correlation percentile</b> (40%) - how elevated is current correlation vs history; "
+        "<b>Commodity vol z-score</b> (30%) - energy + metals volatility vs 1-year mean; "
+        "<b>VIX level</b> (20%) - equity fear gauge mapped to 0-100; "
+        "<b>Active events</b> (10%) - count of ongoing geopolitical events. "
         "Bands: 0-25 Low · 25-50 Moderate · 50-75 Elevated · 75-100 High/Crisis.",
     )
 
@@ -222,7 +222,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "What Does This Measure?",
         "The mean of all pairwise |rolling 60-day correlations| between equity indices "
         "and commodity futures. Spikes indicate that commodities and equities are moving "
-        "together — a hallmark of risk-off crises, supply shocks, and geopolitical stress.",
+        "together - a hallmark of risk-off crises, supply shocks, and geopolitical stress.",
     )
 
     fig_corr = go.Figure()
@@ -290,7 +290,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _chart(fig_heat)
 
     _section_note(
-        "<b>Red</b> = positive correlation (equities and commodities move together — risk-off or inflation). "
+        "<b>Red</b> = positive correlation (equities and commodities move together - risk-off or inflation). "
         "<b>Blue</b> = negative correlation (flight-to-safety or supply shock divergence). "
         "<b>White</b> = decorrelated."
     )

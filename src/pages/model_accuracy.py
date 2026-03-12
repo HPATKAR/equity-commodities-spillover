@@ -1,12 +1,12 @@
 """
-Page 8 — Signal Performance Review
+Page 8 - Signal Performance Review
 Backtests and validates the four analytical signals used in the dashboard:
-  1. Correlation Regime Detection — precision/recall vs VIX ground truth
+  1. Correlation Regime Detection - precision/recall vs VIX ground truth
      · Rule-based (composite stress index)
      · ML: walk-forward logistic regression (5 features, class-balanced)
-  2. Granger Causality Signals — z-score quantile hit rate after significant tests
-  3. Geopolitical Risk Score — correlation / lead-lag vs VIX
-  4. COT Contrarian Signals — win rate after crowded positioning extremes
+  2. Granger Causality Signals - z-score quantile hit rate after significant tests
+  3. Geopolitical Risk Score - correlation / lead-lag vs VIX
+  4. COT Contrarian Signals - win rate after crowded positioning extremes
 """
 
 from __future__ import annotations
@@ -85,7 +85,7 @@ def _regime_classification_stats(
 ) -> dict:
     """
     Compare detected regime (≥2 = elevated/crisis) to ground truth.
-    Headline: balanced accuracy = (TPR + TNR) / 2 — immune to class imbalance.
+    Headline: balanced accuracy = (TPR + TNR) / 2 - immune to class imbalance.
     """
     from sklearn.metrics import roc_auc_score
 
@@ -150,7 +150,7 @@ def _ml_regime_classifier(
         roc_auc_score, balanced_accuracy_score, f1_score,
     )
 
-    # Align on common index — use inner join to handle any index mismatch
+    # Align on common index - use inner join to handle any index mismatch
     gt = _ground_truth.rename("target")
     aligned = _features_df.join(gt, how="inner").dropna()
 
@@ -158,7 +158,7 @@ def _ml_regime_classifier(
     n_total    = len(aligned)
     min_needed = min_train + 30          # at least min_train for first fit + 30 test pts
     if n_total < min_needed:
-        return {"error": f"Only {n_total} aligned observations — need {min_needed}."}
+        return {"error": f"Only {n_total} aligned observations - need {min_needed}."}
 
     # Adapt training window if data is shorter than 2 years
     effective_train_window = min(train_window, max(min_train, n_total // 3))
@@ -194,7 +194,7 @@ def _ml_regime_classifier(
 
     mask = ~np.isnan(probs)
     if mask.sum() < 30:
-        return {"error": f"Walk-forward produced only {mask.sum()} predictions — need 30+."}
+        return {"error": f"Walk-forward produced only {mask.sum()} predictions - need 30+."}
 
     y_true = y_all[mask]
     y_pred = preds[mask].astype(int)
@@ -475,7 +475,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     with st.spinner("Building composite stress index…"):
         avg_corr   = average_cross_corr_series(eq_r, cmd_r, window=60)
         stress_idx = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
-        # Use composite stress as input to regime detector — much better than raw avg_corr
+        # Use composite stress as input to regime detector - much better than raw avg_corr
         # p_elevated=75 → top 25% classified as elevated/crisis, matching VIX>25 base rate ~25-30%
         # smooth_window=3, persist_window=5 → faster regime transitions, less over-smoothing
         regimes    = detect_correlation_regime(
@@ -508,7 +508,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     auc_str = f"AUC: {stats['auc']:.0f}%" if stats["auc"] else ""
     _signal_card(c1,
         "Regime Detection (Composite)",
-        f"{stats['balanced_acc']:.0f}%", "Balanced Accuracy — composite stress index",
+        f"{stats['balanced_acc']:.0f}%", "Balanced Accuracy - composite stress index",
         f"F1: {stats['f1']:.0f}%  ·  Recall: {stats['recall']:.0f}%  ·  {auc_str}",
         stats["balanced_acc"], 60, "bal. acc ≥ 60%",
     )
@@ -520,7 +520,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     )
     _signal_card(c3,
         "Risk Score vs VIX",
-        f"R²={r2:.3f}" if r2 and not np.isnan(r2) else "—", "VIX explained variance",
+        f"R²={r2:.3f}" if r2 and not np.isnan(r2) else "-", "VIX explained variance",
         f"Corr: {np.sqrt(r2):.3f}" if r2 and not np.isnan(r2) else "3-component score (corr + cmd_vol + eq_vol)",
         r2_pct, 40, "R² ≥ 0.40",
     )
@@ -542,23 +542,23 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     ])
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 1 — Regime Detection: Rule-based composite + ML walk-forward
+    # TAB 1 - Regime Detection: Rule-based composite + ML walk-forward
     # ══════════════════════════════════════════════════════════════════════
     with tab1:
-        st.subheader("Correlation Regime Detection — Classification Performance")
+        st.subheader("Correlation Regime Detection - Classification Performance")
         _definition_block(
             "Two-tier detection system",
-            "<b>Tier 1 — Composite stress index (rule-based):</b> "
-            "Weighted combination of 4 features, each mapped to its rolling empirical percentile — "
+            "<b>Tier 1 - Composite stress index (rule-based):</b> "
+            "Weighted combination of 4 features, each mapped to its rolling empirical percentile - "
             "40% avg cross-asset correlation (60d) · 30% equity realized vol (20d, strong VIX proxy) · "
             "20% commodity vol (energy+metals) · 10% fast correlation (20d). "
             "Feeds into the existing adaptive percentile / hysteresis regime classifier. "
-            "<b>Tier 2 — ML walk-forward (logistic regression):</b> "
+            "<b>Tier 2 - ML walk-forward (logistic regression):</b> "
             "Trained on a rolling 2-year window using the 4 raw features as inputs, VIX &gt; threshold as "
             "target, class_weight=balanced. Prediction at day T uses only data up to day T−1 "
             "(strict out-of-sample). "
             "<b>Ground truth: VIX &gt; threshold.</b> "
-            "<b>Headline: Balanced Accuracy = (TPR + TNR) / 2</b> — immune to class imbalance.",
+            "<b>Headline: Balanced Accuracy = (TPR + TNR) / 2</b> - immune to class imbalance.",
         )
 
         thr_col, _ = st.columns([1, 3])
@@ -577,14 +577,14 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             '<p style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;'
             'text-transform:uppercase;color:#000;margin:0.8rem 0 0.4rem">'
-            'Tier 1 — Composite Stress Index (Rule-based)</p>',
+            'Tier 1 - Composite Stress Index (Rule-based)</p>',
             unsafe_allow_html=True,
         )
 
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Balanced Accuracy", f"{s['balanced_acc']:.1f}%",
                   help="(TPR + TNR) / 2")
-        m2.metric("ROC-AUC", f"{s['auc']:.1f}%" if s["auc"] else "—",
+        m2.metric("ROC-AUC", f"{s['auc']:.1f}%" if s["auc"] else "-",
                   help="Continuous regime score (0–3) as ranking signal")
         m3.metric("F1 Score",         f"{s['f1']:.1f}%")
         m4.metric("Recall (TPR)",     f"{s['recall']:.1f}%")
@@ -676,12 +676,12 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             '<p style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;'
             'text-transform:uppercase;color:#000;margin:0.8rem 0 0.4rem">'
-            'Tier 2 — Walk-Forward Logistic Regression (ML)</p>',
+            'Tier 2 - Walk-Forward Logistic Regression (ML)</p>',
             unsafe_allow_html=True,
         )
         _section_note(
             "Logistic regression trained on a rolling 2-year window of the 4 composite features. "
-            "Prediction at time T uses only data up to T−1 — strictly out-of-sample. "
+            "Prediction at time T uses only data up to T−1 - strictly out-of-sample. "
             "class_weight=balanced ensures equal treatment of both classes regardless of "
             "base-rate imbalance. Probability threshold = 0.40 (recall-biased for early warning)."
         )
@@ -789,13 +789,13 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
                 _takeaway_block(
                     f"Walk-forward ML achieves <b>balanced accuracy {ml_result['balanced_acc']:.0f}%</b> "
-                    f"and <b>ROC-AUC {ml_result['auc']:.0f}%</b> out-of-sample — "
+                    f"and <b>ROC-AUC {ml_result['auc']:.0f}%</b> out-of-sample - "
                     f"versus {s['balanced_acc']:.0f}% balanced acc for the rule-based composite. "
                     f"Using 4 features (correlation signal, equity vol, commodity vol, fast correlation) "
                     f"rather than a single signal yields tighter, more calibrated stress predictions."
                 )
         else:
-            # Before ML is run — show the rule-based takeaway
+            # Before ML is run - show the rule-based takeaway
             auc_phrase = f"ROC-AUC {s['auc']:.0f}%" if s["auc"] is not None else "ROC-AUC unavailable"
             _takeaway_block(
                 f"Composite stress regime achieves <b>balanced accuracy {s['balanced_acc']:.0f}%</b> "
@@ -804,10 +804,10 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 2 — Granger Hit Rate
+    # TAB 2 - Granger Hit Rate
     # ══════════════════════════════════════════════════════════════════════
     with tab2:
-        st.subheader("Granger Causality Signal — Directional Edge Analysis")
+        st.subheader("Granger Causality Signal - Directional Edge Analysis")
         _definition_block(
             "Signal Logic (z-score quantile)",
             "For each significant Granger pair (p &lt; 0.05), the cause asset return is "
@@ -816,7 +816,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             "<b>Short signal</b>: z &lt; −1.0 (bottom ~16%). "
             "<b>Hit Rate</b>: % of long (short) signals where effect moved in the "
             "predicted direction N days later. "
-            "<b>Edge (pp)</b>: (avg_hit_rate − 50) — symmetric measure above random baseline. "
+            "<b>Edge (pp)</b>: (avg_hit_rate − 50) - symmetric measure above random baseline. "
             "Using extreme z-score quantiles instead of median split isolates the "
             "strongest regime events and reduces noise from mid-range days.",
         )
@@ -845,8 +845,8 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 k2.metric("Positive Edge (>3pp)", positive_edge)
                 avg_long  = hr_df["Long Hit Rate (%)"].dropna().mean()
                 avg_short = hr_df["Short Hit Rate (%)"].dropna().mean()
-                k3.metric("Avg Long Hit Rate",  f"{avg_long:.1f}%"  if not np.isnan(avg_long)  else "—")
-                k4.metric("Avg Short Hit Rate", f"{avg_short:.1f}%" if not np.isnan(avg_short) else "—")
+                k3.metric("Avg Long Hit Rate",  f"{avg_long:.1f}%"  if not np.isnan(avg_long)  else "-")
+                k4.metric("Avg Short Hit Rate", f"{avg_short:.1f}%" if not np.isnan(avg_short) else "-")
 
                 st.markdown("<br>", unsafe_allow_html=True)
                 bc1, bc2 = st.columns([1, 1])
@@ -862,12 +862,12 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     styled_hr = (
                         hr_df.style
                         .applymap(_edge_col, subset=["Edge (pp)"])
-                        .format(na_rep="—", formatter={
+                        .format(na_rep="-", formatter={
                             "p-value":             "{:.4f}",
-                            "Long Hit Rate (%)":   lambda v: f"{v:.1f}%" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "—",
-                            "Short Hit Rate (%)":  lambda v: f"{v:.1f}%" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "—",
-                            "Mean Fwd Ret (%)":    lambda v: f"{v:+.3f}%" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "—",
-                            "Edge (pp)":           lambda v: f"{v:+.1f}pp" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "—",
+                            "Long Hit Rate (%)":   lambda v: f"{v:.1f}%" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "-",
+                            "Short Hit Rate (%)":  lambda v: f"{v:.1f}%" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "-",
+                            "Mean Fwd Ret (%)":    lambda v: f"{v:+.3f}%" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "-",
+                            "Edge (pp)":           lambda v: f"{v:+.1f}pp" if v is not None and not (isinstance(v, float) and np.isnan(v)) else "-",
                         })
                     )
                     st.dataframe(styled_hr, use_container_width=True, hide_index=True)
@@ -908,16 +908,16 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 3 — Risk Score vs VIX
+    # TAB 3 - Risk Score vs VIX
     # ══════════════════════════════════════════════════════════════════════
     with tab3:
-        st.subheader("Geopolitical Risk Score — VIX Calibration")
+        st.subheader("Geopolitical Risk Score - VIX Calibration")
         _definition_block(
             "Validation Approach",
             "The composite risk score (40% correlation percentile + 35% commodity vol + "
             "25% equity realised vol) is compared against VIX as an <b>independent</b> "
             "stress benchmark. Equity realised vol is a strong VIX proxy but is computed "
-            "from raw returns, not from options pricing — making the R² a genuine out-of-model "
+            "from raw returns, not from options pricing - making the R² a genuine out-of-model "
             "validation rather than a tautology. "
             "Lead/lag analysis shows whether the score leads or lags VIX in time.",
         )
@@ -958,7 +958,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 fig_ll.update_layout(
                     template="purdue", height=300,
                     title=dict(text="Risk Score Lead/Lag vs VIX", font=dict(size=11)),
-                    xaxis=dict(title="Lag (days) — positive = score leads VIX"),
+                    xaxis=dict(title="Lag (days) - positive = score leads VIX"),
                     yaxis=dict(title="Pearson correlation"),
                     margin=dict(l=50, r=40, t=50, b=50),
                 )
@@ -1017,7 +1017,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
             _takeaway_block(
                 f"The 3-component risk score explains <b>R²={r2:.3f}</b> of VIX variance. "
-                "Equity realised vol (25% weight) is the strongest new component — "
+                "Equity realised vol (25% weight) is the strongest new component - "
                 "it is computed from raw price returns, not options pricing, so the R² "
                 "reflects genuine predictive overlap rather than circular dependency. "
                 f"The score {'leads' if best_lag > 0 else 'lags'} VIX by {abs(best_lag)} "
@@ -1025,10 +1025,10 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 4 — COT Contrarian Accuracy
+    # TAB 4 - COT Contrarian Accuracy
     # ══════════════════════════════════════════════════════════════════════
     with tab4:
-        st.subheader("CFTC COT Contrarian Signal — Price Reversal Accuracy")
+        st.subheader("CFTC COT Contrarian Signal - Price Reversal Accuracy")
         _definition_block(
             "Signal Logic",
             "A contrarian signal fires when net speculative positioning exceeds ±25% of open interest. "
@@ -1051,8 +1051,8 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 valid_long  = cot_acc["Long Accuracy (%)"].dropna()
                 valid_short = cot_acc["Short Accuracy (%)"].dropna()
                 ka, kb, kc = st.columns(3)
-                ka.metric("Avg Long Accuracy",  f"{valid_long.mean():.1f}%"  if not valid_long.empty  else "—")
-                kb.metric("Avg Short Accuracy", f"{valid_short.mean():.1f}%" if not valid_short.empty else "—")
+                ka.metric("Avg Long Accuracy",  f"{valid_long.mean():.1f}%"  if not valid_long.empty  else "-")
+                kb.metric("Avg Short Accuracy", f"{valid_short.mean():.1f}%" if not valid_short.empty else "-")
                 kc.metric("Markets > 55% Acc",
                           int((valid_long > 55).sum() + (valid_short > 55).sum()))
 
@@ -1069,7 +1069,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     styled_cot = (
                         cot_acc.style
                         .applymap(_acc_col, subset=["Long Accuracy (%)", "Short Accuracy (%)"])
-                        .format(na_rep="—")
+                        .format(na_rep="-")
                     )
                     st.dataframe(styled_cot, use_container_width=True, hide_index=True)
 
@@ -1116,12 +1116,12 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 )
 
     # ── Page conclusion ──────────────────────────────────────────────────────
-    bal_str = f"{stats['balanced_acc']:.0f}%" if stats["balanced_acc"] else "—"
-    f1_str  = f"{stats['f1']:.0f}%"           if stats["f1"]           else "—"
+    bal_str = f"{stats['balanced_acc']:.0f}%" if stats["balanced_acc"] else "-"
+    f1_str  = f"{stats['f1']:.0f}%"           if stats["f1"]           else "-"
     _page_conclusion(
         "Signal Performance Summary",
         f"The composite stress regime detector (4-feature weighted percentile composite) achieves "
-        f"balanced accuracy of {bal_str} and F1 of {f1_str} against a VIX-based ground truth — "
+        f"balanced accuracy of {bal_str} and F1 of {f1_str} against a VIX-based ground truth - "
         "well above the 50% random baseline and substantially higher than the prior single-signal version. "
         "The walk-forward ML classifier (logistic regression on 4 features, strictly out-of-sample) "
         "further improves predictions. "

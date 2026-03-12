@@ -1,5 +1,5 @@
 """
-Page 2 — Geopolitical Triggers
+Page 2 - Geopolitical Triggers
 Event timeline, pre/during/post performance, correlation shifts, vol comparison.
 """
 
@@ -50,7 +50,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Event selector ─────────────────────────────────────────────────────
     st.markdown("---")
-    event_names = [f"{e['label']} — {e['name']}" for e in GEOPOLITICAL_EVENTS]
+    event_names = [f"{e['label']} - {e['name']}" for e in GEOPOLITICAL_EVENTS]
     selected = st.selectbox("Select event", event_names, index=6)  # Default: Ukraine War
     ev = GEOPOLITICAL_EVENTS[event_names.index(selected)]
 

@@ -1,5 +1,5 @@
 """
-Page 3 — Correlation Analysis
+Page 3 - Correlation Analysis
 Rolling correlations, DCC-GARCH dynamic pairs, regime detection, pair explorer.
 """
 
@@ -52,7 +52,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     tab1, tab2, tab3 = st.tabs(["Rolling Correlation", "DCC-GARCH", "Regime Detection"])
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 1 — Rolling Correlation
+    # TAB 1 - Rolling Correlation
     # ══════════════════════════════════════════════════════════════════════
     with tab1:
         st.subheader("Rolling Pairwise Correlation Explorer")
@@ -95,7 +95,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             pctile = (rc.dropna() <= latest_corr).mean() * 100
             _takeaway_block(
                 f"<b>{asset_a} / {asset_b}</b>: current {window}d correlation = "
-                f"<b>{latest_corr:.3f}</b> — "
+                f"<b>{latest_corr:.3f}</b> - "
                 f"{pctile:.0f}th historical percentile."
             )
 
@@ -129,13 +129,13 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         )
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 2 — DCC-GARCH
+    # TAB 2 - DCC-GARCH
     # ══════════════════════════════════════════════════════════════════════
     with tab2:
         st.subheader("DCC-GARCH Dynamic Conditional Correlation")
         _definition_block(
             "DCC-GARCH (Engle, 2002)",
-            "Unlike rolling Pearson, DCC-GARCH accounts for heteroskedasticity — "
+            "Unlike rolling Pearson, DCC-GARCH accounts for heteroskedasticity - "
             "it explicitly models the time-varying variance structure of each asset. "
             "DCC captures correlation dynamics more accurately during volatile periods "
             "and gives smoother, more statistically robust estimates.",
@@ -168,7 +168,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             latest_dcc = dcc_series.dropna().iloc[-1] if not dcc_series.dropna().empty else 0
             _takeaway_block(
                 f"<b>{dcc_eq} / {dcc_cmd}</b>: DCC correlation = <b>{latest_dcc:.3f}</b>. "
-                "DCC typically diverges from rolling Pearson during regime transitions — "
+                "DCC typically diverges from rolling Pearson during regime transitions - "
                 "the GARCH component captures volatility clustering that biases static estimates."
             )
 
@@ -197,7 +197,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             _chart(_style_fig(fig_dcc2, height=400))
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 3 — Regime Detection
+    # TAB 3 - Regime Detection
     # ══════════════════════════════════════════════════════════════════════
     with tab3:
         st.subheader("Cross-Asset Correlation Regime Detection")
@@ -264,7 +264,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 f"Current regime: <b style='color:{_REGIME_COLORS[current]}'>"
                 f"{_REGIME_NAMES[current]}</b>. "
                 "Crisis regimes (historically ~8–12% of trading days) coincide with "
-                "the most profitable cross-asset hedging windows — but also the highest "
+                "the most profitable cross-asset hedging windows - but also the highest "
                 "basis risk as correlations can snap back abruptly."
             )
 

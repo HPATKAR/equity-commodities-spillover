@@ -1,5 +1,5 @@
 """
-Page 5 — Commodities to Watch
+Page 5 - Commodities to Watch
 Live snapshot, intraday (hourly) price & vol, daily historical charts, commodity cards.
 """
 
@@ -85,7 +85,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "Hourly Data",
         "yfinance provides hourly OHLCV for up to 730 days. "
         "Volatility is annualised using σ_hourly × √(252 × 23) "
-        "— commodity futures trade ~23 hours/day on CME Globex.",
+        "- commodity futures trade ~23 hours/day on CME Globex.",
     )
 
     with st.spinner("Loading hourly prices…"):
@@ -321,7 +321,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         st.subheader("Rolling 24h Hourly Correlation vs S&P 500 (Recent)")
         _section_note(
             "Computed on hourly log returns with a 24-bar rolling window. "
-            "Shows intraday co-movement — spikes reveal short-term contagion "
+            "Shows intraday co-movement - spikes reveal short-term contagion "
             "faster than daily data."
         )
         sp_h = h_eq_r["S&P 500"]
@@ -385,7 +385,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
 
     # ── CFTC COT Positioning ──────────────────────────────────────────────
     st.markdown("---")
-    st.subheader("CFTC Commitments of Traders — Speculative Positioning")
+    st.subheader("CFTC Commitments of Traders - Speculative Positioning")
     _definition_block(
         "COT Report (CFTC)",
         "The CFTC publishes weekly Commitments of Traders reports showing how "
@@ -428,15 +428,15 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
 
         _takeaway_block(
             "Extreme speculative positioning is a powerful contrarian indicator. "
-            "When non-commercial traders are maximally long (>+25% of OI) — typically near "
-            "commodity price peaks — a reversal often follows as longs are forced to unwind. "
+            "When non-commercial traders are maximally long (>+25% of OI) - typically near "
+            "commodity price peaks - a reversal often follows as longs are forced to unwind. "
             "The reverse applies for crowded shorts. Use alongside the correlation regime "
             "to distinguish supply-driven moves from speculative crowding."
         )
 
     _section_note(
         "Daily prices from Yahoo Finance. Daily vol: σ × √252. "
-        "Hourly vol: σ_hourly × √(252 × 23) — commodity futures trade ~23h/day. "
+        "Hourly vol: σ_hourly × √(252 × 23) - commodity futures trade ~23h/day. "
         "Hourly lookback capped at 730 days by yfinance. "
         "COT data: CFTC disaggregated futures-only, updated weekly (Tuesday releases)."
     )

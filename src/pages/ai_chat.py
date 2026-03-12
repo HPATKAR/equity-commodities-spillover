@@ -1,7 +1,7 @@
 """
-Page 9 — AI Analyst
+Page 9 - AI Analyst
 OpenAI GPT-4o chatbot with live dashboard context injected into the system prompt.
-Institutional terminal aesthetic — no emojis, clean layout, sticky chat bar.
+Institutional terminal aesthetic - no emojis, clean layout, sticky chat bar.
 """
 
 from __future__ import annotations
@@ -168,7 +168,7 @@ def page_ai_chat(start: str, end: str) -> None:
         border-color: #CFB991 !important;
         box-shadow: 0 0 0 1px #CFB991 !important;
     }
-    /* Submit button — hide the broken Material Icons text, show clean arrow */
+    /* Submit button - hide the broken Material Icons text, show clean arrow */
     [data-testid="stChatInputSubmitButton"] button {
         background: #000 !important;
         font-size: 0 !important;
@@ -192,7 +192,7 @@ def page_ai_chat(start: str, end: str) -> None:
     [data-testid="stChatInputSubmitButton"] button svg {
         display: none !important;
     }
-    /* Avatar — clean minimal style */
+    /* Avatar - clean minimal style */
     [data-testid="stChatMessageAvatarUser"],
     [data-testid="stChatMessageAvatarAssistant"] {
         background: #f0ede8 !important;

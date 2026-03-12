@@ -1,5 +1,5 @@
 """
-Page 7 — Portfolio Stress Tester
+Page 7 - Portfolio Stress Tester
 Build a custom equity/commodity allocation (indices + S&P 500 individual stocks),
 assign weights via an interactive table, and stress-test against every historical
 geopolitical event in the dashboard.
@@ -102,11 +102,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Build a custom multi-asset portfolio — mix global equity indices, commodity futures, "
-        "and any S&P 500 individual stock — assign weights via an interactive editor, "
+        "Build a custom multi-asset portfolio - mix global equity indices, commodity futures, "
+        "and any S&P 500 individual stock - assign weights via an interactive editor, "
         "and stress-test against every historical geopolitical and macro event. "
         "Metrics: cumulative return (pre/during/post), max drawdown, Sharpe ratio. "
-        "Not investment advice — for educational purposes only."
+        "Not investment advice - for educational purposes only."
     )
 
     with st.spinner("Loading index and commodity price data…"):
@@ -118,7 +118,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Section A: Indices & Commodities ────────────────────────────────────
     st.markdown("---")
-    st.subheader("Section A — Global Indices & Commodities")
+    st.subheader("Section A - Global Indices & Commodities")
     _definition_block(
         "Indices & Commodity Weights",
         "Select indices and commodity futures. Enter weights (%) for each. "
@@ -202,11 +202,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Section B: S&P 500 Individual Stocks ────────────────────────────────
     st.markdown("---")
-    st.subheader("Section B — S&P 500 Individual Stocks")
+    st.subheader("Section B - S&P 500 Individual Stocks")
     _definition_block(
         "Stock Selection & Weight Editor",
         "Search and select any S&P 500 constituent. "
-        "Edit weights directly in the table below — or use the quick-fill buttons. "
+        "Edit weights directly in the table below - or use the quick-fill buttons. "
         "Weights are combined with Section A and normalised to 100% at run time. "
         "Stock prices are fetched from Yahoo Finance on demand (may take a few seconds for large baskets).",
     )
@@ -227,11 +227,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     filtered_sp500 = sp500_df if not sector_filter else sp500_df[sp500_df["sector"].isin(sector_filter)]
     stock_options  = [
-        f"{row['ticker']} — {row['name'][:40]}"
+        f"{row['ticker']} - {row['name'][:40]}"
         for _, row in filtered_sp500.iterrows()
     ]
     option_to_ticker = {
-        f"{row['ticker']} — {row['name'][:40]}": row['ticker']
+        f"{row['ticker']} - {row['name'][:40]}": row['ticker']
         for _, row in filtered_sp500.iterrows()
     }
 
@@ -326,7 +326,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         # Color-coded total weight indicator
         if total_w > 100.0:
             tw_color, tw_bg = "#c0392b", "#fdecea"
-            tw_status = f"⚠ Exceeds 100% — reduce weights or click Normalize"
+            tw_status = f"⚠ Exceeds 100% - reduce weights or click Normalize"
         elif total_w >= 90.0:
             tw_color, tw_bg = "#e67e22", "#fff8f0"
             tw_status = "Near limit"
@@ -377,7 +377,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     pre_days  = c3.slider("Pre-event window (days)",  10, 60, 30, key="st_pre")
     post_days = c4.slider("Post-event window (days)", 10, 90, 45, key="st_post")
 
-    event_labels = [f"{e['label']} — {e['name']}" for e in GEOPOLITICAL_EVENTS]
+    event_labels = [f"{e['label']} - {e['name']}" for e in GEOPOLITICAL_EVENTS]
     sel_events = st.multiselect(
         "Events to include", event_labels, default=event_labels, key="st_events",
     )
@@ -459,7 +459,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         .format({
             "Pre (%)": "{:+.2f}%", "During (%)": "{:+.2f}%",
             "Post (%)": "{:+.2f}%", "Max DD (%)": "{:.2f}%", "Sharpe": "{:.2f}",
-        }, na_rep="—")
+        }, na_rep="-")
     )
     st.dataframe(styled, use_container_width=True, hide_index=True, height=340)
 
@@ -523,7 +523,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Portfolio path (event windows) ────────────────────────────────────────
     st.markdown("---")
-    st.subheader("Portfolio Value Path — Event Windows (Indexed to 100)")
+    st.subheader("Portfolio Value Path - Event Windows (Indexed to 100)")
     _section_note(
         "Each line shows portfolio value indexed to 100 at event start. "
         "Dashed vertical marks: left = event start, right = event end."

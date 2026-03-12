@@ -1,5 +1,5 @@
 """
-Page 6 — Trade Ideas
+Page 6 - Trade Ideas
 Regime-triggered cross-asset trade cards, rationale, entry/exit levels.
 """
 
@@ -76,7 +76,7 @@ _TRADE_LIBRARY = [
         "name":      "Long Copper / Long S&P 500",
         "rationale": "Copper is the premier global growth bellwether. "
                      "When correlation is low, commodities and equities price "
-                     "independent fundamentals — copper rising with equities signals "
+                     "independent fundamentals - copper rising with equities signals "
                      "genuine demand expansion, not just liquidity.",
         "entry":     "Copper 60d momentum > 0, ISM Manufacturing > 50, cross-asset corr < 0.20",
         "exit":      "Copper momentum reversal; ISM contraction; Fed pause signals",
@@ -102,7 +102,7 @@ _TRADE_LIBRARY = [
     },
     {
         "regime":    [3],
-        "trigger":   "Full crisis — all correlations elevated",
+        "trigger":   "Full crisis - all correlations elevated",
         "name":      "Long Gold, Long Silver / Short Copper, Short Shanghai Comp",
         "rationale": "Full crisis regime: precious metals outperform as industrial metals "
                      "and EM equities (particularly China) collapse under dollar strength "
@@ -135,7 +135,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "Regime-triggered cross-asset trade ideas based on the current correlation regime, "
         "geopolitical context, and historical spillover patterns. Each card includes "
         "entry trigger, exit signal, rationale, and key risks. "
-        "Not investment advice — for research and education only."
+        "Not investment advice - for research and education only."
     )
 
     with st.spinner("Loading data…"):
@@ -282,7 +282,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<p style="font-size:0.74rem;color:#555960;line-height:1.65;margin-bottom:0.8rem">'
         'Generate a professionally formatted A4 research report covering the current regime, '
-        'all active trade ideas, geopolitical context, and methodology — suitable for '
+        'all active trade ideas, geopolitical context, and methodology - suitable for '
         'academic submission or institutional review.</p>',
         unsafe_allow_html=True,
     )
@@ -290,7 +290,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     if st.button("Generate PDF Report", key="gen_report", type="primary"):
         try:
             from src.reports.report_generator import generate_report
-            with st.spinner("Building report — generating charts…"):
+            with st.spinner("Building report - generating charts…"):
                 stress = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
                 pdf_bytes = generate_report(
                     start=start,
