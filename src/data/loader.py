@@ -210,6 +210,166 @@ def load_hourly_returns(
     return _log_returns(eq), _log_returns(cmd)
 
 
+# ── S&P 500 individual stock loaders ──────────────────────────────────────
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def get_sp500_constituents() -> pd.DataFrame:
+    """
+    Fetch S&P 500 constituent list from Wikipedia.
+    Returns DataFrame with columns: ticker, name, sector.
+    Tickers are already normalised for yfinance (dots → dashes).
+    Falls back to a curated top-100 list if Wikipedia is unreachable.
+    """
+    try:
+        tables = pd.read_html(
+            "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
+            header=0,
+        )
+        df = tables[0][["Symbol", "Security", "GICS Sector"]].copy()
+        df.columns = ["ticker", "name", "sector"]
+        df["ticker"] = df["ticker"].str.strip().str.replace(".", "-", regex=False)
+        return df.sort_values("ticker").reset_index(drop=True)
+    except Exception:
+        return _SP500_FALLBACK.copy()
+
+
+# Top-100 S&P 500 fallback (market-cap ordered, approximate)
+_SP500_FALLBACK = pd.DataFrame([
+    ("AAPL", "Apple Inc.", "Information Technology"),
+    ("MSFT", "Microsoft Corp.", "Information Technology"),
+    ("NVDA", "NVIDIA Corp.", "Information Technology"),
+    ("GOOGL", "Alphabet Inc. Class A", "Communication Services"),
+    ("AMZN", "Amazon.com Inc.", "Consumer Discretionary"),
+    ("META", "Meta Platforms Inc.", "Communication Services"),
+    ("BRK-B", "Berkshire Hathaway Inc. Class B", "Financials"),
+    ("LLY",  "Eli Lilly and Company", "Health Care"),
+    ("TSLA", "Tesla Inc.", "Consumer Discretionary"),
+    ("JPM",  "JPMorgan Chase & Co.", "Financials"),
+    ("V",    "Visa Inc.", "Financials"),
+    ("UNH",  "UnitedHealth Group Inc.", "Health Care"),
+    ("XOM",  "Exxon Mobil Corp.", "Energy"),
+    ("MA",   "Mastercard Inc.", "Financials"),
+    ("AVGO", "Broadcom Inc.", "Information Technology"),
+    ("HD",   "Home Depot Inc.", "Consumer Discretionary"),
+    ("JNJ",  "Johnson & Johnson", "Health Care"),
+    ("PG",   "Procter & Gamble Co.", "Consumer Staples"),
+    ("COST", "Costco Wholesale Corp.", "Consumer Staples"),
+    ("MRK",  "Merck & Co. Inc.", "Health Care"),
+    ("ABBV", "AbbVie Inc.", "Health Care"),
+    ("WMT",  "Walmart Inc.", "Consumer Staples"),
+    ("CVX",  "Chevron Corp.", "Energy"),
+    ("CRM",  "Salesforce Inc.", "Information Technology"),
+    ("BAC",  "Bank of America Corp.", "Financials"),
+    ("NFLX", "Netflix Inc.", "Communication Services"),
+    ("AMD",  "Advanced Micro Devices Inc.", "Information Technology"),
+    ("ACN",  "Accenture Plc", "Information Technology"),
+    ("TMO",  "Thermo Fisher Scientific Inc.", "Health Care"),
+    ("LIN",  "Linde Plc", "Materials"),
+    ("ORCL", "Oracle Corp.", "Information Technology"),
+    ("ADBE", "Adobe Inc.", "Information Technology"),
+    ("CSCO", "Cisco Systems Inc.", "Information Technology"),
+    ("MCD",  "McDonald's Corp.", "Consumer Discretionary"),
+    ("DIS",  "Walt Disney Co.", "Communication Services"),
+    ("GE",   "GE Aerospace", "Industrials"),
+    ("TXN",  "Texas Instruments Inc.", "Information Technology"),
+    ("INTU", "Intuit Inc.", "Information Technology"),
+    ("WFC",  "Wells Fargo & Co.", "Financials"),
+    ("CAT",  "Caterpillar Inc.", "Industrials"),
+    ("IBM",  "IBM Corp.", "Information Technology"),
+    ("NEE",  "NextEra Energy Inc.", "Utilities"),
+    ("RTX",  "RTX Corp.", "Industrials"),
+    ("SPGI", "S&P Global Inc.", "Financials"),
+    ("AMGN", "Amgen Inc.", "Health Care"),
+    ("LOW",  "Lowe's Companies Inc.", "Consumer Discretionary"),
+    ("ISRG", "Intuitive Surgical Inc.", "Health Care"),
+    ("BKNG", "Booking Holdings Inc.", "Consumer Discretionary"),
+    ("GS",   "Goldman Sachs Group Inc.", "Financials"),
+    ("HON",  "Honeywell International Inc.", "Industrials"),
+    ("MS",   "Morgan Stanley", "Financials"),
+    ("C",    "Citigroup Inc.", "Financials"),
+    ("BSX",  "Boston Scientific Corp.", "Health Care"),
+    ("UBER", "Uber Technologies Inc.", "Industrials"),
+    ("DE",   "Deere & Co.", "Industrials"),
+    ("MMC",  "Marsh & McLennan Companies Inc.", "Financials"),
+    ("AXP",  "American Express Co.", "Financials"),
+    ("SYK",  "Stryker Corp.", "Health Care"),
+    ("REGN", "Regeneron Pharmaceuticals Inc.", "Health Care"),
+    ("BLK",  "BlackRock Inc.", "Financials"),
+    ("VRTX", "Vertex Pharmaceuticals Inc.", "Health Care"),
+    ("PANW", "Palo Alto Networks Inc.", "Information Technology"),
+    ("ADI",  "Analog Devices Inc.", "Information Technology"),
+    ("BA",   "Boeing Co.", "Industrials"),
+    ("SCHW", "Charles Schwab Corp.", "Financials"),
+    ("MDT",  "Medtronic Plc", "Health Care"),
+    ("CI",   "Cigna Group", "Health Care"),
+    ("PLD",  "Prologis Inc.", "Real Estate"),
+    ("MU",   "Micron Technology Inc.", "Information Technology"),
+    ("SO",   "Southern Co.", "Utilities"),
+    ("ELV",  "Elevance Health Inc.", "Health Care"),
+    ("DUK",  "Duke Energy Corp.", "Utilities"),
+    ("TJX",  "TJX Companies Inc.", "Consumer Discretionary"),
+    ("ETN",  "Eaton Corp. Plc", "Industrials"),
+    ("COF",  "Capital One Financial Corp.", "Financials"),
+    ("APH",  "Amphenol Corp.", "Information Technology"),
+    ("ICE",  "Intercontinental Exchange Inc.", "Financials"),
+    ("COP",  "ConocoPhillips", "Energy"),
+    ("ZTS",  "Zoetis Inc.", "Health Care"),
+    ("AMAT", "Applied Materials Inc.", "Information Technology"),
+    ("CME",  "CME Group Inc.", "Financials"),
+    ("AON",  "Aon Plc", "Financials"),
+    ("FI",   "Fiserv Inc.", "Financials"),
+    ("NOC",  "Northrop Grumman Corp.", "Industrials"),
+    ("LMT",  "Lockheed Martin Corp.", "Industrials"),
+    ("PGR",  "Progressive Corp.", "Financials"),
+    ("USB",  "U.S. Bancorp", "Financials"),
+    ("AIG",  "American International Group Inc.", "Financials"),
+    ("MO",   "Altria Group Inc.", "Consumer Staples"),
+    ("PM",   "Philip Morris International Inc.", "Consumer Staples"),
+    ("KO",   "Coca-Cola Co.", "Consumer Staples"),
+    ("PEP",  "PepsiCo Inc.", "Consumer Staples"),
+    ("GILD", "Gilead Sciences Inc.", "Health Care"),
+    ("EW",   "Edwards Lifesciences Corp.", "Health Care"),
+    ("KLAC", "KLA Corp.", "Information Technology"),
+    ("LRCX", "Lam Research Corp.", "Information Technology"),
+    ("ADM",  "Archer-Daniels-Midland Co.", "Consumer Staples"),
+    ("NKE",  "Nike Inc.", "Consumer Discretionary"),
+    ("T",    "AT&T Inc.", "Communication Services"),
+    ("VZ",   "Verizon Communications Inc.", "Communication Services"),
+], columns=["ticker", "name", "sector"])
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_sp500_prices(
+    tickers_tuple: tuple,          # tuple for hashability
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """
+    Batch download S&P 500 individual stock close prices via yfinance.
+    Accepts a tuple of ticker strings (already yfinance-normalised, dots→dashes).
+    Returns a DataFrame with ticker symbols as column names.
+    """
+    if not tickers_tuple:
+        return pd.DataFrame()
+    raw = yf.download(
+        list(tickers_tuple),
+        start=start,
+        end=end,
+        auto_adjust=True,
+        progress=False,
+        threads=True,
+    )
+    if raw.empty:
+        return pd.DataFrame()
+    if isinstance(raw.columns, pd.MultiIndex):
+        prices = raw["Close"].copy()
+    else:
+        prices = raw[["Close"]].copy()
+        if len(tickers_tuple) == 1:
+            prices.columns = list(tickers_tuple)
+    return _fill_gaps(prices)
+
+
 # ── Live snapshot (no cache, called only in watchlist) ─────────────────────
 
 def load_live_snapshot(tickers: dict[str, str]) -> pd.DataFrame:

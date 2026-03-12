@@ -277,7 +277,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
             ytd_color = "#2e7d32" if ytd_pct >= 0 else "#c0392b"
 
             vol_24h_html = (
-                f'<div style="font-size:0.68rem;color:#555960">'
+                f'<div style="font-size:0.68rem;color:#333333">'
                 f'24h Vol <span style="font-weight:600;color:{regime_col}">'
                 f'{vol_24h:.1f}%</span></div>'
             ) if vol_24h > 0 else ""
@@ -288,7 +288,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div>
                     <span style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.12em;
-                    color:#9D9795;font-weight:600">{group}</span>
+                    color:#666666;font-weight:600">{group}</span>
                     <div style="font-size:0.9rem;font-weight:700;color:#000;
                     font-family:'DM Sans',sans-serif">{name}</div>
                   </div>
@@ -300,10 +300,10 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                   </div>
                 </div>
                 <div style="display:flex;gap:1rem;margin-top:0.5rem">
-                  <div style="font-size:0.68rem;color:#555960">
+                  <div style="font-size:0.68rem;color:#333333">
                     YTD <span style="color:{ytd_color};font-weight:600">{ytd_pct:+.1f}%</span>
                   </div>
-                  <div style="font-size:0.68rem;color:#555960">
+                  <div style="font-size:0.68rem;color:#333333">
                     30d Vol <span style="color:{regime_col};font-weight:600">{vol_30d:.1f}% ({regime_lbl})</span>
                   </div>
                   {vol_24h_html}

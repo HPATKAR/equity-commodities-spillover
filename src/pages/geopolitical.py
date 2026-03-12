@@ -66,7 +66,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     c_info2.markdown(
         f"""<div style="border-left:3px solid #E8E5E0;padding:0.4rem 0.8rem">
         <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;
-        color:#9D9795;font-weight:600">Period</div>
+        color:#666666;font-weight:600">Period</div>
         <div style="font-size:0.8rem;font-weight:600;color:#000;
         font-family:'JetBrains Mono',monospace">
         {ev['start'].strftime('%d %b %Y')} → {ev['end'].strftime('%d %b %Y')}</div>
@@ -75,8 +75,8 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     c_info3.markdown(
         f"""<div style="border-left:3px solid #E8E5E0;padding:0.4rem 0.8rem">
         <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;
-        color:#9D9795;font-weight:600">Description</div>
-        <div style="font-size:0.68rem;color:#555960;line-height:1.5">
+        color:#666666;font-weight:600">Description</div>
+        <div style="font-size:0.68rem;color:#333333;line-height:1.5">
         {ev['description'][:180]}…</div>
         </div>""", unsafe_allow_html=True,
     )

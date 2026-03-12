@@ -79,7 +79,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
             padding:0.6rem 0.8rem;background:#fff">
             <div style="font-size:0.55rem;font-weight:600;letter-spacing:0.14em;
-            text-transform:uppercase;color:#9D9795;margin-bottom:3px">{label}</div>
+            text-transform:uppercase;color:#666666;margin-bottom:3px">{label}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;
             font-weight:700;color:#000">{value}</div>
             {"" if not delta else f'<div style="font-size:0.65rem;color:{dcolor}">{delta}</div>'}
@@ -91,7 +91,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
         padding:0.6rem 0.8rem;background:#fff">
         <div style="font-size:0.55rem;font-weight:600;letter-spacing:0.14em;
-        text-transform:uppercase;color:#9D9795;margin-bottom:3px">Correlation Regime</div>
+        text-transform:uppercase;color:#666666;margin-bottom:3px">Correlation Regime</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;
         font-weight:700;color:{regime_color}">{regime_name}</div></div>""",
         unsafe_allow_html=True,
@@ -123,7 +123,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     with st.spinner("Computing risk score…"):
         risk_result = compute_risk_score(avg_corr, cmd_r)
-        score_hist  = risk_score_history(avg_corr, cmd_r)
+        score_hist  = risk_score_history(avg_corr, cmd_r, eq_r=eq_r)
 
     gc1, gc2 = st.columns([1, 2])
     with gc1:
@@ -135,7 +135,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;'
                 f'padding:3px 0;border-bottom:1px solid #F0EDEA;font-size:0.68rem">'
-                f'<span style="color:#555960">{name}</span>'
+                f'<span style="color:#333333">{name}</span>'
                 f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;'
                 f'color:{col_c}">{val:.0f}</span></div>',
                 unsafe_allow_html=True,
@@ -155,27 +155,27 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "Powered by the Anthropic API."
     )
 
-    anthropic_key = ""
+    openai_key = ""
     try:
-        anthropic_key = st.secrets.get("keys", {}).get("anthropic_api_key", "") or ""
+        openai_key = st.secrets.get("keys", {}).get("openai_api_key", "") or ""
     except Exception:
         pass
 
-    if not anthropic_key:
+    if not openai_key:
         st.info(
-            "Add your `anthropic_api_key` to `.streamlit/secrets.toml` to enable AI narratives.",
-            icon="🤖",
+            "Add your `openai_api_key` to `.streamlit/secrets.toml` to enable AI narratives.",
         )
     else:
         if st.button("Generate Market Narrative", type="primary", key="gen_narrative"):
+            import datetime as _dt
             active_events = [
-                e["label"] for e in GEOPOLITICAL_EVENTS if e["end"] >= __import__("datetime").date.today()
+                e["label"] for e in GEOPOLITICAL_EVENTS if e["end"] >= _dt.date.today()
             ]
             prompt = (
                 f"You are a quantitative cross-asset analyst at a macro hedge fund. "
                 f"Write a concise, professional 2-paragraph market narrative (150-200 words total) "
                 f"based on the following live dashboard data:\n\n"
-                f"Date: {__import__('datetime').date.today()}\n"
+                f"Date: {_dt.date.today()}\n"
                 f"Correlation Regime: {regime_name} (avg 60d corr: {current_avg_corr:.3f})\n"
                 f"Geopolitical Risk Score: {risk_result['score']}/100 ({risk_result['label']})\n"
                 f"Best equity (1M): {best_eq} ({recent_eq[best_eq]*100:+.1f}%)\n"
@@ -189,23 +189,22 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 f"specific trade implications. Be precise and analytical. No disclaimers."
             )
             try:
-                import anthropic as _anthropic
-                client = _anthropic.Anthropic(api_key=anthropic_key)
+                from openai import OpenAI as _OpenAI
+                client = _OpenAI(api_key=openai_key)
                 with st.spinner("Generating narrative…"):
-                    msg = client.messages.create(
-                        model="claude-opus-4-6",
+                    resp = client.chat.completions.create(
+                        model="gpt-4o",
                         max_tokens=400,
                         messages=[{"role": "user", "content": prompt}],
                     )
-                narrative = msg.content[0].text
-                regime_col_narrative = regime_color
+                narrative = resp.choices[0].message.content
                 st.markdown(
-                    f"""<div style="border-left:4px solid {regime_col_narrative};
+                    f"""<div style="border-left:4px solid {regime_color};
                     padding:1rem 1.2rem;background:#fafaf8;margin:0.8rem 0;
                     border-radius:0 4px 4px 0">
                     <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
-                    text-transform:uppercase;color:{regime_col_narrative};margin-bottom:0.5rem">
-                    AI MARKET COMMENTARY · {__import__('datetime').datetime.now().strftime('%d %b %Y %H:%M')} UTC
+                    text-transform:uppercase;color:{regime_color};margin-bottom:0.5rem">
+                    AI MARKET COMMENTARY · {_dt.datetime.now().strftime('%d %b %Y %H:%M')} UTC
                     </div>
                     <div style="font-size:0.78rem;color:#2A2A2A;line-height:1.75;
                     font-family:'DM Sans',sans-serif">{narrative.replace(chr(10), '<br>')}</div>
@@ -291,9 +290,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _chart(fig_heat)
 
     _section_note(
-        "🔴 Red = positive correlation (equities and commodities move together — risk-off or inflation). "
-        "🔵 Blue = negative correlation (flight-to-safety or supply shock divergence). "
-        "White = decorrelated."
+        "<b>Red</b> = positive correlation (equities and commodities move together — risk-off or inflation). "
+        "<b>Blue</b> = negative correlation (flight-to-safety or supply shock divergence). "
+        "<b>White</b> = decorrelated."
     )
 
     # ── Active geopolitical events ─────────────────────────────────────────
@@ -310,7 +309,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 letter-spacing:0.08em;color:{ev['color']}">{ev['category']} · {ev['label']}</span>
                 <span style="font-size:0.72rem;color:#000;font-weight:600;
                 margin-left:0.5rem">{ev['name']}</span>
-                <p style="font-size:0.7rem;color:#555960;margin:0.2rem 0 0;
+                <p style="font-size:0.7rem;color:#333333;margin:0.2rem 0 0;
                 line-height:1.55">{ev['description']}</p>
                 </div>""",
                 unsafe_allow_html=True,

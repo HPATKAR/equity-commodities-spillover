@@ -120,12 +120,16 @@ def compute_risk_score(
 def risk_score_history(
     avg_corr: pd.Series,
     cmd_r: pd.DataFrame,
+    eq_r: pd.DataFrame | None = None,
     window: int = 252,
 ) -> pd.Series:
     """
-    Rolling daily risk score (correlation + vol components only,
-    since VIX and active-event counts can't be backcalculated easily).
-    Weights renormalised to 57% corr / 43% vol.
+    Rolling daily risk score with up to 3 components:
+      40% cross-asset correlation percentile
+      35% commodity vol z-score  (energy + metals)
+      25% equity realised vol    (requires eq_r; strong VIX proxy)
+
+    If eq_r is not supplied, falls back to 57% corr / 43% vol (legacy).
     """
     if avg_corr.empty or cmd_r.empty:
         return pd.Series(dtype=float)
@@ -139,15 +143,33 @@ def risk_score_history(
     cols   = [c for c in energy + metals if c in cmd_r.columns]
 
     if cols:
-        rv       = cmd_r[cols].rolling(30).std() * np.sqrt(252) * 100
-        avg_vol  = rv.mean(axis=1)
-        v_mean   = avg_vol.rolling(window, min_periods=60).mean()
-        v_std    = avg_vol.rolling(window, min_periods=60).std().replace(0, np.nan)
-        z        = (avg_vol - v_mean) / v_std
+        rv        = cmd_r[cols].rolling(30).std() * np.sqrt(252) * 100
+        avg_vol   = rv.mean(axis=1)
+        v_mean    = avg_vol.rolling(window, min_periods=60).mean()
+        v_std     = avg_vol.rolling(window, min_periods=60).std().replace(0, np.nan)
+        z         = (avg_vol - v_mean) / v_std
         vol_score = (50 + z.clip(-3, 3) * 15).clip(0, 100)
     else:
         vol_score = pd.Series(50.0, index=avg_corr.index)
 
+    # Equity vol component — realized vol of equal-weight equity universe
+    if eq_r is not None and not eq_r.empty:
+        eq_vol_raw  = eq_r.rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
+        ev_mean     = eq_vol_raw.rolling(window, min_periods=60).mean()
+        ev_std      = eq_vol_raw.rolling(window, min_periods=60).std().replace(0, np.nan)
+        ev_z        = (eq_vol_raw - ev_mean) / ev_std
+        eq_vol_score = (50 + ev_z.clip(-3, 3) * 15).clip(0, 100)
+
+        aligned = pd.concat([corr_pct, vol_score, eq_vol_score], axis=1).dropna()
+        if not aligned.empty:
+            aligned.columns = ["corr", "vol", "eq"]
+            return (
+                0.40 * aligned["corr"]
+                + 0.35 * aligned["vol"]
+                + 0.25 * aligned["eq"]
+            ).clip(0, 100).round(1)
+
+    # Fallback: 2-component version
     aligned = pd.concat([corr_pct, vol_score], axis=1).dropna()
     if aligned.empty:
         return pd.Series(dtype=float)
