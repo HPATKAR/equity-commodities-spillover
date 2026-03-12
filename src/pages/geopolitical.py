@@ -116,7 +116,8 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
 
     normed = event_normalised_prices(
         all_prices[assets_in_prices],
-        ev["start"], pre_days=pre_days, post_days=post_days,
+        ev["start"], event_end=ev["end"],
+        pre_days=pre_days, post_days=post_days,
     )
 
     if not normed.empty:
@@ -163,10 +164,13 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 marker_color=bar_colors[i % 3],
             ))
         fig_bar.update_layout(
+            template="purdue",
             barmode="group",
-            yaxis_title="Cumulative Return (%)",
+            height=400,
+            yaxis=dict(title="Cumulative Return (%)", ticksuffix="%"),
+            xaxis=dict(tickangle=-35, tickfont=dict(size=9)),
         )
-        _chart(_style_fig(fig_bar, height=400))
+        _chart(fig_bar)
 
     # ── 3. Volatility shift ────────────────────────────────────────────────
     st.subheader("Pre vs Post-Event Annualised Volatility")
@@ -188,8 +192,14 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             x=vol_df.index, y=vol_df["Post-Event Vol %"],
             marker_color=ev["color"],
         ))
-        fig_vol.update_layout(barmode="group", yaxis_title="Annualised Vol (%)")
-        _chart(_style_fig(fig_vol, height=350))
+        fig_vol.update_layout(
+            template="purdue",
+            barmode="group",
+            height=350,
+            yaxis=dict(title="Annualised Vol (%)", ticksuffix="%"),
+            xaxis=dict(tickangle=-35, tickfont=dict(size=9)),
+        )
+        _chart(fig_vol)
 
     _section_note(
         f"Volatility is annualised (daily std × √252). "

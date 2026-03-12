@@ -60,16 +60,24 @@ def event_window_returns(
 def event_normalised_prices(
     prices: pd.DataFrame,
     event_start: date,
+    event_end: Optional[date] = None,
     pre_days: int = 30,
     post_days: int = 90,
     assets: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     """
     Index prices to 100 at event_start for the given window.
-    Useful for comparing cross-asset performance during an event.
+    Window: [event_start - pre_days, event_end + post_days].
+    For ongoing events (event_end = today), post window extends post_days beyond today.
     """
+    today = date.today()
+    if event_end is None:
+        event_end = event_start
+    # Cap event_end at today so we don't request future data
+    event_end_capped = min(event_end, today)
+
     t0 = pd.Timestamp(event_start) - pd.Timedelta(days=pre_days)
-    t1 = pd.Timestamp(event_start) + pd.Timedelta(days=post_days)
+    t1 = pd.Timestamp(event_end_capped) + pd.Timedelta(days=post_days)
 
     if assets:
         prices = prices[[c for c in assets if c in prices.columns]]
@@ -78,7 +86,10 @@ def event_normalised_prices(
     if sliced.empty:
         return sliced
 
-    base  = sliced.loc[pd.Timestamp(event_start):].iloc[0]
+    base_slice = sliced.loc[pd.Timestamp(event_start):]
+    if base_slice.empty:
+        return pd.DataFrame()
+    base   = base_slice.iloc[0]
     normed = (sliced / base) * 100
     return normed
 
@@ -92,10 +103,11 @@ def pre_post_volatility(
     """
     Annualised volatility (std * sqrt(252)) for:
       pre-event  : [event_start - window, event_start)
-      post-event : (event_end, event_end + window]
+      post-event : (event_end, event_end + window]  — capped at today
     """
+    today = pd.Timestamp(date.today())
     t0 = pd.Timestamp(event_start)
-    t1 = pd.Timestamp(event_end)
+    t1 = min(pd.Timestamp(event_end), today)
 
     pre_ret  = returns.loc[t0 - pd.Timedelta(days=window): t0]
     post_ret = returns.loc[t1: t1 + pd.Timedelta(days=window)]
@@ -127,8 +139,9 @@ def correlation_shift(
     eq_cols  = equity_returns.columns.tolist()
     cmd_cols = commodity_returns.columns.tolist()
 
+    today = pd.Timestamp(date.today())
     t0 = pd.Timestamp(event_start)
-    t1 = pd.Timestamp(event_end)
+    t1 = min(pd.Timestamp(event_end), today)
 
     pre    = combined.loc[t0 - pd.Timedelta(days=pre_days): t0]
     during = combined.loc[t0: t1]
