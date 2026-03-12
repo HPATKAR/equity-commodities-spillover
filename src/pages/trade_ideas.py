@@ -15,6 +15,7 @@ from src.data.loader import load_returns, load_commodity_prices
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
 from src.analysis.correlations import (
     average_cross_corr_series, detect_correlation_regime, rolling_correlation,
+    composite_stress_index,
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
@@ -159,9 +160,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         background:{r_color};flex-shrink:0"></div>
         <div>
         <span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;
-        color:#9D9795;font-weight:600">Current Regime · </span>
+        color:#666666;font-weight:600">Current Regime · </span>
         <span style="font-size:0.82rem;font-weight:700;color:{r_color}">{r_name}</span>
-        <span style="font-size:0.7rem;color:#555960;margin-left:0.5rem">
+        <span style="font-size:0.7rem;color:#333333;margin-left:0.5rem">
         (avg cross-asset corr: {avg_corr.iloc[-1]:.3f})</span>
         </div></div>""",
         unsafe_allow_html=True,
@@ -186,7 +187,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         st.info(f"No trade ideas active for current regime ({r_name}). Enable 'Show all regimes' to see all ideas.")
     else:
         st.markdown(
-            f'<p style="font-size:0.72rem;color:#555960;margin-bottom:0.8rem">'
+            f'<p style="font-size:0.72rem;color:#333333;margin-bottom:0.8rem">'
             f'{len(active_trades)} idea{"s" if len(active_trades) > 1 else ""} '
             f'{"shown" if show_all else "triggered"} for <b>{r_name}</b> regime</p>',
             unsafe_allow_html=True,
@@ -217,7 +218,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             <div style="padding:0.9rem 1rem;background:#fff">
               <div style="font-size:0.9rem;font-weight:700;color:#000;
               margin-bottom:0.4rem">{trade['name']}</div>
-              <div style="font-size:0.72rem;color:#555960;margin-bottom:0.5rem">{dir_html}</div>
+              <div style="font-size:0.72rem;color:#333333;margin-bottom:0.5rem">{dir_html}</div>
               <p style="font-size:0.74rem;color:#2A2A2A;line-height:1.65;margin-bottom:0.5rem">
               {trade['rationale']}</p>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;
@@ -228,7 +229,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                   {trade['entry']}
                 </div>
                 <div style="background:#f9f8f6;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#555960;font-size:0.6rem;
+                  <div style="font-weight:600;color:#333333;font-size:0.6rem;
                   text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Exit</div>
                   {trade['exit']}
                 </div>
@@ -269,6 +270,59 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     xaxis=dict(rangeslider=dict(visible=False)),
                 )
                 _chart(fig_mini)
+
+    # ── Download report ─────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown(
+        '<p style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;'
+        'text-transform:uppercase;color:#333;margin-bottom:0.5rem">'
+        'Institution Report Download</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p style="font-size:0.74rem;color:#555960;line-height:1.65;margin-bottom:0.8rem">'
+        'Generate a professionally formatted A4 research report covering the current regime, '
+        'all active trade ideas, geopolitical context, and methodology — suitable for '
+        'academic submission or institutional review.</p>',
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Generate PDF Report", key="gen_report", type="primary"):
+        try:
+            from src.reports.report_generator import generate_report
+            with st.spinner("Building report — generating charts…"):
+                stress = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
+                pdf_bytes = generate_report(
+                    start=start,
+                    end=end,
+                    avg_corr_series=avg_corr,
+                    current_regime=current,
+                    regimes=regimes,
+                    active_trades=active_trades,
+                    all_trades=_TRADE_LIBRARY,
+                    eq_r=eq_r,
+                    cmd_r=cmd_r,
+                    stress_series=stress,
+                    geopolitical_events=GEOPOLITICAL_EVENTS,
+                )
+            filename = (
+                f"purdue_spillover_report_"
+                f"{start.replace('-','')}_to_{end.replace('-','')}.pdf"
+            )
+            st.download_button(
+                label="Download PDF",
+                data=pdf_bytes,
+                file_name=filename,
+                mime="application/pdf",
+                key="download_report",
+            )
+        except ImportError:
+            st.error(
+                "reportlab is required for PDF generation. "
+                "Run: `pip install reportlab>=4.2.0`"
+            )
+        except Exception as exc:
+            st.error(f"Report generation failed: {exc}")
 
     _section_note(
         "Trade ideas are generated from historical cross-asset patterns and regime signals. "
