@@ -439,12 +439,16 @@ with st.sidebar:
             ("model_accuracy", "Performance Review"),
             ("ai_chat",        "AI Analyst"),
         ]),
-        ("Team", [
-            ("about_heramb", "Heramb S. Patkar"),
-            ("about_jiahe",  "Jiahe Miao"),
-            ("about_ilian",  "Ilian Zalomai"),
-        ]),
     ]
+
+    # Handle query-param navigation (footer About links)
+    _qp = st.query_params.get("page", "")
+    if _qp in ("about_heramb", "about_jiahe", "about_ilian",
+               "overview", "war_impact_map", "geopolitical", "correlation",
+               "spillover", "watchlist", "trade_ideas", "stress_test",
+               "model_accuracy", "ai_chat"):
+        st.session_state["current_page"] = _qp
+        st.query_params.clear()
 
     if "current_page" not in st.session_state:
         st.session_state["current_page"] = "overview"

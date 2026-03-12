@@ -571,9 +571,9 @@ def _page_footer() -> None:
         # Col 3 — about
         f"<div><p style='{_g}'>About</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
-        f"<li style='margin-bottom:8px;'><a href='https://hpatkar.github.io' target='_blank' style='{_w}'>Heramb S. Patkar</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='https://www.linkedin.com/in/jiahe-miao071/' target='_blank' style='{_w}'>Jiahe Miao</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='https://www.linkedin.com/in/ilian-zalomai-55iz/' target='_blank' style='{_w}'>Ilian Zalomai</a></li>"
+        f"<li style='margin-bottom:8px;'><a href='?page=about_heramb' style='{_w}'>Heramb S. Patkar</a></li>"
+        f"<li style='margin-bottom:8px;'><a href='?page=about_jiahe' style='{_w}'>Jiahe Miao</a></li>"
+        f"<li style='margin-bottom:8px;'><a href='?page=about_ilian' style='{_w}'>Ilian Zalomai</a></li>"
         f"<li><a href='https://business.purdue.edu/' target='_blank' style='{_w}'>Daniels School of Business</a></li>"
         "</ul></div>"
         # Col 4 — connect
