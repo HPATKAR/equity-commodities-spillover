@@ -9,30 +9,32 @@ import streamlit as st
 
 from src.ui.shared import _about_page_styles, _page_footer
 
+_ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+
+
+def _photo_html(filename: str, alt: str) -> str:
+    p = _ASSETS / filename
+    if not p.exists():
+        return ""
+    b64 = base64.b64encode(p.read_bytes()).decode()
+    ext = p.suffix.lstrip(".")
+    return (
+        f"<div class='hero-photo'>"
+        f"<img src='data:image/{ext};base64,{b64}' alt='{alt}' />"
+        f"</div>"
+    )
+
 
 def page_about_heramb() -> None:
     _about_page_styles()
     _f = "font-family:var(--font-sans);"
 
-    # ── load profile image as base64 ──
-    _img_path = Path(__file__).resolve().parent.parent.parent / "FinDis.jpeg"
-    _img_b64 = ""
-    if _img_path.exists():
-        _img_b64 = base64.b64encode(_img_path.read_bytes()).decode()
-
-    _photo_html = ""
-    if _img_b64:
-        _photo_html = (
-            "<div class='hero-photo'>"
-            f"<img src='data:image/jpeg;base64,{_img_b64}' "
-            "alt='Heramb S. Patkar' />"
-            "</div>"
-        )
+    photo = _photo_html("photo_heramb.jpeg", "Heramb S. Patkar")
 
     # ── hero banner ──
     st.markdown(
         "<div class='about-hero'><div class='about-hero-inner'>"
-        f"{_photo_html}"
+        f"{photo}"
         "<div class='hero-body'>"
         "<p class='overline'>About the Author</p>"
         "<h1>Heramb S. Patkar</h1>"
@@ -53,7 +55,6 @@ def page_about_heramb() -> None:
     col_main, col_side = st.columns([1.55, 1], gap="large")
 
     with col_main:
-        # bio
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
@@ -71,7 +72,6 @@ def page_about_heramb() -> None:
             unsafe_allow_html=True,
         )
 
-        # project
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
@@ -90,7 +90,6 @@ def page_about_heramb() -> None:
             unsafe_allow_html=True,
         )
 
-        # experience
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Experience</p>"
@@ -146,7 +145,6 @@ def page_about_heramb() -> None:
         )
 
     with col_side:
-        # education
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Education</p>"
@@ -164,7 +162,6 @@ def page_about_heramb() -> None:
             unsafe_allow_html=True,
         )
 
-        # publication
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Publication</p>"
@@ -182,7 +179,6 @@ def page_about_heramb() -> None:
             unsafe_allow_html=True,
         )
 
-        # certifications
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Licenses &amp; Certifications</p>"
@@ -196,7 +192,6 @@ def page_about_heramb() -> None:
             unsafe_allow_html=True,
         )
 
-        # interests
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Interests</p>"
@@ -210,7 +205,6 @@ def page_about_heramb() -> None:
             unsafe_allow_html=True,
         )
 
-        # acknowledgments
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Acknowledgments</p>"

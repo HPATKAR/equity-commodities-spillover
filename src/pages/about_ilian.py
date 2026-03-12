@@ -2,18 +2,39 @@
 
 from __future__ import annotations
 
+import base64
+from pathlib import Path
+
 import streamlit as st
 
 from src.ui.shared import _about_page_styles, _page_footer
+
+_ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+
+
+def _photo_html(filename: str, alt: str) -> str:
+    p = _ASSETS / filename
+    if not p.exists():
+        return ""
+    b64 = base64.b64encode(p.read_bytes()).decode()
+    ext = p.suffix.lstrip(".")
+    return (
+        f"<div class='hero-photo'>"
+        f"<img src='data:image/{ext};base64,{b64}' alt='{alt}' />"
+        f"</div>"
+    )
 
 
 def page_about_ilian() -> None:
     _about_page_styles()
     _f = "font-family:var(--font-sans);"
 
+    photo = _photo_html("photo_ilian.jpeg", "Ilian Zalomai")
+
     # ── hero banner ──
     st.markdown(
         "<div class='about-hero'><div class='about-hero-inner'>"
+        f"{photo}"
         "<div class='hero-body'>"
         "<p class='overline'>About the Author</p>"
         "<h1>Ilian Zalomai</h1>"
@@ -32,7 +53,6 @@ def page_about_ilian() -> None:
     col_main, col_side = st.columns([1.55, 1], gap="large")
 
     with col_main:
-        # bio
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
@@ -42,13 +62,12 @@ def page_about_ilian() -> None:
             "translating complex datasets into actionable investment insights.</p>"
             f"<p style='{_f}color:#1a1a1a;font-size:var(--fs-md);line-height:1.75;margin:0;'>"
             "Collaborative by nature and motivated by intellectually challenging problems, "
-            "I am always looking to build connections at the intersection of finance, data, "
+            "always looking to build connections at the intersection of finance, data, "
             "and global economic thinking.</p>"
             "</div>",
             unsafe_allow_html=True,
         )
 
-        # project
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
@@ -66,7 +85,6 @@ def page_about_ilian() -> None:
             unsafe_allow_html=True,
         )
 
-        # experience placeholder
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Experience</p>"
@@ -84,7 +102,6 @@ def page_about_ilian() -> None:
         )
 
     with col_side:
-        # education
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Education</p>"
@@ -97,7 +114,6 @@ def page_about_ilian() -> None:
             unsafe_allow_html=True,
         )
 
-        # interests
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Interests</p>"
@@ -111,7 +127,6 @@ def page_about_ilian() -> None:
             unsafe_allow_html=True,
         )
 
-        # acknowledgments
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Acknowledgments</p>"

@@ -242,7 +242,7 @@ def _about_page_styles():
     }
     .about-hero h1 {
         font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: 2.0rem;
+        font-size: 1.45rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.15rem 0;
@@ -251,7 +251,7 @@ def _about_page_styles():
     }
     .about-hero .overline {
         font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-tiny, 0.56rem);
+        font-size: 0.56rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.18em;
@@ -260,16 +260,16 @@ def _about_page_styles():
     }
     .about-hero .subtitle {
         font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-xl, 0.82rem);
+        font-size: 0.78rem;
         color: #555;
-        margin: 0 0 0.6rem 0;
+        margin: 0 0 0.5rem 0;
         font-weight: 500;
     }
     .about-hero .tagline {
         font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-lg, 0.78rem);
+        font-size: 0.72rem;
         color: #777;
-        margin: 0 0 0.8rem 0;
+        margin: 0 0 0.7rem 0;
         line-height: 1.6;
     }
     .about-hero .links {
@@ -279,7 +279,7 @@ def _about_page_styles():
     }
     .about-hero .links a {
         font-family: var(--font-sans, 'DM Sans', sans-serif);
-        font-size: var(--fs-sm, 0.65rem);
+        font-size: 0.62rem;
         font-weight: 600;
         color: #8E6F3E;
         text-decoration: none;
