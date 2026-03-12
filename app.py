@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 # ── Page config ────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Equity-Commodities Spillover | Purdue Daniels",
-    page_icon="🌾",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -56,9 +56,9 @@ st.markdown("""
     --gold-mid:   #DAAA00;
     --aged:       #8E6F3E;
     --black:      #000000;
-    --ink-soft:   #555960;
-    --ink-muted:  #6F727B;
-    --ink-faint:  #9D9795;
+    --ink-soft:   #333333;
+    --ink-muted:  #444444;
+    --ink-faint:  #666666;
     --bg:         #ffffff;
     --bg-warm:    #fafaf8;
     --rule:       #E8E5E0;
@@ -75,65 +75,139 @@ html, body, [data-testid="stAppViewContainer"] {
     color: var(--black);
 }
 
-/* ── Sidebar ── */
+/* ── Sidebar shell ── */
 [data-testid="stSidebar"] {
-    background: var(--black) !important;
-    border-right: 1px solid #1a1a1a;
+    background: #000000 !important;
+    border-right: 1px solid #1e1e1e !important;
+    min-width: 272px !important;
+    width: 272px !important;
+    transform: none !important;
+    visibility: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 [data-testid="stSidebar"] * {
-    color: #E8E5E0 !important;
     font-family: 'DM Sans', sans-serif !important;
 }
-[data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] .stDateInput label,
-[data-testid="stSidebar"] .stTextInput label {
-    font-size: 0.62rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.12em !important;
-    text-transform: uppercase !important;
-    color: var(--gold) !important;
-}
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] select {
-    background: #111 !important;
-    border-color: #333 !important;
-    color: #E8E5E0 !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.72rem !important;
-}
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    font-size: 0.7rem !important;
-    line-height: 1.6;
-    color: var(--ink-faint) !important;
+    font-size: 0.73rem !important;
+    line-height: 1.6 !important;
+    color: rgba(255,255,255,0.52) !important;
+}
+[data-testid="stSidebar"] code {
+    background: rgba(255,255,255,0.06) !important;
+    color: rgba(255,255,255,0.52) !important;
+    font-size: 0.63rem !important;
 }
 
-/* ── Sidebar nav links ── */
+/* ── Date inputs ── */
+[data-testid="stSidebar"] .stDateInput label {
+    font-size: 0.60rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    color: rgba(207,185,145,0.65) !important;
+    margin-bottom: 3px !important;
+}
+[data-testid="stSidebar"] .stDateInput [data-baseweb="input"] {
+    background: #0d0d0d !important;
+    border: 1px solid #222 !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    transition: border-color 0.12s ease !important;
+}
+[data-testid="stSidebar"] .stDateInput [data-baseweb="input"]:hover,
+[data-testid="stSidebar"] .stDateInput [data-baseweb="input"]:focus-within {
+    border-color: var(--gold) !important;
+    background: #0d0d0d !important;
+}
+[data-testid="stSidebar"] .stDateInput input {
+    color: rgba(255,255,255,0.72) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.74rem !important;
+    font-weight: 400 !important;
+    padding: 0.28rem 0.5rem !important;
+    background: transparent !important;
+    caret-color: var(--gold) !important;
+}
+[data-testid="stSidebar"] .stDateInput button {
+    color: rgba(255,255,255,0.28) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stDateInput button:hover {
+    color: var(--gold) !important;
+    background: transparent !important;
+}
+
+/* ── Nav section labels ── */
 .nav-section-label {
-    font-size: 0.56rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+    display: block !important;
+    font-size: 0.60rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.20em !important;
+    text-transform: uppercase !important;
     color: var(--gold) !important;
-    margin: 1.2rem 0 0.4rem;
-    padding: 0 0.2rem;
+    padding: 0.75rem 1.0rem 0.22rem !important;
+    line-height: 1 !important;
 }
-.nav-link {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: #c0bdb8 !important;
-    text-decoration: none;
-    padding: 0.32rem 0.6rem;
-    border-left: 2px solid transparent;
-    border-radius: 0 3px 3px 0;
-    margin-bottom: 1px;
-    cursor: pointer;
-    transition: all 0.15s;
+
+/* ── Nav buttons ── */
+[data-testid="stSidebar"] .stButton {
+    margin-top: 0 !important;
+    margin-bottom: 1px !important;
+    padding: 0 !important;
 }
-.nav-link:hover, .nav-link.active {
+[data-testid="stSidebar"] .stButton > button {
+    color: rgba(255,255,255,0.72) !important;
+    background: transparent !important;
+    border: none !important;
+    border-left: 2px solid transparent !important;
+    border-radius: 0 2px 2px 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    font-size: 0.77rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.01em !important;
+    padding: 0.42rem 1.0rem !important;
+    text-transform: none !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    transition: color 0.12s ease, border-color 0.12s ease,
+                background 0.12s ease !important;
+}
+[data-testid="stSidebar"] .stButton > button > div,
+[data-testid="stSidebar"] .stButton > button > span,
+[data-testid="stSidebar"] .stButton > button p {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    color: inherit !important;
+    margin: 0 !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    color: rgba(255,255,255,0.94) !important;
+    border-left-color: rgba(207,185,145,0.35) !important;
+    background: rgba(255,255,255,0.03) !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover * { color: rgba(255,255,255,0.94) !important; }
+
+/* Active nav item (type="primary") */
+[data-testid="stSidebar"] [data-testid="baseButton-primary"] {
     color: var(--gold) !important;
-    border-left-color: var(--gold);
-    background: rgba(207,185,145,0.08);
+    border-left-color: var(--gold) !important;
+    border-left-width: 2px !important;
+    background: rgba(207,185,145,0.06) !important;
+    font-weight: 500 !important;
+}
+[data-testid="stSidebar"] [data-testid="baseButton-primary"] * {
+    color: var(--gold) !important;
+}
+[data-testid="stSidebar"] [data-testid="baseButton-primary"]:hover {
+    background: rgba(207,185,145,0.09) !important;
 }
 
 /* ── Main content ── */
@@ -165,7 +239,7 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
     font-weight: 600 !important;
     letter-spacing: 0.14em !important;
     text-transform: uppercase !important;
-    color: var(--ink-faint) !important;
+    color: #555960 !important;
 }
 [data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
@@ -251,14 +325,23 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
 [data-testid="stDecoration"],
 [data-testid="stStatusWidget"] { display: none !important; }
 
-/* ── Force sidebar always open ── */
-section[data-testid="stSidebar"] {
-    min-width: 260px !important;
-    width: 260px !important;
-    transform: none !important;
-    visibility: visible !important;
+/* ── Sidebar: always open, no collapse controls ── */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarNavLink"],
+button[aria-label="Close sidebar"],
+button[aria-label="Collapse sidebar"],
+button[aria-label="Open sidebar"],
+button[aria-label="Expand sidebar"],
+[data-testid="stSidebar"] [data-testid="stBaseButton-header"],
+[data-testid="stSidebar"] button[kind="header"] {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
-[data-testid="collapsedControl"] { display: none !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -289,117 +372,164 @@ _FD_KEY   = _get_secret("financial_datasets_key")
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    # Brand header
+
+    # ── Brand header ─────────────────────────────────────────────────────
     st.markdown("""
-    <div style="padding:1.2rem 0.2rem 0.8rem">
-      <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.2em;
-      text-transform:uppercase;color:#CFB991;margin-bottom:0.3rem">
-        Purdue University · Daniels School of Business
+    <div style="padding:1.0rem 0.2rem 0.7rem">
+      <div style="font-size:0.60rem;font-weight:700;letter-spacing:0.22em;
+                  text-transform:uppercase;color:#CFB991;margin-bottom:0.30rem">
+        Purdue University &middot; Daniels School of Business
       </div>
-      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.1;
-      letter-spacing:-0.01em">
+      <div style="font-size:1.28rem;font-weight:800;color:#ffffff;
+                  line-height:1.15;letter-spacing:-0.01em">
         Equity &amp; Commodities
       </div>
-      <div style="font-size:0.72rem;font-weight:400;color:#9D9795;margin-top:0.2rem">
+      <div style="font-size:0.74rem;font-weight:400;color:rgba(255,255,255,0.52);
+                  margin-top:0.18rem;letter-spacing:0.01em">
         Spillover Monitor
       </div>
     </div>
-    <div style="border-top:1px solid #1a1a1a;margin-bottom:0.8rem"></div>
+    <div style="border-top:1px solid #1c1c1c"></div>
     """, unsafe_allow_html=True)
 
-    # Date range
-    start_date = st.date_input(
-        "Start date",
+    # ── Date range ────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-size:0.60rem;font-weight:700;letter-spacing:0.20em;'
+        'text-transform:uppercase;color:rgba(255,255,255,0.38);padding:0.75rem 1.0rem 0.22rem;'
+        'display:block;line-height:1">Date Range</div>',
+        unsafe_allow_html=True,
+    )
+    _d1, _d2 = st.columns(2)
+    start_date = _d1.date_input(
+        "Start",
         value=date(2010, 1, 1),
         min_value=date(2000, 1, 1),
         max_value=date.today(),
     )
-    end_date = st.date_input(
-        "End date",
+    end_date = _d2.date_input(
+        "End",
         value=date.today(),
         min_value=date(2000, 1, 1),
         max_value=date.today(),
     )
 
-    st.markdown("<div style='border-top:1px solid #1a1a1a;margin:0.8rem 0'></div>",
-                unsafe_allow_html=True)
+    st.markdown(
+        "<div style='border-top:1px solid #1c1c1c;margin:0.7rem 0 0'></div>",
+        unsafe_allow_html=True,
+    )
 
-    # Navigation
-    st.markdown('<div class="nav-section-label">Dashboard</div>', unsafe_allow_html=True)
-
-    _PAGES = [
-        ("overview",       "🏠  Overview"),
-        ("geopolitical",   "⚑   Geopolitical Triggers"),
-        ("correlation",    "⟳   Correlation Analysis"),
-        ("spillover",      "→   Spillover Analytics"),
-        ("watchlist",      "👁  Commodities to Watch"),
-        ("stress_test",    "⚡  Portfolio Stress Test"),
-        ("trade_ideas",    "◈   Trade Ideas"),
+    # ── Navigation ────────────────────────────────────────────────────────
+    # Groups: Overview (unlabelled) → Analysis → Strategy → Research
+    _PAGE_GROUPS = [
+        (None, [
+            ("overview", "Overview"),
+        ]),
+        ("Analysis", [
+            ("war_impact_map", "War Impact Map"),
+            ("geopolitical",   "Geopolitical Triggers"),
+            ("correlation",    "Correlation Analysis"),
+            ("spillover",      "Spillover Analytics"),
+            ("watchlist",      "Commodities to Watch"),
+        ]),
+        ("Strategy", [
+            ("trade_ideas", "Trade Ideas"),
+            ("stress_test", "Portfolio Stress Test"),
+        ]),
+        ("Research", [
+            ("model_accuracy", "Performance Review"),
+            ("ai_chat",        "AI Analyst"),
+        ]),
     ]
 
     if "current_page" not in st.session_state:
         st.session_state["current_page"] = "overview"
 
-    for page_key, page_label in _PAGES:
-        is_active = st.session_state["current_page"] == page_key
-        if st.button(
-            page_label,
-            key=f"nav_{page_key}",
-            use_container_width=True,
-            type="secondary",
-        ):
-            st.session_state["current_page"] = page_key
-            st.rerun()
+    for group_label, pages in _PAGE_GROUPS:
+        if group_label is not None:
+            st.markdown(
+                f'<div class="nav-section-label">{group_label}</div>',
+                unsafe_allow_html=True,
+            )
+        for page_key, page_label in pages:
+            is_active = st.session_state["current_page"] == page_key
+            if st.button(
+                page_label,
+                key=f"nav_{page_key}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
+                st.session_state["current_page"] = page_key
+                st.rerun()
 
-    st.markdown("<div style='border-top:1px solid #1a1a1a;margin:0.8rem 0'></div>",
-                unsafe_allow_html=True)
-
-    # API key status
-    st.markdown('<div class="nav-section-label">Data Sources</div>', unsafe_allow_html=True)
-    fred_status = "✓ FRED connected" if _FRED_KEY else "○ FRED (not set)"
-    fd_status   = "✓ FinancialDatasets" if _FD_KEY   else "○ FinancialDatasets (not set)"
+    # ── Data sources ──────────────────────────────────────────────────────
     st.markdown(
-        f"""<div style="font-size:0.64rem;color:#9D9795;line-height:1.9">
-        ✓ Yahoo Finance (active)<br>
-        <span style="color:{'#CFB991' if _FRED_KEY else '#555960'}">{fred_status}</span><br>
-        <span style="color:{'#CFB991' if _FD_KEY else '#555960'}">{fd_status}</span>
+        "<div style='border-top:1px solid #1c1c1c;margin:0.7rem 0 0'></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="font-size:0.60rem;font-weight:700;letter-spacing:0.20em;'
+        'text-transform:uppercase;color:rgba(255,255,255,0.38);padding:0.75rem 1.0rem 0.22rem;'
+        'display:block;line-height:1">Data Sources</div>',
+        unsafe_allow_html=True,
+    )
+
+    _fred_col = "#CFB991" if _FRED_KEY else "rgba(255,255,255,0.28)"
+    _fd_col   = "#CFB991" if _FD_KEY   else "rgba(255,255,255,0.28)"
+    _fred_ic  = "✓" if _FRED_KEY else "○"
+    _fd_ic    = "✓" if _FD_KEY   else "○"
+
+    st.markdown(
+        f"""<div style="font-size:0.69rem;line-height:2.0;padding:0 0.2rem">
+        <span style="color:#CFB991">✓</span>
+        <span style="color:rgba(255,255,255,0.65)"> Yahoo Finance</span><br>
+        <span style="color:{_fred_col}">{_fred_ic} FRED &middot; Federal Reserve</span><br>
+        <span style="color:{_fd_col}">{_fd_ic} FinancialDatasets</span>
         </div>""",
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-size:0.58rem;color:#555960;margin-top:0.4rem">'
-        'Edit <code>.streamlit/secrets.toml</code> to add API keys.</p>',
+        '<p style="font-size:0.63rem;color:rgba(255,255,255,0.30);margin-top:0.35rem;'
+        'padding:0 0.2rem;line-height:1.5">'
+        'Add keys in <code>.streamlit/secrets.toml</code></p>',
         unsafe_allow_html=True,
     )
 
+    # ── Footer ────────────────────────────────────────────────────────────
     st.markdown(
-        """<div style="padding:0.7rem 0;margin-top:1rem;border-top:1px solid #1a1a1a">
-        <p style="font-size:0.58rem;color:#555960;margin:0;line-height:1.5">
-        For educational purposes only.<br>Not investment advice.</p>
-        </div>""",
+        """<div style="border-top:1px solid #1c1c1c;margin-top:1.0rem;
+                       padding:0.7rem 0.2rem 0.4rem">
+           <p style="font-size:0.63rem;color:rgba(255,255,255,0.30);margin:0;line-height:1.6">
+           For educational purposes only.<br>Not investment advice.</p>
+           </div>""",
         unsafe_allow_html=True,
     )
 
 # ── Router ─────────────────────────────────────────────────────────────────
-from src.pages.overview     import page_overview
-from src.pages.geopolitical import page_geopolitical
-from src.pages.correlation  import page_correlation
-from src.pages.spillover    import page_spillover
-from src.pages.watchlist    import page_watchlist
-from src.pages.stress_test  import page_stress_test
-from src.pages.trade_ideas  import page_trade_ideas
+from src.pages.overview        import page_overview
+from src.pages.war_impact_map  import page_war_impact_map
+from src.pages.geopolitical    import page_geopolitical
+from src.pages.correlation     import page_correlation
+from src.pages.spillover       import page_spillover
+from src.pages.watchlist       import page_watchlist
+from src.pages.trade_ideas     import page_trade_ideas
+from src.pages.stress_test     import page_stress_test
+from src.pages.model_accuracy  import page_model_accuracy
+from src.pages.ai_chat         import page_ai_chat
 
 _start = str(start_date)
 _end   = str(end_date)
 
 _PAGE_MAP = {
-    "overview":     lambda: page_overview(_start, _end, _FRED_KEY),
-    "geopolitical": lambda: page_geopolitical(_start, _end, _FRED_KEY),
-    "correlation":  lambda: page_correlation(_start, _end, _FRED_KEY),
-    "spillover":    lambda: page_spillover(_start, _end, _FRED_KEY),
-    "watchlist":    lambda: page_watchlist(_start, _end, _FRED_KEY),
-    "stress_test":  lambda: page_stress_test(_start, _end, _FRED_KEY),
-    "trade_ideas":  lambda: page_trade_ideas(_start, _end, _FRED_KEY),
+    "overview":        lambda: page_overview(_start, _end, _FRED_KEY),
+    "war_impact_map":  lambda: page_war_impact_map(_start, _end, _FRED_KEY),
+    "geopolitical":    lambda: page_geopolitical(_start, _end, _FRED_KEY),
+    "correlation":     lambda: page_correlation(_start, _end, _FRED_KEY),
+    "spillover":       lambda: page_spillover(_start, _end, _FRED_KEY),
+    "watchlist":       lambda: page_watchlist(_start, _end, _FRED_KEY),
+    "trade_ideas":     lambda: page_trade_ideas(_start, _end, _FRED_KEY),
+    "stress_test":     lambda: page_stress_test(_start, _end, _FRED_KEY),
+    "model_accuracy":  lambda: page_model_accuracy(_start, _end, _FRED_KEY),
+    "ai_chat":         lambda: page_ai_chat(_start, _end),
 }
 
 current = st.session_state.get("current_page", "overview")

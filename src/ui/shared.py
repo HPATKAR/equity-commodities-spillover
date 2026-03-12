@@ -40,18 +40,18 @@ _PURDUE_TEMPLATE = go.layout.Template(
             tickfont=dict(family="JetBrains Mono, monospace", size=10),
         ),
         legend=dict(
-            orientation="h", yanchor="bottom", y=1.01,
+            orientation="h", yanchor="top", y=-0.18,
             xanchor="left", x=0,
             font=dict(size=10),
-            bgcolor="rgba(255,255,255,0.8)",
-            bordercolor="#E8E5E0", borderwidth=1,
+            bgcolor="rgba(255,255,255,0)",
+            bordercolor="#E8E5E0", borderwidth=0,
         ),
         hoverlabel=dict(
             bgcolor="rgba(10,10,10,0.94)", font_color="#CFB991",
             font_family="JetBrains Mono, monospace", font_size=11,
             bordercolor="#CFB991",
         ),
-        margin=dict(l=48, r=24, t=48, b=40),
+        margin=dict(l=48, r=24, t=36, b=80),
     )
 )
 pio.templates["purdue"] = _PURDUE_TEMPLATE
@@ -128,7 +128,7 @@ def _add_event_bands(
 def _page_intro(text: str) -> None:
     st.markdown(
         f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.82rem;
-        color:#555960;line-height:1.75;max-width:760px;margin-bottom:1.2rem">
+        color:#222222;line-height:1.75;max-width:760px;margin-bottom:1.2rem">
         {text}</p>""",
         unsafe_allow_html=True,
     )
@@ -137,7 +137,7 @@ def _page_intro(text: str) -> None:
 def _section_note(text: str) -> None:
     st.markdown(
         f"""<div style="border-left:3px solid {_GOLD};padding:0.6rem 1rem;
-        background:#fafaf8;margin:0.8rem 0;font-size:0.76rem;color:#2A2A2A;
+        background:#fafaf8;margin:0.8rem 0;font-size:0.76rem;color:#111111;
         line-height:1.65;font-family:'DM Sans',sans-serif">{text}</div>""",
         unsafe_allow_html=True,
     )
@@ -151,7 +151,7 @@ def _definition_block(title: str, body: str) -> None:
           <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.7rem 1rem;font-size:0.76rem;color:#2A2A2A;
+        <div style="padding:0.7rem 1rem;font-size:0.76rem;color:#111111;
         line-height:1.65;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
@@ -161,7 +161,7 @@ def _definition_block(title: str, body: str) -> None:
 def _takeaway_block(text: str) -> None:
     st.markdown(
         f"""<div style="border-left:3px solid #DAAA00;padding:0.6rem 1rem;
-        background:#fffdf5;margin:0.8rem 0;font-size:0.76rem;color:#2A2A2A;
+        background:#fffdf5;margin:0.8rem 0;font-size:0.76rem;color:#111111;
         line-height:1.65;font-family:'DM Sans',sans-serif">
         <strong style="color:#8E6F3E;font-size:0.65rem;text-transform:uppercase;
         letter-spacing:0.1em">Key Takeaway</strong><br>{text}</div>""",
@@ -178,7 +178,7 @@ def _page_conclusion(verdict: str, summary: str) -> None:
           text-transform:uppercase;color:{_GOLD}">Assessment · {verdict}</span>
         </div>
         <div style="padding:0.8rem 1.2rem;background:#fafaf8;font-size:0.78rem;
-        color:#2A2A2A;line-height:1.7;font-family:'DM Sans',sans-serif">
+        color:#111111;line-height:1.7;font-family:'DM Sans',sans-serif">
         {summary}</div></div>""",
         unsafe_allow_html=True,
     )
@@ -194,7 +194,7 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
         padding:0.7rem 0.9rem;background:#fff;
         transition:box-shadow 0.2s">
         <div style="font-size:0.58rem;font-weight:600;letter-spacing:0.14em;
-        text-transform:uppercase;color:#9D9795;margin-bottom:4px">{label}</div>
+        text-transform:uppercase;color:#555960;margin-bottom:4px">{label}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
         font-weight:700;color:{_BLACK}">{value}</div>
         {delta_html}</div>""",
@@ -263,6 +263,8 @@ def _page_footer() -> None:
         f"<div><p style='{_g}'>About</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
         f"<li style='margin-bottom:8px;'><a href='https://hpatkar.github.io' target='_blank' style='{_w}'>Heramb S. Patkar</a></li>"
+        f"<li style='margin-bottom:8px;'><a href='https://www.linkedin.com/in/jiahe-miao071/' target='_blank' style='{_w}'>Jiahe Miao</a></li>"
+        f"<li style='margin-bottom:8px;'><a href='https://www.linkedin.com/in/ilian-zalomai-55iz/' target='_blank' style='{_w}'>Ilian Zalomai</a></li>"
         f"<li><a href='https://business.purdue.edu/' target='_blank' style='{_w}'>Daniels School of Business</a></li>"
         "</ul></div>"
         # Col 4 — connect
