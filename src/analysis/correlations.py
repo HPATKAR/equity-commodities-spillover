@@ -217,9 +217,17 @@ def compute_regime_features(
         em_cols = cmd_cols[:6]
     cmd_vol = combined[em_cols].rolling(vol_window, min_periods=vol_window // 2).std().mean(axis=1) * np.sqrt(252) * 100
 
-    # Slow correlation — reuse precomputed series if supplied
+    # Slow correlation — reuse precomputed series if supplied and sufficiently dense
     if avg_corr_slow is not None:
-        slow_corr = avg_corr_slow.reindex(combined.index)
+        slow_reindexed = avg_corr_slow.reindex(combined.index)
+        # Fall back to dense proxy when the supplied series is too sparse (< 50% coverage).
+        # average_cross_corr_series uses a union-index approach that can produce only ~32
+        # non-NaN rows for a 14-year dataset; using it directly would make dropna() below
+        # discard virtually all rows and the ML classifier would fail with "insufficient obs".
+        if slow_reindexed.notna().mean() >= 0.50:
+            slow_corr = slow_reindexed
+        else:
+            slow_corr = eq_idx.rolling(60, min_periods=30).corr(cmd_idx).abs()
     else:
         # Cheap proxy: 60d rolling corr of composite indices
         slow_corr = eq_idx.rolling(60, min_periods=30).corr(cmd_idx).abs()

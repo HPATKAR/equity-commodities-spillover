@@ -34,22 +34,42 @@ from src.ui.shared import (
 
 # ── Ground truth helpers ────────────────────────────────────────────────────
 
-def _vix_ground_truth(index: pd.DatetimeIndex, threshold: float = 25.0) -> pd.Series | None:
+def _fetch_vix(start_str: str, end_str: str) -> "pd.Series | None":
+    """Fetch VIX Close with two fallback methods (Ticker.history then yf.download)."""
+    import yfinance as yf
+    for attempt in range(2):
+        try:
+            if attempt == 0:
+                raw = yf.Ticker("^VIX").history(
+                    start=start_str, end=end_str, auto_adjust=True,
+                )
+                vix = raw["Close"] if not raw.empty and "Close" in raw.columns else None
+            else:
+                raw = yf.download(
+                    "^VIX", start=start_str, end=end_str,
+                    progress=False, auto_adjust=True,
+                )
+                if raw.empty:
+                    continue
+                vix = raw["Close"] if "Close" in raw.columns else raw.iloc[:, 0]
+            if vix is not None and not vix.empty:
+                if hasattr(vix.index, "tz") and vix.index.tz is not None:
+                    vix.index = vix.index.tz_convert("UTC").tz_localize(None)
+                vix.index = pd.to_datetime(vix.index).normalize()
+                return vix
+        except Exception:
+            continue
+    return None
+
+
+def _vix_ground_truth(index: pd.DatetimeIndex, threshold: float = 25.0) -> "pd.Series | None":
     """
     Market-based ground truth: days where VIX > threshold = elevated stress (1), else 0.
     Uses reindex with nearest-day tolerance to handle calendar/timezone misalignment.
     """
-    import yfinance as yf
     try:
-        vix = yf.Ticker("^VIX").history(
-            start=str(index[0].date()),
-            end=str(index[-1].date()),
-            auto_adjust=True,
-        )["Close"]
-        if hasattr(vix.index, "tz") and vix.index.tz is not None:
-            vix.index = vix.index.tz_convert("UTC").tz_localize(None)
-        vix.index = pd.to_datetime(vix.index).normalize()
-        if vix.empty:
+        vix = _fetch_vix(str(index[0].date()), str(index[-1].date()))
+        if vix is None or vix.empty:
             return None
         vix_binary = (vix > threshold).astype(float)
         mask = vix_binary.reindex(
@@ -331,17 +351,8 @@ def _risk_score_vs_vix(
     cmd_r: pd.DataFrame,
 ) -> tuple[pd.DataFrame, float]:
     """Align risk score with VIX; compute R² and lead/lag correlation."""
-    import yfinance as yf
-    try:
-        vix = yf.Ticker("^VIX").history(
-            start=str(score_hist.index[0].date()),
-            end=str(date.today()),
-            auto_adjust=True
-        )["Close"]
-        if hasattr(vix.index, "tz") and vix.index.tz is not None:
-            vix.index = vix.index.tz_convert("UTC").tz_localize(None)
-        vix.index = pd.to_datetime(vix.index).normalize()
-    except Exception:
+    vix = _fetch_vix(str(score_hist.index[0].date()), str(date.today()))
+    if vix is None or vix.empty:
         return pd.DataFrame(), np.nan
 
     aligned = pd.concat([score_hist.rename("score"), vix.rename("vix")], axis=1).dropna()

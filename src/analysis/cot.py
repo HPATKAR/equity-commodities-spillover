@@ -31,6 +31,38 @@ COT_MARKETS: dict[str, str] = {
 }
 
 _BASE_URL = "https://www.cftc.gov/files/dea/history/fut_disagg_txt_{year}.zip"
+# Alternative URL path used by some CFTC server configurations
+_ALT_URL  = "https://www.cftc.gov/sites/default/files/files/dea/history/fut_disagg_txt_{year}.zip"
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/zip, application/octet-stream, */*",
+}
+
+
+def _download_cot_year(session: "requests.Session", year: int) -> "pd.DataFrame | None":
+    """Try both URL patterns for a given year; return parsed DataFrame or None."""
+    import requests as _req
+    for url_tmpl in (_BASE_URL, _ALT_URL):
+        url = url_tmpl.format(year=year)
+        try:
+            resp = session.get(url, timeout=60, headers=_HEADERS)
+            resp.raise_for_status()
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                names = zf.namelist()
+                data_file = next(
+                    (n for n in names if n.lower().endswith((".txt", ".csv"))),
+                    names[0],
+                )
+                with zf.open(data_file) as f:
+                    return pd.read_csv(f, low_memory=False)
+        except Exception:
+            continue
+    return None
 
 
 # ── Downloader ──────────────────────────────────────────────────────────────
@@ -47,23 +79,13 @@ def load_cot_data(years: int = 3) -> pd.DataFrame:
     current_year = date.today().year
     raw_frames: list[pd.DataFrame] = []
 
+    session = requests.Session()
+    session.headers.update(_HEADERS)
+
     for yr in range(current_year - years + 1, current_year + 1):
-        url = _BASE_URL.format(year=yr)
-        try:
-            resp = requests.get(url, timeout=45)
-            resp.raise_for_status()
-            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                # Grab the first .txt or .csv inside the archive
-                names = zf.namelist()
-                data_file = next(
-                    (n for n in names if n.lower().endswith((".txt", ".csv"))),
-                    names[0],
-                )
-                with zf.open(data_file) as f:
-                    df = pd.read_csv(f, low_memory=False)
-                    raw_frames.append(df)
-        except Exception:
-            continue
+        df = _download_cot_year(session, yr)
+        if df is not None:
+            raw_frames.append(df)
 
     if not raw_frames:
         return pd.DataFrame()
