@@ -17,6 +17,8 @@ from src.data.config import (
 from src.analysis.correlations import (
     rolling_correlation, cross_asset_corr, dcc_correlation,
     average_cross_corr_series, detect_correlation_regime,
+    regime_transition_matrix, regime_steady_state,
+    regime_mean_first_passage, regime_run_statistics,
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
@@ -48,8 +50,14 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         st.error("Market data unavailable.")
         return
 
+    # ── Hoist regime computation (shared across tabs) ──────────────────────
+    avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
+    regimes  = detect_correlation_regime(avg_corr)
+
     st.markdown("---")
-    tab1, tab2, tab3 = st.tabs(["Rolling Correlation", "DCC-GARCH", "Regime Detection"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Rolling Correlation", "DCC-GARCH", "Regime Detection", "Regime Forecast",
+    ])
 
     # ══════════════════════════════════════════════════════════════════════
     # TAB 1 - Rolling Correlation
@@ -204,13 +212,10 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         _definition_block(
             "Regime Classification",
             "The daily average absolute cross-asset correlation is classified into four regimes: "
-            "Decorrelated (< 0.15), Normal (0.15–0.45), Elevated (0.45–0.60), "
-            "Crisis (≥ 0.60 for 3+ consecutive days). "
+            "Decorrelated (< 0.15), Normal (0.15-0.45), Elevated (0.45-0.60), "
+            "Crisis (>= 0.60 for 3+ consecutive days). "
             "Regime detection helps identify when cross-asset hedges break down.",
         )
-
-        avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
-        regimes  = detect_correlation_regime(avg_corr)
 
         if not avg_corr.empty:
             # Colour the series by regime
@@ -266,6 +271,207 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 "Crisis regimes (historically ~8–12% of trading days) coincide with "
                 "the most profitable cross-asset hedging windows - but also the highest "
                 "basis risk as correlations can snap back abruptly."
+            )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 4 - Regime Forecast (Markov Chain)
+    # ══════════════════════════════════════════════════════════════════════
+    with tab4:
+        st.subheader("Regime Transition Forecast - Markov Chain Analysis")
+        _definition_block(
+            "Markov Regime Transition Model",
+            "A first-order Markov chain models the correlation regime as a stochastic process "
+            "where tomorrow's regime depends only on today's. Transition probabilities are "
+            "estimated from the full historical regime sequence. "
+            "Key outputs: transition matrix (P(j|i) = probability of moving from regime i to j), "
+            "steady-state distribution (long-run time in each regime), and "
+            "Mean First Passage Time - expected trading days until Crisis from any starting regime.",
+        )
+
+        if regimes.empty or len(regimes) < 60:
+            st.warning("Insufficient regime history for Markov analysis. Extend the date range.")
+        else:
+            trans = regime_transition_matrix(regimes)
+            steady = regime_steady_state(trans)
+            mfpt   = regime_mean_first_passage(trans, target=3)
+            run_stats = regime_run_statistics(regimes)
+
+            current_r  = int(regimes.dropna().iloc[-1])
+            r_names    = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+            r_colors   = {0: "#2e7d32",      1: "#555960", 2: "#e67e22", 3: "#c0392b"}
+            r_labels   = [r_names[i] for i in range(4)]
+
+            # ── Section A: Transition Probability Heatmap ────────────────────
+            st.subheader("Transition Probability Matrix")
+            z_vals = trans.values * 100   # convert to percentages
+
+            fig_tm = go.Figure(go.Heatmap(
+                z=z_vals,
+                x=r_labels,
+                y=r_labels,
+                colorscale=[
+                    [0.00, "#f5f2ee"],
+                    [0.20, "#fde0c8"],
+                    [0.50, "#e05c3a"],
+                    [1.00, "#7a0e0e"],
+                ],
+                zmin=0, zmax=100,
+                text=[[f"{v:.1f}%" for v in row] for row in z_vals],
+                texttemplate="%{text}",
+                textfont=dict(size=13, family="JetBrains Mono, monospace"),
+                colorbar=dict(
+                    title=dict(text="P(%)", font=dict(size=9)),
+                    thickness=12, len=0.7,
+                    tickvals=[0, 25, 50, 75, 100],
+                    ticktext=["0%", "25%", "50%", "75%", "100%"],
+                    tickfont=dict(size=8, family="JetBrains Mono, monospace"),
+                ),
+                hoverongaps=False,
+                hovertemplate=(
+                    "<b>From: %{y}</b><br>"
+                    "<b>To: %{x}</b><br>"
+                    "Probability: %{z:.1f}%<extra></extra>"
+                ),
+            ))
+            fig_tm.update_layout(
+                template="purdue",
+                height=340,
+                margin=dict(l=100, r=80, t=50, b=80),
+                xaxis=dict(title="To Regime", tickfont=dict(size=11)),
+                yaxis=dict(title="From Regime", tickfont=dict(size=11)),
+                title=dict(
+                    text="Regime Transition Probability Matrix (From Row -> To Column)",
+                    font=dict(size=11, family="DM Sans, sans-serif"),
+                ),
+            )
+            # Highlight current regime row with a rectangle
+            fig_tm.add_shape(
+                type="rect",
+                x0=-0.5, x1=3.5,
+                y0=current_r - 0.5, y1=current_r + 0.5,
+                line=dict(color=r_colors[current_r], width=2.5),
+                fillcolor="rgba(0,0,0,0)",
+            )
+            _chart(fig_tm)
+
+            st.markdown(
+                f'<p style="font-size:0.68rem;color:#555;margin-top:4px">'
+                f'Highlighted row = current regime (<b style="color:{r_colors[current_r]}">'
+                f'{r_names[current_r]}</b>). Read across to see probability of each next-day outcome.</p>',
+                unsafe_allow_html=True,
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Section B: 3-column forward metrics ─────────────────────────
+            col_ss, col_mfpt, col_runs = st.columns(3)
+
+            with col_ss:
+                st.subheader("Steady-State Distribution")
+                _section_note(
+                    "Long-run proportion of time market spends in each regime, "
+                    "implied by the transition matrix."
+                )
+                fig_ss = go.Figure(go.Bar(
+                    x=[f"<b>{r_labels[i]}</b>" for i in range(4)],
+                    y=[steady[i] * 100 for i in range(4)],
+                    marker_color=[r_colors[i] for i in range(4)],
+                    text=[f"{steady[i]*100:.1f}%" for i in range(4)],
+                    textposition="outside",
+                    textfont=dict(size=10, family="JetBrains Mono, monospace"),
+                ))
+                fig_ss.update_layout(
+                    template="purdue",
+                    height=260,
+                    margin=dict(l=20, r=20, t=20, b=60),
+                    yaxis=dict(range=[0, max(steady)*130, ], title="%"),
+                    showlegend=False,
+                )
+                _chart(fig_ss)
+
+            with col_mfpt:
+                st.subheader("Expected Days to Crisis")
+                _section_note(
+                    "Mean First Passage Time: expected trading days "
+                    "until Crisis regime, starting from each regime."
+                )
+                mfpt_data = {
+                    "Regime":         [r_names[i] for i in range(4)],
+                    "Expected Days":  [
+                        "0 (already in Crisis)" if i == 3
+                        else (f"{mfpt.get(i, float('nan')):.0f} days"
+                              if mfpt.get(i, float('nan')) < 5000
+                              else ">5,000 (rare)")
+                        for i in range(4)
+                    ],
+                }
+                mfpt_df = pd.DataFrame(mfpt_data)
+                # Highlight current regime
+                def _mfpt_style(row):
+                    regime_idx = list(r_names.values()).index(row["Regime"])
+                    if regime_idx == current_r:
+                        return [f"background:{r_colors[current_r]}22;font-weight:700"] * 2
+                    return [""] * 2
+                st.dataframe(
+                    mfpt_df.style.apply(_mfpt_style, axis=1),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                # Big metric for current regime
+                cur_mfpt = mfpt.get(current_r, float("nan"))
+                cur_mfpt_str = (
+                    "0 (in Crisis)" if current_r == 3
+                    else (f"{cur_mfpt:.0f} days" if cur_mfpt < 5000 else ">5,000")
+                )
+                st.markdown(
+                    f'<div style="margin-top:12px;padding:10px;background:#fafaf8;'
+                    f'border-left:4px solid {r_colors[current_r]};border-radius:0 4px 4px 0">'
+                    f'<div style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;'
+                    f'text-transform:uppercase;color:#888">From {r_names[current_r]}</div>'
+                    f'<div style="font-family:JetBrains Mono,monospace;font-size:1.30rem;'
+                    f'font-weight:700;color:{r_colors[current_r]}">{cur_mfpt_str}</div>'
+                    f'<div style="font-size:0.62rem;color:#555">to next Crisis</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            with col_runs:
+                st.subheader("Regime Run Statistics")
+                _section_note(
+                    "Historical consecutive-day run lengths per regime "
+                    "(mean / median / max days)."
+                )
+                run_display = pd.DataFrame({
+                    "Regime": [r_names[i] for i in run_stats.index if i in r_names],
+                    "Avg Days":    run_stats["mean"].values,
+                    "Median":      run_stats["median"].values,
+                    "Max Days":    run_stats["max"].values,
+                    "Episodes":    run_stats["count"].values.astype(int),
+                })
+                st.dataframe(
+                    run_display.style
+                    .format({"Avg Days": "{:.1f}", "Median": "{:.1f}",
+                             "Max Days": "{:.0f}", "Episodes": "{:.0f}"}),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            # ── Section C: Takeaway ──────────────────────────────────────────
+            p_stay    = float(trans.loc[current_r, current_r]) * 100
+            p_crisis  = float(trans.loc[current_r, 3]) * 100
+            avg_dur   = float(run_stats.loc[current_r, "mean"]) if current_r in run_stats.index else 0
+            ss_crisis = steady[3] * 100
+
+            _takeaway_block(
+                f"<b>Current regime: <span style='color:{r_colors[current_r]}'>"
+                f"{r_names[current_r]}</span></b>. "
+                f"Probability of staying in {r_names[current_r]} tomorrow: "
+                f"<b>{p_stay:.1f}%</b>. "
+                f"Probability of transitioning to Crisis: <b>{p_crisis:.1f}%</b>. "
+                f"Expected {cur_mfpt_str} until next Crisis episode. "
+                f"Historical average {r_names[current_r]} run: <b>{avg_dur:.0f} days</b>. "
+                f"Long-run, markets spend <b>{ss_crisis:.1f}%</b> of time in Crisis regime."
             )
 
     _page_footer()

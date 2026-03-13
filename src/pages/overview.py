@@ -14,6 +14,7 @@ from src.data.loader import load_returns, load_all_prices
 from src.data.config import GEOPOLITICAL_EVENTS, EQUITY_REGIONS, COMMODITY_GROUPS, PALETTE
 from src.analysis.correlations import (
     cross_asset_corr, average_cross_corr_series, detect_correlation_regime,
+    regime_transition_matrix, early_warning_signals,
 )
 from src.analysis.risk_score import (
     compute_risk_score, risk_score_history, plot_risk_gauge, plot_risk_history,
@@ -143,6 +144,169 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     with gc2:
         if not score_hist.empty:
             _chart(plot_risk_history(score_hist, height=300))
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Early Warning System ───────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("Early Warning System")
+    _definition_block(
+        "Forward-Looking Crisis Detection (5 Components)",
+        "Five signal components designed to detect regime transitions <b>before</b> they occur. "
+        "Unlike the Risk Score (which measures current stress), the Early Warning System tracks "
+        "the <i>direction and velocity</i> of stress: rising correlation, accelerating volatility, "
+        "extended regime duration, and the Markov probability of an imminent move to Crisis. "
+        "Composite score 0-100: below 40 = benign trajectory, 40-65 = watch closely, above 65 = act.",
+    )
+
+    with st.spinner("Computing early warning signals…"):
+        trans_matrix = regime_transition_matrix(regimes)
+        ews = early_warning_signals(avg_corr, cmd_r, eq_r, regimes, trans_matrix)
+
+    _r_colors = {0: "#2e7d32", 1: "#555960", 2: "#e67e22", 3: "#c0392b"}
+
+    def _ews_score_color(s: float) -> str:
+        if s >= 70: return "#c0392b"
+        if s >= 40: return "#e67e22"
+        return "#2e7d32"
+
+    def _ews_bar(s: float, color: str) -> str:
+        return (
+            f'<div style="background:#F0EDEA;border-radius:2px;height:5px;margin-top:4px">'
+            f'<div style="width:{s:.0f}%;background:{color};height:5px;border-radius:2px"></div>'
+            f'</div>'
+        )
+
+    # 5-component cards
+    sig_items = list(ews["signals"].items())
+    ews_cols = st.columns(5)
+    for col, (name, data) in zip(ews_cols, sig_items):
+        s = data["score"]
+        c = _ews_score_color(s)
+        col.markdown(
+            f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.7rem 0.6rem;'
+            f'background:#fff;min-height:110px">'
+            f'<div style="font-size:0.52rem;font-weight:700;letter-spacing:0.12em;'
+            f'text-transform:uppercase;color:#888;margin-bottom:4px">{name}</div>'
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:1.10rem;'
+            f'font-weight:700;color:{c}">{s:.0f}<span style="font-size:0.65rem;'
+            f'color:#aaa">/100</span></div>'
+            f'{_ews_bar(s, c)}'
+            f'<div style="font-size:0.58rem;color:#666;margin-top:6px;line-height:1.4">'
+            f'{data["desc"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Composite score banner
+    comp = ews["composite"]
+    comp_color = _ews_score_color(comp)
+    comp_label = (
+        "High - Imminent regime shift risk" if comp >= 70
+        else "Elevated - Monitor closely" if comp >= 55
+        else "Moderate - Signals mixed" if comp >= 40
+        else "Low - Benign trajectory"
+    )
+    st.markdown(
+        f'<div style="border:2px solid {comp_color};border-radius:6px;padding:1rem 1.4rem;'
+        f'background:#fafaf8;display:flex;align-items:center;gap:1.5rem;margin:0.4rem 0">'
+        f'<div>'
+        f'<div style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+        f'text-transform:uppercase;color:#888">Composite Early Warning Score</div>'
+        f'<div style="font-family:JetBrains Mono,monospace;font-size:2.0rem;'
+        f'font-weight:700;color:{comp_color};line-height:1.1">{comp:.0f}'
+        f'<span style="font-size:0.9rem;color:#aaa">/100</span></div>'
+        f'<div style="font-size:0.72rem;font-weight:600;color:{comp_color};'
+        f'margin-top:2px">{comp_label}</div>'
+        f'</div>'
+        f'<div style="flex:1">'
+        f'<div style="background:#F0EDEA;border-radius:4px;height:14px">'
+        f'<div style="width:{comp:.0f}%;background:{comp_color};height:14px;'
+        f'border-radius:4px;transition:width 0.3s"></div>'
+        f'</div>'
+        f'<div style="display:flex;justify-content:space-between;'
+        f'font-size:0.55rem;color:#aaa;margin-top:3px">'
+        f'<span>0 - Benign</span><span>40</span><span>65</span><span>100 - Crisis</span>'
+        f'</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Historical analogues table
+    if ews["analogues"]:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(
+            '<p style="font-size:0.78rem;font-weight:700;color:#1a1a1a;margin-bottom:4px">'
+            'Historical Analogues - Most Similar Market Conditions</p>'
+            '<p style="font-size:0.66rem;color:#555;margin-bottom:8px">'
+            'Top-5 dates where cross-asset correlation, equity vol, commodity vol, and '
+            'regime were most similar to today. Shows what happened in the following 30/60/90 days.</p>',
+            unsafe_allow_html=True,
+        )
+
+        _REGIME_NAMES_OVW = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+
+        def _regime_cell(name: str, r_int: int) -> str:
+            c = _r_colors.get(r_int, "#555960")
+            return f'<span style="color:{c};font-weight:600">{name}</span>'
+
+        rows_html = ""
+        for a in ews["analogues"]:
+            sim_bar = f'<div style="background:#F0EDEA;border-radius:2px;height:4px;width:70px;display:inline-block;vertical-align:middle;margin-left:4px"><div style="width:{a["sim"]:.0f}%;background:#CFB991;height:4px;border-radius:2px"></div></div>'
+            rows_html += (
+                f'<tr style="border-bottom:1px solid #F0EDEA">'
+                f'<td style="padding:5px 8px;font-family:JetBrains Mono,monospace;'
+                f'font-size:0.72rem;font-weight:600">{a["date"]}</td>'
+                f'<td style="padding:5px 8px;font-size:0.70rem">'
+                f'{_regime_cell(a["regime"], list(_REGIME_NAMES_OVW.values()).index(a["regime"]) if a["regime"] in _REGIME_NAMES_OVW.values() else 1)}</td>'
+                f'<td style="padding:5px 8px;font-size:0.70rem">'
+                f'{_regime_cell(a["r30"], a["r30_int"])}</td>'
+                f'<td style="padding:5px 8px;font-size:0.70rem">'
+                f'{_regime_cell(a["r60"], a["r60_int"])}</td>'
+                f'<td style="padding:5px 8px;font-size:0.70rem">'
+                f'{_regime_cell(a["r90"], a["r90_int"])}</td>'
+                f'<td style="padding:5px 8px;font-size:0.68rem;color:#888">'
+                f'{a["sim"]:.0f}%{sim_bar}</td>'
+                f'</tr>'
+            )
+
+        st.markdown(
+            f'<table style="width:100%;border-collapse:collapse;'
+            f'font-family:DM Sans,sans-serif;margin-top:4px">'
+            f'<thead><tr style="background:#F5F2EE">'
+            f'<th style="padding:5px 8px;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:0.10em;text-transform:uppercase;text-align:left;color:#666">Date</th>'
+            f'<th style="padding:5px 8px;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:0.10em;text-transform:uppercase;text-align:left;color:#666">Regime Then</th>'
+            f'<th style="padding:5px 8px;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:0.10em;text-transform:uppercase;text-align:left;color:#666">+30d</th>'
+            f'<th style="padding:5px 8px;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:0.10em;text-transform:uppercase;text-align:left;color:#666">+60d</th>'
+            f'<th style="padding:5px 8px;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:0.10em;text-transform:uppercase;text-align:left;color:#666">+90d</th>'
+            f'<th style="padding:5px 8px;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:0.10em;text-transform:uppercase;text-align:left;color:#666">Similarity</th>'
+            f'</tr></thead>'
+            f'<tbody>{rows_html}</tbody>'
+            f'</table>',
+            unsafe_allow_html=True,
+        )
+
+        best = ews["analogues"][0]
+        _takeaway_block(
+            f"Current conditions most closely resemble <b>{best['date']}</b> "
+            f"({best['sim']:.0f}% similarity). "
+            f"At that time the market was in <b>{best['regime']}</b> regime and moved to "
+            f"<b>{best['r30']}</b> within 30 days, "
+            f"<b>{best['r60']}</b> within 60 days. "
+            f"Composite early warning score: <b style='color:{comp_color}'>"
+            f"{comp:.0f}/100 - {comp_label.split(' - ')[0]}</b>."
+        )
+    else:
+        _section_note("Historical analogue matching requires at least 200 days of regime history.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 

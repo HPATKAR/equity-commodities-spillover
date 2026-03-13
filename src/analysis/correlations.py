@@ -367,3 +367,331 @@ def dcc_matrix(
     if not result:
         return pd.DataFrame()
     return pd.DataFrame(result).sort_index()
+
+
+# ── Regime Markov Chain ────────────────────────────────────────────────────
+
+def regime_transition_matrix(regimes: pd.Series) -> pd.DataFrame:
+    """
+    4x4 first-order Markov transition probability matrix.
+
+    Counts day-to-day transitions i -> j across the full regime history,
+    then normalises each row so that probabilities sum to 1.
+
+    Returns a DataFrame indexed and columned by [0, 1, 2, 3].
+    Rows with no observed transitions are left as uniform (0.25 each).
+    """
+    labels = [0, 1, 2, 3]
+    counts = pd.DataFrame(0, index=labels, columns=labels, dtype=float)
+
+    r = regimes.dropna().astype(int).values
+    for t in range(len(r) - 1):
+        counts.loc[r[t], r[t + 1]] += 1
+
+    row_sums = counts.sum(axis=1)
+    # Avoid division by zero - fill uniform for rows with zero observations
+    prob = counts.div(row_sums.replace(0, np.nan), axis=0).fillna(0.25)
+    return prob
+
+
+def regime_steady_state(trans_matrix: pd.DataFrame) -> np.ndarray:
+    """
+    Stationary distribution pi such that pi @ P = pi, sum(pi) = 1.
+
+    Solved via: (P^T - I)^T * pi = 0  with last row replaced by sum = 1.
+    Returns length-4 array, values in [0, 1].
+    """
+    P = trans_matrix.values.astype(float)
+    n = P.shape[0]
+
+    A = (P.T - np.eye(n))
+    A[-1, :] = 1.0          # normalization constraint
+    b = np.zeros(n)
+    b[-1] = 1.0
+
+    try:
+        pi = np.linalg.solve(A, b)
+    except np.linalg.LinAlgError:
+        pi = np.ones(n) / n  # fallback: uniform
+
+    return np.clip(pi, 0, 1)
+
+
+def regime_mean_first_passage(
+    trans_matrix: pd.DataFrame,
+    target: int = 3,
+) -> dict[int, float]:
+    """
+    Mean First Passage Time (MFPT) to reach `target` regime from each other regime.
+
+    Solves: for each i != target:
+        MFPT[i] = 1 + sum_{k != target} P[i,k] * MFPT[k]
+    i.e.  (I - P_sub) * m = 1_vector
+
+    Returns {0: days, 1: days, 2: days, 3: 0.0}.
+    Values > 5000 are capped to indicate "very unlikely" rather than infinity.
+    """
+    P = trans_matrix.values.astype(float)
+    n = P.shape[0]
+    states = [i for i in range(n) if i != target]
+
+    P_sub = P[np.ix_(states, states)]
+    rhs   = np.ones(len(states))
+    A     = np.eye(len(states)) - P_sub
+
+    try:
+        mfpt_vals = np.linalg.solve(A, rhs)
+    except np.linalg.LinAlgError:
+        mfpt_vals = np.full(len(states), np.nan)
+
+    result: dict[int, float] = {target: 0.0}
+    for i, s in enumerate(states):
+        v = float(mfpt_vals[i])
+        result[s] = min(v, 5000.0) if np.isfinite(v) and v > 0 else 5000.0
+
+    return result
+
+
+def regime_run_statistics(regimes: pd.Series) -> pd.DataFrame:
+    """
+    Consecutive run-length statistics per regime.
+
+    Walks the regime series and records each unbroken run.
+    Returns DataFrame with columns [mean, median, max, count] per regime (0-3).
+    """
+    runs: list[tuple[int, int]] = []
+    r = regimes.dropna().astype(int)
+    current = None
+    count   = 0
+    for val in r:
+        if val == current:
+            count += 1
+        else:
+            if current is not None:
+                runs.append((current, count))
+            current = int(val)
+            count   = 1
+    if current is not None:
+        runs.append((current, count))
+
+    if not runs:
+        return pd.DataFrame(
+            columns=["mean", "median", "max", "count"],
+            index=pd.Index([0, 1, 2, 3], name="regime"),
+        )
+
+    df = pd.DataFrame(runs, columns=["regime", "duration"])
+    stats = (
+        df.groupby("regime")["duration"]
+        .agg(mean="mean", median="median", max="max", count="count")
+        .round(1)
+        .reindex([0, 1, 2, 3])
+        .fillna(0)
+    )
+    return stats
+
+
+# ── Early Warning System ───────────────────────────────────────────────────
+
+def early_warning_signals(
+    avg_corr:    pd.Series,
+    cmd_r:       pd.DataFrame,
+    eq_r:        pd.DataFrame,
+    regimes:     pd.Series,
+    trans_matrix: pd.DataFrame,
+) -> dict:
+    """
+    Five forward-looking early-warning signal scores (0-100) plus composite.
+
+    Components:
+    1. Correlation Velocity    (25%) - 30d OLS slope of avg_corr, normalised
+    2. Vol Acceleration        (20%) - 10d change in 30d commodity vol z-score
+    3. Regime Duration Pressure(20%) - current run length vs historical avg
+    4. Equity Vol Trend        (15%) - 20d slope of equity realised vol
+    5. Markov Crisis Probability(20%)- 1-step P(Crisis | current regime)
+
+    Also returns top-5 historical analogue dates (Euclidean NN on 4-dim signature).
+    """
+
+    # ── Helper: OLS slope score ──────────────────────────────────────────────
+    def _slope_score(series: pd.Series, window: int) -> float:
+        s = series.dropna().iloc[-window:]
+        if len(s) < window // 2:
+            return 50.0
+        x = np.arange(len(s), dtype=float)
+        slope = np.polyfit(x, s.values, 1)[0]
+        # Normalise: clip slope to ±3 historical std, map to 0-100
+        hist_slopes = series.dropna().rolling(window).apply(
+            lambda v: np.polyfit(np.arange(len(v)), v, 1)[0], raw=True,
+        ).dropna()
+        if hist_slopes.empty or hist_slopes.std() < 1e-10:
+            return 50.0
+        z = slope / (hist_slopes.std() * 3 + 1e-10)
+        return float(np.clip(50 + z * 50, 0, 100))
+
+    # ── Component 1: Correlation Velocity ───────────────────────────────────
+    try:
+        c1 = _slope_score(avg_corr, 30)
+    except Exception:
+        c1 = 50.0
+
+    # ── Component 2: Vol Acceleration ───────────────────────────────────────
+    try:
+        energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
+        cols = [c for c in energy_metals if c in cmd_r.columns]
+        if cols:
+            rv    = cmd_r[cols].rolling(30).std().mean(axis=1) * np.sqrt(252) * 100
+            rv_mn = rv.rolling(252, min_periods=60).mean()
+            rv_sd = rv.rolling(252, min_periods=60).std().replace(0, np.nan)
+            z_vol = ((rv - rv_mn) / rv_sd).dropna()
+            if len(z_vol) >= 10:
+                delta = float(z_vol.iloc[-1] - z_vol.iloc[-10])
+                # delta typically in [-3, 3]; map rising vol to high score
+                c2 = float(np.clip(50 + delta / 0.12, 0, 100))
+            else:
+                c2 = 50.0
+        else:
+            c2 = 50.0
+    except Exception:
+        c2 = 50.0
+
+    # ── Component 3: Regime Duration Pressure ───────────────────────────────
+    try:
+        run_stats = regime_run_statistics(regimes)
+        current_r = int(regimes.dropna().iloc[-1])
+        # Count current consecutive run
+        r_vals = regimes.dropna().astype(int).values
+        run_len = 0
+        for v in reversed(r_vals):
+            if v == current_r:
+                run_len += 1
+            else:
+                break
+        avg_run = float(run_stats.loc[current_r, "mean"]) if current_r in run_stats.index else 20.0
+        # Pressure: 100 when run_len = 2x avg; 50 at avg; 0 at 0
+        ratio = run_len / max(avg_run, 1.0)
+        c3 = float(np.clip(50 * ratio, 0, 100))
+    except Exception:
+        c3 = 50.0
+
+    # ── Component 4: Equity Vol Trend ───────────────────────────────────────
+    try:
+        eq_vol = eq_r.rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
+        c4 = _slope_score(eq_vol.dropna(), 20)
+    except Exception:
+        c4 = 50.0
+
+    # ── Component 5: Markov Crisis Probability ──────────────────────────────
+    try:
+        current_r = int(regimes.dropna().iloc[-1])
+        c5 = float(trans_matrix.loc[current_r, 3]) * 100
+    except Exception:
+        c5 = 20.0
+
+    composite = float(np.clip(
+        0.25 * c1 + 0.20 * c2 + 0.20 * c3 + 0.15 * c4 + 0.20 * c5,
+        0, 100,
+    ))
+
+    # ── Signal labels and descriptions ──────────────────────────────────────
+    _REGIME_NAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+    current_regime = int(regimes.dropna().iloc[-1]) if not regimes.dropna().empty else 1
+    signals = {
+        "Correlation Velocity":     {"score": round(c1, 1),
+            "desc": "Rate of change in cross-asset correlation (30d trend)"},
+        "Vol Acceleration":         {"score": round(c2, 1),
+            "desc": "10d change in commodity vol z-score (energy + metals)"},
+        "Regime Duration Pressure": {"score": round(c3, 1),
+            "desc": f"Current run length vs. historical avg ({_REGIME_NAMES.get(current_regime, '')} regime)"},
+        "Equity Vol Trend":         {"score": round(c4, 1),
+            "desc": "20d slope of equal-weight equity realised volatility"},
+        "Markov Crisis P":          {"score": round(c5, 1),
+            "desc": f"1-step Markov probability of entering Crisis from {_REGIME_NAMES.get(current_regime, '')}"},
+    }
+
+    # ── Historical analogues (Euclidean NN on 4-dim signature) ──────────────
+    # Use composite-index rolling correlations (avoids sparse union-index issue)
+    analogues: list[dict] = []
+    try:
+        energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
+        cols = [c for c in energy_metals if c in cmd_r.columns]
+
+        eq_vol_s  = eq_r.rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
+        cmd_vol_s = (cmd_r[cols].rolling(30).std().mean(axis=1) * np.sqrt(252) * 100
+                     if cols else eq_vol_s.copy())
+
+        # Composite-index cross-asset correlation (pairwise, avoids union-index NaN issue)
+        eq_idx  = eq_r.mean(axis=1)
+        cmd_idx = cmd_r[cols].mean(axis=1) if cols else cmd_r.mean(axis=1)
+        pair_df = pd.concat([eq_idx.rename("eq"), cmd_idx.rename("cmd")], axis=1).dropna()
+        fast_corr = pair_df["eq"].rolling(60, min_periods=30).corr(pair_df["cmd"]).abs()
+
+        # Build daily signature on the intersection of all series
+        sig_df = pd.concat([
+            eq_vol_s.rename("eq_vol"),
+            cmd_vol_s.rename("cmd_vol"),
+            fast_corr.rename("corr_proxy"),
+        ], axis=1).dropna()
+
+        # Attach regime column via nearest-date join (reindex + ffill)
+        reg_daily = regimes.reindex(sig_df.index, method="ffill")
+        sig_df["regime"] = reg_daily
+
+        if len(sig_df) >= 60:
+            # Distance on the 3 vol/corr features only (no regime in metric)
+            feat_cols = ["eq_vol", "cmd_vol", "corr_proxy"]
+            feat_df   = sig_df[feat_cols]
+            norm = (feat_df - feat_df.min()) / (feat_df.max() - feat_df.min() + 1e-10)
+            current_vec = norm.iloc[-1].values
+
+            dists = np.sqrt(((norm.values - current_vec) ** 2).sum(axis=1))
+            dist_s = pd.Series(dists, index=sig_df.index)
+            # Exclude recent 90 days to avoid trivial self-matches
+            dist_s = dist_s.iloc[:-90] if len(dist_s) > 90 else dist_s.iloc[:-1]
+            dist_s = dist_s.dropna()
+
+            # Regime lookup – fill NaN with Normal (1) for pre-history dates
+            regime_at = reg_daily.fillna(1).astype(int)
+
+            picked: list[pd.Timestamp] = []
+            for dt in dist_s.sort_values().index:
+                if all(abs((dt - p).days) >= 90 for p in picked):
+                    picked.append(dt)
+                if len(picked) >= 5:
+                    break
+
+            for dt in picked:
+                # Get regime at dt + 30/60/90 via nearest-available in regime_at
+                def _reg_at_offset(base_dt: pd.Timestamp, offset_days: int) -> int:
+                    target = base_dt + pd.Timedelta(days=offset_days)
+                    idx = regime_at.index
+                    pos = idx.searchsorted(target)
+                    pos = min(pos, len(idx) - 1)
+                    return int(regime_at.iloc[pos])
+
+                r_now  = _reg_at_offset(dt, 0)
+                r_30   = _reg_at_offset(dt, 30)
+                r_60   = _reg_at_offset(dt, 60)
+                r_90   = _reg_at_offset(dt, 90)
+                similarity = max(0.0, 100.0 - dist_s[dt] * 100)
+                analogues.append({
+                    "date":    dt.strftime("%b %Y"),
+                    "regime":  _REGIME_NAMES.get(r_now, str(r_now)),
+                    "r30":     _REGIME_NAMES.get(r_30,  str(r_30)),
+                    "r60":     _REGIME_NAMES.get(r_60,  str(r_60)),
+                    "r90":     _REGIME_NAMES.get(r_90,  str(r_90)),
+                    "sim":     round(similarity, 1),
+                    "r30_int": r_30,
+                    "r60_int": r_60,
+                    "r90_int": r_90,
+                })
+    except Exception:
+        pass
+
+    return {
+        "signals":       signals,
+        "composite":     round(composite, 1),
+        "current_regime": current_regime,
+        "current_regime_name": _REGIME_NAMES.get(current_regime, "Unknown"),
+        "analogues":     analogues,
+    }
