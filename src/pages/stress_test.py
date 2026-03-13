@@ -196,7 +196,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             default_w = default_weights.get(asset, round(100 / len(all_selected_a), 1))
             w = weight_cols[i % 5].number_input(
                 asset, min_value=0.0, max_value=100.0,
-                value=float(default_w), step=5.0, key=f"w_{asset}",
+                value=float(default_w), step=1.0, key=f"w_{asset}",
             )
             weights_a[asset] = w
 
@@ -366,6 +366,33 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 f'<b>Normalised portfolio</b> ({len(norm_weights)} assets): {summary_txt}</div>',
                 unsafe_allow_html=True,
             )
+
+            # Portfolio allocation bar chart
+            alloc_sorted = sorted(norm_weights.items(), key=lambda x: -x[1])
+            alloc_fig = go.Figure(go.Bar(
+                y=[a for a, _ in alloc_sorted],
+                x=[v * 100 for _, v in alloc_sorted],
+                orientation="h",
+                marker_color="#CFB991",
+                marker_line_color="#B8A070",
+                marker_line_width=0.5,
+                text=[f"{v*100:.1f}%" for _, v in alloc_sorted],
+                textposition="outside",
+                textfont=dict(size=9, family="JetBrains Mono, monospace"),
+                hovertemplate="%{y}: %{x:.1f}%<extra></extra>",
+            ))
+            alloc_fig.update_layout(
+                template="purdue",
+                height=max(120, len(alloc_sorted) * 26),
+                title=dict(text="Portfolio Allocation", font=dict(size=11), x=0),
+                xaxis=dict(
+                    title="Weight (%)", ticksuffix="%",
+                    range=[0, max(v * 100 for _, v in alloc_sorted) * 1.35],
+                ),
+                yaxis=dict(tickfont=dict(size=9, family="JetBrains Mono, monospace")),
+                margin=dict(l=130, r=80, t=36, b=30),
+            )
+            _chart(alloc_fig)
     else:
         norm_weights = {}
 
@@ -395,7 +422,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         )
 
     if not st.button("Run Stress Test", type="primary", key="st_run"):
-        st.info("Configure your portfolio above and click **Run Stress Test**.")
         _page_footer()
         return
 
@@ -469,29 +495,49 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     k3.metric("Worst Max Drawdown", f"{min(valid_dd):.1f}%"      if valid_dd else "N/A")
     k4.metric("Avg During Return",  f"{np.mean(valid_during):+.1f}%" if valid_during else "N/A")
 
-    # ── During-event bar chart ────────────────────────────────────────────────
+    # ── Event returns heatmap (pre / during / post) ───────────────────────────
     st.markdown("---")
-    st.subheader("Portfolio Return During Each Event")
-
-    fig_bar = go.Figure(go.Bar(
-        y=[r["event"] for r in results],
-        x=[r["during_ret"] for r in results],
-        orientation="h",
-        marker_color=["#2e7d32" if r["during_ret"] >= 0 else "#c0392b" for r in results],
-        text=[f"{r['during_ret']:+.1f}%" for r in results],
-        textposition="outside",
-        textfont=dict(size=9, family="JetBrains Mono, monospace"),
-        hovertemplate="%{y}: %{x:+.1f}%<extra></extra>",
-    ))
-    fig_bar.add_vline(x=0, line=dict(color="#ABABAB", width=1, dash="dot"))
-    fig_bar.update_layout(
-        template="purdue",
-        height=max(300, len(results) * 30),
-        xaxis=dict(title="Portfolio Return (%)", ticksuffix="%"),
-        yaxis=dict(tickfont=dict(size=9, family="JetBrains Mono, monospace")),
-        margin=dict(l=130, r=80, t=30, b=30),
+    st.subheader("Event Returns: Pre / During / Post")
+    _section_note(
+        f"Return (%) across three windows: {pre_days}d before, event period, "
+        f"{post_days}d after. Green = gain, red = loss."
     )
-    _chart(fig_bar)
+
+    hm_metrics = ["Pre (%)", "During (%)", "Post (%)"]
+    hm_z_raw   = [
+        [r["pre_ret"], r["during_ret"], r["post_ret"]]
+        for r in results
+    ]
+    hm_z    = [[v if (v is not None and not np.isnan(float(v))) else None for v in row]
+               for row in hm_z_raw]
+    hm_text = [[f"{v:+.1f}%" if v is not None else "–" for v in row] for row in hm_z]
+    hm_y    = [r["event"] for r in results]
+    abs_max = max(
+        (abs(v) for row in hm_z for v in row if v is not None),
+        default=10,
+    )
+
+    fig_hm = go.Figure(go.Heatmap(
+        z=hm_z, x=hm_metrics, y=hm_y,
+        colorscale=[[0, "#c0392b"], [0.5, "#f9f9f7"], [1, "#2e7d32"]],
+        zmid=0, zmin=-abs_max, zmax=abs_max,
+        text=hm_text,
+        texttemplate="%{text}",
+        textfont=dict(size=10, family="JetBrains Mono, monospace"),
+        hovertemplate="%{y} | %{x}: %{text}<extra></extra>",
+        colorbar=dict(title="Return (%)", thickness=12, len=0.8, ticksuffix="%"),
+    ))
+    fig_hm.update_layout(
+        template="purdue",
+        height=max(300, len(results) * 30 + 80),
+        xaxis=dict(side="top", tickfont=dict(size=10)),
+        yaxis=dict(
+            tickfont=dict(size=9, family="JetBrains Mono, monospace"),
+            autorange="reversed",
+        ),
+        margin=dict(l=130, r=40, t=60, b=20),
+    )
+    _chart(fig_hm)
 
     # ── Max drawdown comparison ───────────────────────────────────────────────
     st.markdown("---")
@@ -519,12 +565,13 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     )
     _chart(fig_dd)
 
-    # ── Portfolio path (event windows) ────────────────────────────────────────
+    # ── Portfolio path (relative days from event start) ───────────────────────
     st.markdown("---")
-    st.subheader("Portfolio Value Path - Event Windows (Indexed to 100)")
+    st.subheader("Portfolio Value Path — Days from Event Start (Base = 100)")
     _section_note(
-        "Each line shows portfolio value indexed to 100 at event start. "
-        "Dashed vertical marks: left = event start, right = event end."
+        "Each line is indexed to 100 at event start (day 0), making events "
+        "directly comparable regardless of calendar date. "
+        f"Negative days = {pre_days}d pre-event; positive = {post_days}d post-event."
     )
 
     fig_path = go.Figure()
@@ -536,21 +583,32 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         sl = port.loc[window_start:window_end]
         if sl.empty:
             continue
-        base = sl.loc[t0:].iloc[0] if not sl.loc[t0:].empty else sl.iloc[0]
-        sl_norm = sl / base * 100
+        ref = sl.loc[t0:]
+        if ref.empty:
+            continue
+        base     = ref.iloc[0]
+        sl_norm  = sl / base * 100
+        rel_days = [(d - t0).days for d in sl_norm.index]
         fig_path.add_trace(go.Scatter(
-            x=sl_norm.index, y=sl_norm.values,
+            x=rel_days, y=sl_norm.values,
             name=r["event"],
             line=dict(color=r["color"], width=1.5),
-            hovertemplate="%{x|%d %b %Y}: %{y:.1f}<extra>" + r["event"] + "</extra>",
+            hovertemplate="Day %{x}: %{y:.1f}<extra>" + r["event"] + "</extra>",
         ))
 
+    fig_path.add_vline(
+        x=0,
+        line=dict(color="#555960", width=1.5, dash="dash"),
+        annotation_text="Event Start",
+        annotation_font_size=8,
+        annotation_position="top right",
+    )
     fig_path.add_hline(y=100, line=dict(color="#ABABAB", width=1, dash="dot"))
     fig_path.update_layout(
         template="purdue", height=420,
-        yaxis=dict(title="Portfolio Value (Base=100)"),
-        xaxis=dict(type="date"),
-        margin=dict(l=50, r=20, t=30, b=30),
+        yaxis=dict(title="Portfolio Value (Base=100 at Event Start)"),
+        xaxis=dict(title="Days from Event Start", zeroline=False),
+        margin=dict(l=50, r=20, t=30, b=40),
     )
     _chart(fig_path)
 
@@ -573,12 +631,20 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         stock_sum_df = pd.DataFrame(stock_summary).sort_values("Portfolio Wt (%)", ascending=False)
         st.dataframe(stock_sum_df, use_container_width=True, hide_index=True)
 
+    worst_ev    = min(results, key=lambda r: r["during_ret"] if not np.isnan(r["during_ret"]) else 0)
+    best_ev     = max(results, key=lambda r: r["during_ret"] if not np.isnan(r["during_ret"]) else 0)
+    worst_dd_ev = min(results, key=lambda r: r["max_dd"]     if not np.isnan(r["max_dd"])     else 0)
+    avg_ret     = np.mean(valid_during) if valid_during else 0
+
     _takeaway_block(
-        "A portfolio's worst stress-test score reveals its most vulnerable scenario. "
-        "High commodity weights amplify energy supply-shock returns; "
+        f"Across {len(results)} historical events, this {len(norm_weights)}-asset portfolio "
+        f"averaged {avg_ret:+.1f}% during-event return. "
+        f"Worst: {worst_ev['event']} ({worst_ev['during_ret']:+.1f}%). "
+        f"Best: {best_ev['event']} ({best_ev['during_ret']:+.1f}%). "
+        f"Steepest drawdown: {worst_dd_ev['max_dd']:.1f}% during {worst_dd_ev['event']}. "
+        "High commodity weights amplify energy supply-shock events; "
         "high equity weights amplify correlation-spike drawdowns. "
-        "Gold typically reduces max drawdown during crisis regimes. "
-        "Individual S&P 500 stocks increase idiosyncratic risk alongside systematic exposure."
+        "Gold typically reduces max drawdown during crisis regimes."
     )
 
     _page_conclusion(
