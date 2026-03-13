@@ -351,6 +351,8 @@ def _risk_score_vs_vix(
     cmd_r: pd.DataFrame,
 ) -> tuple[pd.DataFrame, float]:
     """Align risk score with VIX; compute R² and lead/lag correlation."""
+    if score_hist is None or score_hist.empty:
+        return pd.DataFrame(), np.nan
     vix = _fetch_vix(str(score_hist.index[0].date()), str(date.today()))
     if vix is None or vix.empty:
         return pd.DataFrame(), np.nan

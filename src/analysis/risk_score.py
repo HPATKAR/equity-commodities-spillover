@@ -131,7 +131,22 @@ def risk_score_history(
 
     If eq_r is not supplied, falls back to 57% corr / 43% vol (legacy).
     """
-    if avg_corr.empty or cmd_r.empty:
+    if cmd_r.empty:
+        return pd.Series(dtype=float)
+
+    # avg_corr from average_cross_corr_series can be very sparse (32–127 rows over 14+ years).
+    # .notna().mean() on the raw sparse series is 1.0 (all 32 values are non-NaN), so the
+    # right check is to compare its length against the full daily index in cmd_r.
+    if eq_r is not None and not eq_r.empty and (
+        avg_corr.empty or len(avg_corr) < 0.5 * len(cmd_r)
+    ):
+        common = cmd_r.index.intersection(eq_r.index)
+        if len(common) > 120:
+            eq_idx  = eq_r.reindex(common).mean(axis=1)
+            cmd_idx = cmd_r.reindex(common).mean(axis=1)
+            avg_corr = eq_idx.rolling(60, min_periods=30).corr(cmd_idx).abs().dropna()
+
+    if avg_corr.empty:
         return pd.Series(dtype=float)
 
     corr_pct = avg_corr.rolling(window, min_periods=60).apply(
