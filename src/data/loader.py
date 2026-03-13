@@ -1,6 +1,14 @@
 """
-Data loader — yfinance + FRED with Streamlit caching.
+Data loader — LSEG (primary) + yfinance (fallback) + FRED.
 Returns log-return DataFrames and raw price DataFrames.
+
+LSEG setup (Purdue account):
+  1. pip install lseg-data
+  2. Add to .streamlit/secrets.toml:
+       [lseg]
+       app_key = "your_32_char_key_from_developers.lseg.com"
+  3. Keep Eikon / LSEG Workspace open on the same machine.
+  All loaders silently fall back to yfinance if the session fails.
 """
 
 from __future__ import annotations
@@ -16,6 +24,152 @@ from src.data.config import (
     EQUITY_TICKERS, COMMODITY_TICKERS, FRED_SERIES,
     DEFAULT_START, DEFAULT_END,
 )
+
+
+# ── LSEG RIC map ───────────────────────────────────────────────────────────
+# Maps the dashboard's asset names → LSEG RIC codes.
+# Continuous futures use the "1!" convention (front-month roll).
+
+_LSEG_RICS: dict[str, str] = {
+    # ── Equity indices ──────────────────────────────────────────────────
+    "S&P 500":        ".SPX",
+    "Nasdaq 100":     ".NDX",
+    "DJIA":           ".DJI",
+    "Russell 2000":   ".RUT",
+    "Eurostoxx 50":   ".STOXX50E",
+    "DAX":            ".GDAXI",
+    "CAC 40":         ".FCHI",
+    "FTSE 100":       ".FTSE",
+    "Nikkei 225":     ".N225",
+    "TOPIX":          ".TOPX",
+    "Hang Seng":      ".HSI",
+    "Shanghai Comp":  ".SSEC",
+    "CSI 300":        "CSI300.SS",
+    "Sensex":         ".BSESN",
+    "Nifty 50":       ".NSEI",
+    # ── Commodities (continuous front-month futures) ─────────────────────
+    "WTI Crude Oil":  "CL1!",
+    "Brent Crude":    "LCO1!",
+    "Natural Gas":    "NG1!",
+    "Gasoline (RBOB)":"RB1!",
+    "Heating Oil":    "HO1!",
+    "Gold":           "GC1!",
+    "Silver":         "SI1!",
+    "Platinum":       "PL1!",
+    "Copper":         "HG1!",
+    "Aluminum":       "MAL1!",
+    "Nickel":         "MNI1!",
+    "Wheat":          "W1!",
+    "Corn":           "C1!",
+    "Soybeans":       "S1!",
+    "Sugar #11":      "SB1!",
+    "Coffee":         "KC1!",
+    "Cotton":         "CT1!",
+}
+
+_RIC_TO_NAME = {v: k for k, v in _LSEG_RICS.items()}
+
+
+# ── LSEG session management ────────────────────────────────────────────────
+
+def _lseg_open() -> bool:
+    """
+    Open a Desktop Session using the app key in st.secrets["lseg"]["app_key"].
+    Requires Eikon / LSEG Workspace to be running on the same machine.
+    Returns True on success, False otherwise (fallback to yfinance).
+    Stores result in st.session_state so we only attempt once per session.
+    """
+    if st.session_state.get("_lseg_ok") is not None:
+        return bool(st.session_state["_lseg_ok"])
+    try:
+        import lseg.data as ld
+        app_key = st.secrets.get("lseg", {}).get("app_key", "")
+        if not app_key:
+            st.session_state["_lseg_ok"] = False
+            return False
+        ld.open_session(
+            name="desktop.workspace",
+            app_key=app_key,
+        )
+        st.session_state["_lseg_ok"] = True
+        st.session_state["_lseg_mod"] = ld
+        return True
+    except Exception:
+        st.session_state["_lseg_ok"] = False
+        return False
+
+
+# ── LSEG fetch helpers ─────────────────────────────────────────────────────
+
+def _fetch_lseg(names: list[str], start: str, end: str) -> pd.DataFrame:
+    """
+    Fetch daily Close prices from LSEG for a list of dashboard asset names.
+    Returns DataFrame with asset names as columns; empty on any failure.
+    """
+    if not _lseg_open():
+        return pd.DataFrame()
+    ld = st.session_state.get("_lseg_mod")
+    if ld is None:
+        return pd.DataFrame()
+
+    rics = [_LSEG_RICS[n] for n in names if n in _LSEG_RICS]
+    if not rics:
+        return pd.DataFrame()
+
+    try:
+        raw = ld.get_history(
+            universe=rics,
+            fields=["TRDPRC_1"],       # last trade price (exchange close)
+            start=start,
+            end=end,
+            interval="daily",
+        )
+        if raw is None or raw.empty:
+            return pd.DataFrame()
+
+        # get_history may return MultiIndex columns — flatten to RICs
+        if isinstance(raw.columns, pd.MultiIndex):
+            raw = raw.xs("TRDPRC_1", level=0, axis=1) if "TRDPRC_1" in raw.columns.get_level_values(0) \
+                  else raw.droplevel(0, axis=1)
+
+        raw = raw.rename(columns=_RIC_TO_NAME)
+        raw.index = pd.to_datetime(raw.index).normalize()
+        # Keep only requested names (in original order)
+        keep = [n for n in names if n in raw.columns]
+        return raw[keep].sort_index().astype(float)
+
+    except Exception:
+        return pd.DataFrame()
+
+
+def _fetch_lseg_snapshot(names: list[str]) -> pd.DataFrame:
+    """
+    Real-time snapshot: last price, % change, volume for given asset names.
+    Returns DataFrame indexed by asset name; empty on failure.
+    """
+    if not _lseg_open():
+        return pd.DataFrame()
+    ld = st.session_state.get("_lseg_mod")
+    if ld is None:
+        return pd.DataFrame()
+
+    rics = [_LSEG_RICS[n] for n in names if n in _LSEG_RICS]
+    if not rics:
+        return pd.DataFrame()
+
+    try:
+        df, _ = ld.get_data(
+            universe=rics,
+            fields=["CF_LAST", "PCTCHNG", "CF_VOLUME", "CF_HIGH", "CF_LOW"],
+        )
+        if df is None or df.empty:
+            return pd.DataFrame()
+        df["Asset"] = df["Instrument"].map(_RIC_TO_NAME)
+        df = df.dropna(subset=["Asset"]).set_index("Asset").drop(columns=["Instrument"])
+        df.columns = ["Last", "Change %", "Volume", "High", "Low"]
+        return df.loc[[n for n in names if n in df.index]]
+    except Exception:
+        return pd.DataFrame()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -51,19 +205,27 @@ def _fill_gaps(df: pd.DataFrame, method: str = "ffill", limit: int = 5) -> pd.Da
 
 # ── Cached loaders ─────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)   # 5 min when LSEG live; 1 hr otherwise
 def load_equity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
+    names = list(EQUITY_TICKERS.keys())
+    lseg  = _fetch_lseg(names, start, end)
+    if not lseg.empty and len(lseg) > 10:
+        return _fill_gaps(lseg)
     return _fill_gaps(_fetch_yf(EQUITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_commodity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
+    names = list(COMMODITY_TICKERS.keys())
+    lseg  = _fetch_lseg(names, start, end)
+    if not lseg.empty and len(lseg) > 10:
+        return _fill_gaps(lseg)
     return _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
 
 
@@ -374,28 +536,54 @@ def load_sp500_prices(
 
 def load_live_snapshot(tickers: dict[str, str]) -> pd.DataFrame:
     """
-    Fetch 5 days of data for the given tickers and return a snapshot row:
-    last price, 1d change %, 5d change %, YTD change %.
+    Return last price, 1d/5d/YTD change % for each asset.
+    Uses LSEG real-time snapshot when available; falls back to yfinance.
     """
-    start_ytd  = date(date.today().year, 1, 1)
-    start_5d   = date.today() - timedelta(days=7)
+    names = list(tickers.keys())
+
+    # ── LSEG real-time path ───────────────────────────────────────────
+    lseg_snap = _fetch_lseg_snapshot(names)
+    if not lseg_snap.empty:
+        # Supplement with YTD from a short historical pull
+        ytd_start = str(date(date.today().year, 1, 1))
+        ytd_hist  = _fetch_lseg(names, ytd_start, str(date.today()))
+        rows = []
+        for name in names:
+            if name not in lseg_snap.index:
+                continue
+            row = lseg_snap.loc[name]
+            ytd = np.nan
+            if not ytd_hist.empty and name in ytd_hist.columns:
+                s = ytd_hist[name].dropna()
+                ytd = (s.iloc[-1] / s.iloc[0] - 1) * 100 if len(s) >= 2 else np.nan
+            rows.append({
+                "Name":    name,
+                "Last":    round(float(row["Last"]),     2) if pd.notna(row["Last"])     else np.nan,
+                "1D %":    round(float(row["Change %"]), 2) if pd.notna(row["Change %"]) else np.nan,
+                "5D %":    np.nan,    # not in real-time snapshot; filled below if needed
+                "YTD %":   round(float(ytd), 2) if pd.notna(ytd) else np.nan,
+            })
+        if rows:
+            return pd.DataFrame(rows).set_index("Name")
+
+    # ── yfinance fallback ─────────────────────────────────────────────
+    start_ytd = date(date.today().year, 1, 1)
     rows = []
     for name, tk in tickers.items():
         try:
             hist = yf.Ticker(tk).history(start=str(start_ytd), auto_adjust=True)
             if hist.empty:
                 continue
-            last  = hist["Close"].iloc[-1]
-            d1    = (hist["Close"].iloc[-1] / hist["Close"].iloc[-2] - 1) * 100 if len(hist) >= 2 else 0
-            d5    = (hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100 if len(hist) >= 6 else 0
-            ytd   = (hist["Close"].iloc[-1] / hist["Close"].iloc[0]  - 1) * 100 if len(hist) >= 2 else 0
+            last = hist["Close"].iloc[-1]
+            d1   = (hist["Close"].iloc[-1] / hist["Close"].iloc[-2] - 1) * 100 if len(hist) >= 2 else 0
+            d5   = (hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100 if len(hist) >= 6 else 0
+            ytd  = (hist["Close"].iloc[-1] / hist["Close"].iloc[0]  - 1) * 100 if len(hist) >= 2 else 0
             rows.append({
-                "Name":    name,
-                "Ticker":  tk,
-                "Last":    round(last, 2),
-                "1D %":    round(d1, 2),
-                "5D %":    round(d5, 2),
-                "YTD %":   round(ytd, 2),
+                "Name":  name,
+                "Last":  round(last, 2),
+                "1D %":  round(d1,   2),
+                "5D %":  round(d5,   2),
+                "YTD %": round(ytd,  2),
             })
         except Exception:
             pass
