@@ -211,6 +211,19 @@ GEOPOLITICAL_EVENTS = [
                        "Suez Canal disruptions push shipping costs +300%. "
                        "Oil risk premium embedded; gold hits ATH $2,400+.",
     },
+    {
+        "label":       "Iran/Hormuz",
+        "name":        "Iran Military Conflict & Strait of Hormuz Crisis",
+        "start":       date(2025, 6, 13),
+        "end":         date.today(),
+        "color":       "#c0392b",
+        "category":    "Geopolitical",
+        "description": "Direct U.S.-Israel strikes on Iranian nuclear and military facilities trigger "
+                       "escalating retaliation. Iran threatens Strait of Hormuz closure - through which "
+                       "~20% of global oil and 25% of global LNG transits. Brent spikes on supply "
+                       "disruption fears; gold and USD surge as safe havens. Energy-importing Asia "
+                       "bears disproportionate risk.",
+    },
 ]
 
 # ── Commodities watchlist — curated display metadata ──────────────────────

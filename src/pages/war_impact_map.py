@@ -148,6 +148,39 @@ _WAR_DATA: list[dict] = [
             "ZAF": 14,  "NGA": 15,  "ETH": 12,  "KEN": 10,
         },
     },
+    {
+        "label":       "Iran/Hormuz Crisis",
+        "event_label": "Iran/Hormuz",
+        "color":       "#c0392b",
+        "scores": {
+            # Direct conflict parties
+            "IRN": 100, "ISR": 88,  "USA": 80,  "YEM": 75,
+            # Strait of Hormuz - critical chokepoint states
+            "OMN": 82,  "QAT": 80,  "ARE": 78,  "SAU": 78,
+            "KWT": 72,  "BHR": 70,  "IRQ": 68,
+            # Iran proxy / linked conflicts
+            "LBN": 65,  "SYR": 58,  "PSE": 62,  "JOR": 55,
+            # High oil/LNG import dependency via Hormuz
+            "JPN": 68,  "KOR": 65,  "IND": 62,  "PAK": 55,
+            "CHN": 55,  "SGP": 52,  "BGD": 30,
+            # Regional / shipping exposure
+            "EGY": 52,  "TUR": 50,  "GRC": 45,  "CYP": 40,
+            "ITA": 42,  "DEU": 40,  "GBR": 38,  "FRA": 38,
+            "NLD": 35,  "BEL": 28,  "ESP": 32,  "PRT": 22,
+            "NOR": 28,  "SWE": 20,  "DNK": 22,  "CHE": 18,
+            "AUT": 25,  "POL": 20,  "HUN": 18,  "ROU": 18,
+            # Asia-Pacific energy importers
+            "TWN": 48,  "HKG": 42,  "IDN": 32,  "MYS": 30,
+            "THA": 28,  "VNM": 22,  "PHL": 20,  "AUS": 25,
+            # Americas - indirect via oil price
+            "CAN": 15,  "BRA": 12,  "MEX": 14,  "ARG": 10,
+            # Africa - competing exporters / importers
+            "LBY": 25,  "DZA": 20,  "MAR": 18,  "TUN": 15,
+            "NGA": 15,  "ZAF": 20,  "ETH": 12,  "KEN": 10, "SDN": 18,
+            # Russia / Ukraine - indirect oil price benefit/exposure
+            "RUS": 18,  "UKR": 15,
+        },
+    },
 ]
 
 
@@ -184,6 +217,10 @@ _HOMETURF_WARS: list[dict] = [
      "note": "Houthi missile/drone campaign; Red Sea shipping blocked."},
     {"name": "Syria",         "lat": 34.8, "lon": 38.5, "war": "Multi-conflict",
      "note": "Ongoing proxy war; Israeli strikes on Iranian positions."},
+    {"name": "Iran",          "lat": 32.4, "lon": 53.7, "war": "Iran/Hormuz Crisis",
+     "note": "US-Israel strikes on nuclear/military facilities; Hormuz closure threat."},
+    {"name": "Strait of Hormuz", "lat": 26.6, "lon": 56.3, "war": "Iran/Hormuz Crisis",
+     "note": "~20% of global oil + 25% of global LNG transits this chokepoint."},
 ]
 
 
@@ -242,9 +279,16 @@ def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
     # All countries in the world - unscored get 0 (renders as cream)
     all_iso = set(_ALL_COUNTRIES) | scored_iso
     for iso in all_iso:
-        u = _WAR_DATA[0]["scores"].get(iso, 0)
-        h = _WAR_DATA[1]["scores"].get(iso, 0)
-        composite = max(u, h)
+        u  = _WAR_DATA[0]["scores"].get(iso, 0)
+        h  = _WAR_DATA[1]["scores"].get(iso, 0)
+        ir = _WAR_DATA[2]["scores"].get(iso, 0)
+        composite = max(u, h, ir)
+        primary = max(
+            (_WAR_DATA[0]["label"], u),
+            (_WAR_DATA[1]["label"], h),
+            (_WAR_DATA[2]["label"], ir),
+            key=lambda x: x[1],
+        )[0]
         indices = _COUNTRY_INDICES.get(iso, [])
         ret_lines = []
         for idx in indices:
@@ -257,7 +301,8 @@ def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
             "score":         composite,
             "ukraine_score": u,
             "hamas_score":   h,
-            "primary_war":   _WAR_DATA[0]["label"] if u >= h else _WAR_DATA[1]["label"],
+            "iran_score":    ir,
+            "primary_war":   primary,
             "indices":       ", ".join(indices) if indices else "-",
             "ret_text":      " · ".join(ret_lines),
         })
@@ -278,7 +323,9 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         "and equity-market correlation to conflict assets. "
         "Hover any country for the breakdown and war-period equity returns. "
         "Active conflicts: Russia-Ukraine War (Feb 2022) · "
-        "Israel-Hamas & Iran Escalation (Oct 2023)."
+        "Israel-Hamas & Iran Escalation (Oct 2023) · "
+        "Iran/Hormuz Crisis (Jun 2025) - U.S.-Israel strikes on Iranian facilities; "
+        "Strait of Hormuz closure threat disrupts ~20% of global oil supply."
     )
 
     with st.spinner("Loading equity data…"):
@@ -317,7 +364,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     c1, c2, _ = st.columns([2, 2, 4])
     war_filter = c1.radio(
         "Show impact for",
-        ["Combined (max)", "Ukraine War only", "Israel-Hamas only"],
+        ["Combined (max)", "Ukraine War only", "Israel-Hamas only", "Iran/Hormuz only"],
         key="war_filter_map",
     )
     view_mode = c2.radio(
@@ -330,13 +377,15 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         score_col, title_sfx = "ukraine_score", "- Russia-Ukraine War"
     elif war_filter == "Israel-Hamas only":
         score_col, title_sfx = "hamas_score", "- Israel-Hamas War"
+    elif war_filter == "Iran/Hormuz only":
+        score_col, title_sfx = "iran_score", "- Iran/Hormuz Crisis"
     else:
-        score_col, title_sfx = "score", "- Combined (worst of both conflicts)"
+        score_col, title_sfx = "score", "- Combined (worst of all conflicts)"
 
     is_globe = (view_mode == "3D Globe")
 
     # ── Hover text ────────────────────────────────────────────────────────────
-    hometurf_iso = {"UKR", "ISR", "PSE", "LBN", "YEM", "SYR"}
+    hometurf_iso = {"UKR", "ISR", "PSE", "LBN", "YEM", "SYR", "IRN"}
     hover_texts = []
     for _, row in df.iterrows():
         s = int(row[score_col])
@@ -357,7 +406,8 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             f"<b>{row['country']}</b>{hw}<br>"
             f"<span style='color:{lv_color}'><b>{s}/100 - {lv}</b></span><br><br>"
             f"Ukraine War: {int(row['ukraine_score'])}/100<br>"
-            f"Israel-Hamas: {int(row['hamas_score'])}/100"
+            f"Israel-Hamas: {int(row['hamas_score'])}/100<br>"
+            f"Iran/Hormuz: {int(row['iran_score'])}/100"
         )
         if row["indices"] != "-":
             tip += f"<br><br><b>Tracked index:</b> {row['indices']}"
@@ -565,16 +615,18 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
 
     tracked_rows = []
     for iso, indices in _COUNTRY_INDICES.items():
-        u = _WAR_DATA[0]["scores"].get(iso, 0)
-        h = _WAR_DATA[1]["scores"].get(iso, 0)
+        u  = _WAR_DATA[0]["scores"].get(iso, 0)
+        h  = _WAR_DATA[1]["scores"].get(iso, 0)
+        ir = _WAR_DATA[2]["scores"].get(iso, 0)
         for idx in indices:
             w = war_rets.get(idx, {})
             tracked_rows.append({
-                "Country":         _NAMES.get(iso, iso),
-                "Equity Index":    idx,
-                "Impact Score":    max(u, h),
-                "Ukraine War (%)": w.get("Ukraine War", None),
-                "Israel War (%)":  w.get("Israel-Hamas War", None),
+                "Country":           _NAMES.get(iso, iso),
+                "Equity Index":      idx,
+                "Impact Score":      max(u, h, ir),
+                "Ukraine War (%)":   w.get("Ukraine War", None),
+                "Israel War (%)":    w.get("Israel-Hamas War", None),
+                "Iran/Hormuz (%)":   w.get("Iran/Hormuz Crisis", None),
             })
 
     if tracked_rows:
@@ -599,8 +651,9 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
 
         st.dataframe(
             tdf.style
-            .applymap(_sty, subset=["Ukraine War (%)", "Israel War (%)"])
-            .format({"Impact Score": "{:.0f}", "Ukraine War (%)": _fmt, "Israel War (%)": _fmt})
+            .applymap(_sty, subset=["Ukraine War (%)", "Israel War (%)", "Iran/Hormuz (%)"])
+            .format({"Impact Score": "{:.0f}", "Ukraine War (%)": _fmt,
+                     "Israel War (%)": _fmt, "Iran/Hormuz (%)": _fmt})
             .background_gradient(subset=["Impact Score"], cmap="RdYlGn_r", vmin=0, vmax=100),
             use_container_width=True,
             hide_index=True,
@@ -614,12 +667,13 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         df[df[score_col] > 0]
         .sort_values(score_col, ascending=False)
         .head(25)
-        [["country", score_col, "ukraine_score", "hamas_score", "indices"]]
+        [["country", score_col, "ukraine_score", "hamas_score", "iran_score", "indices"]]
         .rename(columns={
             "country":       "Country",
             score_col:       "Impact Score",
             "ukraine_score": "Ukraine War",
             "hamas_score":   "Israel-Hamas War",
+            "iran_score":    "Iran/Hormuz",
             "indices":       "Tracked Index",
         })
         .reset_index(drop=True)
@@ -629,7 +683,8 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     st.dataframe(
         top25.style
         .background_gradient(subset=["Impact Score"], cmap="RdYlGn_r", vmin=0, vmax=100)
-        .format({"Impact Score": "{:.0f}", "Ukraine War": "{:.0f}", "Israel-Hamas War": "{:.0f}"}),
+        .format({"Impact Score": "{:.0f}", "Ukraine War": "{:.0f}",
+                 "Israel-Hamas War": "{:.0f}", "Iran/Hormuz": "{:.0f}"}),
         use_container_width=True,
     )
 
@@ -637,7 +692,9 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         "War Impact Map",
         "This map synthesises geographic proximity, energy dependence, trade linkages, and equity "
         "market correlation to quantify how active conflicts propagate across global capital markets. "
-        "High-impact zones face disruptions via energy supply chains, shipping routes "
-        "(Suez, Black Sea), refugee/fiscal spillovers, or direct military involvement.",
+        "Three simultaneous active conflicts - Russia-Ukraine War, Israel-Hamas & Iran Escalation, "
+        "and the Iran/Hormuz Crisis - create compounding risk vectors. High-impact zones face "
+        "disruptions via energy supply chains, shipping routes (Suez, Black Sea, Strait of Hormuz), "
+        "refugee/fiscal spillovers, or direct military involvement.",
     )
     _page_footer()
