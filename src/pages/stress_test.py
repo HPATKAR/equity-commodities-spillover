@@ -324,15 +324,15 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     if total_w > 0:
         # Color-coded total weight indicator
-        if total_w > 100.0:
-            tw_color, tw_bg = "#c0392b", "#fdecea"
-            tw_status = f"⚠ Exceeds 100% - reduce weights or click Normalize"
-        elif total_w >= 90.0:
+        if total_w > 100.5:
             tw_color, tw_bg = "#e67e22", "#fff8f0"
-            tw_status = "Near limit"
-        else:
+            tw_status = "Exceeds 100% - will normalize on run"
+        elif abs(total_w - 100.0) < 0.5:
             tw_color, tw_bg = "#2e7d32", "#f0f7f0"
-            tw_status = "✓ OK"
+            tw_status = "✓ Fully allocated"
+        else:
+            tw_color, tw_bg = "#555960", "#f5f5f5"
+            tw_status = f"{100 - total_w:.1f}% unallocated - will normalize on run"
 
         tw_col, norm_col, _ = st.columns([3, 1, 2])
         tw_col.markdown(
@@ -388,13 +388,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         _page_footer()
         return
 
-    if total_w > 100.0:
-        st.error(
-            f"Total portfolio weight is **{total_w:.1f}%** (must be ≤ 100%). "
-            "Click **Normalize to 100%** above or reduce individual weights before running."
+    if total_w > 100.5:
+        st.warning(
+            f"Total weight is **{total_w:.1f}%** - portfolio will be normalized to 100% on run. "
+            "Or click **Normalize to 100%** above to update the weights explicitly."
         )
-        _page_footer()
-        return
 
     if not st.button("Run Stress Test", type="primary", key="st_run"):
         st.info("Configure your portfolio above and click **Run Stress Test**.")
