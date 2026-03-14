@@ -416,55 +416,108 @@ function ptHtml(d) {
 
 /* ── Tooltip ── */
 const tt = document.getElementById('tt');
-let mx = 0, my = 0;
-let hideTimer = null;   // grace-period before fade
-let parkTimer = null;   // park offscreen after fade
-let curIso    = null;   // track which country is shown
+let hideTimer = null, parkTimer = null, curIso = null;
 
-document.addEventListener('mousemove', e => {
-  mx = e.clientX; my = e.clientY;
-  if (tt.style.opacity !== '0') _positionTip();
-});
-
-function _positionTip() {
+function _pos(cx, cy) {
   const W = window.innerWidth, H = window.innerHeight;
-  const tw = tt.offsetWidth  || 220;
-  const th = tt.offsetHeight || 120;
-  tt.style.left = (mx + 18 + tw > W ? mx - tw - 8  : mx + 18) + 'px';
-  tt.style.top  = (my + 10 + th > H ? my - th  - 6 : my + 10) + 'px';
+  const tw = tt.offsetWidth || 220, th = tt.offsetHeight || 120;
+  tt.style.left = (cx + 18 + tw > W ? cx - tw - 8 : cx + 18) + 'px';
+  tt.style.top  = (cy + 10 + th > H ? cy - th - 6 : cy + 10) + 'px';
 }
-
-// Show immediately — no debounce (debouncing on show is what broke hover)
-function showTip(html, iso) {
-  if (iso && iso === curIso) return;   // same country, skip re-render
+function showTip(html, iso, cx, cy) {
+  if (iso && iso === curIso) { _pos(cx, cy); return; }
   curIso = iso || null;
   if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
   if (parkTimer) { clearTimeout(parkTimer); parkTimer = null; }
   tt.innerHTML = html;
-  _positionTip();
+  _pos(cx, cy);
   tt.style.opacity = '1';
 }
-
-// Hide with an 80 ms grace period so edge-crossing flicker is invisible
 function hideTip() {
   curIso = null;
-  if (hideTimer) return;               // already scheduled
+  if (hideTimer) return;
   hideTimer = setTimeout(() => {
-    tt.style.opacity = '0';
-    hideTimer = null;
+    tt.style.opacity = '0'; hideTimer = null;
     parkTimer = setTimeout(() => {
-      tt.style.left = '-9999px'; tt.style.top = '-9999px';
-      parkTimer = null;
+      tt.style.left = '-9999px'; tt.style.top = '-9999px'; parkTimer = null;
     }, 160);
   }, 80);
 }
-
 function hideTipNow() {
   curIso = null;
   if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
   if (parkTimer) { clearTimeout(parkTimer); parkTimer = null; }
-  tt.style.opacity = '0';
-  tt.style.left = '-9999px'; tt.style.top = '-9999px';
+  tt.style.opacity = '0'; tt.style.left = '-9999px'; tt.style.top = '-9999px';
+}
+
+/* ── Geo helpers: sphere ray-cast + point-in-polygon ── */
+// Called on every mousemove — replaces unreliable onPolygonHover raycasting.
+let geoFeats = [];
+
+function featureBbox(geom) {
+  let w=180, e=-180, s=90, n=-90;
+  const rings = geom.type === 'Polygon' ? geom.coordinates : geom.coordinates.flat(1);
+  for (const ring of rings) for (const [lo,la] of ring) {
+    if (lo<w) w=lo; if (lo>e) e=lo; if (la<s) s=la; if (la>n) n=la;
+  }
+  return {w,e,s,n};
+}
+function inRing(lon, lat, ring) {
+  let c = false;
+  for (let i=0,j=ring.length-1; i<ring.length; j=i++) {
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if ((yi>lat)!==(yj>lat) && lon<(xj-xi)*(lat-yi)/(yj-yi)+xi) c=!c;
+  }
+  return c;
+}
+function inGeom(lon, lat, geom) {
+  const polys = geom.type==='Polygon' ? [geom.coordinates] : geom.coordinates;
+  for (const poly of polys) {
+    if (!inRing(lon,lat,poly[0])) continue;
+    let hole=false;
+    for (let h=1;h<poly.length;h++) if (inRing(lon,lat,poly[h])) { hole=true; break; }
+    if (!hole) return true;
+  }
+  return false;
+}
+function isoAt(lon, lat) {
+  for (const f of geoFeats) {
+    const b=f.bbox;
+    if (lon<b.w||lon>b.e||lat<b.s||lat>b.n) continue;
+    if (inGeom(lon,lat,f.geom)) return f.iso;
+  }
+  return null;
+}
+
+// Ray from camera through screen point → intersection with globe sphere → lat/lng.
+// Uses raw matrix elements (column-major) — no THREE.js import needed.
+function mouseToGeo(cx, cy) {
+  const cam=globe.camera(), ren=globe.renderer();
+  const rect=ren.domElement.getBoundingClientRect();
+  if (cx<rect.left||cx>rect.right||cy<rect.top||cy>rect.bottom) return null;
+  const P=cam.projectionMatrix.elements, M=cam.matrixWorld.elements;
+  const ndx=((cx-rect.left)/rect.width)*2-1;
+  const ndy=-((cy-rect.top)/rect.height)*2+1;
+  // View-space ray direction (perspective unprojection)
+  const vx=ndx/P[0], vy=ndy/P[5], vz=-1;
+  // Rotate to world space via matrixWorld 3×3
+  const wx=M[0]*vx+M[4]*vy+M[8]*vz;
+  const wy=M[1]*vx+M[5]*vy+M[9]*vz;
+  const wz=M[2]*vx+M[6]*vy+M[10]*vz;
+  const wl=Math.hypot(wx,wy,wz);
+  const dx=wx/wl, dy=wy/wl, dz=wz/wl;
+  const ox=cam.position.x, oy=cam.position.y, oz=cam.position.z;
+  const R=globe.getGlobeRadius?globe.getGlobeRadius():100;
+  // Quadratic: |o+t*d|² = R²
+  const b2=ox*dx+oy*dy+oz*dz;
+  const c=ox*ox+oy*oy+oz*oz-R*R;
+  const disc=b2*b2-c;
+  if (disc<0) return null;
+  const t=-b2-Math.sqrt(disc);
+  if (t<0) return null;
+  const px=ox+t*dx, py=oy+t*dy, pz=oz+t*dz;
+  // three-globe sphere orientation: lon=0/lat=0 at +Z, lon=90E at +X, north at +Y
+  return { lat:Math.asin(py/R)*180/Math.PI, lon:Math.atan2(px,pz)*180/Math.PI };
 }
 
 /* ── Globe init ── */
@@ -476,69 +529,58 @@ const globe = Globe()
 
 /* ── Car-configurator physics ── */
 const ctrl = globe.controls();
-ctrl.enableDamping = true;
-ctrl.dampingFactor  = 0.06;
-ctrl.rotateSpeed    = 0.85;
-ctrl.zoomSpeed      = 0.65;
-ctrl.minDistance    = 115;
-ctrl.maxDistance    = 550;
-
+ctrl.enableDamping = true; ctrl.dampingFactor = 0.06;
+ctrl.rotateSpeed = 0.85;   ctrl.zoomSpeed = 0.65;
+ctrl.minDistance = 115;    ctrl.maxDistance = 550;
 globe.pointOfView({ lat: 25, lng: 20, altitude: 2.1 }, 0);
 
-/* Hide immediately when cursor leaves the globe container */
 document.getElementById('gw').addEventListener('mouseleave', hideTipNow);
 
 const canvas = globe.renderer().domElement;
+let dragging = false;
 canvas.style.cursor = 'grab';
-canvas.addEventListener('mousedown', () => { canvas.style.cursor = 'grabbing'; });
-canvas.addEventListener('mouseup',   () => { canvas.style.cursor = hovering ? 'crosshair' : 'grab'; });
+canvas.addEventListener('mousedown', () => { dragging=true;  canvas.style.cursor='grabbing'; });
+canvas.addEventListener('mouseup',   () => { dragging=false; });
 
-let hovering = false;
+/* ── Country hover via sphere ray-cast + PIP (fires on every mousemove) ── */
+canvas.addEventListener('mousemove', e => {
+  if (dragging) { hideTip(); return; }
+  const geo = mouseToGeo(e.clientX, e.clientY);
+  if (!geo) { hideTip(); canvas.style.cursor='grab'; return; }
+  const iso = isoAt(geo.lon, geo.lat);
+  if (iso) {
+    const html = polyHtml(iso);
+    if (html) { showTip(html, iso, e.clientX, e.clientY); canvas.style.cursor='crosshair'; }
+    else      { hideTip(); canvas.style.cursor='grab'; }
+  } else {
+    hideTip(); canvas.style.cursor='grab';
+  }
+});
 
-/* ── War-zone dot markers ── */
+/* ── War-zone dot markers (onPointHover already works) ── */
 globe
   .pointsData(HT)
-  .pointLat(d => d.lat)
-  .pointLng(d => d.lng)
-  .pointColor(() => '#ff3333')
-  .pointAltitude(0.055)
-  .pointRadius(0.5)
+  .pointLat(d => d.lat).pointLng(d => d.lng)
+  .pointColor(() => '#ff3333').pointAltitude(0.055).pointRadius(0.5)
   .onPointHover(pt => {
-    hovering = !!pt;
-    canvas.style.cursor = pt ? 'crosshair' : 'grab';
-    if (pt) showTip(ptHtml(pt), 'pt_' + pt.name);
+    if (pt) showTip(ptHtml(pt), 'pt_'+pt.name, 0, 0);
     else hideTip();
   });
 
-/* ── Country choropleth polygons (async, jsDelivr CDN) ── */
-fetch('https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@master/example/country-polygons/ne_110m_admin_0_countries.geojson')
+/* ── Country choropleth polygons + build PIP index (async) ── */
+fetch('https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@2.27.2/example/country-polygons/ne_110m_admin_0_countries.geojson')
   .then(r => r.json())
   .then(world => {
     const feats = world.features.filter(f => f.properties.ISO_A3 && f.properties.ISO_A3 !== '-99');
+    // Build PIP lookup used by canvas mousemove handler
+    geoFeats = feats.map(f => ({ iso: f.properties.ISO_A3, bbox: featureBbox(f.geometry), geom: f.geometry }));
+    // Render choropleth (no onPolygonHover needed)
     globe
       .polygonsData(feats)
-      .polygonCapColor(f => { const d=CDATA[f.properties.ISO_A3]; return sc(d?d.score:0, 0.88); })
+      .polygonCapColor(f => { const d=CDATA[f.properties.ISO_A3]; return sc(d?d.score:0,0.88); })
       .polygonSideColor(() => 'rgba(8,8,8,0.55)')
       .polygonStrokeColor(() => 'rgba(255,255,255,0.13)')
-      .polygonAltitude(0.006)
-      .onPolygonHover(hov => {
-        hovering = !!hov;
-        canvas.style.cursor = hov ? 'crosshair' : 'grab';
-        // Only update cap color — never touch polygonAltitude inside this
-        // callback, as re-rendering the geometry invalidates the raycaster
-        // hit-test and causes an immediate null-hover feedback loop.
-        globe.polygonCapColor(f => {
-          const d = CDATA[f.properties.ISO_A3], s = d ? d.score : 0;
-          return f === hov ? sc(Math.min(s + 18, 100), 1.0) : sc(s, 0.88);
-        });
-        if (hov) {
-          const iso = hov.properties.ISO_A3;
-          const html = polyHtml(iso);
-          if (html) showTip(html, iso); else hideTip();
-        } else {
-          hideTip();
-        }
-      });
+      .polygonAltitude(0.006);
   });
 </script></body></html>"""
 
