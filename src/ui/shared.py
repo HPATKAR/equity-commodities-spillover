@@ -137,8 +137,8 @@ def _page_intro(text: str) -> None:
 def _section_note(text: str) -> None:
     st.markdown(
         f"""<div style="border-left:3px solid {_GOLD};padding:0.6rem 1rem;
-        background:#fafaf8;margin:0.8rem 0;font-size:0.76rem;color:#111111;
-        line-height:1.65;font-family:'DM Sans',sans-serif">{text}</div>""",
+        background:#fafaf8;margin:0.8rem 0;font-size:0.78rem;color:#111111;
+        line-height:1.7;font-family:'DM Sans',sans-serif">{text}</div>""",
         unsafe_allow_html=True,
     )
 
@@ -148,11 +148,11 @@ def _definition_block(title: str, body: str) -> None:
         f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
         overflow:hidden;margin:0.8rem 0">
         <div style="background:{_BLACK};padding:0.5rem 1rem">
-          <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;
+          <span style="font-size:0.60rem;font-weight:700;letter-spacing:0.12em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.7rem 1rem;font-size:0.76rem;color:#111111;
-        line-height:1.65;font-family:'DM Sans',sans-serif">{body}</div>
+        <div style="padding:0.7rem 1rem;font-size:0.78rem;color:#111111;
+        line-height:1.7;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -161,10 +161,10 @@ def _definition_block(title: str, body: str) -> None:
 def _takeaway_block(text: str) -> None:
     st.markdown(
         f"""<div style="border-left:3px solid #DAAA00;padding:0.6rem 1rem;
-        background:#fffdf5;margin:0.8rem 0;font-size:0.76rem;color:#111111;
-        line-height:1.65;font-family:'DM Sans',sans-serif">
-        <strong style="color:#8E6F3E;font-size:0.65rem;text-transform:uppercase;
-        letter-spacing:0.1em">Key Takeaway</strong><br>{text}</div>""",
+        background:#fffdf5;margin:0.8rem 0;font-size:0.78rem;color:#111111;
+        line-height:1.7;font-family:'DM Sans',sans-serif">
+        <strong style="color:#8E6F3E;font-size:0.60rem;text-transform:uppercase;
+        letter-spacing:0.12em">Key Takeaway</strong><br>{text}</div>""",
         unsafe_allow_html=True,
     )
 
@@ -174,7 +174,7 @@ def _page_conclusion(verdict: str, summary: str) -> None:
         f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
         overflow:hidden;margin:1.2rem 0">
         <div style="background:{_BLACK};padding:0.7rem 1.2rem">
-          <span style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;
+          <span style="font-size:0.60rem;font-weight:700;letter-spacing:0.12em;
           text-transform:uppercase;color:{_GOLD}">Assessment · {verdict}</span>
         </div>
         <div style="padding:0.8rem 1.2rem;background:#fafaf8;font-size:0.78rem;
@@ -188,12 +188,12 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
     delta_html = ""
     if delta:
         col = delta_color or ("#2e7d32" if delta.startswith("+") else "#c0392b")
-        delta_html = f'<div style="font-size:0.68rem;color:{col};margin-top:2px">{delta}</div>'
+        delta_html = f'<div style="font-size:0.65rem;color:{col};margin-top:2px">{delta}</div>'
     st.markdown(
         f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
         padding:0.7rem 0.9rem;background:#fff;
         transition:box-shadow 0.2s">
-        <div style="font-size:0.58rem;font-weight:600;letter-spacing:0.14em;
+        <div style="font-size:0.60rem;font-weight:600;letter-spacing:0.14em;
         text-transform:uppercase;color:#555960;margin-bottom:4px">{label}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
         font-weight:700;color:{_BLACK}">{value}</div>
@@ -242,7 +242,7 @@ def _about_page_styles():
     }
     .about-hero h1 {
         font-family: 'DM Sans', sans-serif;
-        font-size: 1.40rem;
+        font-size: 1.25rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.15rem 0;
@@ -260,14 +260,14 @@ def _about_page_styles():
     }
     .about-hero .subtitle {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.76rem;
+        font-size: 0.74rem;
         color: #555;
         margin: 0 0 0.45rem 0;
         font-weight: 500;
     }
     .about-hero .tagline {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.70rem;
         color: #777;
         margin: 0 0 0.65rem 0;
         line-height: 1.6;
@@ -331,27 +331,27 @@ def _about_page_styles():
     .exp-item:hover { border-color: #CFB991; }
     .exp-role {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.82rem;
+        font-size: 0.78rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.1rem 0;
     }
     .exp-org {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.76rem;
+        font-size: 0.74rem;
         font-weight: 600;
         color: #8E6F3E;
         margin: 0 0 0.12rem 0;
     }
     .exp-meta {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.66rem;
+        font-size: 0.65rem;
         color: #888;
         margin: 0 0 0.28rem 0;
     }
     .exp-desc {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.70rem;
         color: #444;
         line-height: 1.6;
         margin: 0;
@@ -365,27 +365,27 @@ def _about_page_styles():
     .edu-item:last-child { border-bottom: none; }
     .edu-school {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.84rem;
+        font-size: 0.78rem;
         font-weight: 700;
         color: #1a1a1a;
         margin: 0 0 0.1rem 0;
     }
     .edu-dept {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.70rem;
         color: #8E6F3E;
         margin: 0 0 0.1rem 0;
         font-weight: 500;
     }
     .edu-degree {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.70rem;
         color: #444;
         margin: 0 0 0.1rem 0;
     }
     .edu-year {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.64rem;
+        font-size: 0.65rem;
         color: #999;
         margin: 0;
     }
@@ -396,11 +396,11 @@ def _about_page_styles():
     }
     .pub-title {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.76rem;
+        font-size: 0.74rem;
         font-weight: 600;
         color: #1a1a1a;
         margin: 0 0 0.22rem 0;
-        line-height: 1.45;
+        line-height: 1.55;
     }
     .pub-authors {
         font-family: 'DM Sans', sans-serif;
@@ -410,20 +410,20 @@ def _about_page_styles():
     }
     .pub-journal {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.68rem;
+        font-size: 0.65rem;
         color: #8E6F3E;
         font-style: italic;
         margin: 0 0 0.1rem 0;
     }
     .pub-detail {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.64rem;
+        font-size: 0.65rem;
         color: #999;
         margin: 0 0 0.35rem 0;
     }
     .pub-link {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.68rem;
+        font-size: 0.65rem;
         font-weight: 600;
         color: #CFB991;
         text-decoration: none;
@@ -440,14 +440,14 @@ def _about_page_styles():
     .cert-item:last-child { border-bottom: none; }
     .cert-name {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.76rem;
+        font-size: 0.74rem;
         font-weight: 600;
         color: #1a1a1a;
         margin: 0 0 0.08rem 0;
     }
     .cert-issuer {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.64rem;
+        font-size: 0.65rem;
         color: #999;
         margin: 0;
     }
@@ -458,7 +458,7 @@ def _about_page_styles():
         border-radius: 20px;
         padding: 0.22rem 0.65rem;
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.64rem;
+        font-size: 0.60rem;
         font-weight: 600;
         margin: 0.12rem;
     }
@@ -476,7 +476,7 @@ def _about_page_styles():
     /* ── Acknowledgments ───────────────────────────────── */
     .ack-text {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.70rem;
         color: #555;
         line-height: 1.6;
         margin: 0;
@@ -493,7 +493,7 @@ def _about_page_styles():
     }
     .stat-item { text-align: center; }
     .stat-num {
-        font-size: 1.10rem;
+        font-size: 1.05rem;
         font-weight: 700;
         color: #CFB991;
         font-family: 'JetBrains Mono', monospace;

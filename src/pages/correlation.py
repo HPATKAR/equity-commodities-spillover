@@ -355,7 +355,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             _chart(fig_tm)
 
             st.markdown(
-                f'<p style="font-size:0.68rem;color:#555;margin-top:4px">'
+                f'<p style="font-size:0.74rem;color:#555;margin-top:4px;line-height:1.65">'
                 f'Highlighted row = current regime (<b style="color:{r_colors[current_r]}">'
                 f'{r_names[current_r]}</b>). Read across to see probability of each next-day outcome.</p>',
                 unsafe_allow_html=True,
@@ -427,11 +427,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(
                     f'<div style="margin-top:12px;padding:10px;background:#fafaf8;'
                     f'border-left:4px solid {r_colors[current_r]};border-radius:0 4px 4px 0">'
-                    f'<div style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;'
+                    f'<div style="font-size:0.60rem;font-weight:700;letter-spacing:0.12em;'
                     f'text-transform:uppercase;color:#888">From {r_names[current_r]}</div>'
                     f'<div style="font-family:JetBrains Mono,monospace;font-size:1.30rem;'
                     f'font-weight:700;color:{r_colors[current_r]}">{cur_mfpt_str}</div>'
-                    f'<div style="font-size:0.62rem;color:#555">to next Crisis</div>'
+                    f'<div style="font-size:0.65rem;color:#555">to next Crisis</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )

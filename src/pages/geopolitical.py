@@ -58,25 +58,25 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     c_info1.markdown(
         f"""<div style="border-left:3px solid {ev['color']};padding:0.4rem 0.8rem;
         background:#fafaf8">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;
+        <div style="font-size:0.60rem;text-transform:uppercase;letter-spacing:0.12em;
         color:{ev['color']};font-weight:700">{ev['category']}</div>
-        <div style="font-size:0.8rem;font-weight:700;color:#000">{ev['name']}</div>
+        <div style="font-size:0.88rem;font-weight:700;color:#000">{ev['name']}</div>
         </div>""", unsafe_allow_html=True,
     )
     c_info2.markdown(
         f"""<div style="border-left:3px solid #E8E5E0;padding:0.4rem 0.8rem">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;
+        <div style="font-size:0.60rem;text-transform:uppercase;letter-spacing:0.12em;
         color:#666666;font-weight:600">Period</div>
-        <div style="font-size:0.8rem;font-weight:600;color:#000;
+        <div style="font-size:0.82rem;font-weight:600;color:#000;
         font-family:'JetBrains Mono',monospace">
         {ev['start'].strftime('%d %b %Y')} → {ev['end'].strftime('%d %b %Y')}</div>
         </div>""", unsafe_allow_html=True,
     )
     c_info3.markdown(
         f"""<div style="border-left:3px solid #E8E5E0;padding:0.4rem 0.8rem">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;
+        <div style="font-size:0.60rem;text-transform:uppercase;letter-spacing:0.12em;
         color:#666666;font-weight:600">Description</div>
-        <div style="font-size:0.68rem;color:#333333;line-height:1.5">
+        <div style="font-size:0.74rem;color:#333333;line-height:1.65">
         {ev['description'][:180]}…</div>
         </div>""", unsafe_allow_html=True,
     )

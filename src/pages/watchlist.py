@@ -277,7 +277,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
             ytd_color = "#2e7d32" if ytd_pct >= 0 else "#c0392b"
 
             vol_24h_html = (
-                f'<div style="font-size:0.68rem;color:#333333">'
+                f'<div style="font-size:0.70rem;color:#333333">'
                 f'24h Vol <span style="font-weight:600;color:{regime_col}">'
                 f'{vol_24h:.1f}%</span></div>'
             ) if vol_24h > 0 else ""
@@ -287,29 +287,29 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 padding:0.9rem 1rem;margin-bottom:0.8rem;background:#fff">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div>
-                    <span style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.12em;
+                    <span style="font-size:0.60rem;text-transform:uppercase;letter-spacing:0.12em;
                     color:#666666;font-weight:600">{group}</span>
-                    <div style="font-size:0.9rem;font-weight:700;color:#000;
+                    <div style="font-size:0.88rem;font-weight:700;color:#000;
                     font-family:'DM Sans',sans-serif">{name}</div>
                   </div>
                   <div style="text-align:right">
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
                     font-weight:700">{last_price:,.2f}</div>
-                    <div style="font-size:0.68rem;color:{d1_color};
+                    <div style="font-size:0.65rem;color:{d1_color};
                     font-family:'JetBrains Mono',monospace">{d1_pct:+.2f}% 1d</div>
                   </div>
                 </div>
                 <div style="display:flex;gap:1rem;margin-top:0.5rem">
-                  <div style="font-size:0.68rem;color:#333333">
+                  <div style="font-size:0.70rem;color:#333333">
                     YTD <span style="color:{ytd_color};font-weight:600">{ytd_pct:+.1f}%</span>
                   </div>
-                  <div style="font-size:0.68rem;color:#333333">
+                  <div style="font-size:0.70rem;color:#333333">
                     30d Vol <span style="color:{regime_col};font-weight:600">{vol_30d:.1f}% ({regime_lbl})</span>
                   </div>
                   {vol_24h_html}
                 </div>
                 <div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid #F0EDEA">
-                  <span style="font-size:0.64rem;color:#8E6F3E">⚑ {alert_ctx}</span>
+                  <span style="font-size:0.65rem;color:#8E6F3E">⚑ {alert_ctx}</span>
                 </div>
                 </div>""",
                 unsafe_allow_html=True,

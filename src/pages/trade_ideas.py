@@ -159,10 +159,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         <div style="width:10px;height:10px;border-radius:50%;
         background:{r_color};flex-shrink:0"></div>
         <div>
-        <span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;
+        <span style="font-size:0.60rem;text-transform:uppercase;letter-spacing:0.12em;
         color:#666666;font-weight:600">Current Regime · </span>
-        <span style="font-size:0.82rem;font-weight:700;color:{r_color}">{r_name}</span>
-        <span style="font-size:0.7rem;color:#333333;margin-left:0.5rem">
+        <span style="font-size:0.88rem;font-weight:700;color:{r_color}">{r_name}</span>
+        <span style="font-size:0.74rem;color:#333333;margin-left:0.5rem">
         (avg cross-asset corr: {avg_corr.iloc[-1]:.3f})</span>
         </div></div>""",
         unsafe_allow_html=True,
@@ -187,7 +187,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         st.info(f"No trade ideas active for current regime ({r_name}). Enable 'Show all regimes' to see all ideas.")
     else:
         st.markdown(
-            f'<p style="font-size:0.72rem;color:#333333;margin-bottom:0.8rem">'
+            f'<p style="font-size:0.74rem;color:#333333;margin-bottom:0.8rem">'
             f'{len(active_trades)} idea{"s" if len(active_trades) > 1 else ""} '
             f'{"shown" if show_all else "triggered"} for <b>{r_name}</b> regime</p>',
             unsafe_allow_html=True,
@@ -211,31 +211,31 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             overflow:hidden;margin-bottom:1rem">
             <div style="background:{cat_col};padding:0.5rem 1rem;
             display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.06em;
+              <div style="font-size:0.60rem;font-weight:700;letter-spacing:0.10em;
               text-transform:uppercase;color:#fff">{trade['category']} · {trade['trigger']}</div>
               <div>{regime_pills}</div>
             </div>
             <div style="padding:0.9rem 1rem;background:#fff">
-              <div style="font-size:0.9rem;font-weight:700;color:#000;
+              <div style="font-size:0.88rem;font-weight:700;color:#000;
               margin-bottom:0.4rem">{trade['name']}</div>
-              <div style="font-size:0.72rem;color:#333333;margin-bottom:0.5rem">{dir_html}</div>
-              <p style="font-size:0.74rem;color:#2A2A2A;line-height:1.65;margin-bottom:0.5rem">
+              <div style="font-size:0.74rem;color:#333333;margin-bottom:0.5rem">{dir_html}</div>
+              <p style="font-size:0.78rem;color:#2A2A2A;line-height:1.7;margin-bottom:0.5rem">
               {trade['rationale']}</p>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;
-              font-size:0.7rem">
+              font-size:0.74rem">
                 <div style="background:#f9f8f6;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#8E6F3E;font-size:0.6rem;
-                  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Entry</div>
+                  <div style="font-weight:600;color:#8E6F3E;font-size:0.60rem;
+                  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:2px">Entry</div>
                   {trade['entry']}
                 </div>
                 <div style="background:#f9f8f6;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#333333;font-size:0.6rem;
-                  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Exit</div>
+                  <div style="font-weight:600;color:#333333;font-size:0.60rem;
+                  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:2px">Exit</div>
                   {trade['exit']}
                 </div>
                 <div style="background:#fff0f0;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#c0392b;font-size:0.6rem;
-                  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Risks</div>
+                  <div style="font-weight:600;color:#c0392b;font-size:0.60rem;
+                  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:2px">Risks</div>
                   {trade['risk']}
                 </div>
               </div>
@@ -274,13 +274,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown("---")
     st.markdown(
-        '<p style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;'
+        '<p style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;'
         'text-transform:uppercase;color:#333;margin-bottom:0.5rem">'
         'Institution Report Download</p>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-size:0.74rem;color:#555960;line-height:1.65;margin-bottom:0.8rem">'
+        '<p style="font-size:0.78rem;color:#555960;line-height:1.7;margin-bottom:0.8rem">'
         'Generate a professionally formatted A4 research report covering the current regime, '
         'all active trade ideas, geopolitical context, and methodology - suitable for '
         'academic submission or institutional review.</p>',

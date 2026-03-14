@@ -40,8 +40,8 @@ def page_about_heramb() -> None:
         "<h1>Heramb S. Patkar</h1>"
         "<p class='subtitle'>MSF Candidate &middot; Purdue Daniels School of Business</p>"
         "<p class='tagline'>BITS Pilani engineering graduate and NISM XV certified research analyst "
-        "with equity research experience spanning Indian and U.S. capital markets. "
-        "Published researcher in biomedical device design.</p>"
+        "with experience across equity research, venture capital, and U.S. capital markets. "
+        "Practicum consultant, VC fund analyst, and published researcher.</p>"
         "<div class='links'>"
         "<a href='https://www.linkedin.com/in/heramb-patkar/' target='_blank'>LinkedIn</a>"
         "<a href='https://github.com/HPATKAR' target='_blank'>GitHub</a>"
@@ -58,13 +58,13 @@ def page_about_heramb() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 10px 0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.7;margin:0 0 10px 0;'>"
             "Driven by curiosity about how businesses create impact and grow stronger. "
             "With a background in engineering and experience in global equity research, "
             "I enjoy analysing industries, building financial models, and uncovering insights "
             "that drive smarter decisions. Excited by opportunities where analytical thinking "
             "and creativity intersect to solve complex problems and deliver meaningful value.</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.7;margin:0;'>"
             "Beyond work, I enjoy exploring new places, listening to Carnatic music, "
             "and learning from different cultures and perspectives. Always open to connecting"
             ", feel free to reach out.</p>"
@@ -75,7 +75,7 @@ def page_about_heramb() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.74rem;line-height:1.75;margin:0 0 12px 0;'>"
+            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.7;margin:0 0 12px 0;'>"
             "Built the Equity &amp; Commodities Spillover Monitor as Course Project 3 for "
             "Prof. Cinder Zhang's MGMT 69000-120: a quantitative dashboard that tracks cross-asset "
             "correlation regimes, geopolitical spillover, and generates institutional-grade trade ideas "
@@ -95,32 +95,56 @@ def page_about_heramb() -> None:
             "<p class='about-card-title'>Experience</p>"
 
             "<div class='exp-item'>"
-            "<p class='exp-role'>Practicum Analyst</p>"
+            "<p class='exp-role'>Practicum Consultant</p>"
             "<p class='exp-org'>Fino Advisors LLC</p>"
             "<p class='exp-meta'>Jan 2026 &ndash; Present &middot; Houston, TX (Remote)</p>"
-            "<p class='exp-desc'>Build and update a Series A financial model with revenue "
-            "assumptions and simple scenarios. Conduct valuation and comparable company research "
-            "and help prepare the investor deck and narrative.</p></div>"
+            "<p class='exp-desc'>Building and refining a confidential Series A investor model "
+            "(revenue drivers, scenarios/sensitivities) and synthesising technical and financial "
+            "inputs into decision-ready insights for fundraising conversations. Conducting valuation "
+            "work and comps benchmarking; supporting investor materials for a sustainability/"
+            "infrastructure portfolio company under NDA, translating assumptions into KPIs and "
+            "fundraising-ready outputs.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Analyst</p>"
+            "<p class='exp-org'>Student Managed Venture Fund, Purdue University</p>"
+            "<p class='exp-meta'>Jan 2026 &ndash; Present &middot; West Lafayette, IN</p>"
+            "<p class='exp-desc'>Build and refine financial models to evaluate early-stage deal "
+            "flows each cycle, screening for business model viability, unit economics, and "
+            "operational red flags across Purdue-sourced startups. Present investment "
+            "recommendations to professional VC panels, structuring due diligence findings into "
+            "decision-ready memos and reducing diligence cycle time through systematic early-stage "
+            "risk filtering.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Student Extern</p>"
+            "<p class='exp-org'>Equity Methods</p>"
+            "<p class='exp-meta'>Mar 2026 &middot; Champaign, IL</p>"
+            "<p class='exp-desc'>Used SAS to forecast stock compensation expenses for a Fortune 100 "
+            "company during a two-day externship, refining forecasting techniques, improving "
+            "projection accuracy, and stress-testing assumptions across grant types. Developed "
+            "client-ready decks with graphical disclosures and CAP calculations for proxy filings "
+            "and applied Pay vs. Performance (PVP) analysis to align exec compensation with "
+            "shareholder returns and business outcomes.</p></div>"
 
             "<div class='exp-item'>"
             "<p class='exp-role'>Equity Research Associate</p>"
-            "<p class='exp-org'>Axis Direct</p>"
-            "<p class='exp-meta'>Sep 2024 &ndash; Apr 2025 &middot; Mumbai, India &middot; Full-time</p>"
-            "<p class='exp-desc'>Collaborated with the lead equity research analyst on Auto and "
-            "Auto Ancillary sector coverage across three quarters. Built and maintained detailed "
-            "cash flow / PE models with forecasts for 14 listed names (7 OEMs, 7 ancillaries). "
-            "Co-authored IPO notes (Hyundai Motor India, Ather Energy), earnings updates, "
-            "and industry volume outlooks. Built a comprehensive Indian auto and farming equipment "
-            "industry tracker integrating data from FADA, SIAM, and company filings. Converted "
-            "internship into a full-time role.</p></div>"
+            "<p class='exp-org'>Axis Securities Ltd</p>"
+            "<p class='exp-meta'>Sep 2024 &ndash; Apr 2025 &middot; Mumbai, India</p>"
+            "<p class='exp-desc'>Led Auto &amp; Auto Ancillary equity research under the lead "
+            "analyst, building financial models for 14 stocks, delivering IPO notes, earnings "
+            "updates, and industry outlooks to family offices and fund managers. Owned a dynamic "
+            "industry tracker (production, sales, inventory) across segments and engine classes. "
+            "Pitched stock ideas and thematic plays to the PMS team (AUM ~$1 Bn) and Head of "
+            "Research, engaging senior management on pricing, margins, capex, and tariffs.</p></div>"
 
             "<div class='exp-item'>"
             "<p class='exp-role'>Equity Research Intern</p>"
-            "<p class='exp-org'>Axis Direct</p>"
+            "<p class='exp-org'>Axis Securities Ltd</p>"
             "<p class='exp-meta'>Jul 2024 &ndash; Aug 2024 &middot; Mumbai, India</p>"
-            "<p class='exp-desc'>Supported the lead analyst in Pharma and Hospitality sectors "
-            "through industry analysis, financial modelling, and co-authoring research reports. "
-            "Co-authored two initiating coverage reports on Chalet Hotels and Juniper.</p></div>"
+            "<p class='exp-desc'>Supported coverage across Pharma and Hospitality (13 stocks), "
+            "contributing to thematic research, initiating coverage, and management interactions. "
+            "Converted to full-time; secured a recommendation from the Head of Research.</p></div>"
 
             "<div class='exp-item'>"
             "<p class='exp-role'>Undergraduate Research Assistant</p>"
@@ -139,6 +163,42 @@ def page_about_heramb() -> None:
             "<p class='exp-role'>HVAC Engineer Intern</p>"
             "<p class='exp-org'>Grasim Industries Limited, Pulp &amp; Fibre</p>"
             "<p class='exp-meta'>May 2022 &ndash; Jul 2022 &middot; Nagda, Madhya Pradesh, India</p></div>"
+
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            "<div class='about-card'>"
+            "<p class='about-card-title'>Selected Projects</p>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>JGB Repricing Framework</p>"
+            "<p class='exp-org'>Purdue Daniels &middot; MGMT 69000-119 (Prof. X. Zhang)</p>"
+            "<p class='exp-desc'>Built a quantitative dashboard for JGB repricing as the BOJ "
+            "exits YCC, using regime filters (MS/HMM/GARCH), yield PCA, DCC spillovers, and "
+            "cross-asset transfer entropy to auto-generate trade signals.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Eli Lilly / Madrigal Pharmaceuticals M&amp;A</p>"
+            "<p class='exp-org'>IU Bloomington MSF Case Competition</p>"
+            "<p class='exp-desc'>Built a patient-based DCF for Lilly's acquisition of Madrigal "
+            "(~$10.4&ndash;22B), quantified synergies against pharma M&amp;A precedents, and "
+            "recommended a $640&ndash;809/share offer.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>PepsiCo / Vita Coco Acquisition</p>"
+            "<p class='exp-org'>Purdue Daniels &middot; MGMT 64500 (Prof. S. Chernenko)</p>"
+            "<p class='exp-desc'>Built a DCF and EBIT exit-multiple valuation, quantified revenue "
+            "and cost synergies, and structured a $3.9&ndash;4.2B all-cash bid delivering 1.5% "
+            "EPS accretion for a proposed acquisition of Vita Coco by PepsiCo.</p></div>"
+
+            "<div class='exp-item'>"
+            "<p class='exp-role'>Equity &amp; Commodities Spillover Monitor</p>"
+            "<p class='exp-org'>Purdue Daniels &middot; MGMT 69000-120 (Prof. X. Zhang)</p>"
+            "<p class='exp-desc'>This dashboard. Quantitative cross-asset correlation and spillover "
+            "monitor tracking geopolitical shocks, macro regimes, and commodity supply disruptions "
+            "across 15 equity indices and 17 commodity futures.</p></div>"
 
             "</div>",
             unsafe_allow_html=True,
@@ -188,7 +248,19 @@ def page_about_heramb() -> None:
             "<div class='cert-item'>"
             "<p class='cert-name'>Bloomberg Market Concepts</p>"
             "<p class='cert-issuer'>Bloomberg LP &middot; Feb 2024</p></div>"
-            "</div>",
+            "</div>"
+            "<div class='about-card'>"
+            "<p class='about-card-title'>Skills</p>"
+            "<div>"
+            "<span class='interest-tag interest-gold'>Python</span>"
+            "<span class='interest-tag interest-neutral'>Excel</span>"
+            "<span class='interest-tag interest-gold'>Bloomberg</span>"
+            "<span class='interest-tag interest-neutral'>SAS</span>"
+            "<span class='interest-tag interest-gold'>LSEG</span>"
+            "<span class='interest-tag interest-neutral'>ACE Equity</span>"
+            "<span class='interest-tag interest-gold'>Claude CLI</span>"
+            "<span class='interest-tag interest-neutral'>Autodesk Suite</span>"
+            "</div></div>",
             unsafe_allow_html=True,
         )
 
@@ -201,6 +273,7 @@ def page_about_heramb() -> None:
             "<span class='interest-tag interest-gold'>Valuations</span>"
             "<span class='interest-tag interest-neutral'>Private Equity</span>"
             "<span class='interest-tag interest-gold'>Equity Research</span>"
+            "<span class='interest-tag interest-neutral'>Venture Capital</span>"
             "</div></div>",
             unsafe_allow_html=True,
         )

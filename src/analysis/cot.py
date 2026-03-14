@@ -200,7 +200,7 @@ def plot_cot_overlay(
         height=height,
         barmode="relative",
         title=dict(
-            text=f"CFTC COT: {market} — Net Speculative Positioning (% Open Interest)",
+            text=f"CFTC COT: {market} - Net Speculative Positioning (% Open Interest)",
             font=dict(size=11),
         ),
         yaxis=dict(
@@ -237,8 +237,8 @@ def cot_extremes_table(cot_df: pd.DataFrame) -> pd.DataFrame:
             continue
         latest = float(s["net_spec_pct"].iloc[-1])
         pct    = float((s["net_spec_pct"] < latest).mean() * 100)
-        if pct > 85:   signal, sig_col = "⚠ Crowded Long — Contrarian Sell",  "#c0392b"
-        elif pct < 15: signal, sig_col = "⚠ Crowded Short — Contrarian Buy",   "#2e7d32"
+        if pct > 85:   signal, sig_col = "⚠ Crowded Long - Contrarian Sell",  "#c0392b"
+        elif pct < 15: signal, sig_col = "⚠ Crowded Short - Contrarian Buy",   "#2e7d32"
         else:          signal, sig_col = "Neutral",                             "#555960"
         rows.append({
             "Commodity":        market,

@@ -5,10 +5,13 @@ Choropleth map (flat or 3-D globe) showing equity-market exposure to active wars
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import date
 
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
@@ -309,6 +312,198 @@ def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# ── Globe.GL WebGL template ───────────────────────────────────────────────────
+# Loaded once at module level; data injected at render time via placeholder swap.
+
+_GLOBE_HTML = r"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a1a2e; overflow: hidden; }
+#gw { position: relative; width: 100%; height: 580px; }
+#globe { width: 100%; height: 100%; }
+/* Custom tooltip — fixed so it never gets clipped by the iframe */
+#tt {
+  position: fixed; display: none; pointer-events: none; z-index: 9999;
+  font-family: 'DM Sans',sans-serif; font-size: 11px; line-height: 1.55;
+  padding: 8px 12px; max-width: 220px;
+  background: rgba(5,15,35,0.94); border: 1px solid rgba(100,160,255,0.25);
+  border-radius: 5px; color: #eee;
+}
+#cbar {
+  position: absolute; bottom: 18px; right: 12px;
+  background: rgba(5,15,35,0.78); border: 1px solid rgba(100,160,255,0.18);
+  border-radius: 5px; padding: 8px 11px;
+  font-size: 9px; font-family: 'DM Sans',sans-serif; color: #ccc;
+}
+.cr { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+.cs { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; }
+#leg {
+  position: absolute; bottom: 18px; left: 12px;
+  background: rgba(5,15,35,0.72); border: 1px solid rgba(100,160,255,0.18);
+  border-radius: 5px; padding: 6px 10px;
+  font-size: 9px; font-family: 'DM Sans',sans-serif; color: #ccc;
+}
+</style></head><body>
+<div id="tt"></div>
+<div id="gw">
+  <div id="globe"></div>
+  <div id="cbar">
+    <div style="font-weight:700;color:#CFB991;letter-spacing:.1em;font-size:8px;text-transform:uppercase;margin-bottom:5px">Impact Scale</div>
+    <div class="cr"><div class="cs" style="background:#f5f2ee;border:1px solid #aaa"></div>No exposure</div>
+    <div class="cr"><div class="cs" style="background:#fde0c8"></div>Low (10-25)</div>
+    <div class="cr"><div class="cs" style="background:#f5a870"></div>Moderate (25-50)</div>
+    <div class="cr"><div class="cs" style="background:#e05c3a"></div>Elevated (50-75)</div>
+    <div class="cr"><div class="cs" style="background:#b82020"></div>High (75-90)</div>
+    <div class="cr"><div class="cs" style="background:#7a0e0e"></div>Crisis (90-100)</div>
+  </div>
+  <div id="leg">
+    <div style="display:flex;align-items:center;gap:5px">
+      <span style="color:#ff4444;font-size:12px">●</span><span>Active War Zone</span>
+    </div>
+  </div>
+</div>
+<script src="//unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+<script>
+const CDATA = __COUNTRY_DATA__;
+const HT    = __HOMETURF__;
+const HT_ISO = new Set(['UKR','ISR','PSE','LBN','YEM','SYR','IRN']);
+
+const CS = [
+  [0,   [245,242,238]],
+  [15,  [253,224,200]],
+  [35,  [245,168,112]],
+  [55,  [224, 92, 58]],
+  [75,  [184, 32, 32]],
+  [100, [122, 14, 14]],
+];
+function sc(score, a) {
+  if (score <= 0) return 'rgba(245,242,238,'+a+')';
+  const s = Math.max(0, Math.min(100, score));
+  let lo = CS[0], hi = CS[CS.length-1];
+  for (let i = 0; i < CS.length-1; i++) {
+    if (s >= CS[i][0] && s <= CS[i+1][0]) { lo = CS[i]; hi = CS[i+1]; break; }
+  }
+  const t = hi[0]===lo[0] ? 0 : (s-lo[0])/(hi[0]-lo[0]);
+  return 'rgba('+
+    Math.round(lo[1][0]+t*(hi[1][0]-lo[1][0]))+','+
+    Math.round(lo[1][1]+t*(hi[1][1]-lo[1][1]))+','+
+    Math.round(lo[1][2]+t*(hi[1][2]-lo[1][2]))+','+a+')';
+}
+function lvl(s) { return s>=75?'High':s>=50?'Elevated':s>=25?'Moderate':s>0?'Low':'Minimal'; }
+function lvc(s) { return s>=75?'#ff6b6b':s>=50?'#f5a870':s>=25?'#fde0c8':'#aaa'; }
+
+function polyHtml(iso) {
+  const d = CDATA[iso];
+  if (!d) return '';
+  const s = d.score;
+  if (s === 0) return '<b>'+d.name+'</b><br><span style="color:#88aacc">No significant direct exposure</span>';
+  const hw = HT_ISO.has(iso) ? "<br><b style='color:#e74c3c'>&#9876; Active war on home soil</b>" : '';
+  let t = '<b>'+d.name+'</b>'+hw+'<br>'+
+          '<span style="color:'+lvc(s)+'"><b>'+s+'/100 &ndash; '+lvl(s)+'</b></span><br><br>'+
+          'Ukraine War: <b>'+d.ukraine+'</b>/100<br>'+
+          'Israel-Hamas: <b>'+d.hamas+'</b>/100<br>'+
+          'Iran/Hormuz: <b>'+d.iran+'</b>/100';
+  if (d.indices && d.indices !== '-') t += '<br><br><span style="color:#aac">Tracked:</span> '+d.indices;
+  if (d.ret_text) t += '<br><span style="color:#aac">Returns:</span><br>'+d.ret_text;
+  return t;
+}
+function ptHtml(d) {
+  return '<b>'+d.name+'</b><br>&#9876; '+d.war+'<br><i style="color:#99b">'+d.note+'</i>';
+}
+
+/* ── Tooltip positioning ── */
+const tt = document.getElementById('tt');
+document.addEventListener('mousemove', e => {
+  const x = e.clientX, y = e.clientY;
+  const W = window.innerWidth, H = window.innerHeight;
+  tt.style.left = (x + 16 + 220 > W ? x - 230 : x + 16) + 'px';
+  tt.style.top  = (y - 10 + tt.offsetHeight > H ? y - tt.offsetHeight - 6 : y - 10) + 'px';
+});
+function showTip(html) { tt.innerHTML = html; tt.style.display = 'block'; }
+function hideTip()     { tt.style.display = 'none'; }
+
+/* ── Globe init ── */
+const globe = Globe()
+  .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+  .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+  (document.getElementById('globe'));
+
+/* ── Car-configurator physics ── */
+const ctrl = globe.controls();
+ctrl.enableDamping = true;
+ctrl.dampingFactor  = 0.06;
+ctrl.rotateSpeed    = 0.85;
+ctrl.zoomSpeed      = 0.65;
+ctrl.minDistance    = 115;
+ctrl.maxDistance    = 550;
+
+globe.pointOfView({ lat: 25, lng: 20, altitude: 2.1 }, 0);
+
+/* ── War-zone dot markers ── */
+globe
+  .pointsData(HT)
+  .pointLat(d => d.lat)
+  .pointLng(d => d.lng)
+  .pointColor(() => '#ff3333')
+  .pointAltitude(0.055)
+  .pointRadius(0.5)
+  .onPointHover(pt => { pt ? showTip(ptHtml(pt)) : hideTip(); });
+
+/* ── Country choropleth polygons (async) ── */
+fetch('https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/country-polygons/ne_110m_admin_0_countries.geojson')
+  .then(r => r.json())
+  .then(world => {
+    const feats = world.features.filter(f => f.properties.ISO_A3 && f.properties.ISO_A3 !== '-99');
+    globe
+      .polygonsData(feats)
+      .polygonCapColor(f => { const d=CDATA[f.properties.ISO_A3]; return sc(d?d.score:0, 0.88); })
+      .polygonSideColor(() => 'rgba(8,8,8,0.55)')
+      .polygonStrokeColor(() => 'rgba(255,255,255,0.13)')
+      .polygonAltitude(0.003)
+      .onPolygonHover(hov => {
+        globe
+          .polygonAltitude(f => f===hov ? 0.022 : 0.003)
+          .polygonCapColor(f => {
+            const d=CDATA[f.properties.ISO_A3], s=d?d.score:0;
+            return f===hov ? sc(Math.min(s+18,100),1.0) : sc(s,0.88);
+          });
+        if (hov) {
+          const html = polyHtml(hov.properties.ISO_A3);
+          if (html) showTip(html); else hideTip();
+        } else {
+          hideTip();
+        }
+      });
+  });
+</script></body></html>"""
+
+
+def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
+    """Inject country data into the Globe.GL template and render via components.html."""
+    country_data: dict = {}
+    for _, row in df.iterrows():
+        country_data[str(row["iso3"])] = {
+            "score":   int(row[score_col]),
+            "name":    str(row["country"]),
+            "ukraine": int(row["ukraine_score"]),
+            "hamas":   int(row["hamas_score"]),
+            "iran":    int(row["iran_score"]),
+            "indices": str(row["indices"]),
+            "ret_text": str(row["ret_text"]),
+        }
+    hometurf_data = [
+        {"lat": h["lat"], "lng": h["lon"],
+         "name": h["name"], "war": h["war"], "note": h["note"]}
+        for h in _HOMETURF_WARS
+    ]
+    html = (
+        _GLOBE_HTML
+        .replace("__COUNTRY_DATA__", json.dumps(country_data))
+        .replace("__HOMETURF__", json.dumps(hometurf_data))
+    )
+    components.html(html, height=600, scrolling=False)
+
+
 # ── Page ──────────────────────────────────────────────────────────────────────
 
 def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
@@ -416,174 +611,121 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         hover_texts.append(tip)
     df["hover"] = hover_texts
 
-    # ── Figure ────────────────────────────────────────────────────────────────
-    # Strategy: populate ALL world countries in the choropleth.
-    # Unscored countries → z=0 → cream. This means showland is irrelevant;
-    # the choropleth itself covers every land area without triggering the
-    # showland-overwrites-choropleth bug in orthographic projection.
-    fig = go.Figure()
+    # ── Render map ────────────────────────────────────────────────────────────
+    if is_globe:
+        # WebGL Globe.GL component — smooth inertial physics
+        _render_globe_component(df, score_col)
+    else:
+        # Plotly flat map (Natural Earth projection)
+        fig = go.Figure()
 
-    fig.add_trace(go.Choropleth(
-        locations=df["iso3"],
-        locationmode="ISO-3",
-        z=df[score_col].astype(float),
-        text=df["hover"],
-        hovertemplate="%{text}<extra></extra>",
-        colorscale=_COLORSCALE,
-        zmin=0, zmax=100,
-        showscale=True,
-        colorbar=dict(
-            title=dict(
-                text="Impact",
+        fig.add_trace(go.Choropleth(
+            locations=df["iso3"],
+            locationmode="ISO-3",
+            z=df[score_col].astype(float),
+            text=df["hover"],
+            hovertemplate="%{text}<extra></extra>",
+            colorscale=_COLORSCALE,
+            zmin=0, zmax=100,
+            showscale=True,
+            colorbar=dict(
+                title=dict(
+                    text="Impact",
+                    font=dict(size=9, family="DM Sans, sans-serif", color="#333"),
+                ),
+                thickness=12, len=0.70,
+                tickvals=[0, 25, 50, 75, 100],
+                ticktext=["0", "25", "50", "75", "100"],
+                tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#444"),
+                outlinewidth=0,
+                bgcolor="rgba(0,0,0,0)",
+                x=1.01,
+            ),
+            marker_line_color="rgba(255,255,255,0.55)",
+            marker_line_width=0.4,
+        ))
+
+        # India disputed-territory hover markers (invisible dots, hover only)
+        fig.add_trace(go.Scattergeo(
+            lat=[t["lat"] for t in _INDIA_DISPUTED],
+            lon=[t["lon"] for t in _INDIA_DISPUTED],
+            mode="markers",
+            marker=dict(size=18, color="rgba(255,255,255,0.0)",
+                        line=dict(color="rgba(255,255,255,0.0)", width=0)),
+            customdata=[[t["name"], t["note"]] for t in _INDIA_DISPUTED],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "<b>India</b><br>"
+                "<i>%{customdata[1]}</i><extra></extra>"
+            ),
+            showlegend=False,
+            hoverinfo="text",
+        ))
+
+        # Active war-zone markers (white X, red outline)
+        fig.add_trace(go.Scattergeo(
+            lat=[h["lat"] for h in _HOMETURF_WARS],
+            lon=[h["lon"] for h in _HOMETURF_WARS],
+            mode="markers",
+            marker=dict(
+                size=11,
+                color="#ffffff",
+                symbol="x",
+                line=dict(color="#c0392b", width=2.2),
+            ),
+            customdata=[[h["name"], h["war"], h["note"]] for h in _HOMETURF_WARS],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "⚔ %{customdata[1]}<br>"
+                "<i>%{customdata[2]}</i><extra></extra>"
+            ),
+            name="⚔ Active War Zone",
+            showlegend=True,
+        ))
+
+        fig.update_layout(
+            uirevision="war_map_v3",
+            geo=dict(
+                projection=dict(type="natural earth"),
+                showland=False,
+                showocean=True,
+                oceancolor="#c4dcea",
+                showcoastlines=True,
+                coastlinecolor="rgba(100,90,80,0.40)",
+                coastlinewidth=0.5,
+                showcountries=True,
+                countrycolor="rgba(120,110,100,0.35)",
+                countrywidth=0.3,
+                showlakes=True,
+                lakecolor="#c4dcea",
+                showframe=False,
+                bgcolor="rgba(0,0,0,0)",
+                resolution=110,
+            ),
+            height=530,
+            margin=dict(l=0, r=80, t=40, b=0),
+            paper_bgcolor="#ffffff",
+            legend=dict(
+                x=0.01, y=0.05,
+                bgcolor="rgba(255,255,255,0.88)",
+                bordercolor="#E8E5E0",
+                borderwidth=1,
                 font=dict(size=9, family="DM Sans, sans-serif", color="#333"),
             ),
-            thickness=12,
-            len=0.70,
-            tickvals=[0, 25, 50, 75, 100],
-            ticktext=["0", "25", "50", "75", "100"],
-            tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#444"),
-            outlinewidth=0,
-            bgcolor="rgba(0,0,0,0)",
-            x=1.01,
-        ),
-        marker_line_color="rgba(255,255,255,0.55)",
-        marker_line_width=0.4,
-    ))
-
-    # India disputed-territory hover markers (invisible dots, hover only)
-    fig.add_trace(go.Scattergeo(
-        lat=[t["lat"] for t in _INDIA_DISPUTED],
-        lon=[t["lon"] for t in _INDIA_DISPUTED],
-        mode="markers",
-        marker=dict(size=18, color="rgba(255,255,255,0.0)",
-                    line=dict(color="rgba(255,255,255,0.0)", width=0)),
-        customdata=[[t["name"], t["note"]] for t in _INDIA_DISPUTED],
-        hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
-            "<b>India</b><br>"
-            "<i>%{customdata[1]}</i><extra></extra>"
-        ),
-        showlegend=False,
-        hoverinfo="text",
-    ))
-
-    # Active war-zone markers (white X, red outline)
-    fig.add_trace(go.Scattergeo(
-        lat=[h["lat"] for h in _HOMETURF_WARS],
-        lon=[h["lon"] for h in _HOMETURF_WARS],
-        mode="markers",
-        marker=dict(
-            size=11,
-            color="#ffffff",
-            symbol="x",
-            line=dict(color="#c0392b", width=2.2),
-        ),
-        customdata=[[h["name"], h["war"], h["note"]] for h in _HOMETURF_WARS],
-        hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
-            "⚔ %{customdata[1]}<br>"
-            "<i>%{customdata[2]}</i><extra></extra>"
-        ),
-        name="⚔ Active War Zone",
-        showlegend=True,
-    ))
-
-    # ── Layout ────────────────────────────────────────────────────────────────
-    # showland=False everywhere - choropleth covers all land.
-    # bgcolor=ocean colour so the globe "sphere" exterior looks like water.
-    if is_globe:
-        geo_cfg = dict(
-            projection=dict(
-                type="orthographic",
-                rotation=dict(lon=20, lat=20, roll=0),
+            title=dict(
+                text=f"Equity Market War Impact  {title_sfx}",
+                font=dict(size=11, family="DM Sans, sans-serif", color="#1a1a1a"),
+                x=0.01, y=0.98,
             ),
-            showland=False,
-            showocean=True,
-            oceancolor="#1a3f5c",
-            showcoastlines=True,
-            coastlinecolor="rgba(255,255,255,0.60)",
-            coastlinewidth=0.6,
-            showcountries=True,
-            countrycolor="rgba(255,255,255,0.25)",
-            countrywidth=0.3,
-            showlakes=True,
-            lakecolor="#1a3f5c",
-            showframe=False,
-            bgcolor="#000000",   # space black - fills area outside the globe sphere
-            lataxis=dict(showgrid=True,  gridcolor="rgba(255,255,255,0.12)", gridwidth=0.5),
-            lonaxis=dict(showgrid=True,  gridcolor="rgba(255,255,255,0.12)", gridwidth=0.5),
-            resolution=50,
+            modebar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                color="#aaaaaa",
+                activecolor="#CFB991",
+                remove=["select2d", "lasso2d", "autoScale2d"],
+            ),
         )
-        paper_bg = "#000000"
-        height   = 580
-    else:
-        geo_cfg = dict(
-            projection=dict(type="natural earth"),
-            showland=False,
-            showocean=True,
-            oceancolor="#c4dcea",
-            showcoastlines=True,
-            coastlinecolor="rgba(100,90,80,0.40)",
-            coastlinewidth=0.5,
-            showcountries=True,
-            countrycolor="rgba(120,110,100,0.35)",
-            countrywidth=0.3,
-            showlakes=True,
-            lakecolor="#c4dcea",
-            showframe=False,
-            bgcolor="rgba(0,0,0,0)",
-            resolution=110,
-        )
-        paper_bg = "#ffffff"
-        height   = 530
 
-    legend_cfg = dict(
-        x=0.01, y=0.05,
-        bgcolor="rgba(0,0,0,0.55)" if is_globe else "rgba(255,255,255,0.88)",
-        bordercolor="rgba(255,255,255,0.25)" if is_globe else "#E8E5E0",
-        borderwidth=1,
-        font=dict(size=9, family="DM Sans, sans-serif",
-                  color="#dddddd" if is_globe else "#333"),
-    )
-    title_color = "#dddddd" if is_globe else "#1a1a1a"
-    cb_font_color = "#cccccc" if is_globe else "#444"
-
-    fig.update_traces(
-        selector=dict(type="choropleth"),
-        colorbar=dict(
-            title=dict(text="Impact",
-                       font=dict(size=9, family="DM Sans, sans-serif", color=cb_font_color)),
-            thickness=12, len=0.70,
-            tickvals=[0, 25, 50, 75, 100],
-            ticktext=["0", "25", "50", "75", "100"],
-            tickfont=dict(size=8, family="JetBrains Mono, monospace", color=cb_font_color),
-            outlinewidth=0,
-            bgcolor="rgba(0,0,0,0)",
-            x=1.01,
-        ),
-    )
-
-    fig.update_layout(
-        uirevision="war_map_v3",
-        geo=geo_cfg,
-        height=height,
-        margin=dict(l=0, r=80, t=40, b=0),
-        paper_bgcolor=paper_bg,
-        legend=legend_cfg,
-        title=dict(
-            text=f"Equity Market War Impact  {title_sfx}",
-            font=dict(size=11, family="DM Sans, sans-serif", color=title_color),
-            x=0.01, y=0.98,
-        ),
-        modebar=dict(
-            bgcolor="rgba(0,0,0,0)",
-            color="#aaaaaa",
-            activecolor="#CFB991",
-            remove=["select2d", "lasso2d", "autoScale2d"],
-        ),
-    )
-
-    _chart(fig)
+        _chart(fig)
 
     # Colour legend strip
     st.markdown(

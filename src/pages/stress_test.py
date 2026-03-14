@@ -148,7 +148,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Free-form ticker entry ─────────────────────────────────────────────
     st.markdown(
-        '<p style="font-size:0.62rem;font-weight:600;letter-spacing:0.1em;'
+        '<p style="font-size:0.60rem;font-weight:600;letter-spacing:0.12em;'
         'text-transform:uppercase;color:#555960;margin:0.6rem 0 0.2rem">'
         'Or enter stock tickers directly (comma-separated)</p>',
         unsafe_allow_html=True,
@@ -313,7 +313,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
         total_b = sum(weights_b.values())
         st.markdown(
-            f'<p style="font-size:0.62rem;color:#333333;margin:0.3rem 0">'
+            f'<p style="font-size:0.70rem;color:#333333;margin:0.3rem 0">'
             f'Section B total: <b>{total_b:.1f}%</b> across {n_stocks} stocks</p>',
             unsafe_allow_html=True,
         )
@@ -337,10 +337,10 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         tw_col, norm_col, _ = st.columns([3, 1, 2])
         tw_col.markdown(
             f'<div style="border-left:4px solid {tw_color};padding:0.45rem 0.8rem;'
-            f'background:{tw_bg};margin:0.5rem 0;font-size:0.72rem;border-radius:0 4px 4px 0">'
+            f'background:{tw_bg};margin:0.5rem 0;font-size:0.74rem;border-radius:0 4px 4px 0">'
             f'<b style="color:{tw_color};font-family:JetBrains Mono,monospace">'
             f'Total weight: {total_w:.1f}%</b>'
-            f'<span style="color:#555960;margin-left:10px;font-size:0.66rem">'
+            f'<span style="color:#555960;margin-left:10px;font-size:0.65rem">'
             f'{tw_status}</span></div>',
             unsafe_allow_html=True,
         )
@@ -362,7 +362,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 summary_txt += f" &nbsp;+&nbsp; {remaining} more"
             st.markdown(
                 f'<div style="border-left:3px solid #CFB991;padding:0.4rem 0.8rem;'
-                f'background:#fafaf8;margin:0.4rem 0 0.6rem;font-size:0.70rem;color:#333333">'
+                f'background:#fafaf8;margin:0.4rem 0 0.6rem;font-size:0.74rem;color:#333333">'
                 f'<b>Normalised portfolio</b> ({len(norm_weights)} assets): {summary_txt}</div>',
                 unsafe_allow_html=True,
             )
@@ -567,7 +567,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Portfolio path (relative days from event start) ───────────────────────
     st.markdown("---")
-    st.subheader("Portfolio Value Path — Days from Event Start (Base = 100)")
+    st.subheader("Portfolio Value Path: Days from Event Start (Base = 100)")
     _section_note(
         "Each line is indexed to 100 at event start (day 0), making events "
         "directly comparable regardless of calendar date. "

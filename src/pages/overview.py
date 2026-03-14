@@ -79,9 +79,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         col.markdown(
             f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
             padding:0.6rem 0.8rem;background:#fff">
-            <div style="font-size:0.55rem;font-weight:600;letter-spacing:0.14em;
+            <div style="font-size:0.60rem;font-weight:600;letter-spacing:0.14em;
             text-transform:uppercase;color:#666666;margin-bottom:3px">{label}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
             font-weight:700;color:#000">{value}</div>
             {"" if not delta else f'<div style="font-size:0.65rem;color:{dcolor}">{delta}</div>'}
             </div>""",
@@ -91,9 +91,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     k1.markdown(
         f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
         padding:0.6rem 0.8rem;background:#fff">
-        <div style="font-size:0.55rem;font-weight:600;letter-spacing:0.14em;
+        <div style="font-size:0.60rem;font-weight:600;letter-spacing:0.14em;
         text-transform:uppercase;color:#666666;margin-bottom:3px">Correlation Regime</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
         font-weight:700;color:{regime_color}">{regime_name}</div></div>""",
         unsafe_allow_html=True,
     )
@@ -135,7 +135,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             col_c = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;'
-                f'padding:3px 0;border-bottom:1px solid #F0EDEA;font-size:0.68rem">'
+                f'padding:3px 0;border-bottom:1px solid #F0EDEA;font-size:0.70rem">'
                 f'<span style="color:#333333">{name}</span>'
                 f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;'
                 f'color:{col_c}">{val:.0f}</span></div>',
@@ -186,13 +186,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         col.markdown(
             f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.7rem 0.6rem;'
             f'background:#fff;min-height:110px">'
-            f'<div style="font-size:0.52rem;font-weight:700;letter-spacing:0.12em;'
+            f'<div style="font-size:0.56rem;font-weight:700;letter-spacing:0.12em;'
             f'text-transform:uppercase;color:#888;margin-bottom:4px">{name}</div>'
             f'<div style="font-family:JetBrains Mono,monospace;font-size:1.10rem;'
             f'font-weight:700;color:{c}">{s:.0f}<span style="font-size:0.65rem;'
             f'color:#aaa">/100</span></div>'
             f'{_ews_bar(s, c)}'
-            f'<div style="font-size:0.58rem;color:#666;margin-top:6px;line-height:1.4">'
+            f'<div style="font-size:0.70rem;color:#666;margin-top:6px;line-height:1.55">'
             f'{data["desc"]}</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -213,12 +213,12 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         f'<div style="border:2px solid {comp_color};border-radius:6px;padding:1rem 1.4rem;'
         f'background:#fafaf8;display:flex;align-items:center;gap:1.5rem;margin:0.4rem 0">'
         f'<div>'
-        f'<div style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+        f'<div style="font-size:0.56rem;font-weight:700;letter-spacing:0.14em;'
         f'text-transform:uppercase;color:#888">Composite Early Warning Score</div>'
         f'<div style="font-family:JetBrains Mono,monospace;font-size:2.0rem;'
         f'font-weight:700;color:{comp_color};line-height:1.1">{comp:.0f}'
-        f'<span style="font-size:0.9rem;color:#aaa">/100</span></div>'
-        f'<div style="font-size:0.72rem;font-weight:600;color:{comp_color};'
+        f'<span style="font-size:0.88rem;color:#aaa">/100</span></div>'
+        f'<div style="font-size:0.74rem;font-weight:600;color:{comp_color};'
         f'margin-top:2px">{comp_label}</div>'
         f'</div>'
         f'<div style="flex:1">'
@@ -239,9 +239,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     if ews["analogues"]:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
-            '<p style="font-size:0.78rem;font-weight:700;color:#1a1a1a;margin-bottom:4px">'
+            '<p style="font-size:0.82rem;font-weight:700;color:#1a1a1a;margin-bottom:4px">'
             'Historical Analogues - Most Similar Market Conditions</p>'
-            '<p style="font-size:0.66rem;color:#555;margin-bottom:8px">'
+            '<p style="font-size:0.70rem;color:#555;margin-bottom:8px;line-height:1.6">'
             'Top-5 dates where cross-asset correlation, equity vol, commodity vol, and '
             'regime were most similar to today. Shows what happened in the following 30/60/90 days.</p>',
             unsafe_allow_html=True,
@@ -259,7 +259,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             rows_html += (
                 f'<tr style="border-bottom:1px solid #F0EDEA">'
                 f'<td style="padding:5px 8px;font-family:JetBrains Mono,monospace;'
-                f'font-size:0.72rem;font-weight:600">{a["date"]}</td>'
+                f'font-size:0.70rem;font-weight:600">{a["date"]}</td>'
                 f'<td style="padding:5px 8px;font-size:0.70rem">'
                 f'{_regime_cell(a["regime"], list(_REGIME_NAMES_OVW.values()).index(a["regime"]) if a["regime"] in _REGIME_NAMES_OVW.values() else 1)}</td>'
                 f'<td style="padding:5px 8px;font-size:0.70rem">'
@@ -268,7 +268,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 f'{_regime_cell(a["r60"], a["r60_int"])}</td>'
                 f'<td style="padding:5px 8px;font-size:0.70rem">'
                 f'{_regime_cell(a["r90"], a["r90_int"])}</td>'
-                f'<td style="padding:5px 8px;font-size:0.68rem;color:#888">'
+                f'<td style="padding:5px 8px;font-size:0.70rem;color:#888">'
                 f'{a["sim"]:.0f}%{sim_bar}</td>'
                 f'</tr>'
             )
@@ -366,7 +366,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                     f"""<div style="border-left:4px solid {regime_color};
                     padding:1rem 1.2rem;background:#fafaf8;margin:0.8rem 0;
                     border-radius:0 4px 4px 0">
-                    <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
+                    <div style="font-size:0.60rem;font-weight:700;letter-spacing:0.12em;
                     text-transform:uppercase;color:{regime_color};margin-bottom:0.5rem">
                     AI MARKET COMMENTARY · {_dt.datetime.now().strftime('%d %b %Y %H:%M')} UTC
                     </div>
@@ -469,12 +469,12 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f"""<div style="border-left:3px solid {ev['color']};
                 padding:0.5rem 0.8rem;margin:0.4rem 0;background:#fafaf8">
-                <span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;
-                letter-spacing:0.08em;color:{ev['color']}">{ev['category']} · {ev['label']}</span>
-                <span style="font-size:0.72rem;color:#000;font-weight:600;
+                <span style="font-size:0.60rem;font-weight:700;text-transform:uppercase;
+                letter-spacing:0.10em;color:{ev['color']}">{ev['category']} · {ev['label']}</span>
+                <span style="font-size:0.78rem;color:#000;font-weight:600;
                 margin-left:0.5rem">{ev['name']}</span>
-                <p style="font-size:0.7rem;color:#333333;margin:0.2rem 0 0;
-                line-height:1.55">{ev['description']}</p>
+                <p style="font-size:0.74rem;color:#333333;margin:0.2rem 0 0;
+                line-height:1.65">{ev['description']}</p>
                 </div>""",
                 unsafe_allow_html=True,
             )

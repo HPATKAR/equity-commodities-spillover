@@ -452,7 +452,7 @@ def _cover_page(canvas, doc):
 
     for lbl, val, x in zip(
         ["ANALYSIS PERIOD", "COURSE"],
-        [getattr(doc, "_date_range", "—"), "MGMT 69000-120 · AI for Finance"],
+        [getattr(doc, "_date_range", "-"), "MGMT 69000-120 · AI for Finance"],
         [24*mm, 90*mm],
     ):
         c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 6.5)
@@ -761,7 +761,7 @@ def generate_report(
     narratives = {
         0: ("Decorrelated Regime",
             "Cross-asset correlations are below historical norms. Equities and commodities are pricing "
-            "independent fundamentals — typically benign macro conditions. Growth-correlated long "
+            "independent fundamentals, typically benign macro conditions. Growth-correlated long "
             "positioning is favoured. Diversification benefits are maximised."),
         1: ("Normal Correlation Regime",
             "Cross-asset correlations are within their historical distribution. No systemic stress signal "
@@ -772,7 +772,7 @@ def generate_report(
             "is likely active. Risk-off positioning and crisis hedges become increasingly relevant. "
             "Correlation convergence trades activate."),
         3: ("Crisis Correlation Regime",
-            "Cross-asset correlations are at extreme levels — consistent with systemic crisis. Historical "
+            "Cross-asset correlations are at extreme levels, consistent with systemic crisis. Historical "
             "analogs: GFC (2008–09), COVID crash (2020), Ukraine War onset (2022). Flight-to-quality flows "
             "dominate. Precious metals decouple positively; industrial metals and EM equities face maximum "
             "selling pressure."),
@@ -810,7 +810,7 @@ def generate_report(
         Spacer(1, 8),
         _chart_regime_timeline(avg_corr_series, regimes, w_mm=cw / mm, h_mm=72),
         _chart_caption(
-            "Figure 1 — Rolling 60-day avg |cross-asset correlation| with adaptive percentile regime "
+            "Figure 1: Rolling 60-day avg |cross-asset correlation| with adaptive percentile regime "
             "bands. Regime classification uses median smoothing, hysteresis, and a 10-day persistence gate.",
             S,
         ),
@@ -829,7 +829,7 @@ def generate_report(
         Spacer(1, 6),
         _chart_corr_heatmap(eq_r, cmd_r, w_mm=cw / mm, h_mm=115),
         _chart_caption(
-            "Figure 2 — Cross-asset Pearson correlation matrix (full sample). "
+            "Figure 2: Cross-asset Pearson correlation matrix (full sample). "
             "Rows: equity indices. Columns: commodity futures. "
             "Darker shading = stronger co-movement.",
             S,
@@ -844,7 +844,7 @@ def generate_report(
             "The Composite Stress Index (0–100) blends four signals: equity realised volatility "
             "(45%, VIX proxy), slow cross-asset correlation (35%), commodity energy+metals volatility "
             "(15%), and fast correlation acceleration (5%). Z-score mapping preserves absolute level "
-            "information — critical for detecting VIX threshold breaches.",
+            "information, critical for detecting VIX threshold breaches.",
             S["body"],
         ),
         Spacer(1, 8),
@@ -854,7 +854,7 @@ def generate_report(
         story += [
             _chart_stress_index(stress_series, w_mm=cw / mm, h_mm=72),
             _chart_caption(
-                "Figure 3 — Composite stress index (0–100). Bands: green < 40 (normal), "
+                "Figure 3: Composite stress index (0-100). Bands: green < 40 (normal), "
                 "yellow 40–60 (elevated), orange 60–80 (high), red > 80 (crisis).",
                 S,
             ),
@@ -879,7 +879,7 @@ def generate_report(
         Spacer(1, 8),
         _chart_commodity_performance(cmd_r, w_mm=cw / mm, h_mm=80),
         _chart_caption(
-            "Figure 4 — Indexed commodity performance (last 252 trading days). "
+            "Figure 4: Indexed commodity performance (last 252 trading days). "
             "Values in parentheses show end-of-period index level.",
             S,
         ),
@@ -887,7 +887,7 @@ def generate_report(
 
     # ── 6. ACTIVE TRADE IDEAS ───────────────────────────────────────────────
     story += [PageBreak()]
-    story += _section_header(f"Active Trade Ideas — {r_name} Regime")
+    story += _section_header(f"Active Trade Ideas: {r_name} Regime")
     story += [
         Paragraph(
             f"<b>{len(active_trades)}</b> trade idea{'s' if len(active_trades) != 1 else ''} "
@@ -918,7 +918,7 @@ def generate_report(
                 Spacer(1, 6),
                 corr_chart,
                 _chart_caption(
-                    "Figure 5 — Rolling 60-day correlation for active trade pairs. "
+                    "Figure 5: Rolling 60-day correlation for active trade pairs. "
                     "Colour matches trade category: red = Crisis Hedge, orange = Geopolitical, "
                     "blue = Macro, green = Growth.",
                     S,
@@ -1043,7 +1043,7 @@ def generate_report(
         Paragraph("Data Sources", S["h3"]),
         Table(
             [["Source", "Coverage", "Access"],
-             ["Yahoo Finance", "Equity indices, commodity futures, FX — daily close", "yfinance API"],
+             ["Yahoo Finance", "Equity indices, commodity futures, FX (daily close)", "yfinance API"],
              ["FRED (Federal Reserve)", "VIX, 10Y/2Y yields, CPI, DXY, WTI, Gold", "fredapi"],
              ["FinancialDatasets.ai", "Supplementary financial data", "API key required"]],
             colWidths=[46*mm, 100*mm, 34*mm],
