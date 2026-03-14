@@ -321,17 +321,18 @@ _GLOBE_HTML = r"""<!DOCTYPE html>
 body { background: #0a1a2e; overflow: hidden; }
 #gw { position: relative; width: 100%; height: 580px; }
 #globe { width: 100%; height: 100%; }
-/* Custom tooltip — fixed so it never gets clipped by the iframe */
 #tt {
   position: fixed; pointer-events: none; z-index: 9999;
-  font-family: 'DM Sans',sans-serif; font-size: 11px; line-height: 1.55;
-  padding: 8px 12px; max-width: 220px;
-  background: rgba(5,15,35,0.94); border: 1px solid rgba(100,160,255,0.25);
-  border-radius: 5px; color: #eee;
-  opacity: 0; transition: opacity 0.14s ease;
-  /* start offscreen so offsetHeight is measurable before first show */
+  font-family: 'DM Sans', sans-serif; font-size: 11.5px; line-height: 1.65;
+  padding: 10px 13px; max-width: 240px;
+  background: rgba(8,16,32,0.96);
+  border: 1px solid rgba(207,185,145,0.4);
+  border-radius: 6px; color: #e4e4e4;
+  opacity: 0; transition: opacity 0.12s ease;
   left: -9999px; top: -9999px;
 }
+#tt b { color: #ffffff; }
+#tt i { color: #aab4c8; }
 #cbar {
   position: absolute; bottom: 18px; right: 12px;
   background: rgba(5,15,35,0.78); border: 1px solid rgba(100,160,255,0.18);
@@ -367,237 +368,202 @@ body { background: #0a1a2e; overflow: hidden; }
 </div>
 <script src="//unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
 <script>
-const CDATA = __COUNTRY_DATA__;
-const HT    = __HOMETURF__;
-const HT_ISO = new Set(['UKR','ISR','PSE','LBN','YEM','SYR','IRN']);
+/* ── Data injected from Python ── */
+const CDATA = __COUNTRY_DATA__;   // {ISO3: {score, name}}  — for choropleth colours
+const HOVER = __HOVER_DATA__;     // {ISO3: html_string}    — pre-built tooltip HTML
+const HT    = __HOMETURF__;       // war-zone dot data
 
-const CS = [
-  [0,   [245,242,238]],
-  [15,  [253,224,200]],
-  [35,  [245,168,112]],
-  [55,  [224, 92, 58]],
-  [75,  [184, 32, 32]],
-  [100, [122, 14, 14]],
-];
+/* ── Choropleth colour scale ── */
+const CS = [[0,[245,242,238]],[15,[253,224,200]],[35,[245,168,112]],
+            [55,[224,92,58]],[75,[184,32,32]],[100,[122,14,14]]];
 function sc(score, a) {
   if (score <= 0) return 'rgba(245,242,238,'+a+')';
   const s = Math.max(0, Math.min(100, score));
-  let lo = CS[0], hi = CS[CS.length-1];
-  for (let i = 0; i < CS.length-1; i++) {
-    if (s >= CS[i][0] && s <= CS[i+1][0]) { lo = CS[i]; hi = CS[i+1]; break; }
-  }
-  const t = hi[0]===lo[0] ? 0 : (s-lo[0])/(hi[0]-lo[0]);
-  return 'rgba('+
-    Math.round(lo[1][0]+t*(hi[1][0]-lo[1][0]))+','+
-    Math.round(lo[1][1]+t*(hi[1][1]-lo[1][1]))+','+
-    Math.round(lo[1][2]+t*(hi[1][2]-lo[1][2]))+','+a+')';
+  let lo=CS[0], hi=CS[CS.length-1];
+  for (let i=0;i<CS.length-1;i++) if (s>=CS[i][0]&&s<=CS[i+1][0]){lo=CS[i];hi=CS[i+1];break;}
+  const t = hi[0]===lo[0]?0:(s-lo[0])/(hi[0]-lo[0]);
+  return 'rgba('+[0,1,2].map(i=>Math.round(lo[1][i]+t*(hi[1][i]-lo[1][i]))).join(',')
+         +','+a+')';
 }
-function lvl(s) { return s>=75?'High':s>=50?'Elevated':s>=25?'Moderate':s>0?'Low':'Minimal'; }
-function lvc(s) { return s>=75?'#ff6b6b':s>=50?'#f5a870':s>=25?'#fde0c8':'#aaa'; }
 
-function polyHtml(iso) {
-  const d = CDATA[iso];
-  if (!d) return '';
-  const s = d.score;
-  if (s === 0) return '<b>'+d.name+'</b><br><span style="color:#88aacc">No significant direct exposure</span>';
-  const hw = HT_ISO.has(iso) ? "<br><b style='color:#e74c3c'>&#9876; Active war on home soil</b>" : '';
-  let t = '<b>'+d.name+'</b>'+hw+'<br>'+
-          '<span style="color:'+lvc(s)+'"><b>'+s+'/100 &ndash; '+lvl(s)+'</b></span><br><br>'+
-          'Ukraine War: <b>'+d.ukraine+'</b>/100<br>'+
-          'Israel-Hamas: <b>'+d.hamas+'</b>/100<br>'+
-          'Iran/Hormuz: <b>'+d.iran+'</b>/100';
-  if (d.indices && d.indices !== '-') t += '<br><br><span style="color:#aac">Tracked:</span> '+d.indices;
-  if (d.ret_text) t += '<br><span style="color:#aac">Returns:</span><br>'+d.ret_text;
-  return t;
-}
+/* ── War-zone tooltip (these already work via onPointHover) ── */
 function ptHtml(d) {
-  return '<b>'+d.name+'</b><br>&#9876; '+d.war+'<br><i style="color:#99b">'+d.note+'</i>';
+  return '<b>'+d.name+'</b><br>&#9876; <b>'+d.war+'</b><br>'
+        +'<i>'+d.note+'</i>';
 }
 
-/* ── Tooltip ── */
+/* ── Tooltip engine ── */
 const tt = document.getElementById('tt');
-let hideTimer = null, parkTimer = null, curIso = null;
+let _hideT=null, _parkT=null, _curIso=null;
 
 function _pos(cx, cy) {
-  const W = window.innerWidth, H = window.innerHeight;
-  const tw = tt.offsetWidth || 220, th = tt.offsetHeight || 120;
-  tt.style.left = (cx + 18 + tw > W ? cx - tw - 8 : cx + 18) + 'px';
-  tt.style.top  = (cy + 10 + th > H ? cy - th - 6 : cy + 10) + 'px';
+  const W=window.innerWidth, H=window.innerHeight;
+  const tw=tt.offsetWidth||240, th=tt.offsetHeight||100;
+  tt.style.left = (cx+16+tw>W ? cx-tw-10 : cx+16)+'px';
+  tt.style.top  = (cy+10+th>H ? cy-th-8  : cy+10)+'px';
 }
-function showTip(html, iso, cx, cy) {
-  if (iso && iso === curIso) { _pos(cx, cy); return; }
-  curIso = iso || null;
-  if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-  if (parkTimer) { clearTimeout(parkTimer); parkTimer = null; }
+function showTip(html, key, cx, cy) {
+  if (key && key===_curIso) { _pos(cx,cy); return; }
+  _curIso = key||null;
+  if (_hideT){clearTimeout(_hideT);_hideT=null;}
+  if (_parkT){clearTimeout(_parkT);_parkT=null;}
   tt.innerHTML = html;
   _pos(cx, cy);
   tt.style.opacity = '1';
 }
 function hideTip() {
-  curIso = null;
-  if (hideTimer) return;
-  hideTimer = setTimeout(() => {
-    tt.style.opacity = '0'; hideTimer = null;
-    parkTimer = setTimeout(() => {
-      tt.style.left = '-9999px'; tt.style.top = '-9999px'; parkTimer = null;
-    }, 160);
+  _curIso = null;
+  if (_hideT) return;
+  _hideT = setTimeout(()=>{
+    tt.style.opacity='0'; _hideT=null;
+    _parkT = setTimeout(()=>{tt.style.left='-9999px';tt.style.top='-9999px';_parkT=null;},150);
   }, 80);
 }
 function hideTipNow() {
-  curIso = null;
-  if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-  if (parkTimer) { clearTimeout(parkTimer); parkTimer = null; }
-  tt.style.opacity = '0'; tt.style.left = '-9999px'; tt.style.top = '-9999px';
+  _curIso=null;
+  if(_hideT){clearTimeout(_hideT);_hideT=null;}
+  if(_parkT){clearTimeout(_parkT);_parkT=null;}
+  tt.style.opacity='0'; tt.style.left='-9999px'; tt.style.top='-9999px';
 }
 
-/* ── Geo helpers: sphere ray-cast + point-in-polygon ── */
-// Called on every mousemove — replaces unreliable onPolygonHover raycasting.
-let geoFeats = [];
+/* ── Sphere ray-cast + point-in-polygon hover ──────────────────────────────
+   three-globe coordinate system (from getCoords source):
+     x = -R·sin(φ)·cos(θ)   where  φ = (90-lat)·π/180
+     y =  R·cos(φ)                  θ = (lng-180)·π/180
+     z =  R·sin(φ)·sin(θ)
+   Inverse:
+     lat = asin(y/R)
+     lon = atan2(z, -x)·180/π + 180   [normalised to ±180]
+   ─────────────────────────────────────────────────────────────────────── */
+let _geoFeats = [];
 
-function featureBbox(geom) {
-  let w=180, e=-180, s=90, n=-90;
-  const rings = geom.type === 'Polygon' ? geom.coordinates : geom.coordinates.flat(1);
-  for (const ring of rings) for (const [lo,la] of ring) {
-    if (lo<w) w=lo; if (lo>e) e=lo; if (la<s) s=la; if (la>n) n=la;
+function _bbox(geom) {
+  let w=180,e=-180,s=90,n=-90;
+  const rings = geom.type==='Polygon' ? geom.coordinates : geom.coordinates.flat(1);
+  for (const r of rings) for (const [lo,la] of r){
+    if(lo<w)w=lo; if(lo>e)e=lo; if(la<s)s=la; if(la>n)n=la;
   }
   return {w,e,s,n};
 }
-function inRing(lon, lat, ring) {
-  let c = false;
-  for (let i=0,j=ring.length-1; i<ring.length; j=i++) {
+function _inRing(lon, lat, ring) {
+  let c=false;
+  for (let i=0,j=ring.length-1; i<ring.length; j=i++){
     const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
-    if ((yi>lat)!==(yj>lat) && lon<(xj-xi)*(lat-yi)/(yj-yi)+xi) c=!c;
+    if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi) c=!c;
   }
   return c;
 }
-function inGeom(lon, lat, geom) {
-  const polys = geom.type==='Polygon' ? [geom.coordinates] : geom.coordinates;
-  for (const poly of polys) {
-    if (!inRing(lon,lat,poly[0])) continue;
+function _inGeom(lon, lat, geom) {
+  const ps = geom.type==='Polygon'?[geom.coordinates]:geom.coordinates;
+  for (const p of ps){
+    if(!_inRing(lon,lat,p[0])) continue;
     let hole=false;
-    for (let h=1;h<poly.length;h++) if (inRing(lon,lat,poly[h])) { hole=true; break; }
-    if (!hole) return true;
+    for(let h=1;h<p.length;h++) if(_inRing(lon,lat,p[h])){hole=true;break;}
+    if(!hole) return true;
   }
   return false;
 }
-function isoAt(lon, lat) {
-  for (const f of geoFeats) {
-    const b=f.bbox;
-    if (lon<b.w||lon>b.e||lat<b.s||lat>b.n) continue;
-    if (inGeom(lon,lat,f.geom)) return f.iso;
+function _isoAt(lon, lat) {
+  for (const f of _geoFeats){
+    const b=f.b;
+    if(lon<b.w||lon>b.e||lat<b.s||lat>b.n) continue;
+    if(_inGeom(lon,lat,f.g)) return f.i;
   }
   return null;
 }
-
-// Ray from camera through screen point → intersection with globe sphere → lat/lng.
-// Uses raw matrix elements (column-major) — no THREE.js import needed.
-function mouseToGeo(cx, cy) {
+function _mouseToGeo(cx, cy) {
   const cam=globe.camera(), ren=globe.renderer();
-  const rect=ren.domElement.getBoundingClientRect();
-  if (cx<rect.left||cx>rect.right||cy<rect.top||cy>rect.bottom) return null;
+  const r=ren.domElement.getBoundingClientRect();
+  if(cx<r.left||cx>r.right||cy<r.top||cy>r.bottom) return null;
   const P=cam.projectionMatrix.elements, M=cam.matrixWorld.elements;
-  const ndx=((cx-rect.left)/rect.width)*2-1;
-  const ndy=-((cy-rect.top)/rect.height)*2+1;
-  // View-space ray direction (perspective unprojection)
+  const ndx=((cx-r.left)/r.width)*2-1, ndy=-((cy-r.top)/r.height)*2+1;
+  /* view-space ray direction (perspective: ndx = P[0]·vx/(-vz), vz=-1) */
   const vx=ndx/P[0], vy=ndy/P[5], vz=-1;
-  // Rotate to world space via matrixWorld 3×3
-  const wx=M[0]*vx+M[4]*vy+M[8]*vz;
-  const wy=M[1]*vx+M[5]*vy+M[9]*vz;
-  const wz=M[2]*vx+M[6]*vy+M[10]*vz;
+  /* rotate to world space using matrixWorld upper-left 3×3 (column-major) */
+  const wx=M[0]*vx+M[4]*vy+M[8]*vz, wy=M[1]*vx+M[5]*vy+M[9]*vz, wz=M[2]*vx+M[6]*vy+M[10]*vz;
   const wl=Math.hypot(wx,wy,wz);
   const dx=wx/wl, dy=wy/wl, dz=wz/wl;
   const ox=cam.position.x, oy=cam.position.y, oz=cam.position.z;
-  const R=globe.getGlobeRadius?globe.getGlobeRadius():100;
-  // Quadratic: |o+t*d|² = R²
-  const b2=ox*dx+oy*dy+oz*dz;
-  const c=ox*ox+oy*oy+oz*oz-R*R;
-  const disc=b2*b2-c;
-  if (disc<0) return null;
-  const t=-b2-Math.sqrt(disc);
-  if (t<0) return null;
+  const R=(globe.getGlobeRadius&&globe.getGlobeRadius())||100;
+  /* ray-sphere: |o+t·d|² = R²  →  t² + 2(o·d)t + (|o|²-R²) = 0 */
+  const b2=ox*dx+oy*dy+oz*dz, cc=ox*ox+oy*oy+oz*oz-R*R;
+  const disc=b2*b2-cc; if(disc<0) return null;
+  const t=-b2-Math.sqrt(disc); if(t<0) return null;
   const px=ox+t*dx, py=oy+t*dy, pz=oz+t*dz;
-  // three-globe sphere orientation: lon=0/lat=0 at +Z, lon=90E at +X, north at +Y
-  return { lat:Math.asin(py/R)*180/Math.PI, lon:Math.atan2(px,pz)*180/Math.PI };
+  const lat=Math.asin(Math.max(-1,Math.min(1,py/R)))*180/Math.PI;
+  let lon=Math.atan2(pz,-px)*180/Math.PI+180;
+  if(lon>180) lon-=360;
+  return {lat, lon};
 }
 
-/* ── Globe init ── */
+/* ── Globe ── */
 const globe = Globe()
   .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
   .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
   .enablePointerInteraction(true)
   (document.getElementById('globe'));
 
-/* ── Car-configurator physics ── */
-const ctrl = globe.controls();
-ctrl.enableDamping = true; ctrl.dampingFactor = 0.06;
-ctrl.rotateSpeed = 0.85;   ctrl.zoomSpeed = 0.65;
-ctrl.minDistance = 115;    ctrl.maxDistance = 550;
-globe.pointOfView({ lat: 25, lng: 20, altitude: 2.1 }, 0);
+const ctrl=globe.controls();
+ctrl.enableDamping=true; ctrl.dampingFactor=0.06;
+ctrl.rotateSpeed=0.85;   ctrl.zoomSpeed=0.65;
+ctrl.minDistance=115;    ctrl.maxDistance=550;
+globe.pointOfView({lat:25,lng:20,altitude:2.1},0);
 
 document.getElementById('gw').addEventListener('mouseleave', hideTipNow);
 
-const canvas = globe.renderer().domElement;
-let dragging = false;
-canvas.style.cursor = 'grab';
-canvas.addEventListener('mousedown', () => { dragging=true;  canvas.style.cursor='grabbing'; });
-canvas.addEventListener('mouseup',   () => { dragging=false; });
+const canvas=globe.renderer().domElement;
+let _drag=false;
+canvas.style.cursor='grab';
+canvas.addEventListener('mousedown',()=>{_drag=true; canvas.style.cursor='grabbing';});
+canvas.addEventListener('mouseup',  ()=>{_drag=false;});
 
-/* ── Country hover via sphere ray-cast + PIP (fires on every mousemove) ── */
-canvas.addEventListener('mousemove', e => {
-  if (dragging) { hideTip(); return; }
-  const geo = mouseToGeo(e.clientX, e.clientY);
-  if (!geo) { hideTip(); canvas.style.cursor='grab'; return; }
-  const iso = isoAt(geo.lon, geo.lat);
-  if (iso) {
-    const html = polyHtml(iso);
-    if (html) { showTip(html, iso, e.clientX, e.clientY); canvas.style.cursor='crosshair'; }
-    else      { hideTip(); canvas.style.cursor='grab'; }
+/* every mousemove: ray-cast sphere → lat/lng → PIP → show pre-built HTML */
+canvas.addEventListener('mousemove', e=>{
+  if(_drag){hideTip();return;}
+  const geo=_mouseToGeo(e.clientX,e.clientY);
+  if(!geo){hideTip();canvas.style.cursor='grab';return;}
+  const iso=_isoAt(geo.lon,geo.lat);
+  if(iso&&HOVER[iso]){
+    showTip(HOVER[iso],iso,e.clientX,e.clientY);
+    canvas.style.cursor='crosshair';
   } else {
     hideTip(); canvas.style.cursor='grab';
   }
 });
 
-/* ── War-zone dot markers (onPointHover already works) ── */
+/* war-zone dot markers — onPointHover works fine for points */
 globe
-  .pointsData(HT)
-  .pointLat(d => d.lat).pointLng(d => d.lng)
-  .pointColor(() => '#ff3333').pointAltitude(0.055).pointRadius(0.5)
-  .onPointHover(pt => {
-    if (pt) showTip(ptHtml(pt), 'pt_'+pt.name, 0, 0);
+  .pointsData(HT).pointLat(d=>d.lat).pointLng(d=>d.lng)
+  .pointColor(()=>'#ff3333').pointAltitude(0.055).pointRadius(0.5)
+  .onPointHover(pt=>{
+    if(pt) showTip(ptHtml(pt),'pt_'+pt.name,0,0);
     else hideTip();
   });
 
-/* ── Country choropleth polygons + build PIP index (async) ── */
+/* choropleth polygons — also builds the PIP lookup after fetch */
 fetch('https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@2.27.2/example/country-polygons/ne_110m_admin_0_countries.geojson')
-  .then(r => r.json())
-  .then(world => {
-    const feats = world.features.filter(f => f.properties.ISO_A3 && f.properties.ISO_A3 !== '-99');
-    // Build PIP lookup used by canvas mousemove handler
-    geoFeats = feats.map(f => ({ iso: f.properties.ISO_A3, bbox: featureBbox(f.geometry), geom: f.geometry }));
-    // Render choropleth (no onPolygonHover needed)
+  .then(r=>r.json())
+  .then(world=>{
+    const feats=world.features.filter(f=>f.properties.ISO_A3&&f.properties.ISO_A3!=='-99');
+    _geoFeats=feats.map(f=>({i:f.properties.ISO_A3, b:_bbox(f.geometry), g:f.geometry}));
     globe
       .polygonsData(feats)
-      .polygonCapColor(f => { const d=CDATA[f.properties.ISO_A3]; return sc(d?d.score:0,0.88); })
-      .polygonSideColor(() => 'rgba(8,8,8,0.55)')
-      .polygonStrokeColor(() => 'rgba(255,255,255,0.13)')
+      .polygonCapColor(f=>{const d=CDATA[f.properties.ISO_A3];return sc(d?d.score:0,0.88);})
+      .polygonSideColor(()=>'rgba(8,8,8,0.55)')
+      .polygonStrokeColor(()=>'rgba(255,255,255,0.13)')
       .polygonAltitude(0.006);
   });
 </script></body></html>"""
 
 
 def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
-    """Inject country data into the Globe.GL template and render via components.html."""
-    country_data: dict = {}
-    for _, row in df.iterrows():
-        country_data[str(row["iso3"])] = {
-            "score":   int(row[score_col]),
-            "name":    str(row["country"]),
-            "ukraine": int(row["ukraine_score"]),
-            "hamas":   int(row["hamas_score"]),
-            "iran":    int(row["iran_score"]),
-            "indices": str(row["indices"]),
-            "ret_text": str(row["ret_text"]),
-        }
+    """Inject Python-computed data into the Globe.GL template and render."""
+    # CDATA: score only — used for choropleth polygon colours
+    country_data = {str(row["iso3"]): {"score": int(row[score_col])}
+                    for _, row in df.iterrows()}
+    # HOVER: pre-built tooltip HTML identical to the flat-map Plotly hover
+    hover_data = {str(row["iso3"]): str(row.get("hover", ""))
+                  for _, row in df.iterrows()}
     hometurf_data = [
         {"lat": h["lat"], "lng": h["lon"],
          "name": h["name"], "war": h["war"], "note": h["note"]}
@@ -606,7 +572,8 @@ def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
     html = (
         _GLOBE_HTML
         .replace("__COUNTRY_DATA__", json.dumps(country_data))
-        .replace("__HOMETURF__", json.dumps(hometurf_data))
+        .replace("__HOVER_DATA__",   json.dumps(hover_data))
+        .replace("__HOMETURF__",     json.dumps(hometurf_data))
     )
     components.html(html, height=600, scrolling=False)
 
