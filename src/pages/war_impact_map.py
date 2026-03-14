@@ -520,16 +520,17 @@ fetch('https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@master/example/country-po
       .polygonCapColor(f => { const d=CDATA[f.properties.ISO_A3]; return sc(d?d.score:0, 0.88); })
       .polygonSideColor(() => 'rgba(8,8,8,0.55)')
       .polygonStrokeColor(() => 'rgba(255,255,255,0.13)')
-      .polygonAltitude(0.003)
+      .polygonAltitude(0.006)
       .onPolygonHover(hov => {
         hovering = !!hov;
         canvas.style.cursor = hov ? 'crosshair' : 'grab';
-        globe
-          .polygonAltitude(f => f===hov ? 0.022 : 0.003)
-          .polygonCapColor(f => {
-            const d=CDATA[f.properties.ISO_A3], s=d?d.score:0;
-            return f===hov ? sc(Math.min(s+18,100),1.0) : sc(s,0.88);
-          });
+        // Only update cap color — never touch polygonAltitude inside this
+        // callback, as re-rendering the geometry invalidates the raycaster
+        // hit-test and causes an immediate null-hover feedback loop.
+        globe.polygonCapColor(f => {
+          const d = CDATA[f.properties.ISO_A3], s = d ? d.score : 0;
+          return f === hov ? sc(Math.min(s + 18, 100), 1.0) : sc(s, 0.88);
+        });
         if (hov) {
           const iso = hov.properties.ISO_A3;
           const html = polyHtml(iso);
