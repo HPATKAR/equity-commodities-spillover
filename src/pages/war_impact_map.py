@@ -6,6 +6,7 @@ Choropleth map (flat or 3-D globe) showing equity-market exposure to active wars
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -312,268 +313,293 @@ def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-# ── Globe.GL WebGL template ───────────────────────────────────────────────────
-# Loaded once at module level; data injected at render time via placeholder swap.
+# ── Local GeoJSON loader ──────────────────────────────────────────────────────
+# Reads the pre-processed compact GeoJSON bundled with the project.
+# No network request — 100% reliable in any deployment context.
+
+_ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+_GEO_FILE = _ASSETS / "ne_110m_countries_compact.geojson"
+
+
+@st.cache_data(show_spinner=False)
+def _load_globe_geojson() -> list[dict]:
+    """Load [{iso, name, g}] from the bundled compact GeoJSON. Cached for the session."""
+    try:
+        return json.loads(_GEO_FILE.read_bytes())
+    except Exception:
+        return []
+
+
+# ── D3 Orthographic Globe template ───────────────────────────────────────────
+# Engine: D3 v7 geoOrthographic + canvas.
+# Drag: setPointerCapture — works inside Streamlit iframes.
+# Hover: proj.invert(mouse) → d3.geoContains(feature, point) — 100% reliable.
+# GeoJSON: injected server-side — no client fetch, no CORS issues.
 
 _GLOBE_HTML = r"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0a1a2e; overflow: hidden; }
-#gw { position: relative; width: 100%; height: 580px; }
-#globe { width: 100%; height: 100%; }
-#tt {
-  position: fixed; pointer-events: none; z-index: 9999;
-  font-family: 'DM Sans', sans-serif; font-size: 11.5px; line-height: 1.65;
-  padding: 10px 13px; max-width: 240px;
-  background: rgba(8,16,32,0.96);
-  border: 1px solid rgba(207,185,145,0.4);
-  border-radius: 6px; color: #e4e4e4;
-  opacity: 0; transition: opacity 0.12s ease;
-  left: -9999px; top: -9999px;
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:none}
+#wrap{position:relative;width:100%;height:580px}
+#gc{display:block;touch-action:none}
+#panel{
+  position:absolute;bottom:14px;left:14px;width:222px;
+  background:rgba(5,11,26,0.95);
+  border:1px solid rgba(207,185,145,0.25);
+  border-radius:8px;padding:13px 15px;
+  font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.62;
+  color:#dde0e8;transition:border-color .2s;
+  pointer-events:none;
 }
-#tt b { color: #ffffff; }
-#tt i { color: #aab4c8; }
-#cbar {
-  position: absolute; bottom: 18px; right: 12px;
-  background: rgba(5,15,35,0.78); border: 1px solid rgba(100,160,255,0.18);
-  border-radius: 5px; padding: 8px 11px;
-  font-size: 9px; font-family: 'DM Sans',sans-serif; color: #ccc;
+#panel.lit{border-color:rgba(207,185,145,0.60)}
+#panel .plbl{font-size:7.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#CFB991;margin-bottom:6px}
+#panel .ph{color:#4a5568;font-size:10px;line-height:1.5;font-style:italic}
+#panel b{color:#fff}
+#panel hr{border:none;border-top:1px solid rgba(255,255,255,0.07);margin:7px 0}
+#legend{
+  position:absolute;bottom:14px;right:14px;
+  background:rgba(5,11,26,0.90);
+  border:1px solid rgba(100,140,220,0.14);
+  border-radius:7px;padding:9px 12px;
+  font-family:'DM Sans',sans-serif;font-size:9px;color:#aaa;
+  pointer-events:none;
 }
-.cr { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
-.cs { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; }
-#leg {
-  position: absolute; bottom: 18px; left: 12px;
-  background: rgba(5,15,35,0.72); border: 1px solid rgba(100,160,255,0.18);
-  border-radius: 5px; padding: 6px 10px;
-  font-size: 9px; font-family: 'DM Sans',sans-serif; color: #ccc;
-}
+.lt{font-weight:700;color:#CFB991;letter-spacing:.1em;font-size:8px;text-transform:uppercase;margin-bottom:5px}
+.lr{display:flex;align-items:center;gap:6px;margin:2px 0}
+.lc{width:11px;height:11px;border-radius:2px;flex-shrink:0}
 </style></head><body>
-<div id="tt"></div>
-<div id="gw">
-  <div id="globe"></div>
-  <div id="cbar">
-    <div style="font-weight:700;color:#CFB991;letter-spacing:.1em;font-size:8px;text-transform:uppercase;margin-bottom:5px">Impact Scale</div>
-    <div class="cr"><div class="cs" style="background:#f5f2ee;border:1px solid #aaa"></div>No exposure</div>
-    <div class="cr"><div class="cs" style="background:#fde0c8"></div>Low (10-25)</div>
-    <div class="cr"><div class="cs" style="background:#f5a870"></div>Moderate (25-50)</div>
-    <div class="cr"><div class="cs" style="background:#e05c3a"></div>Elevated (50-75)</div>
-    <div class="cr"><div class="cs" style="background:#b82020"></div>High (75-90)</div>
-    <div class="cr"><div class="cs" style="background:#7a0e0e"></div>Crisis (90-100)</div>
+<div id="wrap">
+  <canvas id="gc"></canvas>
+  <div id="panel">
+    <div class="plbl">Country Analysis</div>
+    <p class="ph">Drag to rotate &middot; Scroll to zoom<br>Hover any country for war-impact data</p>
   </div>
-  <div id="leg">
-    <div style="display:flex;align-items:center;gap:5px">
-      <span style="color:#ff4444;font-size:12px">●</span><span>Active War Zone</span>
-    </div>
+  <div id="legend">
+    <div class="lt">Impact Scale</div>
+    <div class="lr"><div class="lc" style="background:#f5f2ee;border:1px solid #bbb"></div>No exposure</div>
+    <div class="lr"><div class="lc" style="background:#fde0c8"></div>Low (10&ndash;25)</div>
+    <div class="lr"><div class="lc" style="background:#f5a870"></div>Moderate (25&ndash;50)</div>
+    <div class="lr"><div class="lc" style="background:#e05c3a"></div>Elevated (50&ndash;75)</div>
+    <div class="lr"><div class="lc" style="background:#b82020"></div>High (75&ndash;90)</div>
+    <div class="lr"><div class="lc" style="background:#7a0e0e"></div>Crisis (90&ndash;100)</div>
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:5px 0">
+    <div class="lr"><div style="width:9px;height:9px;border-radius:50%;background:#ff3333;flex-shrink:0"></div>Active War Zone</div>
   </div>
 </div>
-<script src="//unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script>
-/* ── Data injected from Python ── */
-const CDATA = __COUNTRY_DATA__;   // {ISO3: {score, name}}  — for choropleth colours
-const HOVER = __HOVER_DATA__;     // {ISO3: html_string}    — pre-built tooltip HTML
-const HT    = __HOMETURF__;       // war-zone dot data
+/* ── injected from Python (no client fetch — data embedded server-side) ── */
+const CDATA    = __COUNTRY_DATA__;     // {ISO3:{score}}
+const HOVER    = __HOVER_DATA__;       // {ISO3:html}
+const HT       = __HOMETURF__;         // [{lat,lng,name,war,note}]
+const GEO_RAW  = __GEO_FEATURES__;     // [{iso,name,g:{type,coordinates}}]
 
-/* ── Choropleth colour scale ── */
+/* ── canvas setup — size after layout ── */
+const wrap   = document.getElementById('wrap');
+const canvas = document.getElementById('gc');
+const panel  = document.getElementById('panel');
+
+const W = Math.max(wrap.getBoundingClientRect().width || wrap.offsetWidth, 300);
+const H = 580;
+canvas.width  = W;
+canvas.height = H;
+const ctx = canvas.getContext('2d');
+const cx = W / 2, cy = H / 2;
+const R0 = Math.min(W, H * 0.88) * 0.44;
+
+/* ── D3 orthographic projection ── */
+const proj = d3.geoOrthographic()
+  .scale(R0).translate([cx, cy]).clipAngle(90).precision(0.1);
+const pathGen = d3.geoPath(proj, ctx);
+const sphere  = {type: 'Sphere'};
+const gratGen = d3.geoGraticule10();
+
+let featData = [];
+let hoverIso = null;
+
+/* ── colour scale ── */
 const CS = [[0,[245,242,238]],[15,[253,224,200]],[35,[245,168,112]],
             [55,[224,92,58]],[75,[184,32,32]],[100,[122,14,14]]];
-function sc(score, a) {
-  if (score <= 0) return 'rgba(245,242,238,'+a+')';
-  const s = Math.max(0, Math.min(100, score));
-  let lo=CS[0], hi=CS[CS.length-1];
-  for (let i=0;i<CS.length-1;i++) if (s>=CS[i][0]&&s<=CS[i+1][0]){lo=CS[i];hi=CS[i+1];break;}
-  const t = hi[0]===lo[0]?0:(s-lo[0])/(hi[0]-lo[0]);
-  return 'rgba('+[0,1,2].map(i=>Math.round(lo[1][i]+t*(hi[1][i]-lo[1][i]))).join(',')
-         +','+a+')';
+function sc(v) {
+  if (!v || v <= 0) return 'rgba(245,242,238,0.88)';
+  const s = Math.max(0, Math.min(100, v));
+  let lo = CS[0], hi = CS[CS.length-1];
+  for (let i = 0; i < CS.length-1; i++)
+    if (s >= CS[i][0] && s <= CS[i+1][0]) { lo=CS[i]; hi=CS[i+1]; break; }
+  const t = hi[0]===lo[0] ? 0 : (s-lo[0])/(hi[0]-lo[0]);
+  return 'rgba('+[0,1,2].map(j=>Math.round(lo[1][j]+t*(hi[1][j]-lo[1][j]))).join(',')+',0.88)';
 }
 
-/* ── War-zone tooltip (these already work via onPointHover) ── */
-function ptHtml(d) {
-  return '<b>'+d.name+'</b><br>&#9876; <b>'+d.war+'</b><br>'
-        +'<i>'+d.note+'</i>';
-}
+/* ── draw ── */
+let rot = [20, -20, 0];
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  proj.rotate(rot);
 
-/* ── Tooltip engine ── */
-const tt = document.getElementById('tt');
-let _hideT=null, _parkT=null, _curIso=null;
+  /* atmosphere */
+  const ag = ctx.createRadialGradient(cx,cy,R0*0.94,cx,cy,R0*1.16);
+  ag.addColorStop(0,'rgba(40,100,220,0.20)');
+  ag.addColorStop(0.6,'rgba(20,60,200,0.06)');
+  ag.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.arc(cx,cy,R0*1.16,0,Math.PI*2); ctx.fillStyle=ag; ctx.fill();
 
-function _pos(cx, cy) {
-  const W=window.innerWidth, H=window.innerHeight;
-  const tw=tt.offsetWidth||240, th=tt.offsetHeight||100;
-  tt.style.left = (cx+16+tw>W ? cx-tw-10 : cx+16)+'px';
-  tt.style.top  = (cy+10+th>H ? cy-th-8  : cy+10)+'px';
-}
-function showTip(html, key, cx, cy) {
-  if (key && key===_curIso) { _pos(cx,cy); return; }
-  _curIso = key||null;
-  if (_hideT){clearTimeout(_hideT);_hideT=null;}
-  if (_parkT){clearTimeout(_parkT);_parkT=null;}
-  tt.innerHTML = html;
-  _pos(cx, cy);
-  tt.style.opacity = '1';
-}
-function hideTip() {
-  _curIso = null;
-  if (_hideT) return;
-  _hideT = setTimeout(()=>{
-    tt.style.opacity='0'; _hideT=null;
-    _parkT = setTimeout(()=>{tt.style.left='-9999px';tt.style.top='-9999px';_parkT=null;},150);
-  }, 80);
-}
-function hideTipNow() {
-  _curIso=null;
-  if(_hideT){clearTimeout(_hideT);_hideT=null;}
-  if(_parkT){clearTimeout(_parkT);_parkT=null;}
-  tt.style.opacity='0'; tt.style.left='-9999px'; tt.style.top='-9999px';
-}
+  /* ocean */
+  ctx.beginPath(); pathGen(sphere);
+  const og = ctx.createRadialGradient(cx-R0*.28,cy-R0*.25,R0*.04,cx,cy,R0);
+  og.addColorStop(0,'#1a4b8e'); og.addColorStop(0.55,'#0d2f6e'); og.addColorStop(1,'#071840');
+  ctx.fillStyle=og; ctx.fill();
 
-/* ── Sphere ray-cast + point-in-polygon hover ──────────────────────────────
-   three-globe coordinate system (from getCoords source):
-     x = -R·sin(φ)·cos(θ)   where  φ = (90-lat)·π/180
-     y =  R·cos(φ)                  θ = (lng-180)·π/180
-     z =  R·sin(φ)·sin(θ)
-   Inverse:
-     lat = asin(y/R)
-     lon = atan2(z, -x)·180/π + 180   [normalised to ±180]
-   ─────────────────────────────────────────────────────────────────────── */
-let _geoFeats = [];
-
-function _bbox(geom) {
-  let w=180,e=-180,s=90,n=-90;
-  const rings = geom.type==='Polygon' ? geom.coordinates : geom.coordinates.flat(1);
-  for (const r of rings) for (const [lo,la] of r){
-    if(lo<w)w=lo; if(lo>e)e=lo; if(la<s)s=la; if(la>n)n=la;
+  /* country fills */
+  for (const {f,iso} of featData) {
+    ctx.beginPath(); pathGen(f);
+    ctx.fillStyle = iso===hoverIso ? 'rgba(255,210,72,0.96)' : sc((CDATA[iso]||{}).score||0);
+    ctx.fill();
   }
-  return {w,e,s,n};
-}
-function _inRing(lon, lat, ring) {
-  let c=false;
-  for (let i=0,j=ring.length-1; i<ring.length; j=i++){
-    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
-    if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi) c=!c;
+  /* country borders (separate pass — avoids fill bleeding over stroke) */
+  for (const {f,iso} of featData) {
+    ctx.beginPath(); pathGen(f);
+    if (iso===hoverIso) { ctx.strokeStyle='rgba(255,210,72,1.0)'; ctx.lineWidth=1.6; }
+    else                { ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=0.35; }
+    ctx.stroke();
   }
-  return c;
-}
-function _inGeom(lon, lat, geom) {
-  const ps = geom.type==='Polygon'?[geom.coordinates]:geom.coordinates;
-  for (const p of ps){
-    if(!_inRing(lon,lat,p[0])) continue;
-    let hole=false;
-    for(let h=1;h<p.length;h++) if(_inRing(lon,lat,p[h])){hole=true;break;}
-    if(!hole) return true;
+
+  /* graticule */
+  ctx.beginPath(); pathGen(gratGen);
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.4; ctx.stroke();
+
+  /* sphere rim */
+  ctx.beginPath(); pathGen(sphere);
+  ctx.strokeStyle='rgba(80,140,255,0.20)'; ctx.lineWidth=0.9; ctx.stroke();
+
+  /* war-zone dots (front hemisphere only) */
+  const front = [-rot[0], -rot[1]];
+  for (const ht of HT) {
+    if (d3.geoDistance([ht.lng,ht.lat], front) >= Math.PI/2-0.02) continue;
+    const p = proj([ht.lng,ht.lat]); if (!p) continue;
+    const [px,py] = p;
+    const rg = ctx.createRadialGradient(px,py,0,px,py,13);
+    rg.addColorStop(0,'rgba(255,50,50,0.55)'); rg.addColorStop(1,'rgba(255,50,50,0)');
+    ctx.beginPath(); ctx.arc(px,py,13,0,Math.PI*2); ctx.fillStyle=rg; ctx.fill();
+    ctx.beginPath(); ctx.arc(px,py,4.3,0,Math.PI*2);
+    ctx.fillStyle='#ff3333'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1.1; ctx.stroke();
   }
-  return false;
 }
-function _isoAt(lon, lat) {
-  for (const f of _geoFeats){
-    const b=f.b;
-    if(lon<b.w||lon>b.e||lat<b.s||lat>b.n) continue;
-    if(_inGeom(lon,lat,f.g)) return f.i;
+
+/* ── hover ── */
+function setHover(iso, name) {
+  if (iso === hoverIso) return;
+  hoverIso = iso; draw();
+  const lbl = '<div class="plbl">Country Analysis</div>';
+  if (!iso) {
+    panel.classList.remove('lit');
+    panel.innerHTML = lbl+'<p class="ph">Drag to rotate &middot; Scroll to zoom<br>Hover any country for war-impact data</p>';
+    return;
   }
-  return null;
-}
-function _mouseToGeo(cx, cy) {
-  const cam=globe.camera(), ren=globe.renderer();
-  const r=ren.domElement.getBoundingClientRect();
-  if(cx<r.left||cx>r.right||cy<r.top||cy>r.bottom) return null;
-  const P=cam.projectionMatrix.elements, M=cam.matrixWorld.elements;
-  const ndx=((cx-r.left)/r.width)*2-1, ndy=-((cy-r.top)/r.height)*2+1;
-  /* view-space ray direction (perspective: ndx = P[0]·vx/(-vz), vz=-1) */
-  const vx=ndx/P[0], vy=ndy/P[5], vz=-1;
-  /* rotate to world space using matrixWorld upper-left 3×3 (column-major) */
-  const wx=M[0]*vx+M[4]*vy+M[8]*vz, wy=M[1]*vx+M[5]*vy+M[9]*vz, wz=M[2]*vx+M[6]*vy+M[10]*vz;
-  const wl=Math.hypot(wx,wy,wz);
-  const dx=wx/wl, dy=wy/wl, dz=wz/wl;
-  const ox=cam.position.x, oy=cam.position.y, oz=cam.position.z;
-  const R=(globe.getGlobeRadius&&globe.getGlobeRadius())||100;
-  /* ray-sphere: |o+t·d|² = R²  →  t² + 2(o·d)t + (|o|²-R²) = 0 */
-  const b2=ox*dx+oy*dy+oz*dz, cc=ox*ox+oy*oy+oz*oz-R*R;
-  const disc=b2*b2-cc; if(disc<0) return null;
-  const t=-b2-Math.sqrt(disc); if(t<0) return null;
-  const px=ox+t*dx, py=oy+t*dy, pz=oz+t*dz;
-  const lat=Math.asin(Math.max(-1,Math.min(1,py/R)))*180/Math.PI;
-  let lon=Math.atan2(pz,-px)*180/Math.PI+180;
-  if(lon>180) lon-=360;
-  return {lat, lon};
+  panel.classList.add('lit');
+  const h = HOVER[iso];
+  panel.innerHTML = lbl + (h
+    ? '<div style="font-size:11px;line-height:1.62">'+h+'</div>'
+    : '<b>'+(name||iso)+'</b><hr><span style="color:#4a5568;font-size:10px">No war-impact data tracked.</span>');
 }
 
-/* ── Globe ── */
-const globe = Globe()
-  .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-  .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-  .enablePointerInteraction(true)
-  (document.getElementById('globe'));
+function handleHover(mx, my) {
+  const dx=mx-cx, dy=my-cy;
+  if (dx*dx+dy*dy > R0*R0) { setHover(null,null); canvas.style.cursor='grab'; return; }
+  const ll = proj.invert([mx,my]); if (!ll) { setHover(null,null); return; }
+  /* reject back-hemisphere (proj.invert is purely mathematical — no clipping) */
+  if (d3.geoDistance(ll, [-rot[0],-rot[1]]) >= Math.PI/2) { setHover(null,null); return; }
+  for (const {f,iso,name} of featData) {
+    if (d3.geoContains(f, ll)) { setHover(iso,name); canvas.style.cursor='crosshair'; return; }
+  }
+  setHover(null,null); canvas.style.cursor='grab';
+}
 
-const ctrl=globe.controls();
-ctrl.enableDamping=true; ctrl.dampingFactor=0.06;
-ctrl.rotateSpeed=0.85;   ctrl.zoomSpeed=0.65;
-ctrl.minDistance=115;    ctrl.maxDistance=550;
-globe.pointOfView({lat:25,lng:20,altitude:2.1},0);
+/* ── pointer-capture drag (works in Streamlit iframes — no window listener needed) ── */
+let velX=0, velY=0, lastX=0, lastY=0, lastT=0, inertiaId=null, dragging=false;
 
-document.getElementById('gw').addEventListener('mouseleave', hideTipNow);
+function clampPhi() { rot[1]=Math.max(-89,Math.min(89,rot[1])); }
 
-const canvas=globe.renderer().domElement;
-let _drag=false;
-canvas.style.cursor='grab';
-canvas.addEventListener('mousedown',()=>{_drag=true; canvas.style.cursor='grabbing';});
-canvas.addEventListener('mouseup',  ()=>{_drag=false;});
+function startInertia() {
+  if (inertiaId) cancelAnimationFrame(inertiaId);
+  let vx=velX, vy=velY;
+  function tick() {
+    vx*=0.91; vy*=0.91;
+    if (Math.hypot(vx,vy) < 0.008) return;
+    rot[0]+=vx; rot[1]+=vy; clampPhi(); draw();
+    inertiaId = requestAnimationFrame(tick);
+  }
+  inertiaId = requestAnimationFrame(tick);
+}
 
-/* every mousemove: ray-cast sphere → lat/lng → PIP → show pre-built HTML */
-canvas.addEventListener('mousemove', e=>{
-  if(_drag){hideTip();return;}
-  const geo=_mouseToGeo(e.clientX,e.clientY);
-  if(!geo){hideTip();canvas.style.cursor='grab';return;}
-  const iso=_isoAt(geo.lon,geo.lat);
-  if(iso&&HOVER[iso]){
-    showTip(HOVER[iso],iso,e.clientX,e.clientY);
-    canvas.style.cursor='crosshair';
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);   /* ← keeps events flowing even outside iframe */
+  dragging=true; lastX=e.clientX; lastY=e.clientY; lastT=e.timeStamp;
+  velX=velY=0;
+  if (inertiaId) { cancelAnimationFrame(inertiaId); inertiaId=null; }
+  canvas.style.cursor='grabbing';
+  e.preventDefault();
+});
+
+canvas.addEventListener('pointermove', e => {
+  const r = canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  if (dragging) {
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    const dt=Math.max(1, e.timeStamp-lastT);
+    velX=dx/dt*16; velY=dy/dt*16;
+    rot[0]+=dx*0.28; rot[1]-=dy*0.28; clampPhi();
+    lastX=e.clientX; lastY=e.clientY; lastT=e.timeStamp;
+    draw();
   } else {
-    hideTip(); canvas.style.cursor='grab';
+    handleHover(mx, my);
   }
 });
 
-/* war-zone dot markers — onPointHover works fine for points */
-globe
-  .pointsData(HT).pointLat(d=>d.lat).pointLng(d=>d.lng)
-  .pointColor(()=>'#ff3333').pointAltitude(0.055).pointRadius(0.5)
-  .onPointHover(pt=>{
-    if(pt) showTip(ptHtml(pt),'pt_'+pt.name,0,0);
-    else hideTip();
-  });
+canvas.addEventListener('pointerup', e => {
+  canvas.releasePointerCapture(e.pointerId);
+  dragging=false; canvas.style.cursor='grab'; startInertia();
+});
 
-/* choropleth polygons — also builds the PIP lookup after fetch */
-fetch('https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@2.27.2/example/country-polygons/ne_110m_admin_0_countries.geojson')
-  .then(r=>r.json())
-  .then(world=>{
-    const feats=world.features.filter(f=>f.properties.ISO_A3&&f.properties.ISO_A3!=='-99');
-    _geoFeats=feats.map(f=>({i:f.properties.ISO_A3, b:_bbox(f.geometry), g:f.geometry}));
-    globe
-      .polygonsData(feats)
-      .polygonCapColor(f=>{const d=CDATA[f.properties.ISO_A3];return sc(d?d.score:0,0.88);})
-      .polygonSideColor(()=>'rgba(8,8,8,0.55)')
-      .polygonStrokeColor(()=>'rgba(255,255,255,0.13)')
-      .polygonAltitude(0.006);
-  });
+canvas.addEventListener('pointerleave', e => {
+  if (!dragging) setHover(null,null);
+});
+
+/* ── scroll zoom ── */
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  proj.scale(Math.max(R0*.44, Math.min(R0*3.8, proj.scale()-e.deltaY*0.4)));
+  draw();
+}, {passive:false});
+
+/* ── build feature index from injected data (synchronous — no fetch needed) ── */
+featData = GEO_RAW.map(d => ({
+  f:    {type: 'Feature', geometry: d.g, properties: {ISO_A3: d.iso}},
+  iso:  d.iso,
+  name: d.name,
+}));
+draw();
 </script></body></html>"""
 
 
 def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
-    """Inject Python-computed data into the Globe.GL template and render."""
-    # CDATA: score only — used for choropleth polygon colours
+    """Fetch GeoJSON server-side, inject all data into D3 globe template, render."""
     country_data = {str(row["iso3"]): {"score": int(row[score_col])}
                     for _, row in df.iterrows()}
-    # HOVER: pre-built tooltip HTML identical to the flat-map Plotly hover
-    hover_data = {str(row["iso3"]): str(row.get("hover", ""))
-                  for _, row in df.iterrows()}
+    hover_data   = {str(row["iso3"]): str(row.get("hover", ""))
+                    for _, row in df.iterrows()}
     hometurf_data = [
         {"lat": h["lat"], "lng": h["lon"],
          "name": h["name"], "war": h["war"], "note": h["note"]}
         for h in _HOMETURF_WARS
     ]
+    # Server-side GeoJSON — injected directly, no browser fetch required
+    geo_features = _load_globe_geojson()
     html = (
         _GLOBE_HTML
         .replace("__COUNTRY_DATA__", json.dumps(country_data))
         .replace("__HOVER_DATA__",   json.dumps(hover_data))
         .replace("__HOMETURF__",     json.dumps(hometurf_data))
+        .replace("__GEO_FEATURES__", json.dumps(geo_features))
     )
     components.html(html, height=600, scrolling=False)
 
