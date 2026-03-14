@@ -323,11 +323,14 @@ body { background: #0a1a2e; overflow: hidden; }
 #globe { width: 100%; height: 100%; }
 /* Custom tooltip — fixed so it never gets clipped by the iframe */
 #tt {
-  position: fixed; display: none; pointer-events: none; z-index: 9999;
+  position: fixed; pointer-events: none; z-index: 9999;
   font-family: 'DM Sans',sans-serif; font-size: 11px; line-height: 1.55;
   padding: 8px 12px; max-width: 220px;
   background: rgba(5,15,35,0.94); border: 1px solid rgba(100,160,255,0.25);
   border-radius: 5px; color: #eee;
+  opacity: 0; transition: opacity 0.14s ease;
+  /* start offscreen so offsetHeight is measurable before first show */
+  left: -9999px; top: -9999px;
 }
 #cbar {
   position: absolute; bottom: 18px; right: 12px;
@@ -411,21 +414,64 @@ function ptHtml(d) {
   return '<b>'+d.name+'</b><br>&#9876; '+d.war+'<br><i style="color:#99b">'+d.note+'</i>';
 }
 
-/* ── Tooltip positioning ── */
+/* ── Tooltip ── */
 const tt = document.getElementById('tt');
+let mx = 0, my = 0;
+let hideTimer = null;   // grace-period before fade
+let parkTimer = null;   // park offscreen after fade
+let curIso    = null;   // track which country is shown
+
 document.addEventListener('mousemove', e => {
-  const x = e.clientX, y = e.clientY;
-  const W = window.innerWidth, H = window.innerHeight;
-  tt.style.left = (x + 16 + 220 > W ? x - 230 : x + 16) + 'px';
-  tt.style.top  = (y - 10 + tt.offsetHeight > H ? y - tt.offsetHeight - 6 : y - 10) + 'px';
+  mx = e.clientX; my = e.clientY;
+  if (tt.style.opacity !== '0') _positionTip();
 });
-function showTip(html) { tt.innerHTML = html; tt.style.display = 'block'; }
-function hideTip()     { tt.style.display = 'none'; }
+
+function _positionTip() {
+  const W = window.innerWidth, H = window.innerHeight;
+  const tw = tt.offsetWidth  || 220;
+  const th = tt.offsetHeight || 120;
+  tt.style.left = (mx + 18 + tw > W ? mx - tw - 8  : mx + 18) + 'px';
+  tt.style.top  = (my + 10 + th > H ? my - th  - 6 : my + 10) + 'px';
+}
+
+// Show immediately — no debounce (debouncing on show is what broke hover)
+function showTip(html, iso) {
+  if (iso && iso === curIso) return;   // same country, skip re-render
+  curIso = iso || null;
+  if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+  if (parkTimer) { clearTimeout(parkTimer); parkTimer = null; }
+  tt.innerHTML = html;
+  _positionTip();
+  tt.style.opacity = '1';
+}
+
+// Hide with an 80 ms grace period so edge-crossing flicker is invisible
+function hideTip() {
+  curIso = null;
+  if (hideTimer) return;               // already scheduled
+  hideTimer = setTimeout(() => {
+    tt.style.opacity = '0';
+    hideTimer = null;
+    parkTimer = setTimeout(() => {
+      tt.style.left = '-9999px'; tt.style.top = '-9999px';
+      parkTimer = null;
+    }, 160);
+  }, 80);
+}
+
+function hideTipNow() {
+  curIso = null;
+  if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+  if (parkTimer) { clearTimeout(parkTimer); parkTimer = null; }
+  tt.style.opacity = '0';
+  tt.style.left = '-9999px'; tt.style.top = '-9999px';
+}
 
 /* ── Globe init ── */
 const globe = Globe()
   .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
   .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+  .enablePointerInteraction(true)
   (document.getElementById('globe'));
 
 /* ── Car-configurator physics ── */
@@ -439,6 +485,16 @@ ctrl.maxDistance    = 550;
 
 globe.pointOfView({ lat: 25, lng: 20, altitude: 2.1 }, 0);
 
+/* Hide immediately when cursor leaves the globe container */
+document.getElementById('gw').addEventListener('mouseleave', hideTipNow);
+
+const canvas = globe.renderer().domElement;
+canvas.style.cursor = 'grab';
+canvas.addEventListener('mousedown', () => { canvas.style.cursor = 'grabbing'; });
+canvas.addEventListener('mouseup',   () => { canvas.style.cursor = hovering ? 'crosshair' : 'grab'; });
+
+let hovering = false;
+
 /* ── War-zone dot markers ── */
 globe
   .pointsData(HT)
@@ -447,10 +503,15 @@ globe
   .pointColor(() => '#ff3333')
   .pointAltitude(0.055)
   .pointRadius(0.5)
-  .onPointHover(pt => { pt ? showTip(ptHtml(pt)) : hideTip(); });
+  .onPointHover(pt => {
+    hovering = !!pt;
+    canvas.style.cursor = pt ? 'crosshair' : 'grab';
+    if (pt) showTip(ptHtml(pt), 'pt_' + pt.name);
+    else hideTip();
+  });
 
-/* ── Country choropleth polygons (async) ── */
-fetch('https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/country-polygons/ne_110m_admin_0_countries.geojson')
+/* ── Country choropleth polygons (async, jsDelivr CDN) ── */
+fetch('https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@master/example/country-polygons/ne_110m_admin_0_countries.geojson')
   .then(r => r.json())
   .then(world => {
     const feats = world.features.filter(f => f.properties.ISO_A3 && f.properties.ISO_A3 !== '-99');
@@ -461,6 +522,8 @@ fetch('https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/coun
       .polygonStrokeColor(() => 'rgba(255,255,255,0.13)')
       .polygonAltitude(0.003)
       .onPolygonHover(hov => {
+        hovering = !!hov;
+        canvas.style.cursor = hov ? 'crosshair' : 'grab';
         globe
           .polygonAltitude(f => f===hov ? 0.022 : 0.003)
           .polygonCapColor(f => {
@@ -468,8 +531,9 @@ fetch('https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/coun
             return f===hov ? sc(Math.min(s+18,100),1.0) : sc(s,0.88);
           });
         if (hov) {
-          const html = polyHtml(hov.properties.ISO_A3);
-          if (html) showTip(html); else hideTip();
+          const iso = hov.properties.ISO_A3;
+          const html = polyHtml(iso);
+          if (html) showTip(html, iso); else hideTip();
         } else {
           hideTip();
         }
