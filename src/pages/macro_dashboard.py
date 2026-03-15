@@ -213,6 +213,242 @@ def _kpi(col, label: str, value: str, delta: str = "", delta_up: bool | None = N
 
 # ── Main page ───────────────────────────────────────────────────────────────
 
+def _narrative_box(text: str) -> None:
+    """Render a pre-loaded data-driven narrative paragraph."""
+    paragraphs = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
+    html_parts = []
+    for p in paragraphs:
+        if ":" in p[:50]:
+            head, _, rest = p.partition(":")
+            html_parts.append(f"<b>{head}:</b>{rest}")
+        else:
+            html_parts.append(p)
+    html = "<br><br>".join(html_parts)
+    st.markdown(
+        f'<div style="border-left:4px solid #CFB991;padding:0.85rem 1.1rem;'
+        f'background:#fafaf8;border-radius:0 4px 4px 0;margin:0.4rem 0 0.8rem">'
+        f'<div style="{_F}font-size:0.74rem;color:#2A2A2A;line-height:1.82">'
+        f'{html}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _narrate_growth(macro_data: dict) -> str:
+    parts = []
+    gdp = macro_data.get("Real GDP Growth (QoQ %)")
+    pmi = macro_data.get("ISM Manufacturing PMI")
+    pay = macro_data.get("Nonfarm Payrolls (MoM k)")
+    cpi = macro_data.get("CPI YoY (%)")
+    un  = macro_data.get("Unemployment Rate (%)")
+
+    if gdp is not None and not gdp.empty:
+        v = gdp.iloc[-1]
+        trend = "expanding" if v > 0 else "contracting"
+        strength = "robustly" if v > 2.5 else ("modestly" if v > 0.5 else "weakly")
+        parts.append(
+            f"The US economy is {trend} {strength}, with real GDP growth at {v:.1f}% QoQ. "
+            + ("Two consecutive quarters of contraction would confirm a technical recession." if v < 0 else
+               "This pace is consistent with late-cycle deceleration." if v < 1.5 else
+               "Expansion at this rate supports corporate earnings and commodity demand.")
+        )
+    if pmi is not None and not pmi.empty:
+        v = pmi.iloc[-1]
+        prev = pmi.iloc[-2] if len(pmi) > 1 else v
+        direction = "improving" if v > prev else "deteriorating"
+        state = "expansion" if v > 50 else "contraction"
+        parts.append(
+            f"ISM Manufacturing PMI stands at {v:.1f} — {state} territory, and {direction}. "
+            + ("PMI above 50 is constructive for industrial metals (copper, aluminium) and energy demand." if v > 50 else
+               "Sub-50 PMI historically leads to negative earnings revisions in industrials and weighs on base metals within 1–2 quarters.")
+        )
+    if pay is not None and not pay.empty:
+        v = pay.iloc[-1] / 1000
+        cpi_v = cpi.iloc[-1] if cpi is not None and not cpi.empty else None
+        un_v  = un.iloc[-1]  if un  is not None and not un.empty  else None
+        labour = "resilient" if v > 0.15 else ("mixed" if v > 0 else "weakening")
+        parts.append(
+            f"The labour market is {labour}: nonfarm payrolls added {v*1000:.0f}k jobs last month"
+            + (f", against an unemployment rate of {un_v:.1f}%" if un_v else "")
+            + (f" and CPI running at {cpi_v:.1f}% YoY" if cpi_v else "")
+            + (". Strong employment underpins consumer spending and keeps inflationary pressure alive, "
+               "limiting the scope for near-term rate cuts which would otherwise benefit high-multiple equities." if v > 0.15 else
+               ". Softening employment reduces consumer demand — negative for retail and consumer discretionary equities, "
+               "and moderately bearish for agricultural and energy commodities.")
+        )
+    return "\n\n".join(parts) if parts else "GDP and labour data unavailable."
+
+
+def _narrate_liquidity(money_data: dict, yields_df: "pd.DataFrame") -> str:
+    parts = []
+    m2 = money_data.get("M2 Money Supply ($B)")
+    fed = money_data.get("Fed Total Assets ($B)")
+    sent = money_data.get("Consumer Sentiment")
+
+    if m2 is not None and not m2.empty and len(m2) > 12:
+        yoy = m2.pct_change(12).iloc[-1] * 100
+        regime = "contracting" if yoy < 0 else ("growing slowly" if yoy < 4 else "expanding")
+        parts.append(
+            f"M2 money supply is {regime} at {yoy:.1f}% YoY. "
+            + ("M2 contraction tightens financial conditions — historically this precedes "
+               "equity drawdowns and softens commodity demand as dollar liquidity shrinks." if yoy < 0 else
+               "Moderate M2 growth supports asset prices without stoking excess inflation." if yoy < 6 else
+               "Rapid M2 expansion is historically reflationary — positive for hard commodities and "
+               "real assets, though it risks keeping inflation elevated.")
+        )
+    if fed is not None and not fed.empty:
+        v = fed.iloc[-1] / 1000
+        prev12 = fed.iloc[-12] / 1000 if len(fed) > 12 else v
+        direction = "expanding (QE)" if v > prev12 * 1.01 else ("shrinking (QT)" if v < prev12 * 0.99 else "broadly stable")
+        parts.append(
+            f"The Federal Reserve balance sheet stands at ${v:.2f}T and is {direction}. "
+            + ("Balance sheet expansion injects reserves into the system, compressing risk premia and "
+               "supporting equity multiples and commodity prices." if v > prev12 else
+               "Quantitative tightening withdraws liquidity, raising the cost of capital and pressuring "
+               "high-multiple equities and speculative commodity positions.")
+        )
+    if not yields_df.empty:
+        y10 = yields_df["10Y"].iloc[-1] if "10Y" in yields_df.columns else None
+        y2  = yields_df["2Y"].iloc[-1]  if "2Y"  in yields_df.columns else None
+        if y10 and y2:
+            parts.append(
+                f"The 10-year Treasury yields {y10:.2f}% against a 2-year at {y2:.2f}%. "
+                + ("An elevated 10Y raises the hurdle rate for equities — particularly growth stocks "
+                   "whose valuations are most sensitive to discount rate changes. "
+                   "For commodities, higher real rates strengthen the dollar and create a headwind for "
+                   "gold and dollar-denominated raw materials." if y10 > 4.0 else
+                   "Yields at this level are broadly neutral for equities but support gold as "
+                   "the opportunity cost of holding bullion remains modest.")
+            )
+    return "\n\n".join(parts) if parts else "Liquidity data unavailable."
+
+
+def _narrate_credit(spreads_df: "pd.DataFrame") -> str:
+    if spreads_df.empty:
+        return "Credit spread data unavailable."
+    parts = []
+    latest = spreads_df.iloc[-1].dropna()
+    curve = latest.get("10Y–2Y (Yield Curve)")
+    hy = latest.get("HY Credit Spread")
+    ig = latest.get("IG Credit Spread")
+
+    if curve is not None:
+        inverted = curve < 0
+        parts.append(
+            f"The 10Y–2Y yield spread is {curve:.2f}%, indicating "
+            + ("an inverted yield curve. Inversion has preceded every US recession since 1955. "
+               "This is the single most powerful macro warning signal: equity markets have historically "
+               "peaked 6–18 months after initial inversion, while commodity demand typically softens "
+               "as growth expectations are repriced lower." if inverted else
+               f"a positively sloped curve — consistent with a growth-positive regime that "
+               f"supports cyclical equities and industrial commodities.")
+        )
+    if hy is not None:
+        stress = "elevated (recession-level)" if hy > 6 else ("moderately wide" if hy > 4 else "contained")
+        parts.append(
+            f"High-yield credit spreads are {stress} at {hy:.2f}%. "
+            + ("Spreads at these levels signal material default risk in the corporate sector. "
+               "This is historically bearish for equities and deeply negative for energy and "
+               "metals commodity demand as capital expenditure freezes." if hy > 6 else
+               "Spread widening at this level signals caution in risk assets — watch for "
+               "further deterioration as the leading indicator for equity drawdowns." if hy > 4 else
+               "Contained spreads indicate healthy credit markets and support risk-on positioning "
+               "across both equities and cyclical commodities.")
+        )
+    if ig is not None:
+        parts.append(
+            f"Investment-grade spreads at {ig:.2f}% suggest "
+            + ("broad credit stress — even high-quality issuers face higher financing costs, "
+               "which compresses margins and weighs on capital-intensive commodity producers." if ig > 2 else
+               "benign credit conditions for corporate borrowers, supportive of capex and commodity demand.")
+        )
+    return "\n\n".join(parts)
+
+
+def _narrate_valuations(val_df: "pd.DataFrame", yields_df: "pd.DataFrame") -> str:
+    if val_df.empty or "Forward P/E" not in val_df.columns:
+        return "Valuation data unavailable."
+    parts = []
+    y10 = yields_df["10Y"].iloc[-1] if (not yields_df.empty and "10Y" in yields_df.columns) else None
+    for _, row in val_df.iterrows():
+        mkt = row.get("Market", "")
+        pe  = row.get("Forward P/E")
+        ey  = row.get("Earnings Yield %")
+        gr  = row.get("Fwd EPS Growth %")
+        if not mkt or pd.isna(pe):
+            continue
+        verdict = "expensive" if pe > 25 else ("fair" if pe > 16 else "cheap")
+        erp = (ey - y10) if (ey and y10) else None
+        erp_text = (
+            f" The equity risk premium vs the 10Y is {erp:.2f}pp — "
+            + ("thin, meaning equities offer little compensation over risk-free bonds." if erp < 1.5 else
+               "reasonable, supporting the case for equities over bonds." if erp > 3 else "at the margin.")
+        ) if erp is not None else ""
+        growth_text = (
+            f" Forward EPS growth of {gr:+.1f}% "
+            + ("must accelerate to justify this multiple." if pe > 22 and gr < 10 else
+               "comfortably supports the current valuation." if gr > 15 else
+               "provides modest support but leaves limited room for disappointment.")
+        ) if gr and not pd.isna(gr) else ""
+        parts.append(f"{mkt} trades at {pe:.1f}x forward earnings — {verdict}.{erp_text}{growth_text}")
+    return "\n\n".join(parts) if parts else "Valuation data unavailable."
+
+
+def _narrate_cross_asset(
+    macro_data: dict, spreads_df: "pd.DataFrame",
+    val_df: "pd.DataFrame", idx_prices: "pd.DataFrame",
+) -> str:
+    """Master narrative: how it all ties together for equities and commodities."""
+    parts = []
+
+    # Cycle assessment
+    pmi_v   = macro_data.get("ISM Manufacturing PMI", pd.Series()).iloc[-1] if macro_data.get("ISM Manufacturing PMI") is not None and not macro_data.get("ISM Manufacturing PMI", pd.Series()).empty else None
+    gdp_v   = macro_data.get("Real GDP Growth (QoQ %)", pd.Series()).iloc[-1] if macro_data.get("Real GDP Growth (QoQ %)") is not None and not macro_data.get("Real GDP Growth (QoQ %)", pd.Series()).empty else None
+    curve_v = spreads_df["10Y–2Y (Yield Curve)"].iloc[-1] if (not spreads_df.empty and "10Y–2Y (Yield Curve)" in spreads_df.columns) else None
+    hy_v    = spreads_df["HY Credit Spread"].iloc[-1]     if (not spreads_df.empty and "HY Credit Spread"     in spreads_df.columns) else None
+
+    # Determine cycle phase
+    late_cycle  = (pmi_v and pmi_v < 50) or (curve_v and curve_v < 0) or (hy_v and hy_v > 4.5)
+    early_cycle = (pmi_v and pmi_v > 55) and (gdp_v and gdp_v > 2) and (curve_v is None or curve_v > 0.5)
+    phase = "late-cycle" if late_cycle else ("early-cycle recovery" if early_cycle else "mid-cycle")
+
+    parts.append(
+        f"Cross-asset synthesis: The aggregate macro signal points to a {phase} environment. "
+        + ("Late-cycle conditions historically favour: (1) defensive equities over cyclicals — "
+           "healthcare, utilities, and consumer staples over technology and discretionary; "
+           "(2) gold and agricultural commodities over base metals as growth slows; "
+           "(3) shorter-duration fixed income over equities on a risk-adjusted basis." if late_cycle else
+           "Early-cycle conditions historically favour: (1) small and mid-cap equities with high operating leverage; "
+           "(2) industrial metals — copper and aluminium benefit most from re-accelerating manufacturing PMI; "
+           "(3) energy commodities as demand recovers faster than supply responds." if early_cycle else
+           "Mid-cycle conditions suggest: balanced equity exposure with a tilt toward quality growth; "
+           "energy and industrial metals supported by stable demand; "
+           "gold range-bound unless real rates shift materially.")
+    )
+
+    # Performance read
+    if not idx_prices.empty:
+        best, worst = None, None
+        best_r, worst_r = -999, 999
+        for name in idx_prices.columns:
+            if name == "VIX": continue
+            s = idx_prices[name].dropna()
+            if len(s) > 21:
+                r = (s.iloc[-1] / s.iloc[-22] - 1) * 100
+                if r > best_r:  best_r  = r; best  = name
+                if r < worst_r: worst_r = r; worst = name
+        if best and worst:
+            parts.append(
+                f"Over the past month, {best} (+{best_r:.1f}%) led and {worst} ({worst_r:.1f}%) lagged. "
+                + ("Divergence between regional indices is consistent with the macro regime: "
+                   "markets most exposed to rate-sensitive sectors or commodity-importing economies "
+                   "underperform when financial conditions tighten." if abs(best_r - worst_r) > 5 else
+                   "Narrow dispersion across indices reflects a low-conviction macro environment "
+                   "where neither growth optimism nor recession fears dominate positioning.")
+            )
+
+    return "\n\n".join(parts)
+
+
 def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
@@ -229,6 +465,14 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 "Valuations and index performance load without it.")
 
     today = date.today()
+
+    # initialise all data stores so later sections and narratives can safely reference them
+    macro_data: dict = {}
+    money_data: dict = {}
+    yields_df  = pd.DataFrame()
+    spreads_df = pd.DataFrame()
+    val_df     = pd.DataFrame()
+    idx_prices = pd.DataFrame()
 
     # ══════════════════════════════════════════════════════════════════════════
     # 1. GDP & GROWTH — Where is the economy?
@@ -307,6 +551,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 "Two consecutive negative GDP quarters = technical recession. Industrial production leads "
                 "earnings revisions by roughly one quarter."
             )
+            _narrative_box(_narrate_growth(macro_data))
 
     # ══════════════════════════════════════════════════════════════════════════
     # 2. HIGH-FREQ INDICATORS — Where is the economy heading?
@@ -536,6 +781,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 "watch this spread as a regime signal. A steep upward-sloping curve signals growth optimism; "
                 "a flat or inverted curve signals tightening or recession expectations."
             )
+            _narrative_box(_narrate_liquidity(money_data, yields_df))
 
     # ══════════════════════════════════════════════════════════════════════════
     # 5. YIELD SPREADS & CREDIT — What does the credit market say?
@@ -602,6 +848,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 "signals broad credit stress. An inverted yield curve alongside widening spreads = "
                 "the strongest combined recession signal."
             )
+            _narrative_box(_narrate_credit(spreads_df))
 
     # ══════════════════════════════════════════════════════════════════════════
     # 6. VALUATIONS & EARNINGS — Are equities priced for this environment?
@@ -673,6 +920,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             "with slowing PMI and widening credit spreads (sections 2 & 5) = the classic "
             "late-cycle vulnerability setup."
         )
+        _narrative_box(_narrate_valuations(val_df, yields_df))
 
     # ══════════════════════════════════════════════════════════════════════════
     # 7. INDEX PERFORMANCE — How have markets responded to all of the above?
@@ -750,6 +998,14 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         )
 
     # ══════════════════════════════════════════════════════════════════════════
+    # CROSS-ASSET SYNTHESIS — The macro story in one place
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
+    _label("Macro Synthesis — Equities & Commodities Implications")
+    _narrative_box(_narrate_cross_asset(macro_data, spreads_df, val_df, idx_prices))
+
+    # ══════════════════════════════════════════════════════════════════════════
     # PDF DOWNLOAD
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
@@ -767,7 +1023,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             try:
                 from src.reports.macro_pdf import build_macro_pdf
 
-                # Collect whatever data was loaded (use empty fallbacks if FRED unavailable)
+                # Reuse already-loaded data (cached); fall back to empty if FRED unavailable
                 _yields  = _load_yields(fred_key, start, end)  if fred_key else pd.DataFrame()
                 _spreads = _load_spreads(fred_key, start, end) if fred_key else pd.DataFrame()
                 _macro   = _load_macro(fred_key, start, end)   if fred_key else {}
@@ -775,6 +1031,15 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 _val     = _load_valuations()
                 _perf_start = (date.today() - timedelta(days=400)).isoformat()
                 _idx    = _load_index_perf(_perf_start)
+
+                # Build narratives for PDF executive summary
+                _narrative = "\n\n".join(filter(None, [
+                    _narrate_growth(_macro),
+                    _narrate_liquidity(_money, _yields),
+                    _narrate_credit(_spreads),
+                    _narrate_valuations(_val, _yields),
+                    _narrate_cross_asset(_macro, _spreads, _val, _idx),
+                ]))
 
                 pdf_bytes = build_macro_pdf(
                     yields_df=_yields,
@@ -785,6 +1050,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     idx_prices=_idx,
                     start=start,
                     end=end,
+                    narrative=_narrative,
                 )
                 fname = f"macro_brief_{date.today().strftime('%Y%m%d')}.pdf"
                 st.download_button(

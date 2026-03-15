@@ -277,6 +277,77 @@ def _chart_money(money_data: dict) -> RLImage:
     return _fig_to_rl(fig, 170, 58)
 
 
+def _chart_inflation(macro_data: dict) -> RLImage:
+    fig, axes = plt.subplots(1, 2, figsize=(7, 2.3))
+    if "CPI YoY (%)" in macro_data:
+        s = macro_data["CPI YoY (%)"].last("10Y")
+        axes[0].plot(s.index, s.values, color="#c0392b", linewidth=1.5)
+        axes[0].axhline(2, color="#CFB991", linestyle="--", linewidth=0.8, alpha=0.8,
+                        label="Fed Target (2%)")
+        axes[0].set_title("CPI Inflation (YoY %)", fontsize=7.5, color="#333")
+        axes[0].yaxis.set_major_formatter(mticker.FormatStrFormatter("%.1f%%"))
+        axes[0].legend(fontsize=5.5, loc="upper left")
+    if "5Y Breakeven Inflation (%)" in macro_data:
+        s = macro_data["5Y Breakeven Inflation (%)"].last("10Y")
+        axes[1].plot(s.index, s.values, color="#8E6F3E", linewidth=1.5)
+        axes[1].axhline(2, color="#CFB991", linestyle="--", linewidth=0.8, alpha=0.8,
+                        label="Fed Target (2%)")
+        axes[1].set_title("5Y Breakeven Inflation (%)", fontsize=7.5, color="#333")
+        axes[1].yaxis.set_major_formatter(mticker.FormatStrFormatter("%.1f%%"))
+        axes[1].legend(fontsize=5.5, loc="upper left")
+    for ax in axes:
+        _mpl_style(ax)
+    fig.tight_layout(pad=0.5)
+    return _fig_to_rl(fig, 170, 58)
+
+
+def _chart_unemployment(macro_data: dict) -> RLImage:
+    fig, ax = plt.subplots(figsize=(3.5, 2.3))
+    if "Unemployment Rate (%)" in macro_data:
+        s = macro_data["Unemployment Rate (%)"].last("10Y")
+        ax.plot(s.index, s.values, color="#c0392b", linewidth=1.5)
+        ax.fill_between(s.index, s.values, alpha=0.08, color="#c0392b")
+        ax.set_title("Unemployment Rate (%)", fontsize=7.5, color="#333")
+        ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.1f%%"))
+    _mpl_style(ax)
+    fig.tight_layout(pad=0.5)
+    return _fig_to_rl(fig, 75, 58)
+
+
+def _chart_consumer_sentiment(money_data: dict) -> RLImage:
+    fig, ax = plt.subplots(figsize=(3.5, 2.3))
+    if "Consumer Sentiment" in money_data:
+        s = money_data["Consumer Sentiment"].last("5Y")
+        avg = float(s.mean())
+        ax.plot(s.index, s.values, color="#2980b9", linewidth=1.5)
+        ax.axhline(avg, color="#CFB991", linestyle="--", linewidth=0.8,
+                   label=f"Avg {avg:.0f}")
+        ax.fill_between(s.index, s.values, avg, where=s.values >= avg,
+                        alpha=0.09, color="#2e7d32")
+        ax.fill_between(s.index, s.values, avg, where=s.values < avg,
+                        alpha=0.09, color="#c0392b")
+        ax.set_title("Consumer Sentiment (Michigan)", fontsize=7.5, color="#333")
+        ax.legend(fontsize=5.5, loc="upper left")
+    _mpl_style(ax)
+    fig.tight_layout(pad=0.5)
+    return _fig_to_rl(fig, 75, 58)
+
+
+def _chart_vix(idx_prices: pd.DataFrame) -> RLImage:
+    fig, ax = plt.subplots(figsize=(3.5, 2.3))
+    if "VIX" in idx_prices.columns:
+        s = idx_prices["VIX"].dropna().tail(126)  # last ~6 months
+        ax.plot(s.index, s.values, color="#c0392b", linewidth=1.2)
+        ax.fill_between(s.index, s.values, alpha=0.07, color="#c0392b")
+        ax.axhline(20, color="#CFB991", linestyle="--", linewidth=0.8, alpha=0.8, label="20 (caution)")
+        ax.axhline(30, color="#c0392b", linestyle="--", linewidth=0.8, alpha=0.8, label="30 (fear)")
+        ax.set_title("VIX Fear Index", fontsize=7.5, color="#333")
+        ax.legend(fontsize=5.5, loc="upper left")
+    _mpl_style(ax)
+    fig.tight_layout(pad=0.5)
+    return _fig_to_rl(fig, 75, 58)
+
+
 def _chart_pe(val_df: pd.DataFrame) -> RLImage:
     df = val_df.dropna(subset=["Forward P/E"]) if "Forward P/E" in val_df.columns else pd.DataFrame()
     if df.empty:
@@ -382,6 +453,7 @@ def build_macro_pdf(
     idx_prices: pd.DataFrame,
     start: str,
     end: str,
+    narrative: str = "",
 ) -> bytes:
     """
     Build and return the macro PDF as bytes.
@@ -417,6 +489,23 @@ def build_macro_pdf(
     # ── Switch to body template ───────────────────────────────────────────────
     from reportlab.platypus import NextPageTemplate
     story.append(NextPageTemplate("Body"))
+
+    def _section_header(title: str, subtitle: str = ""):
+        items = [Paragraph(title.upper(), S["section"])]
+        if subtitle:
+            items.append(Paragraph(subtitle, S["caption"]))
+        items.append(HRFlowable(width="100%", thickness=0.5, color=GOLD, spaceAfter=4))
+        return items
+
+    # ── Executive Summary (narrative) ─────────────────────────────────────────
+    if narrative.strip():
+        story += _section_header("Executive Summary",
+                                  "Data-driven macro synthesis — implications for equities and commodities.")
+        for para in narrative.strip().split("\n\n"):
+            if para.strip():
+                story.append(Paragraph(para.strip(), S["body"]))
+                story.append(Spacer(1, 2 * mm))
+        story.append(PageBreak())
 
     def _section_header(title: str, subtitle: str = ""):
         items = [Paragraph(title.upper(), S["section"])]
@@ -475,9 +564,22 @@ def build_macro_pdf(
             story.append(_chart_hfreq(macro_data))
         except Exception:
             pass
+        # Inflation side-by-side with unemployment
+        try:
+            from reportlab.platypus import Table as RLTable
+            infl_img = _chart_inflation(macro_data)
+            unemp_img = _chart_unemployment(macro_data)
+            row = RLTable([[infl_img, unemp_img]], colWidths=[115 * mm, 65 * mm])
+            row.setStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                          ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                          ("RIGHTPADDING", (0, 0), (-1, -1), 3)])
+            story.append(row)
+        except Exception:
+            pass
         story.append(Paragraph(
             "Retail sales declining YoY typically precede earnings downgrades in consumer discretionary by "
             "one to two quarters. Payrolls above +150k/month indicate a healthy labour market. "
+            "CPI above the 2% Fed target limits the scope for rate cuts. "
             "Watch PMI new orders sub-index as the earliest signal of demand change.",
             S["caption"]))
     else:
@@ -493,10 +595,20 @@ def build_macro_pdf(
             story.append(_chart_money(money_data))
         except Exception:
             pass
+        # Consumer sentiment alongside M2/Fed
+        try:
+            from reportlab.platypus import Table as RLTable
+            sent_img = _chart_consumer_sentiment(money_data)
+            sent_row = RLTable([[sent_img]], colWidths=[75 * mm])
+            sent_row.setStyle([("LEFTPADDING", (0, 0), (-1, -1), 0)])
+            story.append(sent_img)
+        except Exception:
+            pass
         story.append(Paragraph(
             "M2 contraction (negative YoY) has historically preceded asset price stress. "
             "The 2022 drawdown coincided with the first M2 decline since the 1930s. "
-            "Fed QE expands the balance sheet and injects liquidity; QT withdraws it.",
+            "Fed QE expands the balance sheet and injects liquidity; QT withdraws it. "
+            "Consumer sentiment below its long-run average signals reduced retail participation.",
             S["caption"]))
     else:
         story.append(Paragraph("Money flow data unavailable — FRED API key required.", S["caption"]))
@@ -508,12 +620,20 @@ def build_macro_pdf(
                               "Higher long-end yields raise the equity discount rate and compress valuations.")
     if not yields_df.empty:
         try:
-            story.append(_chart_yields(yields_df))
+            from reportlab.platypus import Table as RLTable
+            yld_img   = _chart_yields(yields_df)
+            curve_img = _chart_yield_curve(yields_df)
+            row = RLTable([[yld_img, curve_img]], colWidths=[110 * mm, 70 * mm])
+            row.setStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                          ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                          ("RIGHTPADDING", (0, 0), (-1, -1), 3)])
+            story.append(row)
         except Exception:
             pass
         story.append(Paragraph(
             "When the 10Y yield exceeds the S&P 500 earnings yield, bonds become competitive with equities — "
-            "watch this spread as a regime signal. A flat or inverted yield curve signals recession expectations.",
+            "watch this spread as a regime signal. The spot yield curve (right) shows the current shape: "
+            "a flat or inverted curve signals recession expectations.",
             S["caption"]))
     else:
         story.append(Paragraph("Yield data unavailable — FRED API key required.", S["caption"]))
@@ -570,7 +690,7 @@ def build_macro_pdf(
     story.append(PageBreak())
 
     # ── 7. Index Performance ──────────────────────────────────────────────────
-    story += _section_header("7 · Index Performance",
+    story += _section_header("7 · Index Performance & Market Stress",
                               "The cumulative market verdict on the macro backdrop above.")
     if not idx_prices.empty:
         try:
@@ -579,9 +699,18 @@ def build_macro_pdf(
                 story.append(chart)
         except Exception:
             pass
+        # VIX alongside index table
+        try:
+            from reportlab.platypus import Table as RLTable
+            vix_img = _chart_vix(idx_prices)
+            story.append(vix_img)
+        except Exception:
+            pass
         story.append(Paragraph(
             "Cross-reference with sections 1–6: strong GDP and low spreads should explain positive returns. "
-            "Drawdowns alongside widening credit spreads or inverted yield curves confirm the macro signal.",
+            "Drawdowns alongside widening credit spreads or inverted yield curves confirm the macro signal. "
+            "VIX above 30 indicates fear-driven positioning — historically a contrarian buy signal when "
+            "fundamentals have not yet deteriorated.",
             S["caption"]))
     else:
         story.append(Paragraph("Index data unavailable.", S["caption"]))
