@@ -20,7 +20,7 @@ from src.analysis.risk_score import (
     compute_risk_score, risk_score_history, plot_risk_gauge, plot_risk_history,
 )
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion,
     _page_footer, _add_event_bands, _insight_note,
 )
@@ -44,6 +44,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         'margin:0 0 0.8rem 0">15 equity indices · 17 commodity futures · '
         'Correlation regimes · Geopolitical risk · Spillover signals</p>',
         unsafe_allow_html=True,
+    )
+    _page_intro(
+        "This page is a one-screen brief on current conditions. The five numbers at the top give "
+        "the stress level. The geopolitical scores explain what is driving it. The correlation and "
+        "performance charts show where it is showing up in prices. The analogues table anchors "
+        "today in history — find the past period that looked most like now, and you have a base "
+        "case for what comes next."
     )
 
     with st.spinner("Loading market data…"):
@@ -107,6 +114,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
+    _thread(
+        "The numbers above give the level of stress. The section below breaks down its source — "
+        "which geopolitical conflicts are active and how severely each is scoring."
+    )
 
     # ── ROW: Risk gauge | Risk history ─────────────────────────────────────
     with st.spinner("Computing risk score…"):
@@ -151,6 +162,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
+    _thread(
+        "Knowing the score is useful; knowing whether it is triggering actionable signals is more "
+        "useful. The early warning system below converts the raw score into discrete alerts."
+    )
 
     # ── ROW: EWS composite (left) | 5 signal cards (right) ────────────────
     with st.spinner("Computing early warning signals…"):
@@ -213,6 +228,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
+    _thread(
+        "Alerts tell you something is wrong. The correlation timeline below tells you how that "
+        "stress is transmitting — when equities and commodities start moving together, a shock "
+        "in one will hit the other."
+    )
 
     # ── ROW: Correlation timeline | Analogues table ───────────────────────
     ct_col, an_col = st.columns([1.6, 1])
@@ -236,6 +256,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             "Shows the rolling pairwise correlation between every equity and commodity in the dashboard. "
             "Dark warm colours mean assets are moving together (risk-on or systemic stress). "
             "Dark cool colours mean they are moving in opposite directions (safe-haven flows or diverging fundamentals)."
+        )
+        _thread(
+            "Correlation shows the mechanism. The performance chart below shows the outcome — "
+            "which assets have actually moved and by how much."
         )
 
         # ── 1-Month Performance Bar Chart ─────────────────────────────────
@@ -270,6 +294,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         )
 
     with an_col:
+        _thread(
+            "To put those returns in context, the table below finds the historical periods that "
+            "most closely resemble today's conditions. History does not repeat, but it rhymes."
+        )
         _label("Historical Analogues: Most Similar Conditions")
         if ews["analogues"]:
             rows_html = ""
@@ -472,10 +500,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         )
 
     _page_conclusion(
-        "Cross-Asset Spillover Dashboard",
-        "This dashboard quantifies how geopolitical shocks, supply disruptions, and monetary "
-        "policy shifts transmit across equity and commodity markets. Navigate the pages to "
-        "explore event-driven correlation shifts, Granger causality flows, and trade ideas "
-        "triggered by regime changes."
+        "Current Market Regime",
+        "Use this page to form a view before exploring deeper analysis. A rising geopolitical "
+        "score, tightening equity-commodity correlations, and underperformance concentrated in "
+        "a specific region or commodity group is the classic early-warning pattern. Drill into "
+        "the Analysis pages for the quantitative breakdown."
     )
     _page_footer()

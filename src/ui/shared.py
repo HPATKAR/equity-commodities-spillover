@@ -220,6 +220,16 @@ def _page_conclusion(verdict: str, summary: str) -> None:
     )
 
 
+def _thread(text: str) -> None:
+    """Narrative connector paragraph between page sections."""
+    st.markdown(
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;'
+        f'color:#555;line-height:1.7;margin:0.1rem 0 0.55rem;font-style:italic">'
+        f'{text}</p>',
+        unsafe_allow_html=True,
+    )
+
+
 def _insight_note(text: str) -> None:
     """Compact formal plain-English explanation rendered beneath each infographic."""
     st.markdown(

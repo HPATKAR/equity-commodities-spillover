@@ -18,7 +18,7 @@ from src.analysis.correlations import (
     composite_stress_index,
 )
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
     _insight_note,
 )
@@ -196,6 +196,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
 
     all_r_concat = pd.concat([eq_r, cmd_r], axis=1)
+
+    _thread(
+        "With the current regime confirmed above, the ideas below have been filtered to match the "
+        "prevailing market structure. Each card shows the directional thesis, entry trigger, target, "
+        "stop, and the historical correlation data that supports it."
+    )
 
     # ── 2-column card grid ──────────────────────────────────────────────────
     for row_start in range(0, len(active_trades), 2):

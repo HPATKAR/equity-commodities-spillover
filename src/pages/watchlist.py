@@ -22,8 +22,8 @@ from src.data.config import (
 )
 from src.analysis.correlations import rolling_correlation
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
-    _definition_block, _takeaway_block, _page_footer, _insight_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
+    _definition_block, _takeaway_block, _page_conclusion, _page_footer, _insight_note,
     _line_style, _EQUITY_REGIONS,
 )
 
@@ -62,6 +62,13 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
         'margin:0 0 0.7rem">Live Snapshot · Intraday Prices · Daily Historical · CFTC COT Positioning</p>',
         unsafe_allow_html=True,
+    )
+    _page_intro(
+        "This page zooms in on individual commodities. Read it in sequence: the live snapshot gives you "
+        "the current price state; the intraday charts show how today compares to recent sessions; "
+        "the daily view reveals whether short-term moves are part of a sustained trend; and the COT "
+        "positioning data shows how large speculative traders are leaning — extreme one-sided positioning "
+        "has historically preceded sharp reversals."
     )
 
     # ── Load all data upfront ──────────────────────────────────────────────
@@ -134,6 +141,12 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     else:
         st.warning("Live snapshot unavailable. Check yfinance connectivity.")
 
+    _thread(
+        "The snapshot above is a single moment. The intraday charts below add the dimension of time — "
+        "showing how each commodity has moved through recent trading sessions and whether current "
+        "volatility is normal or elevated."
+    )
+
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
 
@@ -202,6 +215,11 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                     "intraday stress - energy tends to spike here first during geopolitical "
                     "events, often before daily-bar charts show any movement."
                 )
+
+    _thread(
+        "Intraday patterns reveal short-term stress. The daily charts below zoom out to reveal whether "
+        "that stress is noise or part of a sustained directional move."
+    )
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
@@ -430,6 +448,11 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════
     # ROW 6: COT extremes table | COT overlay chart
     # ══════════════════════════════════════════════════════════════════════
+    _thread(
+        "Price charts show what has happened. The CFTC Commitments of Traders data below shows what "
+        "large speculative traders expect to happen next — and when their positioning becomes extreme, "
+        "it often marks the turning point."
+    )
     _label("CFTC Commitments of Traders: Speculative Positioning")
     _definition_block(
         "COT Signal Logic",
@@ -488,5 +511,12 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "Hourly volatility: σ_hourly × √(252 × 23) - commodity futures trade approximately "
         "23 hours per day on CME Globex. Hourly data lookback capped at 730 days by yfinance. "
         "COT data from CFTC disaggregated futures-only reports, updated weekly (Tuesday releases)."
+    )
+    _page_conclusion(
+        "Commodity Positioning Summary",
+        "Commodities with elevated post-event volatility, a sustained price trend, and a crowded "
+        "speculative positioning reading (above 85th percentile long or short) are the highest-conviction "
+        "setups for a reversal. Cross-reference with the Spillover page to confirm the commodity is also "
+        "a price transmitter into equity markets.",
     )
     _page_footer()

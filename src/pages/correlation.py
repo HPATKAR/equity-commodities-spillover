@@ -21,7 +21,7 @@ from src.analysis.correlations import (
     regime_mean_first_passage, regime_run_statistics,
 )
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
     _add_event_bands, _insight_note, _line_style, _EQUITY_REGIONS,
 )
@@ -53,6 +53,13 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
         'margin:0 0 0.7rem">Rolling Pearson · DCC-GARCH · Regime Detection · Markov Forecast</p>',
         unsafe_allow_html=True,
+    )
+    _page_intro(
+        "Correlation is the single most important number in portfolio risk management. When equity "
+        "and commodity markets are highly correlated, a shock in one transmits directly to the "
+        "other and diversification breaks down exactly when you need it most. This page tracks "
+        "how that relationship is evolving — in real time, across historical regimes, and with a "
+        "forward-looking probability forecast."
     )
 
     with st.spinner("Loading returns…"):
@@ -144,6 +151,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             )
 
     # ── Panel 2: DCC-GARCH ────────────────────────────────────────────────
+    _thread(
+        "Simple rolling correlation smooths over the past equally. DCC-GARCH below does better: "
+        "it lets correlation update dynamically, giving more weight to recent observations and "
+        "producing a cleaner estimate of the current coupling strength."
+    )
     with col_dcc:
         _label("DCC-GARCH Dynamic Conditional Correlation")
         cd1, cd2 = st.columns(2)
@@ -208,6 +220,12 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
+    _thread(
+        "Knowing the exact correlation number is useful. Knowing which regime you are in — and "
+        "how stable that regime has been — is more actionable. Below, we classify the market "
+        "into three states: low coupling (diversification working), medium (partial), and high "
+        "(breakdown)."
+    )
 
     # ══════════════════════════════════════════════════════════════════════
     # ROW 2: Regime Detection | Regime Forecast (Markov)
@@ -288,6 +306,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             )
 
     # ── Panel 4: Markov Regime Forecast ───────────────────────────────────
+    _thread(
+        "Regime detection tells you where you are today. The Markov chain below tells you where "
+        "you are statistically likely to go next, based on how often each regime has historically "
+        "transitioned into another."
+    )
     with col_mkov:
         _label("Regime Forecast: Markov Chain")
 
@@ -389,4 +412,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 f"Transition to Crisis: <b>{p_crisis:.1f}%</b>"
             )
 
+    _page_conclusion(
+        "Regime & Diversification Signal",
+        "If correlation is elevated and the Markov model assigns high probability of remaining "
+        "in the high-coupling regime, treat your equity and commodity positions as one risk — "
+        "not two. Hedge accordingly or reduce gross exposure. Low correlation with a high "
+        "probability of staying low is the green light for diversified positioning."
+    )
     _page_footer()

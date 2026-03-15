@@ -27,7 +27,7 @@ from src.analysis.correlations import (
 )
 from src.analysis.risk_score import risk_score_history
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
     _insight_note,
 )
@@ -888,6 +888,12 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
 
+    _thread(
+        "Regime detection identifies the market state. Granger causality below tests whether knowing "
+        "commodity prices actually improves the prediction of equity returns — a much higher bar than "
+        "simple correlation."
+    )
+
     # ══════════════════════════════════════════════════════════════════════
     # ROW 2 — Granger Hit Rate (wider) | COT Contrarian (narrower)
     # ══════════════════════════════════════════════════════════════════════
@@ -983,6 +989,18 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         "<b>Energy→equity pairs</b> consistently show the strongest edge during "
                         "supply shocks and oil price dislocations."
                     )
+
+    _thread(
+        "Statistical causality is a necessary but not sufficient condition. The geopolitical risk score "
+        "below is tested against VIX and realised equity volatility — the question is whether the "
+        "qualitative risk assessment translates into quantifiable market stress."
+    )
+
+    _thread(
+        "The first three signals are continuous — they provide a degree of risk. The COT contrarian "
+        "signal below is binary: when speculative positioning crosses an extreme threshold, does a "
+        "reversal reliably follow? This tests the oldest and most intuitive trade in commodities."
+    )
 
     # ── Panel 4: COT Contrarian ────────────────────────────────────────────
     with col_cot:

@@ -18,7 +18,7 @@ from src.data.loader import (
 )
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
 )
 
@@ -397,6 +397,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         norm_weights = {}
 
     # ── Event selector & stress test controls ───────────────────────────────
+    _thread(
+        "Portfolio built. Now select which historical stress scenarios to apply. Each event is defined "
+        "by a pre-shock window, an acute stress period, and a post-event recovery window — matching the "
+        "same event definitions used in the Geopolitical Triggers page."
+    )
     st.markdown("---")
     st.subheader("Event Selection & Run")
 
@@ -456,6 +461,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         return
 
     # ── Summary table ────────────────────────────────────────────────────────
+    _thread(
+        "Results below decompose your portfolio's behaviour across three phases. Focus on the 'During' "
+        "column first — that is the peak stress you would have experienced. Then check the 'Post' column "
+        "to understand how quickly (or slowly) your specific allocation would have recovered."
+    )
     st.markdown("---")
     st.subheader("Stress Test Results")
 

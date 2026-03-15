@@ -749,4 +749,52 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             "are the most dangerous combination — the macro backdrop confirms the price signal."
         )
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # PDF DOWNLOAD
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
+    _label("Download This Report")
+    st.markdown(
+        f'<p style="{_F}font-size:0.68rem;color:#555;margin:0 0 0.6rem">'
+        f'Generates a formatted PDF brief of all seven sections above — '
+        f'GDP, PMI, money flows, yields, credit spreads, valuations, and index performance.</p>',
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Generate PDF Report", type="primary", key="macro_pdf_btn"):
+        with st.spinner("Building PDF…"):
+            try:
+                from src.reports.macro_pdf import build_macro_pdf
+
+                # Collect whatever data was loaded (use empty fallbacks if FRED unavailable)
+                _yields  = _load_yields(fred_key, start, end)  if fred_key else pd.DataFrame()
+                _spreads = _load_spreads(fred_key, start, end) if fred_key else pd.DataFrame()
+                _macro   = _load_macro(fred_key, start, end)   if fred_key else {}
+                _money   = _load_money(fred_key, start, end)   if fred_key else {}
+                _val     = _load_valuations()
+                _perf_start = (date.today() - timedelta(days=400)).isoformat()
+                _idx    = _load_index_perf(_perf_start)
+
+                pdf_bytes = build_macro_pdf(
+                    yields_df=_yields,
+                    spreads_df=_spreads,
+                    macro_data=_macro,
+                    money_data=_money,
+                    val_df=_val,
+                    idx_prices=_idx,
+                    start=start,
+                    end=end,
+                )
+                fname = f"macro_brief_{date.today().strftime('%Y%m%d')}.pdf"
+                st.download_button(
+                    label="Download PDF",
+                    data=pdf_bytes,
+                    file_name=fname,
+                    mime="application/pdf",
+                    key="macro_pdf_dl",
+                )
+            except Exception as e:
+                st.error(f"PDF generation failed: {e}")
+
     _page_footer()

@@ -21,7 +21,7 @@ from src.analysis.network import (
     plot_dy_network, plot_granger_network, plot_net_transmitter_bar,
 )
 from src.ui.shared import (
-    _style_fig, _chart, _page_intro, _section_note,
+    _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
     _insight_note,
 )
@@ -55,6 +55,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
         'margin:0 0 0.7rem">Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph</p>',
         unsafe_allow_html=True,
+    )
+    _page_intro(
+        "Correlation tells you whether two markets move together. Spillover analysis goes "
+        "further — it tells you who is driving whom. A commodity that Granger-causes equity "
+        "returns is a genuine leading indicator: a move in crude oil today statistically predicts "
+        "a move in energy equities tomorrow. This page maps those directional relationships "
+        "using three complementary methods."
     )
 
     with st.spinner("Loading returns…"):
@@ -152,6 +159,11 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     )
 
     # ── Panel 2: Transfer Entropy ──────────────────────────────────────────
+    _thread(
+        "Granger causality tells you whether a predictive relationship exists. Transfer entropy "
+        "below goes further — it measures how much information is actually flowing in each "
+        "direction, filtering out spurious correlations and isolating the true signal channel."
+    )
     with col_te:
         _label("Transfer Entropy: Net Information Flow")
         with st.spinner("Computing transfer entropy…"):
@@ -189,6 +201,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
+    _thread(
+        "Transfer entropy identifies direction; Diebold-Yilmaz measures magnitude. The FEVD "
+        "table below shows what fraction of each asset's price variance is explained by shocks "
+        "originating elsewhere — the higher the number, the more that asset is a price-taker "
+        "rather than a price-setter."
+    )
 
     # ══════════════════════════════════════════════════════════════════════
     # ROW 2: Diebold-Yilmaz FEVD (wider) | Network graph (narrower)
@@ -245,6 +263,11 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             )
 
     # ── Panel 4: Spillover Network ─────────────────────────────────────────
+    _thread(
+        "The three methods above each illuminate a different facet. The network graph synthesises "
+        "them: transmitters (thick outgoing edges, large nodes) are the price-setters you need "
+        "to monitor; receivers are the assets most vulnerable when those price-setters move."
+    )
     with col_net:
         _label("Spillover Network Graph")
         if G_dy is None or dy_table.empty:
@@ -276,4 +299,11 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _chart(plot_granger_network(G_gr,
                         title="Granger Causality Network (p < 0.05)", layout=layout))
 
+    _page_conclusion(
+        "Transmission Map",
+        "Assets identified as strong transmitters across all three methods — Granger, Transfer "
+        "Entropy, and Diebold-Yilmaz — are your first-order risk factors. A price move in a "
+        "high-transmitter commodity is not isolated; it will propagate. Use this map to identify "
+        "which equity markets to hedge when a key commodity breaks out."
+    )
     _page_footer()
