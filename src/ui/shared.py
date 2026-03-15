@@ -521,78 +521,105 @@ def _footer_logo_b64() -> str:
 
 def _page_footer() -> None:
     from datetime import datetime
-    yr = datetime.now().year
-    ts = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
+    yr  = datetime.now().year
+    ts  = datetime.now().strftime("%d %b %Y")
     logo_src = _footer_logo_b64()
-    _w = ("color:rgba(255,255,255,0.75);text-decoration:none;"
-          "font-size:var(--fs-base);font-weight:500;transition:color 0.15s ease;")
-    _g = ("font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;"
-          "letter-spacing:var(--ls-widest);color:#CFB991;margin:0 0 14px 0;"
-          "padding-bottom:8px;border-bottom:1px solid rgba(207,185,145,0.15);")
+
+    _F  = "font-family:'DM Sans',-apple-system,sans-serif;"
+    _lnk = (f"{_F}font-size:.72rem;font-weight:400;color:rgba(255,255,255,.52);"
+            "text-decoration:none;transition:color .12s;display:block;padding:3px 0;")
+    _hd  = (f"{_F}font-size:.52rem;font-weight:700;text-transform:uppercase;"
+            "letter-spacing:.16em;color:rgba(207,185,145,.70);margin:0 0 12px 0;"
+            "padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);")
+
     logo_html = (
-        f"<img src='{logo_src}' alt='Purdue Daniels School of Business' "
-        "style='height:40px;margin-bottom:16px;display:block;' />"
+        f"<img src='{logo_src}' alt='Purdue Daniels' "
+        "style='height:34px;margin-bottom:14px;display:block;opacity:.85;' />"
         if logo_src else
-        "<span style='color:#CFB991;font-weight:800;font-size:1rem'>Purdue Daniels</span>"
+        f"<span style='{_F}color:#CFB991;font-weight:800;font-size:.92rem;"
+        "letter-spacing:-.01em;display:block;margin-bottom:14px;'>Purdue Daniels</span>"
     )
+
     st.markdown(
         "<style>"
-        ".main .block-container { padding-bottom: 0 !important; margin-bottom: 0 !important; }"
-        ".main { padding-bottom: 0 !important; margin-bottom: 0 !important; }"
-        "[data-testid='stAppViewContainer'] { padding-bottom: 0 !important; }"
-        "[data-testid='stBottom'] { display: none !important; }"
+        ".main .block-container{padding-bottom:0!important;margin-bottom:0!important}"
+        ".main{padding-bottom:0!important;margin-bottom:0!important}"
+        "[data-testid='stAppViewContainer']{padding-bottom:0!important}"
+        "[data-testid='stBottom']{display:none!important}"
         "</style>"
-        "<div style='margin-top:4rem;font-family:var(--font-sans);"
-        "position:relative;width:100vw;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;"
-        "margin-bottom:-10rem;padding-bottom:0;'>"
-        "<div style='background:#000000;padding:44px 0 40px 0;'>"
-        "<div style='display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;"
-        "gap:28px;max-width:1280px;margin:0 auto;padding:0 48px;'>"
-        # Col 1 - brand
-        f"<div><a href='https://business.purdue.edu/' target='_blank'>{logo_html}</a>"
-        "<p style='font-size:var(--fs-base);color:rgba(255,255,255,0.7);line-height:1.65;"
-        "margin:0 0 16px 0;max-width:260px;'>"
-        "MGMT 69000-120 &middot; AI for Finance<br/>West Lafayette, Indiana</p>"
-        f"<p style='font-size:var(--fs-xs);color:rgba(207,185,145,0.6);margin:0;"
-        f"font-weight:600;letter-spacing:var(--ls-wide);'>Last updated {ts}</p>"
+
+        "<div style='margin-top:4rem;"
+        "position:relative;width:100vw;left:50%;right:50%;"
+        "margin-left:-50vw;margin-right:-50vw;margin-bottom:-10rem;'>"
+
+        # ── Main footer body ──
+        "<div style='background:#070707;border-top:1px solid #1c1c1c;"
+        "padding:48px 0 44px;'>"
+        "<div style='display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr 1fr;"
+        "gap:32px;max-width:1280px;margin:0 auto;padding:0 52px;'>"
+
+        # Col 1 — brand
+        f"<div>{logo_html}"
+        f"<p style='{_F}font-size:.72rem;color:rgba(255,255,255,.40);line-height:1.7;"
+        "margin:0 0 18px 0;max-width:240px;'>"
+        "Equity &amp; Commodities Spillover Monitor<br/>"
+        "MGMT 69000&ndash;120 &middot; AI for Finance<br/>"
+        "Purdue University, West Lafayette, IN</p>"
+        f"<p style='{_F}font-size:.58rem;color:rgba(207,185,145,.40);margin:0;"
+        f"letter-spacing:.08em;'>Updated {ts}</p>"
         "</div>"
-        # Col 2 - navigate
-        f"<div><p style='{_g}'>Navigate</p>"
+
+        # Col 2 — navigate
+        f"<div><p style='{_hd}'>Navigate</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
-        f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Overview</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Geopolitical Triggers</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Correlation Analysis</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Spillover Analytics</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Commodities to Watch</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='#' style='{_w}'>Trade Ideas</a></li>"
+        f"<li><a href='?page=overview'      style='{_lnk}'>Overview</a></li>"
+        f"<li><a href='?page=war_impact_map' style='{_lnk}'>War Impact Map</a></li>"
+        f"<li><a href='?page=geopolitical'  style='{_lnk}'>Geopolitical Triggers</a></li>"
+        f"<li><a href='?page=correlation'   style='{_lnk}'>Correlation Analysis</a></li>"
+        f"<li><a href='?page=spillover'     style='{_lnk}'>Spillover Analytics</a></li>"
+        f"<li><a href='?page=watchlist'     style='{_lnk}'>Commodities to Watch</a></li>"
         "</ul></div>"
-        # Col 3 - about
-        f"<div><p style='{_g}'>About</p>"
+
+        # Col 3 — strategy
+        f"<div><p style='{_hd}'>Strategy &amp; Research</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
-        f"<li style='margin-bottom:8px;'><a href='?page=about_heramb' style='{_w}'>Heramb S. Patkar</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='?page=about_jiahe' style='{_w}'>Jiahe Miao</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='?page=about_ilian' style='{_w}'>Ilian Zalomai</a></li>"
-        f"<li><a href='https://business.purdue.edu/' target='_blank' style='{_w}'>Daniels School of Business</a></li>"
+        f"<li><a href='?page=trade_ideas'   style='{_lnk}'>Trade Ideas</a></li>"
+        f"<li><a href='?page=stress_test'   style='{_lnk}'>Portfolio Stress Test</a></li>"
+        f"<li><a href='?page=model_accuracy' style='{_lnk}'>Performance Review</a></li>"
+        f"<li><a href='?page=ai_chat'       style='{_lnk}'>AI Analyst</a></li>"
         "</ul></div>"
-        # Col 4 - connect
-        f"<div><p style='{_g}'>Connect</p>"
+
+        # Col 4 — authors
+        f"<div><p style='{_hd}'>Authors</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
-        f"<li style='margin-bottom:8px;'><a href='https://www.linkedin.com/in/heramb-patkar/' target='_blank' style='{_w}'>LinkedIn</a></li>"
-        f"<li><a href='https://github.com/HPATKAR' target='_blank' style='{_w}'>GitHub</a></li>"
+        f"<li><a href='?page=about_heramb'  style='{_lnk}'>Heramb S. Patkar</a></li>"
+        f"<li><a href='?page=about_jiahe'   style='{_lnk}'>Jiahe Miao</a></li>"
+        f"<li><a href='?page=about_ilian'   style='{_lnk}'>Ilian Zalomai</a></li>"
+        f"<li><a href='https://business.purdue.edu/' target='_blank' style='{_lnk}'>"
+        "Daniels School of Business</a></li>"
         "</ul></div>"
-        # Col 5 - data sources
-        f"<div><p style='{_g}'>Data Sources</p>"
+
+        # Col 5 — data sources
+        f"<div><p style='{_hd}'>Data Sources</p>"
         "<ul style='list-style:none;padding:0;margin:0;'>"
-        f"<li style='margin-bottom:8px;'><a href='https://finance.yahoo.com' target='_blank' style='{_w}'>Yahoo Finance</a></li>"
-        f"<li style='margin-bottom:8px;'><a href='https://fred.stlouisfed.org' target='_blank' style='{_w}'>FRED · Federal Reserve</a></li>"
-        f"<li><a href='https://financialdatasets.ai' target='_blank' style='{_w}'>FinancialDatasets</a></li>"
+        f"<li><a href='https://finance.yahoo.com'     target='_blank' style='{_lnk}'>Yahoo Finance</a></li>"
+        f"<li><a href='https://fred.stlouisfed.org'   target='_blank' style='{_lnk}'>FRED &middot; Federal Reserve</a></li>"
+        f"<li><a href='https://financialdatasets.ai'  target='_blank' style='{_lnk}'>FinancialDatasets</a></li>"
+        f"<li><a href='https://www.cftc.gov'          target='_blank' style='{_lnk}'>CFTC COT Reports</a></li>"
         "</ul></div>"
+
         "</div></div>"
-        "<div style='background:#CFB991;padding:10px 48px;text-align:center;'>"
-        f"<p style='font-size:var(--fs-tiny);color:#000000;margin:0;font-weight:600;"
-        f"letter-spacing:var(--ls-wide);font-family:var(--font-sans);'>"
-        f"&copy; {yr} Purdue University &middot; For educational purposes only "
-        f"&middot; Not investment advice</p>"
-        "</div></div>",
+
+        # ── Bottom strip ──
+        "<div style='background:#000;border-top:1px solid #1c1c1c;"
+        "padding:13px 52px;display:flex;align-items:center;justify-content:space-between;"
+        "max-width:100%;'>"
+        f"<p style='{_F}font-size:.58rem;color:rgba(255,255,255,.28);margin:0;"
+        f"letter-spacing:.06em;'>&copy; {yr} Purdue University</p>"
+        f"<p style='{_F}font-size:.58rem;color:rgba(255,255,255,.22);margin:0;"
+        "letter-spacing:.04em;'>For educational purposes only &middot; Not investment advice</p>"
+        "</div>"
+
+        "</div>",
         unsafe_allow_html=True,
     )

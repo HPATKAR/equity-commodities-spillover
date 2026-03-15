@@ -72,9 +72,9 @@ button[aria-label="Open sidebar"] {
     overflow: hidden !important;
 }
 
-/* ── Content area — padded below the 56 px fixed navbar ── */
+/* ── Content area — padded below the 72 px fixed navbar ── */
 .main .block-container {
-    padding-top:    68px !important;
+    padding-top:    86px !important;
     padding-bottom: 3rem !important;
     padding-left:   2.2rem !important;
     padding-right:  2.2rem !important;
@@ -200,103 +200,134 @@ _fd_col   = "#CFB991" if _FD_KEY   else "rgba(255,255,255,0.22)"
 
 _NAVBAR = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-html,body{{height:56px;overflow:hidden;background:#000;
+html,body{{height:72px;overflow:hidden;background:#000;
   font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   -webkit-font-smoothing:antialiased}}
 #nav{{
-  display:flex;align-items:stretch;height:56px;
+  display:flex;align-items:stretch;height:72px;
   padding:0 2rem;background:#000;
-  border-bottom:1px solid #1c1c1c;
+  border-bottom:1px solid #1e1e1e;
 }}
-/* Brand */
+
+/* ── Logotype ── */
 .brand{{
-  display:flex;flex-direction:column;justify-content:center;
-  gap:2px;margin-right:2.6rem;flex-shrink:0;cursor:pointer;
-  text-decoration:none;border-bottom:2px solid transparent;
-  padding:0 2px;transition:opacity .14s;
+  display:flex;align-items:center;gap:13px;
+  margin-right:2.8rem;flex-shrink:0;
+  text-decoration:none;padding:0 2px;
+  transition:opacity .15s;
 }}
-.brand:hover{{opacity:.80}}
-.bm{{font-size:.80rem;font-weight:700;color:#fff;letter-spacing:.01em;white-space:nowrap;line-height:1.2}}
-.bs{{font-size:.53rem;color:rgba(207,185,145,.60);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}}
-/* Nav list */
+.brand:hover{{opacity:.82}}
+/* Gold monogram tile */
+.brand-mark{{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:36px;height:36px;flex-shrink:0;
+  background:#CFB991;border-radius:5px;
+  font-size:.60rem;font-weight:800;
+  color:#000;letter-spacing:.06em;line-height:1.15;
+  user-select:none;
+}}
+.brand-mark .mk-top{{font-size:.58rem;font-weight:800;letter-spacing:.10em}}
+.brand-mark .mk-bot{{font-size:.44rem;font-weight:600;letter-spacing:.14em;opacity:.70}}
+/* Divider */
+.brand-div{{width:1px;height:30px;background:rgba(207,185,145,.18);flex-shrink:0}}
+/* Text stack */
+.brand-text{{display:flex;flex-direction:column;gap:3px}}
+.bm{{
+  font-size:.82rem;font-weight:700;
+  color:#fff;letter-spacing:.005em;
+  white-space:nowrap;line-height:1.1;
+}}
+/* Italic serif-like styling via font-style + lighter weight for the "&" */
+.bm em{{font-style:italic;font-weight:400;color:rgba(207,185,145,.85);margin:0 1px}}
+.bs{{
+  font-size:.50rem;font-weight:500;
+  color:rgba(207,185,145,.55);
+  letter-spacing:.16em;text-transform:uppercase;
+  white-space:nowrap;
+}}
+
+/* ── Nav list ── */
 ul.links{{display:flex;list-style:none;height:100%;align-items:stretch;margin:0;padding:0;gap:0}}
 li.ni{{position:relative;display:flex;align-items:stretch}}
-/* Top-level item */
+
+/* Top-level items */
 .ni > a.lnk,.ni > span.lnk{{
-  display:flex;align-items:center;gap:5px;
-  padding:0 1rem;
+  display:flex;align-items:center;gap:5px;padding:0 1.05rem;
   font-size:.72rem;font-weight:500;
-  color:rgba(255,255,255,.58);
+  color:rgba(255,255,255,.55);
   text-decoration:none;white-space:nowrap;
   border-bottom:2px solid transparent;
   cursor:pointer;user-select:none;
   transition:color .13s,border-color .13s,background .13s;
-  letter-spacing:.025em;
+  letter-spacing:.022em;
 }}
-.ni > a.lnk:hover,.ni.hd:hover > span.lnk{{
+.ni > a.lnk:hover,.ni > span.lnk:hover{{
   color:#fff;background:rgba(255,255,255,.03);
-  border-bottom-color:rgba(207,185,145,.30);
+  border-bottom-color:rgba(207,185,145,.28);
 }}
 .ni > a.lnk.active{{color:#CFB991;border-bottom-color:#CFB991;font-weight:600}}
-.ni.hd.active > span.lnk{{color:#CFB991;border-bottom-color:#CFB991;font-weight:600}}
+.ni.hd-active > span.lnk{{color:#CFB991;border-bottom-color:#CFB991;font-weight:600}}
+
 /* Caret */
-.ct{{font-size:.46rem;opacity:.50;transition:transform .16s;display:inline-block;margin-top:1px}}
-.ni.hd:hover .ct{{transform:rotate(180deg);opacity:.80}}
-/* Dropdown */
+.ct{{font-size:.45rem;opacity:.45;transition:transform .16s;display:inline-block;margin-top:1px}}
+.ni:hover .ct{{transform:rotate(180deg);opacity:.75}}
+
+/* ── Dropdown ── */
 ul.drop{{
-  display:none;position:absolute;top:100%;left:0;
-  min-width:210px;background:#060606;
-  border:1px solid #262626;border-top:2px solid #CFB991;
-  border-radius:0 0 5px 5px;list-style:none;
-  margin:0;padding:6px 0;
-  box-shadow:0 12px 32px rgba(0,0,0,.65);z-index:9999;
+  display:none;position:absolute;top:calc(100% + 0px);left:0;
+  min-width:214px;background:#070707;
+  border:1px solid #282828;border-top:2px solid #CFB991;
+  border-radius:0 0 6px 6px;list-style:none;
+  margin:0;padding:7px 0;
+  box-shadow:0 14px 36px rgba(0,0,0,.70);z-index:99999;
 }}
-.ni.hd:hover > ul.drop{{display:block}}
+.ni:hover > ul.drop{{display:block}}
 ul.drop li a{{
-  display:block;padding:.50rem 1.1rem;
+  display:block;padding:.52rem 1.15rem;
   font-size:.70rem;font-weight:400;
-  color:rgba(255,255,255,.58);text-decoration:none;
+  color:rgba(255,255,255,.55);text-decoration:none;
   border-left:2px solid transparent;white-space:nowrap;
   transition:color .10s,background .10s,border-color .10s;
-  letter-spacing:.015em;
+  letter-spacing:.012em;
 }}
-ul.drop li a:hover{{color:#fff;background:rgba(255,255,255,.045);border-left-color:rgba(207,185,145,.35)}}
+ul.drop li a:hover{{color:#fff;background:rgba(255,255,255,.04);border-left-color:rgba(207,185,145,.32)}}
 ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-color:#CFB991;font-weight:500}}
-/* Right strip */
-.ds{{margin-left:auto;display:flex;align-items:center;gap:.9rem;flex-shrink:0;
-     font-size:.58rem;letter-spacing:.05em;padding-left:1.5rem}}
-.dsi{{display:flex;align-items:center;gap:4px;color:rgba(255,255,255,.28)}}
-.dsi .dot{{font-size:.52rem}}
+
+/* ── Right data-source strip ── */
+.ds{{margin-left:auto;display:flex;align-items:center;gap:.85rem;flex-shrink:0;
+     font-size:.57rem;letter-spacing:.05em;padding-left:1.4rem}}
+.dsi{{display:flex;align-items:center;gap:4px}}
+.dsi .dot{{font-size:.50rem}}
 </style>
 </head>
 <body>
 <script>
 /* Hoist this iframe to position:fixed at top of parent viewport */
 (function(){{
+  var H='72px';
   var f=window.frameElement;
   if(!f) return;
   function fix(){{
     f.style.cssText='position:fixed!important;top:0!important;left:0!important;'+
-      'width:100%!important;height:56px!important;border:none!important;'+
+      'width:100%!important;height:'+H+'!important;border:none!important;'+
       'z-index:9999!important;margin:0!important;padding:0!important;'+
       'background:#000!important;';
     var p=f.parentElement;
     if(p) p.style.cssText='position:fixed!important;top:0!important;left:0!important;'+
-      'width:100%!important;height:56px!important;z-index:9999!important;'+
+      'width:100%!important;height:'+H+'!important;z-index:9999!important;'+
       'margin:0!important;padding:0!important;';
   }}
   fix();
-  /* Re-apply after any Streamlit DOM mutation */
   try{{
     new window.parent.MutationObserver(fix)
       .observe(window.parent.document.body,{{childList:true,subtree:false,attributes:false}});
   }}catch(e){{}}
 }})();
 
-/* Mark the active page and its parent group */
+/* Mark active page + parent group */
 (function(){{
   var cur={json.dumps(current)};
   var ANALYSIS=['war_impact_map','geopolitical','correlation','spillover','watchlist'];
@@ -311,7 +342,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     Object.keys(MAP).forEach(function(id){{
       if(MAP[id].indexOf(cur)>-1){{
         var el=document.getElementById(id);
-        if(el) el.classList.add('active');
+        if(el) el.classList.add('hd-active');
       }}
     }});
   }});
@@ -319,9 +350,17 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 </script>
 
 <div id="nav">
+  <!-- Logotype -->
   <a class="brand" href="?page=overview" target="_parent">
-    <span class="bm">Equity &amp; Commodities Spillover</span>
-    <span class="bs">Purdue Daniels &middot; MGMT 69000&ndash;120</span>
+    <div class="brand-mark">
+      <span class="mk-top">E&amp;C</span>
+      <span class="mk-bot">MON</span>
+    </div>
+    <div class="brand-div"></div>
+    <div class="brand-text">
+      <span class="bm">Equity <em>&amp;</em> Commodities Spillover</span>
+      <span class="bs">Purdue Daniels &middot; MGMT&nbsp;69000&ndash;120</span>
+    </div>
   </a>
 
   <ul class="links">
@@ -330,7 +369,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
          href="?page=overview" target="_parent">Overview</a>
     </li>
 
-    <li class="ni hd {'active' if current in {'war_impact_map','geopolitical','correlation','spillover','watchlist'} else ''}" id="ga">
+    <li class="ni" id="ga">
       <span class="lnk">Analysis <span class="ct">&#9660;</span></span>
       <ul class="drop">
         <li><a data-pg="war_impact_map" href="?page=war_impact_map" target="_parent" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
@@ -341,7 +380,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       </ul>
     </li>
 
-    <li class="ni hd {'active' if current in {'trade_ideas','stress_test'} else ''}" id="gs">
+    <li class="ni" id="gs">
       <span class="lnk">Strategy <span class="ct">&#9660;</span></span>
       <ul class="drop">
         <li><a data-pg="trade_ideas" href="?page=trade_ideas" target="_parent" class="{'active' if current=='trade_ideas' else ''}">Trade Ideas</a></li>
@@ -349,7 +388,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       </ul>
     </li>
 
-    <li class="ni hd {'active' if current in {'model_accuracy','ai_chat'} else ''}" id="gr">
+    <li class="ni" id="gr">
       <span class="lnk">Research <span class="ct">&#9660;</span></span>
       <ul class="drop">
         <li><a data-pg="model_accuracy" href="?page=model_accuracy" target="_parent" class="{'active' if current=='model_accuracy' else ''}">Performance Review</a></li>
@@ -357,7 +396,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       </ul>
     </li>
 
-    <li class="ni hd {'active' if current in {'about_heramb','about_jiahe','about_ilian'} else ''}" id="gab">
+    <li class="ni" id="gab">
       <span class="lnk">About <span class="ct">&#9660;</span></span>
       <ul class="drop">
         <li><a data-pg="about_heramb" href="?page=about_heramb" target="_parent" class="{'active' if current=='about_heramb' else ''}">Heramb S. Patkar</a></li>
@@ -368,7 +407,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   </ul>
 
   <div class="ds">
-    <div class="dsi"><span class="dot" style="color:#CFB991">&#9679;</span><span style="color:rgba(255,255,255,.42)">Yahoo Finance</span></div>
+    <div class="dsi"><span class="dot" style="color:#CFB991">&#9679;</span><span style="color:rgba(255,255,255,.40)">Yahoo Finance</span></div>
     <div class="dsi"><span class="dot" style="color:{_fred_col}">{_fred_dot}</span><span style="color:{_fred_col}">FRED</span></div>
     <div class="dsi"><span class="dot" style="color:{_fd_col}">{_fd_dot}</span><span style="color:{_fd_col}">FinancialDatasets</span></div>
   </div>
