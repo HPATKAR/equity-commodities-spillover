@@ -57,11 +57,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Correlation tells you whether two markets move together. Spillover analysis goes "
-        "further — it tells you who is driving whom. A commodity that Granger-causes equity "
-        "returns is a genuine leading indicator: a move in crude oil today statistically predicts "
-        "a move in energy equities tomorrow. This page maps those directional relationships "
-        "using three complementary methods."
+        "<strong>Which markets are currently exporting volatility — and which are importing it?</strong> "
+        "Correlation shows co-movement; spillover shows <em>causation and direction</em>. "
+        "Section 1 (Granger) tests statistical predictability between pairs. "
+        "Section 2 (Transfer Entropy) quantifies directional information flow. "
+        "Section 3 (Diebold-Yilmaz) decomposes forecast error variance to rank transmitters and receivers. "
+        "Section 4 draws the network. "
+        "The key output: which one or two assets are at the centre of the current risk transmission web."
     )
 
     with st.spinner("Loading returns…"):

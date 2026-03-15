@@ -15,7 +15,7 @@ from datetime import date, timedelta
 
 from src.ui.shared import (
     _style_fig, _chart, _insight_note, _definition_block,
-    _page_footer,
+    _page_footer, _section_header, _regime_banner,
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
@@ -212,25 +212,6 @@ def _kpi(col, label: str, value: str, delta: str = "", delta_up: bool | None = N
 
 
 # ── Main page ───────────────────────────────────────────────────────────────
-
-def _narrative_box(text: str) -> None:
-    """Render a pre-loaded data-driven narrative paragraph."""
-    paragraphs = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
-    html_parts = []
-    for p in paragraphs:
-        if ":" in p[:50]:
-            head, _, rest = p.partition(":")
-            html_parts.append(f"<b>{head}:</b>{rest}")
-        else:
-            html_parts.append(p)
-    html = "<br><br>".join(html_parts)
-    st.markdown(
-        f'<div style="border-left:4px solid #CFB991;padding:0.85rem 1.1rem;'
-        f'background:#fafaf8;border-radius:0 4px 4px 0;margin:0.4rem 0 0.8rem">'
-        f'<div style="{_F}font-size:0.74rem;color:#2A2A2A;line-height:1.82">'
-        f'{html}</div></div>',
-        unsafe_allow_html=True,
-    )
 
 
 def _narrate_growth(macro_data: dict) -> str:
@@ -474,12 +455,34 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     val_df     = pd.DataFrame()
     idx_prices = pd.DataFrame()
 
+    # ── Regime banner — quick upfront read using spread data ─────────────────
+    if fred_key:
+        try:
+            _sp = _load_spreads(fred_key, start, end)
+            _curve = _sp["10Y–2Y (Yield Curve)"].iloc[-1] if (not _sp.empty and "10Y–2Y (Yield Curve)" in _sp.columns) else None
+            _hy    = _sp["HY Credit Spread"].iloc[-1]     if (not _sp.empty and "HY Credit Spread" in _sp.columns) else None
+            _m     = _load_macro(fred_key, start, end)
+            _pmi   = _m.get("ISM Manufacturing PMI")
+            _pmi_v = float(_pmi.iloc[-1]) if _pmi is not None and not _pmi.empty else None
+            _late  = (_curve is not None and _curve < 0) or (_hy is not None and _hy > 4.5) or (_pmi_v is not None and _pmi_v < 50)
+            _early = (_pmi_v is not None and _pmi_v > 55) and (_curve is None or _curve > 0.5)
+            if _late:
+                _phase, _pcolor = "LATE-CYCLE CAUTION", "#b03a2e"
+                _psub = "Yield curve or credit spreads signal elevated recession risk — favour defensives and gold"
+            elif _early:
+                _phase, _pcolor = "EARLY-CYCLE RECOVERY", "#1e8449"
+                _psub = "PMI expanding and curve positive — cyclicals, copper, and energy are the beneficiaries"
+            else:
+                _phase, _pcolor = "MID-CYCLE EXPANSION", "#8E6F3E"
+                _psub = "Balanced conditions — quality growth equities and stable commodity demand"
+            _regime_banner(_phase, _psub, _pcolor)
+        except Exception:
+            pass
+
     # ══════════════════════════════════════════════════════════════════════════
     # 1. GDP & GROWTH — Where is the economy?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("1 · Economic Growth — GDP & Output")
+    _section_header("01", "Economic Growth", "GDP, industrial output — the broadest cycle context")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -556,9 +559,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # 2. HIGH-FREQ INDICATORS — Where is the economy heading?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("2 · High-Frequency Indicators — PMI, Retail Sales & Labour")
+    _section_header("02", "High-Frequency Indicators", "PMI · retail sales · payrolls · unemployment")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -644,9 +645,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # 3. MONEY FLOWS & LIQUIDITY — What is driving the cycle?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("3 · Money Flows & Liquidity — M2, Fed Balance Sheet & Sentiment")
+    _section_header("03", "Money Flows & Liquidity", "M2 · Fed balance sheet · consumer sentiment")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -720,9 +719,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # 4. BOND YIELDS — What does the rates market price in?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("4 · Bond Yields — The Risk-Free Rate Backdrop")
+    _section_header("04", "Bond Yields", "Treasury yield curve — the risk-free rate backdrop")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -786,9 +783,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # 5. YIELD SPREADS & CREDIT — What does the credit market say?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("5 · Yield Spreads & Credit Risk — Financial Conditions")
+    _section_header("05", "Yield Spreads & Credit Risk", "Yield curve shape · IG and HY credit spreads")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -853,9 +848,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # 6. VALUATIONS & EARNINGS — Are equities priced for this environment?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("6 · Valuations & Expected Earnings Growth")
+    _section_header("06", "Valuations & Expected Earnings Growth", "Forward P/E · earnings yield · equity risk premium")
 
     with st.spinner("Loading valuation data…"):
         val_df = _load_valuations()
@@ -925,9 +918,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # 7. INDEX PERFORMANCE — How have markets responded to all of the above?
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("7 · Index Performance & Market Stress — The Verdict")
+    _section_header("07", "Index Performance & Market Stress", "Rolling returns · VIX — the market's verdict on everything above")
 
     perf_windows = {"1W": 5, "1M": 21, "3M": 63, "6M": 126, "YTD": None}
     perf_start = (today - timedelta(days=400)).isoformat()
@@ -1000,17 +991,13 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # CROSS-ASSET SYNTHESIS — The macro story in one place
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("Macro Synthesis — Equities & Commodities Implications")
+    _section_header("∑", "Macro Synthesis", "Cross-asset implications for equities and commodities")
     _narrative_box(_narrate_cross_asset(macro_data, spreads_df, val_df, idx_prices))
 
     # ══════════════════════════════════════════════════════════════════════════
     # PDF DOWNLOAD
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("Download This Report")
+    _section_header("↓", "Download This Report", "Institutional-format PDF with all charts and narrative")
     st.markdown(
         f'<p style="{_F}font-size:0.68rem;color:#555;margin:0 0 0.6rem">'
         f'Generates a formatted PDF brief of all seven sections above — '

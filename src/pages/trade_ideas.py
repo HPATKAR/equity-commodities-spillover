@@ -133,10 +133,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Regime-triggered cross-asset trade ideas based on the current correlation regime, "
-        "geopolitical context, and historical spillover patterns. Each card includes "
-        "entry trigger, exit signal, rationale, and key risks. "
-        "Not investment advice - for research and education only."
+        "<strong>Given the current macro and correlation regime, which cross-asset positions are structurally supported?</strong> "
+        "Each idea is regime-conditioned — it only activates when the prevailing market structure matches its trigger. "
+        "The KPI strip below shows the current stance at a glance. Cards are sorted by regime match; "
+        "read the entry trigger and rationale to understand <em>why</em> the idea makes sense now."
     )
 
     with st.spinner("Loading data…"):
@@ -153,21 +153,37 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     r_name   = _REGIME_NAMES[current]
     r_color  = _REGIME_COLORS[current]
 
-    st.markdown(
-        f"""<div style="display:flex;align-items:center;gap:0.8rem;
-        padding:0.7rem 1rem;border:1px solid {r_color};border-radius:4px;
-        background:#fafaf8;margin-bottom:1rem">
-        <div style="width:10px;height:10px;border-radius:50%;
-        background:{r_color};flex-shrink:0"></div>
-        <div>
-        <span style="font-size:0.60rem;text-transform:uppercase;letter-spacing:0.12em;
-        color:#666666;font-weight:600">Current Regime · </span>
-        <span style="font-size:0.88rem;font-weight:700;color:{r_color}">{r_name}</span>
-        <span style="font-size:0.74rem;color:#333333;margin-left:0.5rem">
-        (avg cross-asset corr: {avg_corr.iloc[-1]:.3f})</span>
-        </div></div>""",
+    # ── Signal summary KPI strip ────────────────────────────────────────────
+    _all_triggered = [t for t in _TRADE_LIBRARY if current in t["regime"]]
+    _n_bull = sum(1 for t in _all_triggered if "Long" in t["direction"] and t["direction"][0] == "Long")
+    _n_bear = sum(1 for t in _all_triggered if "Short" in t["direction"] and t["direction"][0] == "Short")
+    _cats   = list(dict.fromkeys(t["category"] for t in _all_triggered))
+
+    _F_ti = "font-family:'DM Sans',sans-serif;"
+    def _ti_kpi(col, label, value, value_color="#000"):
+        col.markdown(
+            f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.6rem 0.85rem;background:#fafaf8">'
+            f'<div style="{_F_ti}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.14em;color:#8E6F3E;margin-bottom:3px">{label}</div>'
+            f'<div style="{_F_ti}font-size:1.0rem;font-weight:700;color:{value_color}">{value}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    _sk1, _sk2, _sk3, _sk4, _sk5 = st.columns(5)
+    _sk1.markdown(
+        f'<div style="border:1px solid {r_color};border-left:4px solid {r_color};border-radius:4px;'
+        f'padding:0.6rem 0.85rem;background:#fafaf8">'
+        f'<div style="{_F_ti}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E6F3E;margin-bottom:3px">Regime</div>'
+        f'<div style="{_F_ti}font-size:1.0rem;font-weight:700;color:{r_color}">{r_name}</div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
+    _ti_kpi(_sk2, "Avg Corr (60d)", f"{avg_corr.iloc[-1]:.3f}")
+    _ti_kpi(_sk3, "Ideas Triggered", str(len(_all_triggered)), "#8E6F3E")
+    _ti_kpi(_sk4, "Long-First Ideas", str(_n_bull), "#2e7d32")
+    _ti_kpi(_sk5, "Short-First Ideas", str(_n_bear), "#c0392b")
 
     # ── Filter by regime / category ────────────────────────────────────────
     st.markdown("---")

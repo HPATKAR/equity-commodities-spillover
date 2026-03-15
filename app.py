@@ -1093,7 +1093,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
     /* Mark active page + group */
     var cur={json.dumps(current)};
-    var ANALYSIS=['war_impact_map','geopolitical','correlation','spillover','watchlist'];
+    var ANALYSIS=['war_impact_map','geopolitical','correlation','spillover'];
     var STRATEGY=['trade_ideas','stress_test'];
     var RESEARCH=['model_accuracy','ai_chat'];
     var ABOUT   =['about_heramb','about_jiahe','about_ilian'];
@@ -1131,15 +1131,18 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
          href="#" onclick="navigate('overview');return false;">Overview</a>
     </li>
 
+    <li class="ni">
+      <a class="lnk {'active' if current == 'macro_dashboard' else ''}" data-pg="macro_dashboard"
+         href="?page=macro_dashboard" target="_parent">Macro</a>
+    </li>
+
     <li class="ni" id="ga">
       <span class="lnk">Analysis <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="war_impact_map" href="?page=war_impact_map" target="_parent" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
-        <li><a data-pg="geopolitical"   href="?page=geopolitical"   target="_parent" class="{'active' if current=='geopolitical' else ''}">Geopolitical Triggers</a></li>
         <li><a data-pg="correlation"    href="?page=correlation"    target="_parent" class="{'active' if current=='correlation' else ''}">Correlation Analysis</a></li>
         <li><a data-pg="spillover"      href="?page=spillover"      target="_parent" class="{'active' if current=='spillover' else ''}">Spillover Analytics</a></li>
-        <li><a data-pg="watchlist"      href="?page=watchlist"      target="_parent" class="{'active' if current=='watchlist' else ''}">Commodities to Watch</a></li>
-        <li><a data-pg="macro_dashboard" href="?page=macro_dashboard" target="_parent" class="{'active' if current=='macro_dashboard' else ''}">Macro Dashboard</a></li>
+        <li><a data-pg="geopolitical"   href="?page=geopolitical"   target="_parent" class="{'active' if current=='geopolitical' else ''}">Geopolitical Triggers</a></li>
+        <li><a data-pg="war_impact_map" href="?page=war_impact_map" target="_parent" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
       </ul>
     </li>
 
@@ -1149,6 +1152,11 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         <li><a data-pg="trade_ideas" href="?page=trade_ideas" target="_parent" class="{'active' if current=='trade_ideas' else ''}">Trade Ideas</a></li>
         <li><a data-pg="stress_test" href="?page=stress_test" target="_parent" class="{'active' if current=='stress_test' else ''}">Portfolio Stress Test</a></li>
       </ul>
+    </li>
+
+    <li class="ni">
+      <a class="lnk {'active' if current == 'watchlist' else ''}" data-pg="watchlist"
+         href="?page=watchlist" target="_parent">Monitor</a>
     </li>
 
     <li class="ni" id="gr">

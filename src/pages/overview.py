@@ -46,11 +46,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "This page is a one-screen brief on current conditions. The five numbers at the top give "
-        "the stress level. The geopolitical scores explain what is driving it. The correlation and "
-        "performance charts show where it is showing up in prices. The analogues table anchors "
-        "today in history — find the past period that looked most like now, and you have a base "
-        "case for what comes next."
+        "Start here. The single question this page answers: <strong>what is the current stress level "
+        "across equity and commodity markets, what is driving it, and which historical periods "
+        "looked most like today?</strong> Read the KPIs and regime badge first — they give you the "
+        "verdict in five seconds. Then work down the page: risk drivers → early warning signals → "
+        "price action → historical analogues → correlation heatmap. Each section builds on the previous."
     )
 
     with st.spinner("Loading market data…"):

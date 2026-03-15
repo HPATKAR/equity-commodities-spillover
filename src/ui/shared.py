@@ -261,6 +261,86 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
     )
 
 
+def _section_header(number: str, title: str, subtitle: str = "") -> None:
+    """Numbered section header — establishes reading sequence within a page."""
+    sub_html = (
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.64rem;'
+        f'color:#888;font-weight:400;margin-left:0.6rem;font-style:italic">{subtitle}</span>'
+        if subtitle else ""
+    )
+    st.markdown(
+        f'<div style="margin:1.1rem 0 0.45rem;padding-bottom:0.35rem;'
+        f'border-bottom:1.5px solid #E8E5E0;display:flex;align-items:baseline;gap:0">'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.18em;color:#CFB991;'
+        f'background:#000;padding:2px 6px;border-radius:2px;margin-right:0.55rem">{number}</span>'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.76rem;font-weight:700;'
+        f'color:#000">{title}</span>'
+        f'{sub_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
+    """Full-width coloured regime banner — place at the very top of a page to surface the verdict."""
+    sub_html = (
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
+        f'color:rgba(255,255,255,0.72);margin-left:0.75rem">{sub}</span>'
+        if sub else ""
+    )
+    st.markdown(
+        f'<div style="background:{color};padding:0.55rem 1.2rem;border-radius:4px;'
+        f'display:flex;align-items:center;gap:0.75rem;margin-bottom:0.9rem">'
+        f'<div style="width:7px;height:7px;border-radius:50%;'
+        f'background:rgba(255,255,255,0.55);flex-shrink:0"></div>'
+        f'<div>'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
+        f'letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.60)">'
+        f'MACRO REGIME &nbsp;·&nbsp; </span>'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;'
+        f'font-weight:700;color:#fff">{label}</span>'
+        f'{sub_html}'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _narrative_box(text: str) -> None:
+    """Pre-loaded data-driven narrative with gold left border. Paragraphs separated by blank lines."""
+    paragraphs = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
+    html_parts = []
+    for p in paragraphs:
+        if ":" in p[:60]:
+            head, _, rest = p.partition(":")
+            html_parts.append(f"<b>{head}:</b>{rest}")
+        else:
+            html_parts.append(p)
+    html = "<br><br>".join(html_parts)
+    st.markdown(
+        f'<div style="border-left:4px solid #CFB991;padding:0.8rem 1.1rem;'
+        f'background:#fafaf8;border-radius:0 4px 4px 0;margin:0.35rem 0 0.75rem">'
+        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.73rem;'
+        f'color:#2A2A2A;line-height:1.80">{html}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _primary_chart(fig, caption: str = "") -> None:
+    """Render the headline chart for a page/section with a gold left-border emphasis strip."""
+    st.markdown(
+        '<div style="border-left:3px solid #CFB991;padding-left:0.4rem;margin-bottom:0.1rem">',
+        unsafe_allow_html=True,
+    )
+    _chart(fig)
+    st.markdown('</div>', unsafe_allow_html=True)
+    if caption:
+        st.markdown(
+            f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;'
+            f'color:#888;font-style:italic;margin:0 0 0.55rem 0.5rem">{caption}</p>',
+            unsafe_allow_html=True,
+        )
+
+
 # ── About page styles ───────────────────────────────────────────────────────
 
 def _about_page_styles():

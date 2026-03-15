@@ -55,11 +55,12 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Correlation is the single most important number in portfolio risk management. When equity "
-        "and commodity markets are highly correlated, a shock in one transmits directly to the "
-        "other and diversification breaks down exactly when you need it most. This page tracks "
-        "how that relationship is evolving — in real time, across historical regimes, and with a "
-        "forward-looking probability forecast."
+        "<strong>Is the equity-commodity correlation regime currently at an extreme — and is diversification working?</strong> "
+        "Section 1 shows the rolling pairwise correlation for any asset pair you choose. "
+        "Section 2 applies DCC-GARCH to capture time-varying, non-linear dependence. "
+        "Section 3 classifies the current regime (Decorrelated / Normal / Elevated / Crisis). "
+        "Section 4 projects the next regime using a Markov chain. "
+        "Read these four sections in order — together they answer whether cross-asset risk is building or releasing."
     )
 
     with st.spinner("Loading returns…"):
