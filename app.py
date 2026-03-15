@@ -293,6 +293,11 @@ section[data-testid="stMain"],
 }
 
 /* ── Headings & generic text ── */
+h1, h2, h3, label, p, span, div { color: inherit; }
+[data-testid="stMarkdownContainer"] * { color: #e8e9ed; }
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 { color: #CFB991 !important; }
 h1, h2, h3, label, p { color: #e8e9ed !important; }
 
 /* ── Metric cards ── */
@@ -893,48 +898,78 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     [255,255,254], [254,254,254]
   ];
 
-  function _dmRgbNearWhite(rgbStr) {{
-    var m = rgbStr.match(/rgba?\\(([\\d]+),\\s*([\\d]+),\\s*([\\d]+)/);
-    if (!m) return false;
-    var r=parseInt(m[1]), g=parseInt(m[2]), b=parseInt(m[3]);
-    for (var i=0; i<DM_WHITE_TARGETS.length; i++) {{
-      var t=DM_WHITE_TARGETS[i];
-      if (Math.abs(r-t[0])<=4 && Math.abs(g-t[1])<=4 && Math.abs(b-t[2])<=4) return true;
-    }}
-    return false;
+  /* Parse rgb/rgba string → [r,g,b] or null */
+  function _dmParseRgb(s) {{
+    var m = s.match(/rgba?\\(([\\d.]+),\\s*([\\d.]+),\\s*([\\d.]+)/);
+    return m ? [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])] : null;
   }}
 
   function _dmPatchInlineStyles(on) {{
     var pDoc = window.parent.document;
     if (on) {{
       pDoc.querySelectorAll('[style]').forEach(function(el) {{
-        /* skip canvas, Plotly SVG, iframes */
-        if (el.tagName==='CANVAS'||el.tagName==='IFRAME'||el.tagName==='SVG') return;
+        if (el.tagName==='CANVAS'||el.tagName==='IFRAME') return;
         if (el.closest && el.closest('.js-plotly-plot')) return;
+
+        /* 1. BACKGROUND: near-white → dark */
         var bg = el.style.backgroundColor;
-        if (!bg || bg==='' || bg==='transparent' || bg==='initial') return;
-        if (_dmRgbNearWhite(bg)) {{
-          el.setAttribute('data-dm-bg', bg);
-          el.style.setProperty('background', '#1a1d27', 'important');
-          /* also darken text if it was dark-on-white */
-          var col = el.style.color;
-          if (col) {{
-            var mc = col.match(/rgba?\\(([\\d]+),\\s*([\\d]+),\\s*([\\d]+)/);
-            if (mc && parseInt(mc[1])<100 && parseInt(mc[2])<100 && parseInt(mc[3])<100) {{
+        if (bg && bg!=='' && bg!=='transparent' && bg!=='initial') {{
+          var bc = _dmParseRgb(bg);
+          if (bc && bc[0]>228 && bc[1]>228 && bc[2]>228) {{
+            el.setAttribute('data-dm-bg', bg);
+            el.style.setProperty('background','#1a1d27','important');
+          }}
+        }}
+
+        /* 2. TEXT COLOR: dark gray / black → light
+           Only patch achromatic/near-achromatic darks (all channels < 115).
+           Saturated colours (green, red, gold) are kept — they have at
+           least one channel well above the others. */
+        var col = el.style.color;
+        if (col && col!=='' && col!=='transparent' && col!=='inherit') {{
+          var cc = _dmParseRgb(col);
+          if (cc) {{
+            var mx=Math.max(cc[0],cc[1],cc[2]);
+            var mn=Math.min(cc[0],cc[1],cc[2]);
+            /* near-achromatic dark: max < 115 AND saturation (max-min) < 40 */
+            if (mx < 115 && (mx-mn) < 40) {{
               el.setAttribute('data-dm-col', col);
-              el.style.setProperty('color', '#e8e9ed', 'important');
+              var light = mx < 50 ? '#e8e9ed' : '#b8bec8';
+              el.style.setProperty('color', light, 'important');
             }}
+          }}
+        }}
+
+        /* 3. BORDER COLOR: near-white → Purdue gold (subtle) */
+        var brd = el.style.borderColor ||
+                  el.style.borderTopColor || el.style.borderRightColor ||
+                  el.style.borderBottomColor || el.style.borderLeftColor;
+        if (brd && brd!=='' && brd!=='transparent') {{
+          var bv = _dmParseRgb(brd);
+          if (bv && bv[0]>200 && bv[1]>195 && bv[2]>190) {{
+            el.setAttribute('data-dm-brd', brd);
+            /* use a muted gold for general borders, bright gold for accent */
+            var isAccent = (el.style.borderLeftWidth==='3px'||el.style.borderLeftWidth==='4px'
+                           ||el.style.borderTopWidth==='2px'||el.style.borderTopWidth==='3px');
+            var goldBrd = isAccent ? '#CFB991' : 'rgba(207,185,145,0.35)';
+            ['borderColor','borderTopColor','borderRightColor',
+             'borderBottomColor','borderLeftColor'].forEach(function(p) {{
+              if (el.style[p]) el.style.setProperty(
+                p.replace(/([A-Z])/g,function(c){{return '-'+c.toLowerCase();}}),
+                goldBrd, 'important');
+            }});
           }}
         }}
       }});
     }} else {{
-      pDoc.querySelectorAll('[data-dm-bg]').forEach(function(el) {{
-        el.style.background = el.getAttribute('data-dm-bg');
-        el.removeAttribute('data-dm-bg');
-      }});
-      pDoc.querySelectorAll('[data-dm-col]').forEach(function(el) {{
-        el.style.color = el.getAttribute('data-dm-col');
-        el.removeAttribute('data-dm-col');
+      ['data-dm-bg','data-dm-col','data-dm-brd'].forEach(function(attr) {{
+        pDoc.querySelectorAll('['+attr+']').forEach(function(el) {{
+          var orig = el.getAttribute(attr);
+          if (attr==='data-dm-bg')  el.style.background  = orig;
+          if (attr==='data-dm-col') el.style.color        = orig;
+          if (attr==='data-dm-brd') el.style.borderColor  = orig;
+          el.removeAttribute(attr);
+        }});
       }});
     }}
   }}
