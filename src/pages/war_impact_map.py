@@ -657,6 +657,115 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         "because the strait carries the bulk of their crude imports.",
     )
 
+    with st.expander("Technical Scoring Methodology", expanded=False):
+        st.markdown(
+            """
+**Model class:** Structured Expert Judgment (SEJ) composite index — not the output of a
+statistical model or machine learning pipeline. Scores are expert-calibrated on a 0–100
+ordinal-interval scale, anchored at known extremes and validated against observed market
+reactions to each conflict.
+
+---
+
+#### Scoring Formula (per conflict, per country)
+
+Each country *i* receives a conflict-specific score *S_c(i)* computed as a weighted sum
+of five sub-scores, each independently assessed on [0, 100]:
+
+```
+S_c(i) = w1·P(i) + w2·E(i) + w3·T(i) + w4·R(i) + w5·A(i)
+```
+
+| Symbol | Dimension | Weight (approx.) | Measurement basis |
+|--------|-----------|-------------------|-------------------|
+| P(i) | **Geographic Proximity** | ~30 % | Geodesic distance from conflict epicentre; border states score ≥ 80. Score decays non-linearly: ~−15 pts per degree of separation for adjacent states, flattening to a floor of ~5 beyond 5,000 km. |
+| E(i) | **Energy Dependency** | ~25 % | Share of oil + gas + LNG imports transiting disrupted corridors or sourced from conflict-adjacent exporters. Calibrated against IEA bilateral trade matrices; Russia-gas reliance (EU states) and Gulf crude reliance (East Asia) are primary inputs. |
+| T(i) | **Trade Route Exposure** | ~20 % | Fraction of annual merchandise trade value transiting threatened chokepoints (Black Sea, Suez/Red Sea, Strait of Hormuz). Proxied from UNCTAD maritime freight statistics and Lloyd's voyage data. |
+| R(i) | **Equity-Market Correlation** | ~15 % | 252-day rolling Pearson correlation of the domestic equity index with a conflict commodity basket (crude oil, natural gas, wheat), averaged over the 12 months preceding conflict onset, rescaled linearly from [−1, 1] → [0, 100]. |
+| A(i) | **Alliance & Sanctions Exposure** | ~10 % | Ordinal measure: NATO Article 5 obligation (max weight), EU sanctions participant, UN resolution co-sponsor, diplomatic alignment with a conflict party. Scored on a 0/25/50/75/100 step scale. |
+
+> **Note on weights:** Weights are conflict-specific (see table below) and do not sum to uniform
+> proportions across conflicts. The Ukraine War up-weights P and E; the Iran/Hormuz scenario
+> up-weights T and E for energy-import-dependent economies.
+
+---
+
+#### Conflict-Specific Weight Adjustments
+
+| Conflict | P | E | T | R | A |
+|----------|---|---|---|---|---|
+| Russia-Ukraine War | **35 %** | **30 %** | 15 % | 10 % | 10 % |
+| Israel-Hamas War | 20 % | 15 % | **30 %** | **20 %** | 15 % |
+| Iran / Hormuz Crisis | 15 % | **30 %** | **35 %** | 15 % | 5 % |
+
+---
+
+#### Composite Score and Aggregation
+
+The map displays a single **composite score** per country, defined as the worst-case
+(maximum) conflict score across all three tracked wars:
+
+```
+Composite(i) = max { S_Ukraine(i),  S_Hamas(i),  S_Hormuz(i) }
+```
+
+A max-aggregator is used rather than a sum or average because the map is intended to
+represent *peak risk exposure*: a country with a high score under any single conflict
+faces a material equity-market repricing event regardless of its scores under the other
+two. Summing would double-count unrelated risk channels; averaging would understate
+the dominant exposure.
+
+---
+
+#### Anchor Calibration
+
+Scores are calibrated top-down from two fixed anchors:
+
+- **Score = 100** — Direct conflict party on home soil (Ukraine, Israel/Palestine, Iran).
+  By definition these face maximal exposure on every dimension.
+- **Score = 0** — No measurable direct or indirect exposure via any of the five channels.
+
+All other scores are assigned by triangulating from these anchors, using the factor
+weights above and cross-checked against:
+1. Observed equity-market drawdowns at conflict onset (e.g., DAX −4 % on Feb 24 2022;
+   TA-35 −8 % on Oct 7 2023).
+2. Published IEA / World Bank energy-import dependency ratios.
+3. IMF Direction of Trade Statistics for trade-route exposure fractions.
+
+---
+
+#### Score Tiers and Risk Interpretation
+
+| Tier | Score range | Equity-market interpretation |
+|------|-------------|------------------------------|
+| **Crisis** | 90 – 100 | Active military engagement; equity circuit-breaker risk; index-level VaR likely to widen by ≥ 3× in an escalation scenario. |
+| **High** | 75 – 89 | Structural exposure via energy supply or border security; sustained risk-premium elevation; equity beta to conflict commodities > 0.5. |
+| **Elevated** | 50 – 74 | Meaningful trade-route or energy-import risk; equity correlation with conflict commodities historically > 0.3; potential for 5–15 % sector-level drawdowns. |
+| **Moderate** | 25 – 49 | Secondary exposure via commodity-price channel or regional contagion; index-level impact likely < 5 % in a moderate escalation scenario. |
+| **Low** | 1 – 24 | Tertiary exposure only (global risk-off sentiment, USD strength, commodity inflation pass-through); limited direct equity repricing expected. |
+| **No exposure** | 0 | No scored exposure across all five dimensions for any tracked conflict. |
+
+---
+
+#### Limitations and Caveats
+
+- **Static calibration.** Scores reflect the geopolitical configuration at the time of
+  the last model update. They are not dynamically recalculated from live market data;
+  sudden escalations or ceasefires will not be reflected until the scores are manually revised.
+- **Expert subjectivity.** The weight table above represents informed judgment, not
+  econometrically estimated coefficients. Reasonable analysts may assign different weights
+  for the same conflict.
+- **Correlation dimension uses pre-conflict history.** The R(i) sub-score is computed on
+  pre-onset returns. Regime changes during a conflict may alter the realized correlation
+  structure; the score does not adapt to this.
+- **Country-level aggregation masks sector heterogeneity.** An energy-exporting country
+  (e.g., Norway, Canada) may score moderate on the composite while domestic energy-sector
+  equities actually benefit from supply-driven price spikes. The map scores the *broad
+  equity index*, not individual sectors.
+            """,
+            unsafe_allow_html=False,
+        )
+
     with st.spinner("Loading equity data…"):
         eq_r, _ = load_returns(start, end)
 
