@@ -18,7 +18,7 @@ from datetime import date
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
 from src.data.loader import load_returns
 from src.ui.shared import (
-    _chart, _page_intro, _section_note,
+    _chart, _page_intro, _section_note, _definition_block,
     _page_conclusion, _page_footer,
 )
 
@@ -621,6 +621,40 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         "Israel-Hamas & Iran Escalation (Oct 2023) · "
         "Iran/Hormuz Crisis (Jun 2025) - U.S.-Israel strikes on Iranian facilities; "
         "Strait of Hormuz closure threat disrupts ~20% of global oil supply."
+    )
+
+    _definition_block(
+        "How the Impact Score is Determined",
+        "Each country receives an independent score (0–100) for each of the three tracked conflicts. "
+        "The <b>composite score</b> shown on the map is the worst-case value across all three - "
+        "i.e. <code>max(Ukraine score, Israel-Hamas score, Iran/Hormuz score)</code>. "
+        "Scores are constructed from five factors:<br><br>"
+
+        "<b>1. Geographic proximity</b> - Direct border exposure, contiguous-state risk, "
+        "and displacement or refugee-flow pressure on neighbouring economies.<br>"
+
+        "<b>2. Energy dependency</b> - Share of oil, gas, and LNG imports that transit "
+        "disrupted supply corridors or originate from conflict-adjacent exporters. "
+        "Countries with high Russian-gas or Middle-East-oil reliance score higher.<br>"
+
+        "<b>3. Trade route exposure</b> - Vulnerability to blocked or threatened shipping lanes. "
+        "Ukraine War elevates Black Sea exposure; Israel-Hamas escalation threatens Suez/Red Sea; "
+        "Iran/Hormuz Crisis puts ~20 % of global oil and 25 % of global LNG at risk.<br>"
+
+        "<b>4. Equity-market correlation</b> - Historical co-movement of the domestic index "
+        "with conflict-sensitive commodities (crude oil, natural gas, wheat). "
+        "Markets that historically reprice sharply when these commodities spike score higher.<br>"
+
+        "<b>5. Alliance and sanctions exposure</b> - NATO/EU commitments requiring fiscal "
+        "or military contributions, active sanctions regimes affecting trade flows, "
+        "and diplomatic alignment with conflict parties.<br><br>"
+
+        "<b>Conflict-specific emphasis:</b> Ukraine War scores weight energy dependency and "
+        "geographic proximity most heavily (especially EU states reliant on Russian gas). "
+        "Israel-Hamas scores weight regional spillover, Red Sea shipping disruption, and "
+        "Muslim-world political risk premiums. Iran/Hormuz scores weight Strait of Hormuz "
+        "oil-transit dependency - Japan, South Korea, India, and the Gulf states score highest "
+        "because the strait carries the bulk of their crude imports.",
     )
 
     with st.spinner("Loading equity data…"):
