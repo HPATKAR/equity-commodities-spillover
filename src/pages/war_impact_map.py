@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 from datetime import date
@@ -606,56 +605,193 @@ def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
 
 # ── Page ──────────────────────────────────────────────────────────────────────
 
+_F = "font-family:'DM Sans',sans-serif;"
+
 def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
+
+    # ── Page header ───────────────────────────────────────────────────────────
     st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.3rem">Geopolitical War Impact Map</h1>',
+        f'<div style="{_F}display:flex;align-items:baseline;justify-content:space-between;'
+        f'margin-bottom:0.05rem">'
+        f'<h1 style="font-size:1.25rem;font-weight:700;margin:0">Geopolitical War Impact Map</h1>'
+        f'<span style="font-size:0.58rem;font-weight:600;letter-spacing:0.12em;'
+        f'text-transform:uppercase;color:#8E6F3E">Live conflict risk · Composite 0–100 index</span>'
+        f'</div>',
         unsafe_allow_html=True,
     )
-    _page_intro(
-        "Countries shaded cream → deep-red by composite war-impact score (0–100), "
-        "combining geographic proximity, energy/gas dependency, trade-route exposure, "
-        "and equity-market correlation to conflict assets. "
-        "Hover any country for the breakdown and war-period equity returns. "
-        "Active conflicts: Russia-Ukraine War (Feb 2022) · "
-        "Israel-Hamas & Iran Escalation (Oct 2023) · "
-        "Iran/Hormuz Crisis (Jun 2025) - U.S.-Israel strikes on Iranian facilities; "
-        "Strait of Hormuz closure threat disrupts ~20% of global oil supply."
+    st.markdown(
+        f'<p style="{_F}font-size:0.70rem;color:#555;margin:0 0 0.8rem;line-height:1.6">'
+        f'Composite war-impact score shaded cream → deep-crimson across 150+ countries. '
+        f'Score = worst-case across three active conflicts, integrating geographic proximity, '
+        f'energy dependency, trade-route exposure, equity correlation, and alliance obligations. '
+        f'Hover any country on the globe for a full breakdown and war-period equity returns.</p>',
+        unsafe_allow_html=True,
     )
 
-    _definition_block(
-        "How the Impact Score is Determined",
-        "Each country receives an independent score (0–100) for each of the three tracked conflicts. "
-        "The <b>composite score</b> shown on the map is the worst-case value across all three - "
-        "i.e. <code>max(Ukraine score, Israel-Hamas score, Iran/Hormuz score)</code>. "
-        "Scores are constructed from five factors:<br><br>"
+    with st.spinner("Loading equity data…"):
+        eq_r, _ = load_returns(start, end)
 
-        "<b>1. Geographic proximity</b> - Direct border exposure, contiguous-state risk, "
-        "and displacement or refugee-flow pressure on neighbouring economies.<br>"
+    war_rets = _war_period_returns(eq_r) if not eq_r.empty else {}
+    df = _build_df(war_rets)
 
-        "<b>2. Energy dependency</b> - Share of oil, gas, and LNG imports that transit "
-        "disrupted supply corridors or originate from conflict-adjacent exporters. "
-        "Countries with high Russian-gas or Middle-East-oil reliance score higher.<br>"
+    today = date.today()
+    active = [ev for ev in GEOPOLITICAL_EVENTS
+              if ev["category"] == "Geopolitical" and ev["end"] >= today]
 
-        "<b>3. Trade route exposure</b> - Vulnerability to blocked or threatened shipping lanes. "
-        "Ukraine War elevates Black Sea exposure; Israel-Hamas escalation threatens Suez/Red Sea; "
-        "Iran/Hormuz Crisis puts ~20 % of global oil and 25 % of global LNG at risk.<br>"
-
-        "<b>4. Equity-market correlation</b> - Historical co-movement of the domestic index "
-        "with conflict-sensitive commodities (crude oil, natural gas, wheat). "
-        "Markets that historically reprice sharply when these commodities spike score higher.<br>"
-
-        "<b>5. Alliance and sanctions exposure</b> - NATO/EU commitments requiring fiscal "
-        "or military contributions, active sanctions regimes affecting trade flows, "
-        "and diplomatic alignment with conflict parties.<br><br>"
-
-        "<b>Conflict-specific emphasis:</b> Ukraine War scores weight energy dependency and "
-        "geographic proximity most heavily (especially EU states reliant on Russian gas). "
-        "Israel-Hamas scores weight regional spillover, Red Sea shipping disruption, and "
-        "Muslim-world political risk premiums. Iran/Hormuz scores weight Strait of Hormuz "
-        "oil-transit dependency - Japan, South Korea, India, and the Gulf states score highest "
-        "because the strait carries the bulk of their crude imports.",
+    # ── War filter (above the hero) ───────────────────────────────────────────
+    st.markdown(
+        f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+        f'text-transform:uppercase;color:#8E6F3E;margin:0 0 4px">Filter by conflict</p>',
+        unsafe_allow_html=True,
     )
+    war_filter = st.radio(
+        "Filter by conflict",
+        ["Combined (max)", "Ukraine War only", "Israel-Hamas only", "Iran/Hormuz only"],
+        key="war_filter_map",
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    if war_filter == "Ukraine War only":
+        score_col = "ukraine_score"
+    elif war_filter == "Israel-Hamas only":
+        score_col = "hamas_score"
+    elif war_filter == "Iran/Hormuz only":
+        score_col = "iran_score"
+    else:
+        score_col = "score"
+
+    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
+
+    # ── Hero: left panel + globe ──────────────────────────────────────────────
+    left_col, globe_col = st.columns([1, 2.2])
+
+    with left_col:
+        # Active conflict status cards
+        st.markdown(
+            f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 8px">Active Conflicts</p>',
+            unsafe_allow_html=True,
+        )
+        for ev in active:
+            days = (today - ev["start"]).days
+            st.markdown(
+                f'<div style="border-left:3px solid {ev["color"]};padding:0.55rem 0.8rem;'
+                f'background:#fafaf8;border-radius:0 4px 4px 0;margin-bottom:8px">'
+                f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.11em;'
+                f'text-transform:uppercase;color:{ev["color"]}">{ev["category"]}</div>'
+                f'<div style="{_F}font-size:0.80rem;font-weight:700;color:#1a1a1a;'
+                f'margin-top:1px;line-height:1.3">{ev["name"]}</div>'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;'
+                f'color:#666;margin-top:3px">'
+                f'{ev["start"].strftime("%d %b %Y")} &nbsp;&middot;&nbsp; {days:,}d elapsed</div>'
+                f'<div style="{_F}font-size:0.62rem;color:#444;margin-top:5px;line-height:1.55">'
+                f'{ev["description"][:130]}{"…" if len(ev["description"]) > 130 else ""}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+                    unsafe_allow_html=True)
+
+        # Impact scale legend
+        st.markdown(
+            f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 6px">Impact Scale</p>',
+            unsafe_allow_html=True,
+        )
+        for c, lbl in [
+            ("#f5f2ee", "No exposure  (0)"),
+            ("#fde0c8", "Low          (10–25)"),
+            ("#f5a870", "Moderate     (25–50)"),
+            ("#e05c3a", "Elevated     (50–75)"),
+            ("#b82020", "High         (75–90)"),
+            ("#7a0e0e", "Crisis       (90–100)"),
+        ]:
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0">'
+                f'<div style="width:11px;height:11px;background:{c};border-radius:2px;'
+                f'flex-shrink:0;{"border:1px solid #ccc" if c == "#f5f2ee" else ""}"></div>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;'
+                f'color:#444">{lbl}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+                    unsafe_allow_html=True)
+
+        # Score methodology note
+        st.markdown(
+            f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 5px">Composite Score</p>'
+            f'<p style="{_F}font-size:0.64rem;color:#555;line-height:1.6;margin:0">'
+            f'<code style="font-size:0.62rem;background:#f0ede8;padding:1px 4px;'
+            f'border-radius:2px">max(Ukraine, Hamas, Hormuz)</code> — the worst-case '
+            f'conflict score across all three tracked wars. Five factors: geographic '
+            f'proximity, energy dependency, trade-route exposure, equity-market '
+            f'correlation, and alliance obligations.</p>',
+            unsafe_allow_html=True,
+        )
+
+    with globe_col:
+        # ── Hover text construction ───────────────────────────────────────────
+        hometurf_iso = {"UKR", "ISR", "PSE", "LBN", "YEM", "SYR", "IRN"}
+        hover_texts = []
+        for _, row in df.iterrows():
+            s = int(row[score_col])
+            if s == 0:
+                hover_texts.append(f"<b>{row['country']}</b><br>No significant direct exposure")
+                continue
+            lv = _impact_label(s)
+            lv_color = (
+                "#7a0e0e" if s >= 75 else
+                "#b82020" if s >= 50 else
+                "#e05c3a" if s >= 25 else
+                "#888888"
+            )
+            hw = ("<br><b style='color:#c0392b'>⚔ Active war on home soil</b>"
+                  if row["iso3"] in hometurf_iso else "")
+            tip = (
+                f"<b>{row['country']}</b>{hw}<br>"
+                f"<span style='color:{lv_color}'><b>{s}/100 - {lv}</b></span><br><br>"
+                f"Ukraine War: {int(row['ukraine_score'])}/100<br>"
+                f"Israel-Hamas: {int(row['hamas_score'])}/100<br>"
+                f"Iran/Hormuz: {int(row['iran_score'])}/100"
+            )
+            if row["indices"] != "-":
+                tip += f"<br><br><b>Tracked index:</b> {row['indices']}"
+            if row["ret_text"]:
+                tip += f"<br><b>War-period returns:</b><br>{row['ret_text']}"
+            hover_texts.append(tip)
+        df["hover"] = hover_texts
+
+        _render_globe_component(df, score_col)
+
+    st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
+
+    # ── Methodology expanders ─────────────────────────────────────────────────
+    with st.expander("Score Methodology - Plain English", expanded=False):
+        _definition_block(
+            "How the Impact Score is Determined",
+            "Each country receives an independent score (0–100) for each of the three tracked conflicts. "
+            "The <b>composite score</b> shown on the globe is the worst-case value across all three - "
+            "i.e. <code>max(Ukraine score, Israel-Hamas score, Iran/Hormuz score)</code>. "
+            "Scores are constructed from five factors:<br><br>"
+            "<b>1. Geographic proximity</b> - Direct border exposure, contiguous-state risk, "
+            "and displacement or refugee-flow pressure on neighbouring economies.<br>"
+            "<b>2. Energy dependency</b> - Share of oil, gas, and LNG imports that transit "
+            "disrupted supply corridors or originate from conflict-adjacent exporters.<br>"
+            "<b>3. Trade route exposure</b> - Vulnerability to blocked or threatened shipping lanes "
+            "(Black Sea, Suez/Red Sea, Strait of Hormuz).<br>"
+            "<b>4. Equity-market correlation</b> - Historical co-movement of the domestic index "
+            "with conflict-sensitive commodities (crude oil, natural gas, wheat).<br>"
+            "<b>5. Alliance and sanctions exposure</b> - NATO/EU commitments, active sanctions "
+            "regimes, and diplomatic alignment with conflict parties.<br><br>"
+            "<b>Conflict-specific emphasis:</b> Ukraine War weights energy dependency and geographic "
+            "proximity most heavily. Israel-Hamas weights Red Sea shipping disruption and regional "
+            "spillover. Iran/Hormuz weights Strait of Hormuz crude-transit dependency.",
+        )
 
     with st.expander("Technical Scoring Methodology", expanded=False):
         st.markdown(
@@ -676,327 +812,77 @@ of five sub-scores, each independently assessed on [0, 100]:
 S_c(i) = w1·P(i) + w2·E(i) + w3·T(i) + w4·R(i) + w5·A(i)
 ```
 
-| Symbol | Dimension | Weight (approx.) | Measurement basis |
-|--------|-----------|-------------------|-------------------|
-| P(i) | **Geographic Proximity** | ~30 % | Geodesic distance from conflict epicentre; border states score ≥ 80. Score decays non-linearly: ~−15 pts per degree of separation for adjacent states, flattening to a floor of ~5 beyond 5,000 km. |
-| E(i) | **Energy Dependency** | ~25 % | Share of oil + gas + LNG imports transiting disrupted corridors or sourced from conflict-adjacent exporters. Calibrated against IEA bilateral trade matrices; Russia-gas reliance (EU states) and Gulf crude reliance (East Asia) are primary inputs. |
-| T(i) | **Trade Route Exposure** | ~20 % | Fraction of annual merchandise trade value transiting threatened chokepoints (Black Sea, Suez/Red Sea, Strait of Hormuz). Proxied from UNCTAD maritime freight statistics and Lloyd's voyage data. |
-| R(i) | **Equity-Market Correlation** | ~15 % | 252-day rolling Pearson correlation of the domestic equity index with a conflict commodity basket (crude oil, natural gas, wheat), averaged over the 12 months preceding conflict onset, rescaled linearly from [−1, 1] → [0, 100]. |
-| A(i) | **Alliance & Sanctions Exposure** | ~10 % | Ordinal measure: NATO Article 5 obligation (max weight), EU sanctions participant, UN resolution co-sponsor, diplomatic alignment with a conflict party. Scored on a 0/25/50/75/100 step scale. |
+| Symbol | Dimension | Weight range | Measurement basis |
+|--------|-----------|--------------|-------------------|
+| P(i) | **Geographic Proximity** | 18 – 33 % | Geodesic distance from conflict epicentre; border states score ≥ 80. Decays ~−15 pts per degree of separation for adjacent states, flattening to a floor of ~5 beyond 5,000 km. For Iran/Hormuz, P also captures *military projection proximity* (naval basing, carrier group presence). |
+| E(i) | **Energy Dependency** | 18 – 32 % | Share of oil, gas, and LNG imports transiting disrupted corridors or sourced from conflict-adjacent exporters. Calibrated against IEA bilateral trade matrices; Russian-gas reliance (EU states) and Gulf-crude reliance (East Asia) are primary inputs. |
+| T(i) | **Trade Route Exposure** | 11 – 28 % | Fraction of annual merchandise trade value transiting threatened chokepoints (Black Sea, Suez/Red Sea, Strait of Hormuz). Proxied from UNCTAD maritime freight statistics and Lloyd's voyage data. For Iran/Hormuz, T is intentionally down-weighted — ~85 % of Hormuz traffic is energy already captured by E; non-energy cargo represents only ~15 % of Hormuz transit. |
+| R(i) | **Equity-Market Correlation** | 14 – 17 % | 252-day rolling Pearson correlation of the domestic equity index with a conflict commodity basket (crude oil, natural gas, wheat), averaged over the 12 months preceding conflict onset, rescaled linearly from [−1, 1] → [0, 100]. |
+| A(i) | **Alliance & Sanctions Exposure** | 7 – 15 % | Ordinal measure: NATO Article 5 obligation (max weight), EU sanctions participation, UN resolution co-sponsorship, formal alignment with a conflict party. Scored on a 0/25/50/75/100 step scale. Also captures direct military engagement (USA in Iran/Hormuz) and fiscal obligations (Germany's Zeitenwende, Baltic defense build-up). |
 
-> **Note on weights:** Weights are conflict-specific (see table below) and do not sum to uniform
-> proportions across conflicts. The Ukraine War up-weights P and E; the Iran/Hormuz scenario
-> up-weights T and E for energy-import-dependent economies.
+> **Note:** Weights are conflict-specific (table below). Each row sums to 100 %. Validated by
+> checking formula output against diagnostic country pairs (Germany/Poland/UK for Ukraine;
+> Egypt/Singapore for Israel-Hamas; Japan/Oman for Iran/Hormuz) to within ± 5 pts.
 
 ---
 
-#### Conflict-Specific Weight Adjustments
+#### Conflict-Specific Weight Assignments
 
-| Conflict | P | E | T | R | A |
-|----------|---|---|---|---|---|
-| Russia-Ukraine War | **35 %** | **30 %** | 15 % | 10 % | 10 % |
-| Israel-Hamas War | 20 % | 15 % | **30 %** | **20 %** | 15 % |
-| Iran / Hormuz Crisis | 15 % | **30 %** | **35 %** | 15 % | 5 % |
+| Conflict | P | E | T | R | A | Primary rationale |
+|----------|---|---|---|---|---|---|
+| Russia-Ukraine War | **33 %** | **30 %** | 11 % | 14 % | 12 % | P and E dominate (border exposure + Russian-gas lock-in). R raised from prior 10 % — DAX–gas correlation was the dominant market narrative throughout 2022. A raised from 10 % to reflect NATO fiscal obligations and EU sanctions depth. T reduced: Black Sea grain corridor is real but secondary to the energy channel. |
+| Israel-Hamas War | 22 % | 18 % | **28 %** | 17 % | 15 % | T is the lead factor (Suez/Red Sea shipping-cost spike was the primary global transmission mechanism). P raised slightly — Jordan and Egypt border analysis shows regional proximity is more discriminating than 20 % implied. E raised from 15 %: Middle East oil import dependency for South/Southeast Asia is a genuine scored channel (Pakistan 28, India 25, Indonesia 22). R moderated: global equity correlation to this conflict is less systematic than energy-channel conflicts. |
+| Iran / Hormuz Crisis | 18 % | **32 %** | 28 % | 15 % | 7 % | E is dominant: Hormuz crude dependency is the single most discriminating variable (Japan 68, Korea 65, India 62 vs. Canada 15, Brazil 12). T reduced from prior 35 % to avoid double-counting with E. P raised from 15 % — Gulf chokepoint states (Oman, Qatar, UAE) derive exposure from literal proximity to the strait. A raised from 5 %: USA's direct military role (carrier group, strike operations) cannot be adequately represented at 5 %. |
 
 ---
 
 #### Composite Score and Aggregation
 
-The map displays a single **composite score** per country, defined as the worst-case
-(maximum) conflict score across all three tracked wars:
-
 ```
 Composite(i) = max { S_Ukraine(i),  S_Hamas(i),  S_Hormuz(i) }
 ```
 
-A max-aggregator is used rather than a sum or average because the map is intended to
-represent *peak risk exposure*: a country with a high score under any single conflict
-faces a material equity-market repricing event regardless of its scores under the other
-two. Summing would double-count unrelated risk channels; averaging would understate
-the dominant exposure.
+A max-aggregator is preferred over sum or average because the map represents *peak risk
+exposure*. A country with a high score under any single conflict faces a material equity
+repricing event regardless of its scores under the others. Summing would double-count
+unrelated risk channels; averaging would understate the dominant exposure.
 
 ---
 
 #### Anchor Calibration
 
-Scores are calibrated top-down from two fixed anchors:
-
 - **Score = 100** — Direct conflict party on home soil (Ukraine, Israel/Palestine, Iran).
-  By definition these face maximal exposure on every dimension.
-- **Score = 0** — No measurable direct or indirect exposure via any of the five channels.
+- **Score = 0** — No measurable exposure via any of the five channels.
 
-All other scores are assigned by triangulating from these anchors, using the factor
-weights above and cross-checked against:
-1. Observed equity-market drawdowns at conflict onset (e.g., DAX −4 % on Feb 24 2022;
-   TA-35 −8 % on Oct 7 2023).
-2. Published IEA / World Bank energy-import dependency ratios.
+All intermediate scores triangulate from these anchors, cross-checked against:
+1. Observed equity drawdowns at conflict onset (DAX −4 % on 24 Feb 2022; TA-35 −8 % on 7 Oct 2023).
+2. IEA bilateral energy-import dependency ratios.
 3. IMF Direction of Trade Statistics for trade-route exposure fractions.
 
 ---
 
 #### Score Tiers and Risk Interpretation
 
-| Tier | Score range | Equity-market interpretation |
-|------|-------------|------------------------------|
-| **Crisis** | 90 – 100 | Active military engagement; equity circuit-breaker risk; index-level VaR likely to widen by ≥ 3× in an escalation scenario. |
-| **High** | 75 – 89 | Structural exposure via energy supply or border security; sustained risk-premium elevation; equity beta to conflict commodities > 0.5. |
-| **Elevated** | 50 – 74 | Meaningful trade-route or energy-import risk; equity correlation with conflict commodities historically > 0.3; potential for 5–15 % sector-level drawdowns. |
-| **Moderate** | 25 – 49 | Secondary exposure via commodity-price channel or regional contagion; index-level impact likely < 5 % in a moderate escalation scenario. |
-| **Low** | 1 – 24 | Tertiary exposure only (global risk-off sentiment, USD strength, commodity inflation pass-through); limited direct equity repricing expected. |
-| **No exposure** | 0 | No scored exposure across all five dimensions for any tracked conflict. |
+| Tier | Range | Equity-market interpretation |
+|------|-------|------------------------------|
+| **Crisis** | 90–100 | Active military engagement; circuit-breaker risk; index VaR widens ≥ 3× in escalation. |
+| **High** | 75–89 | Structural energy or border exposure; sustained risk-premium elevation; equity beta to conflict commodities > 0.5. |
+| **Elevated** | 50–74 | Meaningful trade-route or energy-import risk; commodity correlation historically > 0.3; 5–15 % sector drawdowns likely. |
+| **Moderate** | 25–49 | Secondary exposure via commodity-price or regional contagion; index-level impact < 5 % in moderate escalation. |
+| **Low** | 1–24 | Tertiary exposure only (risk-off sentiment, USD strength, commodity inflation pass-through). |
+| **None** | 0 | No scored exposure across all five dimensions for any tracked conflict. |
 
 ---
 
 #### Limitations and Caveats
 
-- **Static calibration.** Scores reflect the geopolitical configuration at the time of
-  the last model update. They are not dynamically recalculated from live market data;
-  sudden escalations or ceasefires will not be reflected until the scores are manually revised.
-- **Expert subjectivity.** The weight table above represents informed judgment, not
-  econometrically estimated coefficients. Reasonable analysts may assign different weights
-  for the same conflict.
-- **Correlation dimension uses pre-conflict history.** The R(i) sub-score is computed on
-  pre-onset returns. Regime changes during a conflict may alter the realized correlation
-  structure; the score does not adapt to this.
-- **Country-level aggregation masks sector heterogeneity.** An energy-exporting country
-  (e.g., Norway, Canada) may score moderate on the composite while domestic energy-sector
-  equities actually benefit from supply-driven price spikes. The map scores the *broad
-  equity index*, not individual sectors.
+- **Static calibration.** Scores reflect the configuration at the last model update; escalations or ceasefires are not auto-reflected.
+- **Expert subjectivity.** The weight table represents informed judgment, not econometrically estimated coefficients.
+- **Pre-conflict correlation window.** R(i) uses pre-onset returns; regime changes during the conflict may alter the realized correlation structure.
+- **Country-level aggregation.** An energy exporter (Norway, Canada) may score moderate on the composite while domestic energy-sector equities actually benefit from supply-driven price spikes. The map scores the broad index, not sectors.
             """,
             unsafe_allow_html=False,
         )
-
-    with st.spinner("Loading equity data…"):
-        eq_r, _ = load_returns(start, end)
-
-    war_rets = _war_period_returns(eq_r) if not eq_r.empty else {}
-    df = _build_df(war_rets)
-
-    # ── Active conflict cards ─────────────────────────────────────────────────
-    st.markdown("---")
-    today = date.today()
-    active = [ev for ev in GEOPOLITICAL_EVENTS
-              if ev["category"] == "Geopolitical" and ev["end"] >= today]
-    if active:
-        cols = st.columns(len(active))
-        for col, ev in zip(cols, active):
-            days = (today - ev["start"]).days
-            col.markdown(
-                f'<div style="border-left:4px solid {ev["color"]};padding:0.6rem 0.9rem;'
-                f'background:#fafaf8;border-radius:0 4px 4px 0">'
-                f'<div style="font-size:0.54rem;font-weight:700;letter-spacing:0.12em;'
-                f'text-transform:uppercase;color:{ev["color"]}">Active Conflict</div>'
-                f'<div style="font-size:0.82rem;font-weight:700;color:#1a1a1a;margin-top:2px">'
-                f'{ev["name"]}</div>'
-                f'<div style="font-size:0.62rem;color:#666;margin-top:3px">'
-                f'Since {ev["start"].strftime("%b %d, %Y")} &nbsp;·&nbsp; <b>{days:,} days</b></div>'
-                f'<div style="font-size:0.62rem;color:#444;margin-top:4px;line-height:1.5">'
-                f'{ev["description"][:120]}…</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── Controls ──────────────────────────────────────────────────────────────
-    c1, c2, _ = st.columns([2, 2, 4])
-    war_filter = c1.radio(
-        "Show impact for",
-        ["Combined (max)", "Ukraine War only", "Israel-Hamas only", "Iran/Hormuz only"],
-        key="war_filter_map",
-    )
-    view_mode = c2.radio(
-        "Map style",
-        ["Flat Map", "3D Globe"],
-        key="map_view_mode",
-    )
-
-    if war_filter == "Ukraine War only":
-        score_col, title_sfx = "ukraine_score", "- Russia-Ukraine War"
-    elif war_filter == "Israel-Hamas only":
-        score_col, title_sfx = "hamas_score", "- Israel-Hamas War"
-    elif war_filter == "Iran/Hormuz only":
-        score_col, title_sfx = "iran_score", "- Iran/Hormuz Crisis"
-    else:
-        score_col, title_sfx = "score", "- Combined (worst of all conflicts)"
-
-    is_globe = (view_mode == "3D Globe")
-
-    # ── Hover text ────────────────────────────────────────────────────────────
-    hometurf_iso = {"UKR", "ISR", "PSE", "LBN", "YEM", "SYR", "IRN"}
-    hover_texts = []
-    for _, row in df.iterrows():
-        s = int(row[score_col])
-        if s == 0:
-            # Unscored country - minimal hover
-            hover_texts.append(f"<b>{row['country']}</b><br>No significant direct exposure")
-            continue
-        lv = _impact_label(s)
-        lv_color = (
-            "#7a0e0e" if s >= 75 else
-            "#b82020" if s >= 50 else
-            "#e05c3a" if s >= 25 else
-            "#888888"
-        )
-        hw = ("<br><b style='color:#c0392b'>⚔ Active war on home soil</b>"
-              if row["iso3"] in hometurf_iso else "")
-        tip = (
-            f"<b>{row['country']}</b>{hw}<br>"
-            f"<span style='color:{lv_color}'><b>{s}/100 - {lv}</b></span><br><br>"
-            f"Ukraine War: {int(row['ukraine_score'])}/100<br>"
-            f"Israel-Hamas: {int(row['hamas_score'])}/100<br>"
-            f"Iran/Hormuz: {int(row['iran_score'])}/100"
-        )
-        if row["indices"] != "-":
-            tip += f"<br><br><b>Tracked index:</b> {row['indices']}"
-        if row["ret_text"]:
-            tip += f"<br><b>War-period returns:</b><br>{row['ret_text']}"
-        hover_texts.append(tip)
-    df["hover"] = hover_texts
-
-    # ── Render map ────────────────────────────────────────────────────────────
-    if is_globe:
-        # WebGL Globe.GL component — smooth inertial physics
-        _render_globe_component(df, score_col)
-    else:
-        # Plotly flat map (Natural Earth projection)
-        fig = go.Figure()
-
-        fig.add_trace(go.Choropleth(
-            locations=df["iso3"],
-            locationmode="ISO-3",
-            z=df[score_col].astype(float),
-            text=df["hover"],
-            hovertemplate="%{text}<extra></extra>",
-            colorscale=_COLORSCALE,
-            zmin=0, zmax=100,
-            showscale=True,
-            colorbar=dict(
-                title=dict(
-                    text="Impact",
-                    font=dict(size=9, family="DM Sans, sans-serif", color="#333"),
-                ),
-                thickness=12, len=0.70,
-                tickvals=[0, 25, 50, 75, 100],
-                ticktext=["0", "25", "50", "75", "100"],
-                tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#444"),
-                outlinewidth=0,
-                bgcolor="rgba(0,0,0,0)",
-                x=1.01,
-            ),
-            marker_line_color="rgba(255,255,255,0.55)",
-            marker_line_width=0.4,
-        ))
-
-        # India disputed-territory hover markers (invisible dots, hover only)
-        fig.add_trace(go.Scattergeo(
-            lat=[t["lat"] for t in _INDIA_DISPUTED],
-            lon=[t["lon"] for t in _INDIA_DISPUTED],
-            mode="markers",
-            marker=dict(size=18, color="rgba(255,255,255,0.0)",
-                        line=dict(color="rgba(255,255,255,0.0)", width=0)),
-            customdata=[[t["name"], t["note"]] for t in _INDIA_DISPUTED],
-            hovertemplate=(
-                "<b>%{customdata[0]}</b><br>"
-                "<b>India</b><br>"
-                "<i>%{customdata[1]}</i><extra></extra>"
-            ),
-            showlegend=False,
-            hoverinfo="text",
-        ))
-
-        # Active war-zone markers (white X, red outline)
-        fig.add_trace(go.Scattergeo(
-            lat=[h["lat"] for h in _HOMETURF_WARS],
-            lon=[h["lon"] for h in _HOMETURF_WARS],
-            mode="markers",
-            marker=dict(
-                size=11,
-                color="#ffffff",
-                symbol="x",
-                line=dict(color="#c0392b", width=2.2),
-            ),
-            customdata=[[h["name"], h["war"], h["note"]] for h in _HOMETURF_WARS],
-            hovertemplate=(
-                "<b>%{customdata[0]}</b><br>"
-                "⚔ %{customdata[1]}<br>"
-                "<i>%{customdata[2]}</i><extra></extra>"
-            ),
-            name="⚔ Active War Zone",
-            showlegend=True,
-        ))
-
-        fig.update_layout(
-            uirevision="war_map_v3",
-            geo=dict(
-                projection=dict(type="natural earth"),
-                showland=False,
-                showocean=True,
-                oceancolor="#c4dcea",
-                showcoastlines=True,
-                coastlinecolor="rgba(100,90,80,0.40)",
-                coastlinewidth=0.5,
-                showcountries=True,
-                countrycolor="rgba(120,110,100,0.35)",
-                countrywidth=0.3,
-                showlakes=True,
-                lakecolor="#c4dcea",
-                showframe=False,
-                bgcolor="rgba(0,0,0,0)",
-                resolution=110,
-            ),
-            height=530,
-            margin=dict(l=0, r=80, t=40, b=0),
-            paper_bgcolor="#ffffff",
-            legend=dict(
-                x=0.01, y=0.05,
-                bgcolor="rgba(255,255,255,0.88)",
-                bordercolor="#E8E5E0",
-                borderwidth=1,
-                font=dict(size=9, family="DM Sans, sans-serif", color="#333"),
-            ),
-            title=dict(
-                text=f"Equity Market War Impact  {title_sfx}",
-                font=dict(size=11, family="DM Sans, sans-serif", color="#1a1a1a"),
-                x=0.01, y=0.98,
-            ),
-            modebar=dict(
-                bgcolor="rgba(0,0,0,0)",
-                color="#aaaaaa",
-                activecolor="#CFB991",
-                remove=["select2d", "lasso2d", "autoScale2d"],
-            ),
-        )
-
-        _chart(fig)
-
-    # Colour legend strip
-    st.markdown(
-        '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin:0.2rem 0 0.8rem">'
-        + "".join(
-            f'<span style="font-size:0.62rem;color:#444">'
-            f'<span style="display:inline-block;width:12px;height:12px;'
-            f'background:{c};border-radius:2px;vertical-align:middle;margin-right:4px"></span>'
-            f'{lbl}</span>'
-            for c, lbl in [
-                ("#f5f2ee", "No exposure"),
-                ("#fde0c8", "Low (10–25)"),
-                ("#f5a870", "Moderate (25–50)"),
-                ("#e05c3a", "Elevated (50–75)"),
-                ("#b82020", "High (75–90)"),
-                ("#7a0e0e", "Crisis (90–100)"),
-            ]
-        )
-        + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    # ── Tracked equity performance table ─────────────────────────────────────
-    st.markdown("---")
-    st.subheader("Tracked Equity Markets - War-Period Performance")
-    _section_note(
-        "Cumulative returns for each tracked equity index since each conflict's start date."
-    )
 
     tracked_rows = []
     for iso, indices in _COUNTRY_INDICES.items():
