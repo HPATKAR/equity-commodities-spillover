@@ -884,6 +884,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       _dmObsTimer = setTimeout(function() {{
         _dmRelayoutAll(true);
         _dmPatchInlineStyles(true);
+        _dmStyleDataframes(true);
       }}, 300);
     }});
     _dmObserver.observe(pDoc.body, {{ childList: true, subtree: true }});
@@ -974,6 +975,69 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     }}
   }}
 
+  /* ── Dataframe iframe injection ──────────────────────────────────────────
+     st.dataframe() renders inside a same-origin iframe.  CSS from the parent
+     document cannot cross that iframe boundary, so we inject a <style> tag
+     directly into each frame's document. Called after every relayout pass
+     and from the MutationObserver so newly-rendered tables get styled too. */
+  var DF_STYLE_ID = 'ec-df-dark';
+
+  var DF_DARK_CSS = [
+    'html,body{{background:#0f1117!important;color:#e8e9ed!important}}',
+    '.dvn-scroller,.dvn-scroll-inner,.clip-region{{background:#0f1117!important}}',
+    '[role="columnheader"],[role="rowheader"],.gdg-header,.gdg-group-header{{',
+    '  background:#1a1d27!important;color:#CFB991!important;border-color:#2a2d3a!important}}',
+    'table{{background:#0f1117!important;border-color:#2a2d3a!important}}',
+    'thead,thead tr,thead th{{background:#1a1d27!important;color:#CFB991!important;border-color:#2a2d3a!important}}',
+    'tbody tr{{background:#0f1117!important;color:#e8e9ed!important}}',
+    'tbody tr:nth-child(even){{background:#141720!important}}',
+    'tbody tr:hover{{background:#1e2130!important}}',
+    'td,th{{color:#e8e9ed!important;border-color:#2a2d3a!important}}',
+    '[data-testid="stFullScreenFrame"]{{background:#0f1117!important}}',
+    'button,select,input{{background:#1a1d27!important;color:#e8e9ed!important;border-color:#2a2d3a!important}}',
+    'div[style*="rgb(255"]{{background:#0f1117!important;color:#e8e9ed!important}}',
+    'div[style*="rgb(250"]{{background:#161920!important;color:#e8e9ed!important}}',
+    'span[style*="color: rgb(0"]{{color:#e8e9ed!important}}',
+    'span[style*="color: rgb(5"]{{color:#e8e9ed!important}}',
+  ].join('');
+
+  function _dmStyleDataframes(on) {{
+    var pDoc = window.parent.document;
+    /* target both stDataFrame wrappers and any inner iframes */
+    pDoc.querySelectorAll('[data-testid="stDataFrame"] iframe, [data-testid="stDataFrame"] > div iframe').forEach(function(fr) {{
+      try {{
+        var fd = fr.contentDocument || (fr.contentWindow && fr.contentWindow.document);
+        if (!fd || !fd.head) return;
+        var ex = fd.getElementById(DF_STYLE_ID);
+        if (on) {{
+          if (!ex) {{
+            var s = fd.createElement('style');
+            s.id = DF_STYLE_ID;
+            s.textContent = DF_DARK_CSS;
+            fd.head.appendChild(s);
+          }}
+          /* also patch inline bg/col inside the frame */
+          fd.querySelectorAll('[style]').forEach(function(el) {{
+            var bg = el.style.backgroundColor;
+            if (bg) {{
+              var bc = _dmParseRgb(bg);
+              if (bc && bc[0]>228 && bc[1]>228 && bc[2]>228)
+                el.style.setProperty('background','#0f1117','important');
+            }}
+            var col = el.style.color;
+            if (col) {{
+              var cc = _dmParseRgb(col);
+              if (cc && Math.max(cc[0],cc[1],cc[2])<115 && (Math.max(cc[0],cc[1],cc[2])-Math.min(cc[0],cc[1],cc[2]))<40)
+                el.style.setProperty('color','#e8e9ed','important');
+            }}
+          }});
+        }} else {{
+          if (ex) ex.remove();
+        }}
+      }} catch(e) {{}}
+    }});
+  }}
+
   function _dmApply(on) {{
     var pDoc = window.parent.document;
     /* CSS layer */
@@ -990,8 +1054,10 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     }}
     /* Plotly charts */
     _dmRelayoutAll(on);
-    /* Inline-style white-patch fix */
+    /* Inline-style white-patch fix (main doc) */
     setTimeout(function() {{ _dmPatchInlineStyles(on); }}, 150);
+    /* Dataframe iframes */
+    setTimeout(function() {{ _dmStyleDataframes(on); }}, 300);
     /* Observer for future charts + new elements */
     _dmStartObserver(on);
     /* button icon */
@@ -1014,6 +1080,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
            (Streamlit may still be mounting components at 400ms) */
         setTimeout(function() {{ _dmApply(true); }}, 400);
         setTimeout(function() {{ _dmPatchInlineStyles(true); }}, 900);
+        setTimeout(function() {{ _dmStyleDataframes(true); }}, 1200);
       }}
     }} catch(e) {{}}
 
