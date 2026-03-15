@@ -203,7 +203,7 @@ _NAVBAR = f"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-html,body{{height:72px;overflow:hidden;background:#000;
+html,body{{height:72px;overflow:visible;background:#000;
   font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   -webkit-font-smoothing:antialiased}}
 #nav{{
@@ -257,7 +257,7 @@ li.ni{{position:relative;display:flex;align-items:stretch}}
 .ni > a.lnk,.ni > span.lnk{{
   display:flex;align-items:center;gap:5px;padding:0 1.05rem;
   font-size:.72rem;font-weight:500;
-  color:rgba(255,255,255,.55);
+  color:rgba(255,255,255,.78);
   text-decoration:none;white-space:nowrap;
   border-bottom:2px solid transparent;
   cursor:pointer;user-select:none;
@@ -265,8 +265,8 @@ li.ni{{position:relative;display:flex;align-items:stretch}}
   letter-spacing:.022em;
 }}
 .ni > a.lnk:hover,.ni > span.lnk:hover{{
-  color:#fff;background:rgba(255,255,255,.03);
-  border-bottom-color:rgba(207,185,145,.28);
+  color:#fff;background:rgba(255,255,255,.04);
+  border-bottom-color:rgba(207,185,145,.35);
 }}
 .ni > a.lnk.active{{color:#CFB991;border-bottom-color:#CFB991;font-weight:600}}
 .ni.hd-active > span.lnk{{color:#CFB991;border-bottom-color:#CFB991;font-weight:600}}
@@ -277,14 +277,13 @@ li.ni{{position:relative;display:flex;align-items:stretch}}
 
 /* ── Dropdown ── */
 ul.drop{{
-  display:none;position:absolute;top:calc(100% + 0px);left:0;
+  display:none;position:absolute;top:72px;left:0;
   min-width:214px;background:#070707;
   border:1px solid #282828;border-top:2px solid #CFB991;
   border-radius:0 0 6px 6px;list-style:none;
   margin:0;padding:7px 0;
   box-shadow:0 14px 36px rgba(0,0,0,.70);z-index:99999;
 }}
-.ni:hover > ul.drop{{display:block}}
 ul.drop li a{{
   display:block;padding:.52rem 1.15rem;
   font-size:.70rem;font-weight:400;
@@ -305,36 +304,115 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 </head>
 <body>
 <script>
-/* Hoist this iframe to position:fixed at top of parent viewport */
 (function(){{
-  var H='72px';
-  var f=window.frameElement;
+  var NAV_H = 72;
+  var f = window.frameElement;
   if(!f) return;
-  function fix(){{
+
+  /* ── Hoist iframe to fixed top bar ── */
+  function fixNav(){{
+    var hs = NAV_H+'px';
     f.style.cssText='position:fixed!important;top:0!important;left:0!important;'+
-      'width:100%!important;height:'+H+'!important;border:none!important;'+
-      'z-index:9999!important;margin:0!important;padding:0!important;'+
-      'background:#000!important;';
+      'width:100%!important;height:'+hs+'!important;border:none!important;'+
+      'z-index:9999!important;margin:0!important;padding:0!important;background:#000!important;';
     var p=f.parentElement;
     if(p) p.style.cssText='position:fixed!important;top:0!important;left:0!important;'+
-      'width:100%!important;height:'+H+'!important;z-index:9999!important;'+
+      'width:100%!important;height:'+hs+'!important;z-index:9999!important;'+
       'margin:0!important;padding:0!important;';
   }}
-  fix();
+  fixNav();
   try{{
-    new window.parent.MutationObserver(fix)
+    new window.parent.MutationObserver(fixNav)
       .observe(window.parent.document.body,{{childList:true,subtree:false,attributes:false}});
   }}catch(e){{}}
-}})();
 
-/* Mark active page + parent group */
-(function(){{
-  var cur={json.dumps(current)};
-  var ANALYSIS=['war_impact_map','geopolitical','correlation','spillover','watchlist'];
-  var STRATEGY=['trade_ideas','stress_test'];
-  var RESEARCH=['model_accuracy','ai_chat'];
-  var ABOUT   =['about_heramb','about_jiahe','about_ilian'];
+  /* ── Parent-document dropdown (bypasses iframe clipping entirely) ── */
+  var _timer=null, _pdoc=window.parent.document;
+
+  function cancelTimer(){{ if(_timer){{ clearTimeout(_timer); _timer=null; }} }}
+
+  function removeDropdown(){{
+    var el=_pdoc.getElementById('ec-nav-drop');
+    if(el) el.remove();
+  }}
+
+  function scheduleHide(){{
+    cancelTimer();
+    _timer=setTimeout(removeDropdown,130);
+  }}
+
+  function buildDropdown(li){{
+    cancelTimer();
+    removeDropdown();
+
+    var items=li.querySelectorAll('ul.drop > li > a');
+    if(!items.length) return;
+
+    var ifrR=f.getBoundingClientRect();
+    var liR=li.getBoundingClientRect();
+
+    var ul=_pdoc.createElement('ul');
+    ul.id='ec-nav-drop';
+    ul.style.cssText=
+      'position:fixed;top:'+(ifrR.top+NAV_H)+'px;left:'+(ifrR.left+liR.left)+'px;'+
+      'min-width:220px;background:#070707;'+
+      'border:1px solid #282828;border-top:2px solid #CFB991;'+
+      'border-radius:0 0 6px 6px;list-style:none;margin:0;padding:7px 0;'+
+      'box-shadow:0 14px 36px rgba(0,0,0,.75);z-index:99999;'+
+      'font-family:DM Sans,-apple-system,sans-serif;';
+
+    items.forEach(function(origA){{
+      var pg=origA.getAttribute('data-pg');
+      var isActive=origA.classList.contains('active');
+      var li2=_pdoc.createElement('li');
+      var a=_pdoc.createElement('a');
+      a.textContent=origA.textContent;
+      a.href='?page='+pg;
+      a.style.cssText=
+        'display:block;padding:.52rem 1.15rem;font-size:.72rem;font-weight:400;'+
+        'color:'+(isActive?'#CFB991':'rgba(255,255,255,.72)')+';text-decoration:none;'+
+        'border-left:2px solid '+(isActive?'#CFB991':'transparent')+';'+
+        'white-space:nowrap;letter-spacing:.012em;'+
+        'background:'+(isActive?'rgba(207,185,145,.07)':'')+';'+
+        'cursor:pointer;';
+      a.addEventListener('mouseover',function(){{
+        a.style.color='#fff';
+        a.style.background='rgba(255,255,255,.04)';
+        a.style.borderLeftColor='rgba(207,185,145,.35)';
+      }});
+      a.addEventListener('mouseout',function(){{
+        a.style.color=isActive?'#CFB991':'rgba(255,255,255,.72)';
+        a.style.background=isActive?'rgba(207,185,145,.07)':'';
+        a.style.borderLeftColor=isActive?'#CFB991':'transparent';
+      }});
+      a.addEventListener('click',function(e){{
+        e.preventDefault();
+        removeDropdown();
+        window.parent.location.href='?page='+pg;
+      }});
+      li2.appendChild(a);
+      ul.appendChild(li2);
+    }});
+
+    ul.addEventListener('mouseenter',cancelTimer);
+    ul.addEventListener('mouseleave',scheduleHide);
+    _pdoc.body.appendChild(ul);
+  }}
+
   document.addEventListener('DOMContentLoaded',function(){{
+    /* Wire hover items */
+    document.querySelectorAll('li.ni').forEach(function(li){{
+      if(!li.querySelector('ul.drop')) return;
+      li.addEventListener('mouseenter',function(){{ buildDropdown(li); }});
+      li.addEventListener('mouseleave',scheduleHide);
+    }});
+
+    /* Mark active page + group */
+    var cur={json.dumps(current)};
+    var ANALYSIS=['war_impact_map','geopolitical','correlation','spillover','watchlist'];
+    var STRATEGY=['trade_ideas','stress_test'];
+    var RESEARCH=['model_accuracy','ai_chat'];
+    var ABOUT   =['about_heramb','about_jiahe','about_ilian'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
       if(a.dataset.pg===cur) a.classList.add('active');
     }});
