@@ -493,6 +493,67 @@ code, pre {
 [data-testid="stForm"] > div { background: #1a1d27 !important; border-color: #2a2d3a !important; }
 iframe { background: transparent !important; }
 
+/* ── Date inputs (all wrappers + input element) ── */
+[data-testid="stDateInput"] div,
+[data-testid="stDateInput"] input,
+[data-testid="stDateInput"] [data-baseweb],
+[data-testid="stDateInput"] [role="textbox"],
+[data-baseweb="input-container"],
+[data-baseweb="calendar"] { background: #1a1d27 !important; color: #e8e9ed !important; border-color: #2a2d3a !important; }
+
+/* ── Radio / checkbox labels ── */
+[data-testid="stRadio"]   label { color: #b8bec8 !important; }
+[data-testid="stCheckbox"] label { color: #b8bec8 !important; }
+[data-testid="stRadio"]   [role="radio"][aria-checked="true"] ~ span,
+[data-testid="stRadio"]   label:has([aria-checked="true"]) { color: #CFB991 !important; }
+
+/* ════════════════════════════════════════════════════════════════
+   PURDUE GOLD ACCENTS  (dark mode — tasteful, not loud)
+   ════════════════════════════════════════════════════════════════ */
+
+/* Page titles */
+h1 { color: #CFB991 !important; }
+h2 { color: #c4ae88 !important; }
+h3 { color: #b8a27a !important; }
+
+/* Streamlit heading widget */
+[data-testid="stHeading"] { color: #CFB991 !important; }
+
+/* Metric values */
+[data-testid="stMetricValue"] { color: #CFB991 !important; }
+
+/* Active tab — gold underline + text */
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    color: #CFB991 !important;
+    border-bottom: 2px solid #CFB991 !important;
+}
+
+/* DataTable column headers */
+[data-testid="stDataFrame"] thead th {
+    background: #1a1d27 !important;
+    color: #CFB991 !important;
+    border-bottom: 1px solid rgba(207,185,145,0.3) !important;
+}
+
+/* Subheader (st.subheader) */
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 { color: #c4ae88 !important; }
+
+/* Dividers (---) → faint gold */
+hr { border-top-color: rgba(207,185,145,0.25) !important; }
+
+/* Expander header text */
+[data-testid="stExpander"] summary span { color: #CFB991 !important; }
+
+/* Active radio button dot → gold */
+[data-baseweb="radio"] [role="radio"][aria-checked="true"] div:first-child {
+    border-color: #CFB991 !important;
+    background: #CFB991 !important;
+}
+
+/* Inline <code> snippets → warm gold tint */
+code:not(pre code) { color: #CFB991 !important; background: rgba(207,185,145,0.10) !important; }
+
 """
 
 # ── API keys ──────────────────────────────────────────────────────────────────
@@ -815,9 +876,67 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var pDoc = window.parent.document;
     _dmObserver = new window.parent.MutationObserver(function() {{
       clearTimeout(_dmObsTimer);
-      _dmObsTimer = setTimeout(function() {{ _dmRelayoutAll(true); }}, 250);
+      _dmObsTimer = setTimeout(function() {{
+        _dmRelayoutAll(true);
+        _dmPatchInlineStyles(true);
+      }}, 300);
     }});
     _dmObserver.observe(pDoc.body, {{ childList: true, subtree: true }});
+  }}
+
+  /* ── Inline-style patch: CSS attr selectors fail because Chrome normalises
+     hex colours to rgb() when parsing HTML. This JS checks computed
+     backgroundColor and directly overwrites near-white inline backgrounds. ── */
+  var DM_WHITE_TARGETS = [
+    [255,255,255], [250,250,248], [255,253,245],
+    [240,237,232], [245,242,238], [250,250,250], [248,248,248],
+    [255,255,254], [254,254,254]
+  ];
+
+  function _dmRgbNearWhite(rgbStr) {{
+    var m = rgbStr.match(/rgba?\\(([\\d]+),\\s*([\\d]+),\\s*([\\d]+)/);
+    if (!m) return false;
+    var r=parseInt(m[1]), g=parseInt(m[2]), b=parseInt(m[3]);
+    for (var i=0; i<DM_WHITE_TARGETS.length; i++) {{
+      var t=DM_WHITE_TARGETS[i];
+      if (Math.abs(r-t[0])<=4 && Math.abs(g-t[1])<=4 && Math.abs(b-t[2])<=4) return true;
+    }}
+    return false;
+  }}
+
+  function _dmPatchInlineStyles(on) {{
+    var pDoc = window.parent.document;
+    if (on) {{
+      pDoc.querySelectorAll('[style]').forEach(function(el) {{
+        /* skip canvas, Plotly SVG, iframes */
+        if (el.tagName==='CANVAS'||el.tagName==='IFRAME'||el.tagName==='SVG') return;
+        if (el.closest && el.closest('.js-plotly-plot')) return;
+        var bg = el.style.backgroundColor;
+        if (!bg || bg==='' || bg==='transparent' || bg==='initial') return;
+        if (_dmRgbNearWhite(bg)) {{
+          el.setAttribute('data-dm-bg', bg);
+          el.style.setProperty('background', '#1a1d27', 'important');
+          /* also darken text if it was dark-on-white */
+          var col = el.style.color;
+          if (col) {{
+            var mc = col.match(/rgba?\\(([\\d]+),\\s*([\\d]+),\\s*([\\d]+)/);
+            if (mc && parseInt(mc[1])<100 && parseInt(mc[2])<100 && parseInt(mc[3])<100) {{
+              el.setAttribute('data-dm-col', col);
+              el.style.setProperty('color', '#e8e9ed', 'important');
+            }}
+          }}
+        }}
+      }});
+    }} else {{
+      pDoc.querySelectorAll('[data-dm-bg]').forEach(function(el) {{
+        el.style.background = el.getAttribute('data-dm-bg');
+        el.removeAttribute('data-dm-bg');
+      }});
+      pDoc.querySelectorAll('[data-dm-col]').forEach(function(el) {{
+        el.style.color = el.getAttribute('data-dm-col');
+        el.removeAttribute('data-dm-col');
+      }});
+    }}
   }}
 
   function _dmApply(on) {{
@@ -836,7 +955,9 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     }}
     /* Plotly charts */
     _dmRelayoutAll(on);
-    /* Observer for future charts */
+    /* Inline-style white-patch fix */
+    setTimeout(function() {{ _dmPatchInlineStyles(on); }}, 150);
+    /* Observer for future charts + new elements */
     _dmStartObserver(on);
     /* button icon */
     var btn = document.getElementById('dm-btn');
@@ -854,8 +975,10 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     /* Restore dark mode from localStorage on every load */
     try {{
       if (localStorage.getItem(DM_KEY) === '1') {{
-        /* Slight delay so Plotly charts are rendered first */
+        /* Two passes: first CSS+Plotly at 400ms, then inline-style patch at 900ms
+           (Streamlit may still be mounting components at 400ms) */
         setTimeout(function() {{ _dmApply(true); }}, 400);
+        setTimeout(function() {{ _dmPatchInlineStyles(true); }}, 900);
       }}
     }} catch(e) {{}}
 
