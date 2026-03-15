@@ -484,11 +484,10 @@ def build_macro_pdf(
         "and index performance. Read it sequentially — each section builds on the previous to "
         "form a coherent view of the current macro regime.",
         S["cover_meta"]))
-    story.append(PageBreak())
-
-    # ── Switch to body template ───────────────────────────────────────────────
+    # Switch to body template BEFORE the page break so the next page uses Body
     from reportlab.platypus import NextPageTemplate
     story.append(NextPageTemplate("Body"))
+    story.append(PageBreak())
 
     def _section_header(title: str, subtitle: str = ""):
         items = [Paragraph(title.upper(), S["section"])]
@@ -506,13 +505,6 @@ def build_macro_pdf(
                 story.append(Paragraph(para.strip(), S["body"]))
                 story.append(Spacer(1, 2 * mm))
         story.append(PageBreak())
-
-    def _section_header(title: str, subtitle: str = ""):
-        items = [Paragraph(title.upper(), S["section"])]
-        if subtitle:
-            items.append(Paragraph(subtitle, S["caption"]))
-        items.append(HRFlowable(width="100%", thickness=0.5, color=GOLD, spaceAfter=4))
-        return items
 
     # ── 1. GDP & Growth ──────────────────────────────────────────────────────
     story += _section_header("1 · Economic Growth",
