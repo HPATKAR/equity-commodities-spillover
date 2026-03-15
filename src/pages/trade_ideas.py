@@ -20,6 +20,7 @@ from src.analysis.correlations import (
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _insight_note,
 )
 
 _REGIME_NAMES  = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
@@ -184,92 +185,95 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     ]
 
     if not active_trades:
-        st.info(f"No trade ideas active for current regime ({r_name}). Enable 'Show all regimes' to see all ideas.")
+        st.info(f"No trade ideas for {r_name} regime. Enable 'Show all regimes' to see all.")
     else:
         st.markdown(
-            f'<p style="font-size:0.74rem;color:#333333;margin-bottom:0.8rem">'
-            f'{len(active_trades)} idea{"s" if len(active_trades) > 1 else ""} '
-            f'{"shown" if show_all else "triggered"} for <b>{r_name}</b> regime</p>',
+            f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;color:#555;'
+            f'margin-bottom:0.6rem">'
+            f'<b>{len(active_trades)}</b> idea{"s" if len(active_trades)>1 else ""} '
+            f'{"shown" if show_all else "triggered"} for <b style=\'color:{r_color}\'>{r_name}</b></p>',
             unsafe_allow_html=True,
         )
 
-    for trade in active_trades:
-        cat_col = _CATEGORY_COLORS.get(trade["category"], "#CFB991")
-        dir_html = " | ".join(
-            f'<span style="color:{"#2e7d32" if d=="Long" else "#c0392b"};'
-            f'font-weight:700">{d}</span> {a}'
-            for a, d in zip(trade["assets"], trade["direction"])
-        )
-        regime_pills = " ".join(
-            f'<span style="background:{_REGIME_COLORS[r]};color:#fff;padding:1px 6px;'
-            f'border-radius:2px;font-size:0.58rem">{_REGIME_NAMES[r]}</span>'
-            for r in trade["regime"]
-        )
+    all_r_concat = pd.concat([eq_r, cmd_r], axis=1)
 
-        st.markdown(
-            f"""<div style="border:1px solid #E8E5E0;border-radius:5px;
-            overflow:hidden;margin-bottom:1rem">
-            <div style="background:{cat_col};padding:0.5rem 1rem;
-            display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:0.60rem;font-weight:700;letter-spacing:0.10em;
-              text-transform:uppercase;color:#fff">{trade['category']} · {trade['trigger']}</div>
-              <div>{regime_pills}</div>
-            </div>
-            <div style="padding:0.9rem 1rem;background:#fff">
-              <div style="font-size:0.88rem;font-weight:700;color:#000;
-              margin-bottom:0.4rem">{trade['name']}</div>
-              <div style="font-size:0.74rem;color:#333333;margin-bottom:0.5rem">{dir_html}</div>
-              <p style="font-size:0.78rem;color:#2A2A2A;line-height:1.7;margin-bottom:0.5rem">
-              {trade['rationale']}</p>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;
-              font-size:0.74rem">
-                <div style="background:#f9f8f6;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#8E6F3E;font-size:0.60rem;
-                  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:2px">Entry</div>
-                  {trade['entry']}
-                </div>
-                <div style="background:#f9f8f6;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#333333;font-size:0.60rem;
-                  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:2px">Exit</div>
-                  {trade['exit']}
-                </div>
-                <div style="background:#fff0f0;padding:0.4rem 0.6rem;border-radius:3px">
-                  <div style="font-weight:600;color:#c0392b;font-size:0.60rem;
-                  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:2px">Risks</div>
-                  {trade['risk']}
-                </div>
-              </div>
-            </div></div>""",
-            unsafe_allow_html=True,
-        )
+    # ── 2-column card grid ──────────────────────────────────────────────────
+    for row_start in range(0, len(active_trades), 2):
+        pair = active_trades[row_start:row_start + 2]
+        card_cols = st.columns(len(pair), gap="medium")
 
-        # Mini chart: rolling correlation of the first two assets
-        if len(trade["assets"]) >= 2:
-            all_r = pd.concat([eq_r, cmd_r], axis=1)
-            a1, a2 = trade["assets"][0], trade["assets"][1]
-            if a1 in all_r.columns and a2 in all_r.columns:
-                rc = rolling_correlation(all_r[a1], all_r[a2], 60)
-                fig_mini = go.Figure()
-                fig_mini.add_trace(go.Scatter(
-                    x=rc.index, y=rc.values,
-                    name=f"{a1}/{a2} 60d corr",
-                    line=dict(color=cat_col, width=1.5),
-                    fill="tozeroy",
-                    fillcolor=f"rgba({int(cat_col[1:3],16)},{int(cat_col[3:5],16)},{int(cat_col[5:7],16)},0.08)",
-                ))
-                fig_mini.add_hline(y=0, line=dict(color="#ABABAB", width=1, dash="dot"))
-                for ev in GEOPOLITICAL_EVENTS:
-                    fig_mini.add_vrect(
-                        x0=str(ev["start"]), x1=str(ev["end"]),
-                        fillcolor=ev["color"], opacity=0.05, layer="below", line_width=0,
-                    )
-                fig_mini.update_layout(
-                    template="purdue", height=200,
-                    title=dict(text=f"Rolling 60d Correlation: {a1} / {a2}", font=dict(size=11)),
-                    showlegend=False, margin=dict(l=40, r=20, t=35, b=30),
-                    xaxis=dict(rangeslider=dict(visible=False)),
+        for col, trade in zip(card_cols, pair):
+            with col:
+                cat_col = _CATEGORY_COLORS.get(trade["category"], "#CFB991")
+                dir_html = " &nbsp;|&nbsp; ".join(
+                    f'<span style="color:{"#2e7d32" if d=="Long" else "#c0392b"};font-weight:700">{d}</span> {a}'
+                    for a, d in zip(trade["assets"], trade["direction"])
                 )
-                _chart(fig_mini)
+                regime_pills = " ".join(
+                    f'<span style="background:{_REGIME_COLORS[r]};color:#fff;padding:1px 5px;'
+                    f'border-radius:2px;font-size:0.56rem">{_REGIME_NAMES[r]}</span>'
+                    for r in trade["regime"]
+                )
+                st.markdown(
+                    f'<div style="border:1px solid #E8E5E0;border-radius:5px;overflow:hidden;margin-bottom:0.5rem">'
+                    f'<div style="background:{cat_col};padding:0.4rem 0.85rem;'
+                    f'display:flex;justify-content:space-between;align-items:center">'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.57rem;font-weight:700;'
+                    f'letter-spacing:0.10em;text-transform:uppercase;color:#fff">'
+                    f'{trade["category"]} · {trade["trigger"]}</div>'
+                    f'<div>{regime_pills}</div></div>'
+                    f'<div style="padding:0.75rem 0.85rem;background:#fff">'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;font-weight:700;'
+                    f'color:#000;margin-bottom:3px">{trade["name"]}</div>'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
+                    f'color:#333;margin-bottom:6px">{dir_html}</div>'
+                    f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;color:#2A2A2A;'
+                    f'line-height:1.65;margin-bottom:8px">{trade["rationale"]}</p>'
+                    f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;font-size:0.70rem">'
+                    f'<div style="background:#f9f8f6;padding:0.35rem 0.5rem;border-radius:3px">'
+                    f'<div style="font-weight:700;color:#8E6F3E;font-size:0.56rem;text-transform:uppercase;'
+                    f'letter-spacing:0.10em;margin-bottom:2px">Entry</div>{trade["entry"]}</div>'
+                    f'<div style="background:#f9f8f6;padding:0.35rem 0.5rem;border-radius:3px">'
+                    f'<div style="font-weight:700;color:#333;font-size:0.56rem;text-transform:uppercase;'
+                    f'letter-spacing:0.10em;margin-bottom:2px">Exit</div>{trade["exit"]}</div>'
+                    f'<div style="background:#fff0f0;padding:0.35rem 0.5rem;border-radius:3px">'
+                    f'<div style="font-weight:700;color:#c0392b;font-size:0.56rem;text-transform:uppercase;'
+                    f'letter-spacing:0.10em;margin-bottom:2px">Risks</div>{trade["risk"]}</div>'
+                    f'</div></div></div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Mini correlation chart inside the card column
+                if len(trade["assets"]) >= 2:
+                    a1, a2 = trade["assets"][0], trade["assets"][1]
+                    if a1 in all_r_concat.columns and a2 in all_r_concat.columns:
+                        rc = rolling_correlation(all_r_concat[a1], all_r_concat[a2], 60)
+                        fig_mini = go.Figure()
+                        r, g, b = int(cat_col[1:3],16), int(cat_col[3:5],16), int(cat_col[5:7],16)
+                        fig_mini.add_trace(go.Scatter(
+                            x=rc.index, y=rc.values,
+                            name=f"{a1}/{a2}",
+                            line=dict(color=cat_col, width=1.4),
+                            fill="tozeroy",
+                            fillcolor=f"rgba({r},{g},{b},0.07)",
+                        ))
+                        fig_mini.add_hline(y=0, line=dict(color="#ABABAB", width=1, dash="dot"))
+                        for ev in GEOPOLITICAL_EVENTS:
+                            fig_mini.add_vrect(x0=str(ev["start"]), x1=str(ev["end"]),
+                                fillcolor=ev["color"], opacity=0.04, layer="below", line_width=0)
+                        fig_mini.update_layout(
+                            template="purdue", height=180,
+                            title=dict(text=f"60d Corr: {a1} / {a2}", font=dict(size=10)),
+                            showlegend=False,
+                            margin=dict(l=36, r=12, t=28, b=24),
+                            xaxis=dict(rangeslider=dict(visible=False)),
+                        )
+                        _chart(fig_mini)
+                        _insight_note(
+                            "Shows the rolling 60-day correlation between the commodity driver and the equity target for this trade. "
+                            "A rising positive correlation means the relationship underpinning the trade thesis is strengthening. "
+                            "A declining or negative reading is a warning that the causal link may be breaking down."
+                        )
 
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown("---")
@@ -280,7 +284,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-size:0.78rem;color:#555960;line-height:1.7;margin-bottom:0.8rem">'
+        '<p style="font-size:0.72rem;color:#555960;line-height:1.7;margin-bottom:0.8rem">'
         'Generate a professionally formatted A4 research report covering the current regime, '
         'all active trade ideas, geopolitical context, and methodology - suitable for '
         'academic submission or institutional review.</p>',

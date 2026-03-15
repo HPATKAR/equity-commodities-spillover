@@ -164,8 +164,336 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 /* ── Fade-in ── */
 @keyframes fadeInUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .main .block-container > div { animation: fadeInUp 0.28s ease; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORMALIZATION — Tighter, institutional-grade UI polish
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Streamlit column gap tightening ── */
+[data-testid="stHorizontalBlock"] { gap: 1.2rem !important; align-items: stretch !important; }
+[data-testid="stColumn"] { padding: 0 !important; }
+
+/* ── Dividers rendered by st.markdown('---') ── */
+[data-testid="stMarkdownContainer"] hr { margin: 0.6rem 0 !important; }
+
+/* ── Spinner font ── */
+[data-testid="stSpinner"] p { font-size: 0.68rem !important; color: var(--ink-faint) !important; letter-spacing: 0.06em !important; }
+
+/* ── Alert boxes ── */
+[data-testid="stAlert"] {
+    border-radius: 3px !important;
+    font-size: 0.72rem !important;
+    border-left-width: 3px !important;
+    padding: 0.55rem 0.9rem !important;
+}
+
+/* ── Expander header ── */
+[data-testid="stExpander"] summary {
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: var(--ink-muted) !important;
+}
+[data-testid="stExpander"] summary:hover { color: var(--black) !important; }
+[data-testid="stExpander"] { border-radius: 3px !important; border-color: var(--rule) !important; }
+
+/* ── Multiselect tag pill ── */
+[data-baseweb="tag"] {
+    border-radius: 3px !important;
+    font-size: 0.60rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    background: rgba(207,185,145,0.12) !important;
+    border-color: rgba(207,185,145,0.30) !important;
+    color: #8E6F3E !important;
+}
+
+/* ── Select dropdown menu ── */
+[data-baseweb="popover"] {
+    border-radius: 3px !important;
+    border: 1px solid var(--rule) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10) !important;
+}
+[role="option"] {
+    font-size: 0.70rem !important;
+    padding: 0.45rem 0.85rem !important;
+}
+[role="option"][aria-selected="true"] { color: var(--gold) !important; }
+
+/* ── Slider ── */
+[data-testid="stSlider"] [role="slider"] { background: var(--gold) !important; border-color: var(--gold) !important; }
+[data-testid="stSlider"] div[data-testid="stThumbValue"] { font-size: 0.62rem !important; }
+
+/* ── Date inputs ── */
+[data-testid="stDateInput"] input { font-size: 0.68rem !important; font-family: var(--font-mono) !important; }
+
+/* ── Plotly chart container borders ── */
+.stPlotlyChart { border: 1px solid var(--rule) !important; border-radius: 4px !important; overflow: hidden; }
+
+/* ── KPI number in stMetric — enforce mono font ── */
+[data-testid="stMetricValue"] > div { font-family: var(--font-mono) !important; }
+
+/* ── Primary button — refined ── */
+.stButton > button[kind="primary"] {
+    background: var(--gold) !important;
+    color: #000 !important;
+    border-color: var(--gold) !important;
+    font-weight: 700 !important;
+}
+
+/* ── Selectbox & slider label uppercase ── */
+[data-testid="stSelectbox"] > label p,
+[data-testid="stMultiSelect"] > label p,
+[data-testid="stSlider"] > label p {
+    font-size: 0.58rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    color: var(--ink-faint) !important;
+}
+
+/* ── Column content vertical alignment ── */
+.stPlotlyChart { margin-bottom: 0 !important; }
+
+/* ── Section headings via st.subheader ── */
+[data-testid="stHeading"] h2 {
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.10em !important;
+    text-transform: uppercase !important;
+    color: var(--black) !important;
+    border-bottom: 1px solid var(--rule) !important;
+    padding-bottom: 0.35rem !important;
+    margin-bottom: 0.8rem !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
+# ── Dark mode CSS (injected by JS from navbar iframe into parent document) ────
+_DM_CSS = """
+/* ════════════════════════════════════════════════════════════════════════════
+   DARK MODE — Equity & Commodities Spillover Dashboard
+   All inline-style overrides use !important which wins over non-!important
+   inline styles per CSS cascade spec.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page background ── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stApp"],
+section[data-testid="stMain"],
+.main,
+.main .block-container,
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="stColumn"] {
+    background: #0f1117 !important;
+    color: #e8e9ed !important;
+}
+
+/* ── Headings & generic text ── */
+h1, h2, h3, label, p { color: #e8e9ed !important; }
+
+/* ── Metric cards ── */
+[data-testid="metric-container"] {
+    background: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+[data-testid="stMetricLabel"]  { color: #8890a1 !important; }
+[data-testid="stMetricValue"]  { color: #e8e9ed !important; }
+[data-testid="stMetricDelta"]  { color: #CFB991 !important; }
+
+/* ── Tabs ── */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    border-bottom-color: #2a2d3a !important;
+    background: #0f1117 !important;
+}
+[data-testid="stTabs"] button[role="tab"]                    { color: #8890a1 !important; }
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] { color: #e8e9ed !important; }
+
+/* ── Buttons ── */
+.stButton > button {
+    background: #1a1d27 !important;
+    color: #CFB991 !important;
+    border-color: #CFB991 !important;
+}
+.stButton > button:hover {
+    background: #CFB991 !important;
+    color: #000 !important;
+}
+
+/* ── Select / multiselect / input ── */
+[data-baseweb="select"] > div,
+[data-baseweb="input"]  > div  { background: #1a1d27 !important; border-color: #2a2d3a !important; }
+[data-baseweb="select"] input,
+[data-baseweb="input"]  input  { color: #e8e9ed !important; }
+[data-baseweb="popover"] > div { background: #1a1d27 !important; }
+[role="option"]                { background: #1a1d27 !important; color: #e8e9ed !important; }
+[role="option"]:hover          { background: #252a3a !important; }
+[data-baseweb="tag"]           { background: #252a3a !important; color: #CFB991 !important; }
+[data-baseweb="tag"] span      { color: #CFB991 !important; }
+[data-testid="stSelectbox"] label,
+[data-testid="stMultiSelect"] label,
+[data-testid="stSlider"] label        { color: #8890a1 !important; }
+[data-testid="stDateInput"] label     { color: #8890a1 !important; }
+[data-testid="stDateInput"] [data-baseweb="input"] {
+    background: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+    color: #e8e9ed !important;
+}
+
+/* ── Expanders ── */
+[data-testid="stExpander"]         { border-color: #2a2d3a !important; background: #1a1d27 !important; }
+[data-testid="stExpander"] summary { color: #b8bec8 !important; }
+[data-testid="stExpander"] > div   { background: #1a1d27 !important; }
+
+/* ── DataFrames ── */
+[data-testid="stDataFrame"]       { border-color: #2a2d3a !important; background: #0f1117 !important; }
+[data-testid="stDataFrame"] thead th { background: #1a1d27 !important; color: #8890a1 !important; }
+[data-testid="stDataFrame"] tbody td { color: #e8e9ed !important; }
+[data-testid="stDataFrame"] div    { background: #0f1117 !important; color: #e8e9ed !important; }
+
+/* ── Alerts ── */
+[data-testid="stAlert"]   { background: #1a1d27 !important; border-color: #2a2d3a !important; color: #e8e9ed !important; }
+[data-testid="stInfo"]    { color: #e8e9ed !important; }
+[data-testid="stWarning"] { color: #e8e9ed !important; }
+[data-testid="stError"]   { color: #e8e9ed !important; }
+
+/* ── Dividers / scrollbar ── */
+hr { border-top-color: #2a2d3a !important; }
+::-webkit-scrollbar-thumb { background: #2a2d3a !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   INLINE-STYLE OVERRIDES  (cascade: stylesheet !important > inline)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* -- Backgrounds -- */
+[style*="background:#fafaf8"],   [style*="background: #fafaf8"]   { background: #1a1d27 !important; }
+[style*="background:#fff"],      [style*="background: #fff"]      { background: #1e2130 !important; }
+[style*="background:#fffdf5"],   [style*="background: #fffdf5"]   { background: #1a1f2e !important; }
+[style*="background:#f0ede8"],   [style*="background: #f0ede8"]   { background: #1c1e2a !important; }
+[style*="background:rgba(207,185,145,0.10)"],
+[style*="background: rgba(207,185,145,0.10)"] { background: rgba(207,185,145,0.15) !important; }
+
+/* -- Text -- */
+[style*="color:#000000"],  [style*="color: #000000"]  { color: #e8e9ed !important; }
+[style*="color:#000;"],    [style*="color: #000;"]    { color: #e8e9ed !important; }
+[style*="color:#000\""],   [style*="color: #000\""]   { color: #e8e9ed !important; }
+[style*="color:#111111"],  [style*="color: #111111"]  { color: #e8e9ed !important; }
+[style*="color:#333333"],  [style*="color: #333333"]  { color: #d1d5db !important; }
+[style*="color:#333;"],    [style*="color: #333;"]    { color: #d1d5db !important; }
+[style*="color:#333\""],   [style*="color: #333\""]   { color: #d1d5db !important; }
+[style*="color:#444444"],  [style*="color: #444444"]  { color: #b8bec8 !important; }
+[style*="color:#444;"],    [style*="color: #444;"]    { color: #b8bec8 !important; }
+[style*="color:#555960"],  [style*="color: #555960"]  { color: #8890a1 !important; }
+[style*="color:#555;"],    [style*="color: #555;"]    { color: #8890a1 !important; }
+[style*="color:#666666"],  [style*="color: #666666"]  { color: #8890a1 !important; }
+[style*="color:#666;"],    [style*="color: #666;"]    { color: #8890a1 !important; }
+[style*="color:#666\""],   [style*="color: #666\""]   { color: #8890a1 !important; }
+[style*="color:#777"],     [style*="color: #777"]     { color: #6b7280 !important; }
+[style*="color:#888"],     [style*="color: #888"],
+[style*="color: #888"]                                { color: #6b7280 !important; }
+
+/* -- Borders -- */
+[style*="border:1px solid #E8E5E0"],  [style*="border: 1px solid #E8E5E0"]  { border-color: #2a2d3a !important; }
+[style*="border-top:1px solid #E8E5E0"], [style*="border-top: 1px solid #E8E5E0"] { border-top-color: #2a2d3a !important; }
+[style*="border-bottom:1px solid #E8E5E0"] { border-bottom-color: #2a2d3a !important; }
+[style*="border-top:3px solid"],      [style*="border-top: 3px solid"]      { border-top-color: #CFB991 !important; }
+
+/* -- Definition block header (black bg → very dark) -- */
+[style*="background:#000000"], [style*="background: #000000"],
+[style*="background:#000;"],   [style*="background: #000;"]   { background: #050608 !important; }
+
+/* ── Text inputs & text areas ── */
+[data-testid="stTextInput"] > div,
+[data-testid="stTextInput"] > div > div,
+[data-baseweb="base-input"] {
+    background: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"]  textarea {
+    background: #1a1d27 !important;
+    color:       #e8e9ed !important;
+    border-color: #2a2d3a !important;
+    caret-color: #CFB991 !important;
+}
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stTextArea"]  textarea::placeholder { color: #4a5060 !important; }
+[data-testid="stTextInput"] label,
+[data-testid="stTextArea"]  label { color: #8890a1 !important; }
+
+/* ── Text area outer wrapper ── */
+[data-testid="stTextArea"] > div {
+    background: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+
+/* ── Chat input ── */
+[data-testid="stChatInput"],
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"],
+[data-testid="stChatInputContainer"] > div {
+    background: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInputContainer"] textarea {
+    background: #1a1d27 !important;
+    color:       #e8e9ed !important;
+    caret-color: #CFB991 !important;
+}
+[data-testid="stChatInput"] textarea::placeholder,
+[data-testid="stChatInputContainer"] textarea::placeholder { color: #4a5060 !important; }
+
+/* ── Chat messages ── */
+[data-testid="stChatMessage"] {
+    background: #1a1d27 !important;
+    border-color: #2a2d3a !important;
+}
+
+/* ── Slider track & thumb ── */
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
+    background: #CFB991 !important;
+    border-color: #CFB991 !important;
+}
+[data-testid="stSlider"] div[data-testid="stTickBar"] { color: #6b7280 !important; }
+
+/* ── Number input ── */
+[data-testid="stNumberInput"] input {
+    background: #1a1d27 !important;
+    color: #e8e9ed !important;
+    border-color: #2a2d3a !important;
+}
+[data-testid="stNumberInput"] > div { background: #1a1d27 !important; border-color: #2a2d3a !important; }
+
+/* ── Code blocks ── */
+[data-testid="stCode"],
+[data-testid="stCode"] pre,
+code, pre {
+    background: #0d0f18 !important;
+    color: #c8cdd8 !important;
+    border-color: #2a2d3a !important;
+}
+
+/* ── Spinner / status ── */
+[data-testid="stSpinner"] > div { color: #CFB991 !important; }
+
+/* ── Bottom bar (chat input sticky area) ── */
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottom"] section { background: #0f1117 !important; border-top-color: #2a2d3a !important; }
+
+/* ── Plotly chart borders ── */
+.stPlotlyChart { border-color: #2a2d3a !important; }
+
+/* ── Any remaining white container patches ── */
+[data-testid="stForm"],
+[data-testid="stForm"] > div { background: #1a1d27 !important; border-color: #2a2d3a !important; }
+iframe { background: transparent !important; }
+
+"""
 
 # ── API keys ──────────────────────────────────────────────────────────────────
 def _get_secret(key: str, default: str = "") -> str:
@@ -302,6 +630,30 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
      font-size:.57rem;letter-spacing:.05em;padding-left:1.4rem}}
 .dsi{{display:flex;align-items:center;gap:4px}}
 .dsi .dot{{font-size:.50rem}}
+
+/* ── Dark mode toggle ── */
+.dm-toggle{{
+  display:flex;align-items:center;justify-content:center;
+  width:30px;height:30px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(207,185,145,0.22);
+  border-radius:5px;
+  color:rgba(255,255,255,0.65);
+  cursor:pointer;
+  font-size:0.82rem;
+  line-height:1;
+  transition:all .15s;
+  margin-left:0.5rem;
+  flex-shrink:0;
+  text-decoration:none;
+  user-select:none;
+}}
+.dm-toggle:hover{{
+  background:rgba(207,185,145,0.12);
+  border-color:#CFB991;
+  color:#CFB991;
+}}
+.dm-toggle:focus{{outline:none;}}
 </style>
 </head>
 <body>
@@ -387,12 +739,6 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         a.style.background=isActive?'rgba(207,185,145,.07)':'';
         a.style.borderLeftColor=isActive?'#CFB991':'transparent';
       }});
-      a.href='?page='+pg;
-      a.addEventListener('click',function(e){{
-        e.preventDefault();
-        removeDropdown();
-        window.parent.postMessage({{isStreamlitMessage:true,type:"streamlit:setComponentValue",value:pg,dataType:"json"}},"*");
-      }});
       li2.appendChild(a);
       ul.appendChild(li2);
     }});
@@ -411,7 +757,108 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     }},"*");
   }};
 
+  /* ── Dark mode engine (pure JS + localStorage, no Python round-trip) ── */
+  var DM_STYLE_ID = 'ec-dark-mode-css';
+  var DM_KEY      = 'ec_dark_mode';
+  var DM_CSS      = `{_DM_CSS}`;
+
+  var DM_PLOT_DARK = {{
+    paper_bgcolor: '#0f1117',
+    plot_bgcolor:  '#1a1d27',
+    'font.color':  '#e8e9ed',
+    'xaxis.gridcolor':            '#2a2d3a',
+    'xaxis.zerolinecolor':        '#2a2d3a',
+    'xaxis.tickfont.color':       '#8890a1',
+    'xaxis.rangeselector.bgcolor':'#1e2130',
+    'xaxis.rangeselector.font.color':'#c8cdd8',
+    'xaxis.rangeslider.bgcolor':  '#1a1d27',
+    'yaxis.gridcolor':            '#2a2d3a',
+    'yaxis.zerolinecolor':        '#2a2d3a',
+    'yaxis.tickfont.color':       '#8890a1',
+    'legend.font.color':          '#c8cdd8',
+    'legend.bgcolor':             'rgba(15,17,23,0.5)'
+  }};
+
+  var DM_PLOT_LIGHT = {{
+    paper_bgcolor: '#ffffff',
+    plot_bgcolor:  '#fafaf8',
+    'font.color':  '#000000',
+    'xaxis.gridcolor':            '#EEEBE6',
+    'xaxis.zerolinecolor':        '#EEEBE6',
+    'xaxis.tickfont.color':       '#000000',
+    'xaxis.rangeselector.bgcolor':'#f0ede8',
+    'xaxis.rangeselector.font.color':'#000000',
+    'xaxis.rangeslider.bgcolor':  '#ffffff',
+    'yaxis.gridcolor':            '#EEEBE6',
+    'yaxis.zerolinecolor':        '#EEEBE6',
+    'yaxis.tickfont.color':       '#000000',
+    'legend.font.color':          '#000000',
+    'legend.bgcolor':             'rgba(255,255,255,0)'
+  }};
+
+  function _dmRelayoutAll(on) {{
+    var pWin = window.parent;
+    var pDoc = pWin.document;
+    if (!pWin.Plotly) return;
+    var upd = on ? DM_PLOT_DARK : DM_PLOT_LIGHT;
+    pDoc.querySelectorAll('.js-plotly-plot').forEach(function(el) {{
+      try {{ pWin.Plotly.relayout(el, upd); }} catch(e) {{}}
+    }});
+  }}
+
+  var _dmObserver = null;
+  var _dmObsTimer = null;
+
+  function _dmStartObserver(on) {{
+    if (_dmObserver) {{ _dmObserver.disconnect(); _dmObserver = null; }}
+    if (!on) return;
+    var pDoc = window.parent.document;
+    _dmObserver = new window.parent.MutationObserver(function() {{
+      clearTimeout(_dmObsTimer);
+      _dmObsTimer = setTimeout(function() {{ _dmRelayoutAll(true); }}, 250);
+    }});
+    _dmObserver.observe(pDoc.body, {{ childList: true, subtree: true }});
+  }}
+
+  function _dmApply(on) {{
+    var pDoc = window.parent.document;
+    /* CSS layer */
+    var existing = pDoc.getElementById(DM_STYLE_ID);
+    if (on) {{
+      if (!existing) {{
+        var s = pDoc.createElement('style');
+        s.id = DM_STYLE_ID;
+        s.textContent = DM_CSS;
+        pDoc.head.appendChild(s);
+      }}
+    }} else {{
+      if (existing) existing.remove();
+    }}
+    /* Plotly charts */
+    _dmRelayoutAll(on);
+    /* Observer for future charts */
+    _dmStartObserver(on);
+    /* button icon */
+    var btn = document.getElementById('dm-btn');
+    if (btn) btn.innerHTML = on ? '&#x2600;' : '&#x1F319;';
+  }}
+
+  window.ecToggleDark = function() {{
+    var isDark = !!window.parent.document.getElementById(DM_STYLE_ID);
+    var next = !isDark;
+    try {{ localStorage.setItem(DM_KEY, next ? '1' : '0'); }} catch(e) {{}}
+    _dmApply(next);
+  }};
+
   document.addEventListener('DOMContentLoaded',function(){{
+    /* Restore dark mode from localStorage on every load */
+    try {{
+      if (localStorage.getItem(DM_KEY) === '1') {{
+        /* Slight delay so Plotly charts are rendered first */
+        setTimeout(function() {{ _dmApply(true); }}, 400);
+      }}
+    }} catch(e) {{}}
+
     /* Wire hover items */
     document.querySelectorAll('li.ni').forEach(function(li){{
       if(!li.querySelector('ul.drop')) return;
@@ -500,17 +947,20 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     <div class="dsi"><span class="dot" style="color:#CFB991">&#9679;</span><span style="color:rgba(255,255,255,.40)">Yahoo Finance</span></div>
     <div class="dsi"><span class="dot" style="color:{_fred_col}">{_fred_dot}</span><span style="color:{_fred_col}">FRED</span></div>
     <div class="dsi"><span class="dot" style="color:{_fd_col}">{_fd_dot}</span><span style="color:{_fd_col}">FinancialDatasets</span></div>
+    <a id="dm-btn" class="dm-toggle" href="#" onclick="ecToggleDark();return false;" title="Toggle dark mode">&#x1F319;</a>
   </div>
 </div>
 </body></html>"""
 
 _nav_click = components.html(_NAVBAR, height=1, scrolling=False)
-_nav_last = st.session_state.get("_nav_last", "")
-if _nav_click and _nav_click in _VALID_PAGES and _nav_click != _nav_last:
+_nav_last  = st.session_state.get("_nav_last", "")
+
+if _nav_click and _nav_click != _nav_last:
     st.session_state["_nav_last"] = _nav_click
-    st.session_state["current_page"] = _nav_click
-    current = _nav_click
-    st.rerun()
+    if _nav_click in _VALID_PAGES:
+        st.session_state["current_page"] = _nav_click
+        current = _nav_click
+        st.rerun()
 
 # ── Date range strip (hidden on About pages — they need no data range) ────────
 _is_about = current in _ABOUT_PAGES

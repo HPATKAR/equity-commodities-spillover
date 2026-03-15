@@ -1,6 +1,7 @@
 """
 Page 4 - Spillover Analytics
 Granger causality grid, transfer entropy flows, Diebold-Yilmaz spillover index.
+All four analyses pre-run and displayed in a grid.
 """
 
 from __future__ import annotations
@@ -22,21 +23,38 @@ from src.analysis.network import (
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _insight_note,
 )
+
+_F = "font-family:'DM Sans',sans-serif;"
+
+_DEFAULT_EQ  = ["S&P 500", "DAX", "Nikkei 225", "Shanghai Comp", "Sensex"]
+_DEFAULT_CMD = ["WTI Crude Oil", "Gold", "Wheat", "Copper", "Natural Gas"]
+_DEFAULT_ALL = _DEFAULT_EQ + _DEFAULT_CMD
+
+
+def _label(txt: str) -> None:
+    st.markdown(
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">{txt}</p>',
+        unsafe_allow_html=True,
+    )
+
+
+def _panel_note(txt: str) -> None:
+    st.markdown(
+        f'<p style="{_F}font-size:0.64rem;color:#666;line-height:1.5;margin:4px 0 0 0">{txt}</p>',
+        unsafe_allow_html=True,
+    )
 
 
 def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.3rem">Spillover Analytics</h1>',
+        'font-weight:700;margin-bottom:0.1rem">Spillover Analytics</h1>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
+        'margin:0 0 0.7rem">Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph</p>',
         unsafe_allow_html=True,
-    )
-    _page_intro(
-        "Directional spillover analysis quantifies <em>which</em> market leads and "
-        "<em>which</em> follows during stress. Granger causality tests whether past commodity "
-        "returns improve the forecast of equity returns (and vice versa). "
-        "Transfer entropy captures nonlinear information flow. "
-        "Diebold-Yilmaz provides a network-level spillover index."
     )
 
     with st.spinner("Loading returns…"):
@@ -46,356 +64,216 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         st.error("Market data unavailable.")
         return
 
-    st.markdown("---")
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Granger Causality", "Transfer Entropy", "Diebold-Yilmaz Index", "Spillover Network"
-    ])
+    all_r   = pd.concat([eq_r, cmd_r], axis=1)
+    all_col = list(all_r.columns)
+
+    # Validate defaults
+    def_eq  = [c for c in _DEFAULT_EQ  if c in eq_r.columns]
+    def_cmd = [c for c in _DEFAULT_CMD if c in cmd_r.columns]
+    def_all = [c for c in _DEFAULT_ALL if c in all_r.columns]
+
+    # ── Asset selection strip ───────────────────────────────────────────────
+    with st.expander("Asset selection (applies to all panels)", expanded=False):
+        sel_l, sel_r = st.columns(2)
+        sel_eq  = sel_l.multiselect("Equities",    list(eq_r.columns),  default=def_eq,  key="sp_eq")
+        sel_cmd = sel_r.multiselect("Commodities", list(cmd_r.columns), default=def_cmd, key="sp_cmd")
+        sel_all = st.multiselect("VAR assets (DY + Network)", all_col, default=def_all, key="sp_all")
+        max_lag   = st.slider("Granger max lag (days)", 1, 10, 5, key="sp_lag")
+        dy_thresh = st.slider("DY edge threshold (%)",  1, 15,  4, key="sp_thresh")
+        layout    = st.selectbox("Network layout", ["bipartite","spring","circular"], key="sp_layout")
+
+    sel_eq  = [c for c in sel_eq  if c in eq_r.columns]  or def_eq
+    sel_cmd = [c for c in sel_cmd if c in cmd_r.columns] or def_cmd
+    sel_all = [c for c in sel_all if c in all_r.columns]  or def_all
+
+    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 1 - Granger Causality
+    # ROW 1: Granger Causality (wider) | Transfer Entropy (narrower)
     # ══════════════════════════════════════════════════════════════════════
-    with tab1:
-        st.subheader("Granger Causality: Commodity → Equity & Equity → Commodity")
-        _definition_block(
-            "Granger Causality",
-            "Series X Granger-causes series Y if past values of X significantly "
-            "improve forecasts of Y beyond Y's own history. "
-            "This is a predictive (not structural) test - "
-            "it identifies statistical lead-lag relationships, not economic causation. "
-            "p < 0.05 → significant at 5% level.",
-        )
+    col_gc, col_te = st.columns([1.2, 1], gap="medium")
 
-        # Subset selector
-        c1, c2 = st.columns(2)
-        eq_region   = c1.selectbox("Equity region", ["All"] + list(EQUITY_REGIONS.keys()))
-        cmd_group   = c2.selectbox("Commodity group", ["All"] + list(COMMODITY_GROUPS.keys()))
-        max_lag     = st.slider("Max lag (days)", 1, 10, 5)
+    # ── Panel 1: Granger Causality ─────────────────────────────────────────
+    with col_gc:
+        _label("Granger Causality: Commodity → Equity p-values")
+        with st.spinner("Running Granger causality tests…"):
+            granger_df = granger_grid(eq_r[sel_eq], cmd_r[sel_cmd], max_lag=max_lag)
 
-        eq_subset = (
-            [c for c in EQUITY_REGIONS[eq_region] if c in eq_r.columns]
-            if eq_region != "All" else list(eq_r.columns)
-        )
-        cmd_subset = (
-            [c for c in COMMODITY_GROUPS[cmd_group] if c in cmd_r.columns]
-            if cmd_group != "All" else list(cmd_r.columns)
-        )
+        if granger_df.empty:
+            st.warning("Not enough data for Granger tests.")
+        else:
+            sig_df = granger_df[granger_df["significant"]].copy()
+            c2e    = sig_df[sig_df["direction"] == "Commodity → Equity"]
 
-        if st.button("Run Granger Tests", type="primary"):
-            with st.spinner("Running Granger causality tests… (this may take ~30s)"):
-                granger_df = granger_grid(
-                    eq_r[eq_subset], cmd_r[cmd_subset], max_lag=max_lag
+            # Metrics row
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Tested pairs",      len(granger_df))
+            m2.metric("Significant (p<.05)", len(sig_df))
+            m3.metric("Cmd → Equity links", len(c2e))
+
+            if not c2e.empty:
+                pivot = c2e.pivot(index="effect", columns="cause", values="min_p")
+                fig_gc = go.Figure(go.Heatmap(
+                    z=pivot.values,
+                    x=pivot.columns.tolist(),
+                    y=pivot.index.tolist(),
+                    colorscale=[[0,"#c0392b"],[0.05,"#e74c3c"],[0.1,"#f9f3ea"],[1,"#ffffff"]],
+                    zmin=0, zmax=0.1,
+                    text=pivot.round(3).values,
+                    texttemplate="%{text}",
+                    textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                    colorbar=dict(title="p-val", thickness=10),
+                ))
+                fig_gc.update_layout(
+                    template="purdue", height=320,
+                    xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
+                    yaxis=dict(tickfont=dict(size=8)),
+                    margin=dict(l=100, r=40, t=20, b=90),
                 )
-
-            if granger_df.empty:
-                st.warning("Not enough overlapping data.")
+                _chart(fig_gc)
+                _panel_note("Red = strong lead (low p-value). Energy commodities typically lead equities by 1–3 days.")
+                _insight_note(
+                    "Red cells indicate the column commodity statistically 'Granger-causes' the row "
+                    "equity - meaning its past price moves help predict where that equity is heading. "
+                    "This is not coincidence: it means commodity price changes consistently arrive "
+                    "before equity price changes, giving a 1–3 day early warning window."
+                )
             else:
-                st.success(f"Tested {len(granger_df)} pairs.")
+                _panel_note("No significant Commodity → Equity Granger links with current selection.")
 
-                # Significant only
-                sig_df = granger_df[granger_df["significant"]].copy()
-                all_df = granger_df.copy()
-
-                col_a, col_b = st.columns(2)
-                col_a.metric("Significant pairs (p<0.05)", len(sig_df))
-                col_b.metric(
-                    "Commodity → Equity",
-                    len(sig_df[sig_df["direction"] == "Commodity → Equity"]),
-                )
-
-                if not sig_df.empty:
-                    # Heatmap: p-values for commodity → equity
-                    c2e = sig_df[sig_df["direction"] == "Commodity → Equity"].copy()
-                    if not c2e.empty:
-                        pivot = c2e.pivot(index="effect", columns="cause", values="min_p")
-                        fig_gc = go.Figure(go.Heatmap(
-                            z=pivot.values,
-                            x=pivot.columns.tolist(),
-                            y=pivot.index.tolist(),
-                            colorscale=[
-                                [0.0, "#c0392b"],
-                                [0.05, "#e74c3c"],
-                                [0.1, "#f9f3ea"],
-                                [1.0, "#ffffff"],
-                            ],
-                            zmin=0, zmax=0.1,
-                            text=pivot.round(3).values,
-                            texttemplate="%{text}",
-                            textfont=dict(size=8, family="JetBrains Mono, monospace"),
-                            colorbar=dict(title="p-value", thickness=12),
-                        ))
-                        fig_gc.update_layout(
-                            template="purdue", height=400,
-                            title="Commodity → Equity: Granger p-values (red = significant)",
-                            xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
-                            yaxis=dict(tickfont=dict(size=8)),
-                            margin=dict(l=120, r=40, t=50, b=120),
-                        )
-                        _chart(fig_gc)
-
+            # Top pairs table in expander
+            if not sig_df.empty:
+                with st.expander(f"Top significant pairs ({len(sig_df)})"):
                     st.dataframe(
-                        sig_df[["cause", "effect", "direction", "min_p", "best_lag"]]
-                        .sort_values("min_p")
-                        .head(30),
+                        sig_df[["cause","effect","direction","min_p","best_lag"]]
+                        .sort_values("min_p").head(20),
                         use_container_width=True, hide_index=True,
                     )
-                else:
-                    st.info("No significant Granger relationships found with current settings.")
 
-        _section_note(
-            "Energy commodities (WTI, Natural Gas) typically Granger-cause equity returns "
-            "with 1–3 day lags during supply shocks. Gold tends to Granger-cause equity "
-            "returns negatively during flight-to-safety episodes."
-        )
+    # ── Panel 2: Transfer Entropy ──────────────────────────────────────────
+    with col_te:
+        _label("Transfer Entropy: Net Information Flow")
+        with st.spinner("Computing transfer entropy…"):
+            te_c2e, te_e2c = transfer_entropy_matrix(eq_r[sel_eq], cmd_r[sel_cmd])
+            net_te = net_flow_matrix(te_c2e, te_e2c)
+
+        if net_te.empty:
+            st.warning("Transfer entropy computation failed.")
+        else:
+            fig_te = go.Figure(go.Heatmap(
+                z=net_te.values.astype(float),
+                x=net_te.columns.tolist(),
+                y=net_te.index.tolist(),
+                colorscale=[[0,"#c0392b"],[0.5,"#ffffff"],[1,"#2e7d32"]],
+                zmid=0,
+                text=net_te.round(4).values.astype(float),
+                texttemplate="%{text:.3f}",
+                textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                colorbar=dict(title="Net TE", thickness=10),
+            ))
+            fig_te.update_layout(
+                template="purdue", height=320,
+                xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
+                yaxis=dict(tickfont=dict(size=8)),
+                margin=dict(l=100, r=40, t=20, b=90),
+            )
+            _chart(fig_te)
+            _panel_note("Green = commodity leads equity. Red = equity leads commodity.")
+            _insight_note(
+                "Transfer entropy measures the net direction of information flow between two assets - "
+                "which one is telling the story, and which one is listening. Green cells mean the "
+                "commodity is driving the equity. Red cells mean the equity is driving the commodity. "
+                "This goes beyond correlation by capturing the directionality of influence."
+            )
+
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 2 - Transfer Entropy
+    # ROW 2: Diebold-Yilmaz FEVD (wider) | Network graph (narrower)
     # ══════════════════════════════════════════════════════════════════════
-    with tab2:
-        st.subheader("Transfer Entropy: Information Flow Direction")
-        _definition_block(
-            "Transfer Entropy (Schreiber, 2000)",
-            "A model-free, nonlinear measure of directional information flow. "
-            "TE(X→Y) quantifies how much knowing X's past reduces uncertainty about Y's future, "
-            "beyond Y's own past. Unlike Granger, TE detects nonlinear dependencies. "
-            "Net flow = TE(commodity→equity) − TE(equity→commodity): "
-            "positive = commodity leads equity.",
-        )
+    col_dy, col_net = st.columns([1.1, 1], gap="medium")
 
-        c1, c2 = st.columns(2)
-        te_eq_sel  = c1.multiselect(
-            "Equities",  list(eq_r.columns),
-            default=list(eq_r.columns)[:5], key="te_eq",
-        )
-        te_cmd_sel = c2.multiselect(
-            "Commodities", list(cmd_r.columns),
-            default=["WTI Crude Oil", "Gold", "Wheat", "Copper", "Natural Gas"],
-            key="te_cmd",
-        )
+    dy_valid = [c for c in sel_all if c in all_r.columns]
+    dy_result, dy_table, total_sp, G_dy = None, pd.DataFrame(), 0.0, None
 
-        if st.button("Compute Transfer Entropy", type="primary"):
-            te_cmd_sel_valid = [c for c in te_cmd_sel if c in cmd_r.columns]
-            te_eq_sel_valid  = [c for c in te_eq_sel  if c in eq_r.columns]
+    if len(dy_valid) >= 3:
+        combined = all_r[dy_valid].dropna()
+        with st.spinner("Fitting VAR (Diebold-Yilmaz)…"):
+            dy_result = diebold_yilmaz(combined, top_n=len(dy_valid))
+        dy_table = dy_result["spillover_table"]
+        total_sp = dy_result["total_spillover"]
+        if not dy_table.empty:
+            G_dy = build_dy_graph(dy_table, threshold=dy_thresh)
 
-            if not te_cmd_sel_valid or not te_eq_sel_valid:
-                st.warning("Select valid assets.")
-            else:
-                with st.spinner("Computing transfer entropy… (may take ~20s)"):
-                    te_c2e, te_e2c = transfer_entropy_matrix(
-                        eq_r[te_eq_sel_valid],
-                        cmd_r[te_cmd_sel_valid],
-                    )
-                    net_te = net_flow_matrix(te_c2e, te_e2c)
+    # ── Panel 3: Diebold-Yilmaz FEVD ──────────────────────────────────────
+    with col_dy:
+        _label("Diebold-Yilmaz: Forecast Error Variance Decomposition")
+        if dy_table.empty:
+            st.warning("Select ≥ 3 VAR assets.")
+        else:
+            st.metric("Total Spillover Index", f"{total_sp:.1f}%",
+                      help="% of FEVD from cross-asset shocks. >50% = high interconnectedness.")
+            fig_dy = go.Figure(go.Heatmap(
+                z=dy_table.values,
+                x=dy_table.columns.tolist(),
+                y=dy_table.index.tolist(),
+                colorscale="YlOrRd", zmin=0,
+                text=dy_table.values,
+                texttemplate="%{text:.1f}%",
+                textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                colorbar=dict(title="% FEVD", thickness=10),
+            ))
+            fig_dy.update_layout(
+                template="purdue", height=340,
+                xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
+                yaxis=dict(tickfont=dict(size=8)),
+                margin=dict(l=100, r=40, t=20, b=90),
+            )
+            _chart(fig_dy)
+            _insight_note(
+                "Each cell shows what percentage of one asset's price uncertainty (forecast error) "
+                "is caused by shocks originating in another asset. The diagonal is self-driven. "
+                "A high total spillover index (above 50%) means markets are deeply interconnected - "
+                "a shock anywhere in the system propagates everywhere quickly."
+            )
+            _panel_note(
+                f"Total spillover: <b>{total_sp:.1f}%</b> · "
+                "Off-diagonal = cross-asset variance explained. "
+                "High values = systemic transmission risk."
+            )
 
-                st.subheader("Net Transfer Entropy (Commodity → Equity direction)")
-                _section_note(
-                    "Green = commodity information flows TO equity (commodity leads). "
-                    "Red = equity information flows TO commodity (equity leads). "
-                    "Magnitude indicates strength of the directional link."
-                )
-                fig_te = go.Figure(go.Heatmap(
-                    z=net_te.values.astype(float),
-                    x=net_te.columns.tolist(),
-                    y=net_te.index.tolist(),
-                    colorscale=[
-                        [0.0,  "#c0392b"],
-                        [0.5,  "#ffffff"],
-                        [1.0,  "#2e7d32"],
-                    ],
-                    zmid=0,
-                    text=net_te.round(4).values.astype(float),
-                    texttemplate="%{text:.4f}",
-                    textfont=dict(size=8, family="JetBrains Mono, monospace"),
-                    colorbar=dict(title="Net TE", thickness=12),
+    # ── Panel 4: Spillover Network ─────────────────────────────────────────
+    with col_net:
+        _label("Spillover Network Graph")
+        if G_dy is None or dy_table.empty:
+            st.warning("Insufficient data for network graph.")
+        else:
+            # Net transmitter bar (compact)
+            _chart(plot_net_transmitter_bar(G_dy, height=max(200, len(dy_valid) * 22)))
+            _panel_note("Green = net transmitter (spills shocks outward). Red = net receiver.")
+            _insight_note(
+                "Green bars are 'shock exporters' - when they move, other assets tend to follow. "
+                "Red bars are 'shock absorbers' - they react to moves elsewhere. Energy commodities "
+                "like WTI tend to be strong transmitters; equity markets tend to be large receivers "
+                "of commodity-originated shocks during supply disruption events."
+            )
+
+            # Full network in expander
+            with st.expander("View full network graph"):
+                _chart(plot_dy_network(
+                    G_dy,
+                    title=f"DY Network · Total {total_sp:.1f}%",
+                    layout=layout,
+                    top_edges=min(len(dy_valid) * 4, 32),
                 ))
-                fig_te.update_layout(
-                    template="purdue", height=420,
-                    xaxis=dict(tickangle=-35, tickfont=dict(size=9)),
-                    yaxis=dict(tickfont=dict(size=9)),
-                    margin=dict(l=120, r=40, t=30, b=100),
-                )
-                _chart(fig_te)
-
-        _takeaway_block(
-            "Energy commodities (WTI, Brent, Natural Gas) typically show the strongest "
-            "net transfer entropy INTO equities - particularly for Europe (DAX, Eurostoxx) "
-            "which has high energy import dependency. Gold's TE often flows FROM equities "
-            "during risk-off, reflecting reactive safe-haven demand rather than a leading signal."
-        )
-
-    # ══════════════════════════════════════════════════════════════════════
-    # TAB 3 - Diebold-Yilmaz
-    # ══════════════════════════════════════════════════════════════════════
-    with tab3:
-        st.subheader("Diebold-Yilmaz Spillover Index")
-        _definition_block(
-            "Diebold-Yilmaz (2012) Spillover Index",
-            "Uses a VAR-based forecast error variance decomposition (FEVD) to measure "
-            "how much of asset i's forecast error variance is explained by shocks to asset j. "
-            "The total spillover index aggregates all cross-asset contributions into a single "
-            "network-level measure of interconnectedness.",
-        )
-
-        # Select assets for VAR
-        all_cols = list(eq_r.columns) + list(cmd_r.columns)
-        dy_assets = st.multiselect(
-            "Assets for VAR (max 8 recommended)",
-            all_cols,
-            default=["S&P 500", "Eurostoxx 50", "Nikkei 225",
-                     "WTI Crude Oil", "Gold", "Wheat"],
-        )
-
-        if st.button("Run Diebold-Yilmaz", type="primary"):
-            dy_valid = [c for c in dy_assets if c in eq_r.columns or c in cmd_r.columns]
-            if len(dy_valid) < 3:
-                st.warning("Select at least 3 assets.")
-            else:
-                combined = pd.concat([eq_r, cmd_r], axis=1)[dy_valid].dropna()
-                with st.spinner("Fitting VAR model…"):
-                    result = diebold_yilmaz(combined, top_n=len(dy_valid))
-
-                total = result["total_spillover"]
-                table = result["spillover_table"]
-
-                st.metric("Total Spillover Index", f"{total:.1f}%",
-                          help="Share of FEVD explained by cross-asset shocks. Higher = more interconnected.")
-
-                if not table.empty:
-                    fig_dy = go.Figure(go.Heatmap(
-                        z=table.values,
-                        x=table.columns.tolist(),
-                        y=table.index.tolist(),
-                        colorscale="YlOrRd",
-                        zmin=0,
-                        text=table.values,
-                        texttemplate="%{text:.1f}%",
-                        textfont=dict(size=9, family="JetBrains Mono, monospace"),
-                        colorbar=dict(title="% FEVD", thickness=12),
-                    ))
-                    fig_dy.update_layout(
-                        template="purdue", height=420,
-                        title="Forecast Error Variance Decomposition (%)",
-                        xaxis=dict(tickangle=-35, tickfont=dict(size=9)),
-                        yaxis=dict(tickfont=dict(size=9)),
-                        margin=dict(l=100, r=40, t=50, b=100),
-                    )
-                    _chart(fig_dy)
-
-                    _takeaway_block(
-                        f"Total spillover index: <b>{total:.1f}%</b>. "
-                        f"Values above 50% indicate high systemic interconnectedness - "
-                        "typical of crisis periods. "
-                        "Off-diagonal entries show the largest net transmitters and receivers."
-                    )
-
-    # ══════════════════════════════════════════════════════════════════════
-    # TAB 4 - Spillover Network
-    # ══════════════════════════════════════════════════════════════════════
-    with tab4:
-        st.subheader("Spillover Network Graph")
-        _definition_block(
-            "Network Interpretation",
-            "<b>DY Network:</b> Nodes = assets. Directed edge j → i = j's shocks explain "
-            "a significant share of i's forecast error variance. "
-            "Node size ∝ |net spillover score| (Transmit − Receive). "
-            "Large nodes = strong net transmitters (positive) or receivers (negative).<br><br>"
-            "<b>Granger Network:</b> Edge cause → effect = cause significantly Granger-causes effect. "
-            "Red = commodity → equity flow. Blue = equity → commodity flow.",
-        )
-
-        # ── Controls ──
-        all_cols = list(eq_r.columns) + list(cmd_r.columns)
-        c1, c2, c3 = st.columns([2, 1, 1])
-
-        net_assets = c1.multiselect(
-            "Assets (max 10 recommended)",
-            all_cols,
-            default=["S&P 500", "DAX", "Nikkei 225", "Shanghai Comp", "Sensex",
-                     "WTI Crude Oil", "Gold", "Wheat", "Copper", "Natural Gas"],
-            key="net_assets",
-        )
-        layout_opt = c2.selectbox(
-            "Layout",
-            ["bipartite", "spring", "circular"],
-            key="net_layout",
-        )
-        dy_thresh = c3.slider(
-            "DY edge threshold (%)",
-            min_value=1, max_value=15, value=4,
-            help="Minimum % FEVD for an edge to appear",
-            key="net_thresh",
-        )
-
-        if st.button("Build Network Graphs", type="primary", key="net_build"):
-            net_valid = [c for c in net_assets if c in eq_r.columns or c in cmd_r.columns]
-            if len(net_valid) < 3:
-                st.warning("Select at least 3 assets.")
-            else:
-                combined = pd.concat([eq_r, cmd_r], axis=1)[net_valid].dropna()
-
-                # ── DY Network ──────────────────────────────────────────
-                with st.spinner("Fitting VAR for Diebold-Yilmaz…"):
-                    dy_result = diebold_yilmaz(combined, top_n=len(net_valid))
-
-                dy_table = dy_result["spillover_table"]
-                total_sp = dy_result["total_spillover"]
-
-                if not dy_table.empty:
-                    st.markdown("---")
-                    st.markdown("#### Diebold-Yilmaz Spillover Network")
-
-                    m1, m2 = st.columns(2)
-                    m1.metric("Total Spillover Index", f"{total_sp:.1f}%")
-                    m2.metric("Assets", len(net_valid))
-
-                    G_dy = build_dy_graph(dy_table, threshold=dy_thresh)
-                    st.session_state["_dy_graph"] = G_dy
-
-                    # Net transmitter bar
-                    _chart(plot_net_transmitter_bar(G_dy, height=max(280, len(net_valid) * 24)))
-
-                    _section_note(
-                        "Green bars = net transmitters (their shocks spill INTO other assets). "
-                        "Red bars = net receivers (absorb shocks from others). "
-                        "Energy commodities and the S&P 500 are typically the largest net transmitters."
-                    )
-
-                    # Network graph
-                    _chart(plot_dy_network(
-                        G_dy,
-                        title=f"DY Spillover Network · Total Index {total_sp:.1f}%",
-                        layout=layout_opt,
-                        top_edges=min(len(net_valid) * 4, 32),
-                    ))
-
-                # ── Granger Network ─────────────────────────────────────
-                st.markdown("---")
-                st.markdown("#### Granger Causality Network")
-
-                eq_net  = [c for c in net_valid if c in eq_r.columns]
-                cmd_net = [c for c in net_valid if c in cmd_r.columns]
-
-                if eq_net and cmd_net:
-                    with st.spinner("Running Granger tests for network…"):
-                        g_df = granger_grid(eq_r[eq_net], cmd_r[cmd_net], max_lag=5)
-
-                    sig_count = g_df["significant"].sum() if not g_df.empty else 0
-                    st.metric("Significant Granger links", int(sig_count))
-
-                    if sig_count > 0:
-                        G_gr = build_granger_graph(g_df)
-                        st.session_state["_granger_graph"] = G_gr
-                        _chart(plot_granger_network(
-                            G_gr,
-                            title="Granger Causality Network (p < 0.05)",
-                            layout=layout_opt,
-                        ))
-                        _takeaway_block(
-                            "Node size = number of assets it Granger-causes. "
-                            "Red arrows = commodity information flowing into equity markets. "
-                            "Blue arrows = equity-driven flows back into commodities. "
-                            "Energy commodities typically dominate outbound red arrows."
-                        )
-                    else:
-                        st.info("No significant Granger links found. Try a longer date range or looser lag settings.")
+                # Granger network
+                eq_net  = [c for c in dy_valid if c in eq_r.columns]
+                cmd_net = [c for c in dy_valid if c in cmd_r.columns]
+                if eq_net and cmd_net and not granger_df.empty:
+                    G_gr = build_granger_graph(granger_df)
+                    _chart(plot_granger_network(G_gr,
+                        title="Granger Causality Network (p < 0.05)", layout=layout))
 
     _page_footer()

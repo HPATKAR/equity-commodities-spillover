@@ -243,19 +243,23 @@ WATCHLIST = [
 
 # ── Colour palette ─────────────────────────────────────────────────────────
 PALETTE = [
-    "#000000",  # Purdue Black
-    "#CFB991",  # Boilermaker Gold
-    "#8E6F3E",  # Aged
-    "#c0392b",  # Red
-    "#2e7d32",  # Green
-    "#555960",  # Steel
-    "#DAAA00",  # Rush
-    "#6F727B",  # Cool Gray
-    "#2980b9",  # Blue
-    "#8e44ad",  # Purple
-    "#16a085",  # Teal
-    "#e67e22",  # Orange
+    "#000000",  # Black      — strong anchor (equities lead)
+    "#c0392b",  # Red        — crisis / energy
+    "#2980b9",  # Blue       — liquid / financials
+    "#2e7d32",  # Green      — growth / metals
+    "#e67e22",  # Orange     — grain / soft commodities
+    "#8e44ad",  # Purple     — diversification
+    "#16a085",  # Teal       — EM / Asia
+    "#DAAA00",  # Rush Gold  — Purdue brand accent
+    "#555960",  # Steel      — additional series
+    "#CFB991",  # Boilermaker Gold — lighter accent
+    "#8E6F3E",  # Aged Brown — tertiary
+    "#6F727B",  # Cool Gray  — fallback
 ]
+
+# High-contrast palette explicitly for multi-line charts (equity + commodity mixed).
+# Equities use solid lines; commodities use dash patterns — see _EQUITY_DASH / _CMD_DASH.
+CHART_PALETTE = PALETTE  # alias — update PALETTE to change all charts
 
 CATEGORY_COLORS = {
     "Geopolitical": "#c0392b",

@@ -219,18 +219,17 @@ def page_ai_chat(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── API key guard ─────────────────────────────────────────────────────────
-    openai_key = ""
+    # ── API keys (Anthropic preferred, OpenAI fallback) ───────────────────────
+    anthropic_key = openai_key = ""
     try:
-        openai_key = st.secrets.get("keys", {}).get("openai_api_key", "") or ""
+        _keys = st.secrets.get("keys", {})
+        anthropic_key = _keys.get("anthropic_api_key", "") or ""
+        openai_key    = _keys.get("openai_api_key", "")    or ""
     except Exception:
         pass
 
-    if not openai_key:
-        st.markdown("---")
-        st.warning("Add `openai_api_key` to `.streamlit/secrets.toml` to activate the AI Analyst.")
-        st.code('[keys]\nopenai_api_key = "sk-..."', language="toml")
-        return
+    _has_key  = bool(anthropic_key or openai_key)
+    _provider = "anthropic" if anthropic_key else ("openai" if openai_key else None)
 
     # ── Session state ─────────────────────────────────────────────────────────
     if "chat_messages"   not in st.session_state:
@@ -240,35 +239,41 @@ def page_ai_chat(start: str, end: str) -> None:
     if "chat_context_ts" not in st.session_state:
         st.session_state["chat_context_ts"] = None
 
-    # ── Context status + refresh ──────────────────────────────────────────────
+    # ── Auto-load context on first visit ──────────────────────────────────────
     st.markdown("---")
     status_col, btn_col = st.columns([6, 1])
+    _refresh = btn_col.button("Refresh context", key="refresh_ctx", use_container_width=True)
 
-    if st.session_state["chat_context_ts"]:
-        delta = datetime.datetime.now() - st.session_state["chat_context_ts"]
-        age   = f"{int(delta.total_seconds() // 60)}m ago"
-    else:
-        age = "not loaded"
-
-    status_col.markdown(
-        f'<p style="font-size:0.62rem;color:#333333;margin:0;padding-top:0.45rem">'
-        f'Market context: <span style="color:#CFB991;font-family:\'JetBrains Mono\',monospace">'
-        f'{age}</span>'
-        f'&nbsp;&nbsp;·&nbsp;&nbsp;Regime, risk score, movers, and active events injected into every query.'
-        f'</p>',
-        unsafe_allow_html=True,
-    )
-
-    do_load = (
-        st.session_state["chat_context"] is None
-        or btn_col.button("Refresh", key="refresh_ctx", use_container_width=True)
-    )
-
-    if do_load:
+    if st.session_state["chat_context"] is None or _refresh:
         with st.spinner("Loading live market context…"):
             ctx = _build_market_context(start, end)
             st.session_state["chat_context"]    = ctx
             st.session_state["chat_context_ts"] = datetime.datetime.now()
+
+    # ── Status bar rendered AFTER load so age is always current ───────────────
+    if st.session_state["chat_context_ts"]:
+        _delta = datetime.datetime.now() - st.session_state["chat_context_ts"]
+        _age   = f"{int(_delta.total_seconds() // 60)}m ago" if _delta.total_seconds() >= 60 else "just loaded"
+    else:
+        _age = "not loaded"
+
+    _ctx_ok  = st.session_state["chat_context"] and not st.session_state["chat_context"].startswith("Market data unavailable")
+    _age_col = "#CFB991" if _ctx_ok else "#c0392b"
+    status_col.markdown(
+        f'<p style="font-size:0.62rem;color:#333333;margin:0;padding-top:0.45rem">'
+        f'Market context:&nbsp;<span style="color:{_age_col};font-family:\'JetBrains Mono\',monospace;font-weight:600">'
+        f'{_age}</span>'
+        f'&nbsp;&nbsp;&middot;&nbsp;&nbsp;Regime, risk score, movers, and active events injected into every query.'
+        f'</p>',
+        unsafe_allow_html=True,
+    )
+
+    # ── No API key warning (non-blocking — chat input still shown below) ──────
+    if not _has_key:
+        st.warning(
+            "No API key configured. Add one of the following to `.streamlit/secrets.toml` to enable responses:\n\n"
+            "```toml\n[keys]\nanthropics_api_key = \"sk-ant-...\"\n# or\nopenai_api_key = \"sk-...\"\n```"
+        )
 
     context = st.session_state["chat_context"] or ""
 
@@ -290,8 +295,22 @@ def page_ai_chat(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── CHAT INPUT (placed before messages to anchor sticky bar properly) ─────
-    user_input = st.chat_input("Ask the analyst…")
+    # ── QUERY INPUT ───────────────────────────────────────────────────────────
+    st.markdown(
+        '<p style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+        'text-transform:uppercase;color:#8E6F3E;margin:0.6rem 0 0.25rem">Query Input</p>',
+        unsafe_allow_html=True,
+    )
+    _inp_col, _btn_col = st.columns([5, 1])
+    _typed = _inp_col.text_area(
+        "Ask the analyst",
+        placeholder="e.g. How is the current regime affecting oil–equity correlations?",
+        height=80,
+        label_visibility="collapsed",
+        key="chat_textarea",
+    )
+    _send = _btn_col.button("Send", type="primary", key="send_chat", use_container_width=True)
+    user_input = _typed.strip() if (_send and _typed.strip()) else None
 
     # ── Message history ───────────────────────────────────────────────────────
     for msg in st.session_state["chat_messages"]:
@@ -309,47 +328,67 @@ def page_ai_chat(start: str, end: str) -> None:
 
     # ── Handle new input ──────────────────────────────────────────────────────
     if user_input:
-        st.session_state["chat_messages"].append({"role": "user", "content": user_input})
+        if not _has_key:
+            st.warning("Add an API key (see above) to receive AI responses.")
+        else:
+            st.session_state["chat_messages"].append({"role": "user", "content": user_input})
 
-        with st.chat_message("user"):
-            st.markdown(user_input)
+            with st.chat_message("user"):
+                st.markdown(user_input)
 
-        system_prompt = _SYSTEM_TEMPLATE.format(context=context)
-        api_messages  = [{"role": "system", "content": system_prompt}]
-        for m in st.session_state["chat_messages"][-20:]:
-            api_messages.append({"role": m["role"], "content": m["content"]})
+            system_prompt = _SYSTEM_TEMPLATE.format(context=context)
+            api_messages  = [{"role": "system", "content": system_prompt}]
+            for m in st.session_state["chat_messages"][-20:]:
+                api_messages.append({"role": m["role"], "content": m["content"]})
 
-        with st.chat_message("assistant"):
-            st.markdown(
-                '<div style="border-left:3px solid #CFB991;padding-left:0.8rem">'
-                '<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-                'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.35rem">'
-                'AI Analyst</span>'
-                '</div>',
-                unsafe_allow_html=True,
+            with st.chat_message("assistant"):
+                st.markdown(
+                    '<div style="border-left:3px solid #CFB991;padding-left:0.8rem">'
+                    '<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+                    'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.35rem">'
+                    'AI Analyst</span>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                response = ""
+                try:
+                    if _provider == "anthropic":
+                        import anthropic as _ant
+                        _client = _ant.Anthropic(api_key=anthropic_key)
+                        # Extract system from messages and pass separately
+                        _user_msgs = [m for m in api_messages if m["role"] != "system"]
+                        with _client.messages.stream(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=700,
+                            system=system_prompt,
+                            messages=_user_msgs,
+                        ) as _stream:
+                            response = st.write_stream(
+                                chunk.delta.text
+                                for chunk in _stream.text_stream
+                            )
+                    else:
+                        from openai import OpenAI as _OpenAI
+                        _client = _OpenAI(api_key=openai_key)
+                        _stream = _client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=api_messages,
+                            max_tokens=700,
+                            temperature=0.25,
+                            stream=True,
+                        )
+                        response = st.write_stream(
+                            chunk.choices[0].delta.content or ""
+                            for chunk in _stream
+                            if chunk.choices[0].delta.content
+                        )
+                except Exception as e:
+                    response = f"Request failed: {e}"
+                    st.markdown(response)
+
+            st.session_state["chat_messages"].append(
+                {"role": "assistant", "content": response}
             )
-            try:
-                from openai import OpenAI as _OpenAI
-                client   = _OpenAI(api_key=openai_key)
-                stream   = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=api_messages,
-                    max_tokens=600,
-                    temperature=0.25,
-                    stream=True,
-                )
-                response = st.write_stream(
-                    chunk.choices[0].delta.content or ""
-                    for chunk in stream
-                    if chunk.choices[0].delta.content
-                )
-            except Exception as e:
-                response = f"Request failed: {e}"
-                st.markdown(response)
-
-        st.session_state["chat_messages"].append(
-            {"role": "assistant", "content": response}
-        )
 
     # ── Utility bar ───────────────────────────────────────────────────────────
     if st.session_state["chat_messages"]:
@@ -360,7 +399,7 @@ def page_ai_chat(start: str, end: str) -> None:
             st.rerun()
 
     # ── Context inspector ─────────────────────────────────────────────────────
-    with st.expander("Injected market context", expanded=False):
+    with st.expander("Injected market context", expanded=True):
         st.code(context, language="text")
 
     st.markdown(

@@ -57,6 +57,35 @@ _PURDUE_TEMPLATE = go.layout.Template(
 pio.templates["purdue"] = _PURDUE_TEMPLATE
 
 
+_EQUITY_REGIONS  = {"S&P 500","DAX","Nikkei 225","FTSE 100","Eurostoxx 50","Shanghai Comp",
+                    "Sensex","Hang Seng","KOSPI","Bovespa","ASX 200","CAC 40","Nifty 50"}
+_COMMODITY_NAMES = {"WTI Crude Oil","Brent Crude","Gold","Silver","Copper","Natural Gas",
+                    "Wheat","Corn","Soybeans","Platinum","Palladium","Sugar","Coffee",
+                    "Cotton","Crude Oil"}
+
+# Four clearly distinct dash styles — rotate within equities and commodities separately
+_EQ_DASHES  = ["solid", "dash", "dot", "dashdot"]
+_CMD_DASHES = ["longdash", "longdashdot", "solid", "dash"]
+
+
+def _line_style(name: str, eq_idx: int, cmd_idx: int) -> dict:
+    """
+    Return a Plotly line dict with a distinguishable color + dash for multi-series charts.
+    Equities get solid/dashed lines at width 1.9; commodities get different dash patterns at 1.6.
+    Caller tracks eq_idx and cmd_idx separately and increments the appropriate counter.
+    """
+    from src.data.config import PALETTE
+    if name in _EQUITY_REGIONS:
+        color = PALETTE[eq_idx % len(PALETTE)]
+        dash  = _EQ_DASHES[eq_idx % len(_EQ_DASHES)]
+        return dict(color=color, width=1.9, dash=dash)
+    else:
+        # Offset commodity colors so they don't clash with the first equity colors
+        color = PALETTE[(cmd_idx + 1) % len(PALETTE)]
+        dash  = _CMD_DASHES[cmd_idx % len(_CMD_DASHES)]
+        return dict(color=color, width=1.5, dash=dash)
+
+
 def _style_fig(fig: go.Figure, height: int = 400) -> go.Figure:
     """Apply Purdue template + rangeselector to a Plotly figure."""
     fig.update_layout(
@@ -127,32 +156,36 @@ def _add_event_bands(
 
 def _page_intro(text: str) -> None:
     st.markdown(
-        f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.82rem;
-        color:#222222;line-height:1.75;max-width:760px;margin-bottom:1.2rem">
-        {text}</p>""",
+        f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.76rem;
+        color:#333333;line-height:1.75;max-width:860px;margin:0 0 1.0rem;
+        padding-left:0.85rem;border-left:3px solid #E8E5E0">{text}</p>""",
         unsafe_allow_html=True,
     )
 
 
 def _section_note(text: str) -> None:
     st.markdown(
-        f"""<div style="border-left:3px solid {_GOLD};padding:0.6rem 1rem;
-        background:#fafaf8;margin:0.8rem 0;font-size:0.78rem;color:#111111;
-        line-height:1.7;font-family:'DM Sans',sans-serif">{text}</div>""",
+        f"""<div style="border-left:3px solid {_GOLD};padding:0.5rem 0.9rem;
+        background:#fafaf8;margin:0.6rem 0 0.9rem;font-size:0.70rem;color:#333333;
+        line-height:1.7;font-family:'DM Sans',sans-serif">
+        <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
+        text-transform:uppercase;color:#8E6F3E;display:block;margin-bottom:2px">
+        Methodology</span>{text}</div>""",
         unsafe_allow_html=True,
     )
 
 
 def _definition_block(title: str, body: str) -> None:
     st.markdown(
-        f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
-        overflow:hidden;margin:0.8rem 0">
-        <div style="background:{_BLACK};padding:0.5rem 1rem">
-          <span style="font-size:0.60rem;font-weight:700;letter-spacing:0.12em;
+        f"""<div style="border:1px solid #E8E5E0;border-radius:3px;
+        overflow:hidden;margin:0.6rem 0 0.9rem">
+        <div style="background:{_BLACK};padding:0.45rem 1rem;display:flex;align-items:center;gap:0.5rem">
+          <div style="width:3px;height:14px;background:{_GOLD};border-radius:2px;flex-shrink:0"></div>
+          <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.7rem 1rem;font-size:0.78rem;color:#111111;
-        line-height:1.7;font-family:'DM Sans',sans-serif">{body}</div>
+        <div style="padding:0.65rem 1rem;font-size:0.70rem;color:#333333;
+        line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -160,26 +193,42 @@ def _definition_block(title: str, body: str) -> None:
 
 def _takeaway_block(text: str) -> None:
     st.markdown(
-        f"""<div style="border-left:3px solid #DAAA00;padding:0.6rem 1rem;
-        background:#fffdf5;margin:0.8rem 0;font-size:0.78rem;color:#111111;
-        line-height:1.7;font-family:'DM Sans',sans-serif">
-        <strong style="color:#8E6F3E;font-size:0.60rem;text-transform:uppercase;
-        letter-spacing:0.12em">Key Takeaway</strong><br>{text}</div>""",
+        f"""<div style="border:1px solid #E8E5E0;border-top:2px solid {_GOLD};
+        border-radius:0 0 3px 3px;padding:0.55rem 1rem;
+        background:#fffdf5;margin:0.6rem 0 0.9rem;font-size:0.70rem;color:#333333;
+        line-height:1.75;font-family:'DM Sans',sans-serif">
+        <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
+        text-transform:uppercase;color:#8E6F3E;display:block;margin-bottom:3px">
+        Key Insight</span>{text}</div>""",
         unsafe_allow_html=True,
     )
 
 
 def _page_conclusion(verdict: str, summary: str) -> None:
     st.markdown(
-        f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
-        overflow:hidden;margin:1.2rem 0">
-        <div style="background:{_BLACK};padding:0.7rem 1.2rem">
-          <span style="font-size:0.60rem;font-weight:700;letter-spacing:0.12em;
-          text-transform:uppercase;color:{_GOLD}">Assessment · {verdict}</span>
+        f"""<div style="border:1px solid #E8E5E0;border-top:3px solid {_GOLD};
+        border-radius:0 0 3px 3px;overflow:hidden;margin:1.2rem 0">
+        <div style="background:{_BLACK};padding:0.6rem 1.2rem;display:flex;align-items:center;gap:0.6rem">
+          <div style="width:3px;height:16px;background:{_GOLD};border-radius:2px;flex-shrink:0"></div>
+          <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
+          text-transform:uppercase;color:{_GOLD}">Assessment &middot; {verdict}</span>
         </div>
-        <div style="padding:0.8rem 1.2rem;background:#fafaf8;font-size:0.78rem;
-        color:#111111;line-height:1.7;font-family:'DM Sans',sans-serif">
+        <div style="padding:0.75rem 1.2rem;background:#fafaf8;font-size:0.70rem;
+        color:#333333;line-height:1.75;font-family:'DM Sans',sans-serif">
         {summary}</div></div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _insight_note(text: str) -> None:
+    """Compact formal plain-English explanation rendered beneath each infographic."""
+    st.markdown(
+        f"""<div style="border-left:2px solid {_GOLD};padding:0.38rem 0.85rem;
+        background:#fafaf8;margin:0.1rem 0 0.75rem;font-size:0.66rem;color:#444444;
+        line-height:1.65;font-family:'DM Sans',sans-serif">
+        <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
+        text-transform:uppercase;color:#8E6F3E;display:block;margin-bottom:2px">
+        Interpretation</span>{text}</div>""",
         unsafe_allow_html=True,
     )
 
@@ -539,15 +588,15 @@ def _page_footer() -> None:
 <style>
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{
-  background:#000;
+  background:#000;width:100%;
   font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
+  overflow:visible;
 }}
-.ft-body{{background:#000;padding:44px 0 40px;border-top:1px solid #1a1a1a;}}
+.ft-body{{background:#0a0a0a;padding:44px 0 40px;border-top:1px solid #1e1e1e;}}
 .ft-grid{{
   display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;
-  gap:28px;max-width:1280px;margin:0 auto;padding:0 48px;
+  gap:28px;width:100%;padding:0 48px;
 }}
 .ft-logo{{height:38px;margin-bottom:16px;display:block;}}
 .ft-wordmark{{
@@ -590,13 +639,65 @@ a:hover{{color:#CFB991;}}
 </head>
 <body>
 <script>
+(function(){{
+  var f = window.frameElement;
+  if (!f) return;
+
+  /* ── 1. Full-width: break out of Streamlit block-container ── */
+  f.style.width          = '100vw';
+  f.style.position       = 'relative';
+  f.style.left           = '50%';
+  f.style.transform      = 'translateX(-50%)';
+  f.style.maxWidth       = '100vw';
+  f.style.border         = 'none';
+  f.style.display        = 'block';
+  f.style.marginLeft     = '0';
+  f.style.marginRight    = '0';
+  f.style.overflow       = 'hidden';
+
+  /* ── 2. Walk every ancestor: remove overflow clip + bottom spacing ── */
+  var el = f.parentElement;
+  while (el && el !== window.parent.document.body) {{
+    el.style.overflow      = 'visible';
+    el.style.maxWidth      = 'none';
+    el.style.paddingBottom = '0';
+    el.style.marginBottom  = '0';
+    el = el.parentElement;
+  }}
+
+  /* ── 3. Kill Streamlit's injected bottom chrome via parent CSS ── */
+  var pid = 'ec-ft-css';
+  if (!window.parent.document.getElementById(pid)) {{
+    var s = window.parent.document.createElement('style');
+    s.id = pid;
+    s.textContent =
+      '.main .block-container{{padding-bottom:0!important;margin-bottom:0!important}}' +
+      '[data-testid="stBottom"]{{display:none!important}}' +
+      '.stDeployButton{{display:none!important}}';
+    window.parent.document.head.appendChild(s);
+  }}
+
+  /* ── 4. Auto-size iframe height to exact content height ── */
+  function measure() {{
+    var h = document.documentElement.scrollHeight || document.body.scrollHeight;
+    if (h > 20) f.style.height = h + 'px';
+  }}
+  /* Run immediately, after fonts, and with two fallback retries */
+  measure();
+  if (document.fonts && document.fonts.ready) {{
+    document.fonts.ready.then(function() {{ measure(); setTimeout(measure, 150); }});
+  }} else {{
+    setTimeout(measure, 400);
+  }}
+}})();
+
 function nav(page) {{
-    window.parent.postMessage({{
-        isStreamlitMessage: true,
-        type: "streamlit:setComponentValue",
-        value: page,
-        dataType: "json"
-    }}, "*");
+  window.parent.postMessage({{
+    isStreamlitMessage: true,
+    type: "streamlit:setComponentValue",
+    value: page,
+    dataType: "json"
+  }}, "*");
 }}
 </script>
 <div class="ft-body">
@@ -655,10 +756,10 @@ function nav(page) {{
 <div class="ft-bar">
   <p>&copy; {yr} Purdue University &middot; For educational purposes only &middot; Not investment advice</p>
 </div>
-</body></html>""", height=320, scrolling=False)
-    _VALID = {{'overview','war_impact_map','geopolitical','correlation','spillover',
+</body></html>""", height=380, scrolling=False)
+    _VALID = {'overview','war_impact_map','geopolitical','correlation','spillover',
               'watchlist','trade_ideas','stress_test','model_accuracy','ai_chat',
-              'about_heramb','about_jiahe','about_ilian'}}
+              'about_heramb','about_jiahe','about_ilian'}
     _ft_last = st.session_state.get("_ft_nav_last", "")
     if _ft_click and _ft_click in _VALID and _ft_click != _ft_last:
         st.session_state["_ft_nav_last"] = _ft_click
