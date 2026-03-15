@@ -74,7 +74,8 @@ def _load_via_socrata(session, years: int = 3) -> "pd.DataFrame | None":
     """
     Fallback: fetch COT data via CFTC's public Socrata API.
     Works from cloud IPs (Hugging Face, AWS, GCP) where direct ZIP downloads are blocked.
-    Returns a DataFrame with columns normalised to match ZIP CSV naming.
+    The disaggregated dataset uses 'm_money' (Managed Money) as the speculative category.
+    Returns a DataFrame with columns normalised to match the rest of the pipeline.
     """
     since = f"{date.today().year - years}-01-01"
     url = _SOCRATA_URL.format(since=since)
@@ -88,15 +89,19 @@ def _load_via_socrata(session, years: int = 3) -> "pd.DataFrame | None":
         if not data:
             return None
         df = pd.DataFrame(data)
-        # Socrata uses lowercase snake_case — rename to match ZIP CSV column names
+        # In the disaggregated report, Managed Money = speculative non-commercial traders
+        # Socrata column names → normalised names used by the rest of the pipeline
         rename = {
-            "report_date_as_yyyy_mm_dd": "Report_Date_as_YYYY-MM-DD",
+            "report_date_as_yyyy_mm_dd":  "Report_Date_as_YYYY-MM-DD",
             "market_and_exchange_names":  "Market_and_Exchange_Names",
-            "noncomm_positions_long_all": "NonComm_Positions_Long_All",
-            "noncomm_positions_short_all":"NonComm_Positions_Short_All",
+            "m_money_positions_long_all": "NonComm_Positions_Long_All",
+            "m_money_positions_short_all":"NonComm_Positions_Short_All",
             "open_interest_all":          "Open_Interest_All",
         }
         df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+        # Keep only futures-only rows to match ZIP behaviour
+        if "futonly_or_combined" in df.columns:
+            df = df[df["futonly_or_combined"] == "FutOnly"]
         return df
     except Exception:
         return None
