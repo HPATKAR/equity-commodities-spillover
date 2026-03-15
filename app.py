@@ -574,7 +574,7 @@ _FD_KEY   = _get_secret("financial_datasets_key")
 # ── Navigation state ──────────────────────────────────────────────────────────
 _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
-    "spillover", "watchlist", "trade_ideas", "stress_test",
+    "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test",
     "model_accuracy", "ai_chat", "about_heramb", "about_jiahe", "about_ilian",
 }
 _ABOUT_PAGES = {"about_heramb", "about_jiahe", "about_ilian"}
@@ -1139,6 +1139,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         <li><a data-pg="correlation"    href="?page=correlation"    target="_parent" class="{'active' if current=='correlation' else ''}">Correlation Analysis</a></li>
         <li><a data-pg="spillover"      href="?page=spillover"      target="_parent" class="{'active' if current=='spillover' else ''}">Spillover Analytics</a></li>
         <li><a data-pg="watchlist"      href="?page=watchlist"      target="_parent" class="{'active' if current=='watchlist' else ''}">Commodities to Watch</a></li>
+        <li><a data-pg="macro_dashboard" href="?page=macro_dashboard" target="_parent" class="{'active' if current=='macro_dashboard' else ''}">Macro Dashboard</a></li>
       </ul>
     </li>
 
@@ -1216,7 +1217,8 @@ from src.pages.spillover       import page_spillover
 from src.pages.watchlist       import page_watchlist
 from src.pages.trade_ideas     import page_trade_ideas
 from src.pages.stress_test     import page_stress_test
-from src.pages.model_accuracy  import page_model_accuracy
+from src.pages.macro_dashboard  import page_macro_dashboard
+from src.pages.model_accuracy   import page_model_accuracy
 from src.pages.ai_chat         import page_ai_chat
 from src.pages.about_heramb    import page_about_heramb
 from src.pages.about_jiahe     import page_about_jiahe
@@ -1231,8 +1233,9 @@ _PAGE_MAP = {
     "geopolitical":   lambda: page_geopolitical(_start, _end, _FRED_KEY),
     "correlation":    lambda: page_correlation(_start, _end, _FRED_KEY),
     "spillover":      lambda: page_spillover(_start, _end, _FRED_KEY),
-    "watchlist":      lambda: page_watchlist(_start, _end, _FRED_KEY),
-    "trade_ideas":    lambda: page_trade_ideas(_start, _end, _FRED_KEY),
+    "watchlist":        lambda: page_watchlist(_start, _end, _FRED_KEY),
+    "macro_dashboard":  lambda: page_macro_dashboard(_start, _end, _FRED_KEY),
+    "trade_ideas":      lambda: page_trade_ideas(_start, _end, _FRED_KEY),
     "stress_test":    lambda: page_stress_test(_start, _end, _FRED_KEY),
     "model_accuracy": lambda: page_model_accuracy(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
