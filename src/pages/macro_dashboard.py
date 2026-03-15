@@ -228,105 +228,256 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         st.info("Add a FRED API key in Settings to unlock bond, macro, and money-flow data. "
                 "Valuations and index performance load without it.")
 
-    # ── SECTION 1: Index Performance ────────────────────────────────────────
+    today = date.today()
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 1. GDP & GROWTH — Where is the economy?
+    # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
-    _label("Index Performance")
+    _label("1 · Economic Growth — GDP & Output")
 
-    # Rolling windows for performance
-    perf_windows = {"1W": 5, "1M": 21, "3M": 63, "6M": 126, "YTD": None}
-    today = date.today()
-    perf_start = (today - timedelta(days=400)).isoformat()
+    if no_fred:
+        st.caption("Requires FRED API key.")
+    else:
+        with st.spinner("Loading macro indicators…"):
+            macro_data = _load_macro(fred_key, start, end)
 
-    with st.spinner("Loading index data…"):
-        idx_prices = _load_index_perf(perf_start)
+        if macro_data:
+            kpi_keys = [
+                "Real GDP Growth (QoQ %)",
+                "ISM Manufacturing PMI",
+                "Unemployment Rate (%)",
+                "CPI YoY (%)",
+            ]
+            k_cols = st.columns(len(kpi_keys))
+            for i, key in enumerate(kpi_keys):
+                if key in macro_data and not macro_data[key].empty:
+                    s = macro_data[key]
+                    latest = s.iloc[-1]
+                    prev   = s.iloc[-2] if len(s) > 1 else latest
+                    delta  = latest - prev
+                    is_up  = delta > 0
+                    good_up = key not in ("Unemployment Rate (%)", "CPI YoY (%)")
+                    _kpi(
+                        k_cols[i], key,
+                        f"{latest:.2f}{'%' if '%' in key else ''}",
+                        f"{abs(delta):.2f}",
+                        delta_up=is_up if good_up else not is_up,
+                    )
 
-    if not idx_prices.empty:
-        # KPI strip — latest returns for each window
-        win_cols = st.columns(len(perf_windows))
-        chosen_win = None
-        for i, (wlabel, wdays) in enumerate(perf_windows.items()):
-            win_cols[i].markdown(
-                f'<div style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-                f'letter-spacing:0.12em;color:#8E6F3E;text-align:center">{wlabel}</div>',
-                unsafe_allow_html=True,
+            g_l, g_r = st.columns(2)
+            with g_l:
+                if "Real GDP Growth (QoQ %)" in macro_data:
+                    s = macro_data["Real GDP Growth (QoQ %)"].last("10Y")
+                    fig_gdp = go.Figure(go.Bar(
+                        x=s.index, y=s.values, name="Real GDP Growth",
+                        marker_color=["#2e7d32" if v >= 0 else "#c0392b" for v in s.values],
+                    ))
+                    fig_gdp.add_hline(y=0, line=dict(color="#ABABAB", dash="dot", width=1))
+                    fig_gdp.update_layout(
+                        template="purdue", height=280,
+                        title=dict(text="Real GDP Growth (QoQ %)", font=dict(size=10)),
+                        yaxis=dict(title="Growth (%)", ticksuffix="%"),
+                        margin=dict(l=40, r=10, t=35, b=30),
+                    )
+                    _chart(fig_gdp)
+
+            with g_r:
+                if "Industrial Production" in macro_data:
+                    s = macro_data["Industrial Production"].last("10Y")
+                    s_yoy = s.pct_change(12) * 100
+                    fig_ip = go.Figure(go.Scatter(
+                        x=s_yoy.dropna().index, y=s_yoy.dropna().values,
+                        line=dict(color="#8E6F3E", width=1.8),
+                        fill="tozeroy", fillcolor="rgba(142,111,62,0.08)",
+                        name="Ind. Production YoY %",
+                    ))
+                    fig_ip.add_hline(y=0, line=dict(color="#ABABAB", dash="dot", width=1))
+                    fig_ip.update_layout(
+                        template="purdue", height=280,
+                        title=dict(text="Industrial Production (YoY %)", font=dict(size=10)),
+                        yaxis=dict(title="YoY (%)", ticksuffix="%"),
+                        margin=dict(l=40, r=10, t=35, b=30),
+                    )
+                    _chart(fig_ip)
+
+            _insight_note(
+                "GDP and industrial production set the broadest context: are we in expansion or contraction? "
+                "Two consecutive negative GDP quarters = technical recession. Industrial production leads "
+                "earnings revisions by roughly one quarter."
             )
 
-        # Performance heatmap table
-        perf_rows = []
-        for name in idx_prices.columns:
-            if name == "VIX":
-                continue
-            s = idx_prices[name].dropna()
-            if s.empty:
-                continue
-            row = {"Index": name}
-            for wlabel, wdays in perf_windows.items():
-                if wdays is None:
-                    ytd_start = pd.Timestamp(today.year, 1, 1)
-                    s_ytd = s[s.index >= ytd_start]
-                    if len(s_ytd) >= 2:
-                        row[wlabel] = round((s_ytd.iloc[-1] / s_ytd.iloc[0] - 1) * 100, 2)
-                    else:
-                        row[wlabel] = None
-                else:
-                    if len(s) > wdays:
-                        row[wlabel] = round((s.iloc[-1] / s.iloc[-wdays - 1] - 1) * 100, 2)
-                    else:
-                        row[wlabel] = None
-            row["Latest"] = round(float(s.iloc[-1]), 2)
-            perf_rows.append(row)
-
-        perf_df = pd.DataFrame(perf_rows).set_index("Index")
-        ret_cols = [c for c in perf_df.columns if c != "Latest"]
-
-        def _color_ret(val):
-            if pd.isna(val):
-                return ""
-            if val > 2:    return "background-color:#c8e6c9;color:#1b5e20"
-            if val > 0:    return "background-color:#e8f5e9;color:#2e7d32"
-            if val > -2:   return "background-color:#ffebee;color:#b71c1c"
-            return              "background-color:#ffcdd2;color:#b71c1c"
-
-        styled_perf = perf_df.style.applymap(_color_ret, subset=ret_cols).format(
-            {c: "{:+.2f}%" for c in ret_cols},
-            na_rep="—",
-        )
-        idx_l, idx_r = st.columns([1.6, 1])
-        with idx_l:
-            st.dataframe(styled_perf, use_container_width=True, height=280)
-
-        with idx_r:
-            # VIX trend
-            if "VIX" in idx_prices.columns:
-                vix = idx_prices["VIX"].dropna().last("90D")
-                fig_vix = go.Figure()
-                fig_vix.add_trace(go.Scatter(
-                    x=vix.index, y=vix.values, name="VIX",
-                    line=dict(color="#c0392b", width=1.8),
-                    fill="tozeroy", fillcolor="rgba(192,57,43,0.08)",
-                ))
-                fig_vix.add_hline(y=20, line=dict(color="#CFB991", width=1, dash="dot"),
-                                  annotation_text="20 (Caution)", annotation_font_size=8)
-                fig_vix.add_hline(y=30, line=dict(color="#c0392b", width=1, dash="dot"),
-                                  annotation_text="30 (Fear)", annotation_font_size=8)
-                fig_vix.update_layout(
-                    template="purdue", height=260, margin=dict(l=40, r=10, t=30, b=30),
-                    title=dict(text="VIX Fear Index (90D)", font=dict(size=10)),
-                    yaxis=dict(title="VIX"), showlegend=False,
-                )
-                _chart(fig_vix)
-
-        _insight_note(
-            "Performance heatmap shows returns across rolling windows. "
-            "Green = positive return; red = negative. "
-            "VIX above 20 signals elevated market stress; above 30 signals fear."
-        )
-
-    # ── SECTION 2: Bond Yields & Yield Curve ────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # 2. HIGH-FREQ INDICATORS — Where is the economy heading?
+    # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
-    _label("Bond Yields & Yield Curve")
+    _label("2 · High-Frequency Indicators — PMI, Retail Sales & Labour")
+
+    if no_fred:
+        st.caption("Requires FRED API key.")
+    elif macro_data:
+        hf_l, hf_r = st.columns(2)
+        with hf_l:
+            if "ISM Manufacturing PMI" in macro_data:
+                s = macro_data["ISM Manufacturing PMI"].last("5Y")
+                fig_pmi = go.Figure(go.Scatter(
+                    x=s.index, y=s.values, name="ISM PMI",
+                    line=dict(color="#CFB991", width=2),
+                    fill="tozeroy", fillcolor="rgba(207,185,145,0.1)",
+                ))
+                fig_pmi.add_hline(y=50, line=dict(color="#c0392b", dash="dash", width=1.2),
+                                  annotation_text="50 = Expansion/Contraction", annotation_font_size=8)
+                fig_pmi.update_layout(
+                    template="purdue", height=260,
+                    title=dict(text="ISM Manufacturing PMI", font=dict(size=10)),
+                    yaxis=dict(title="PMI"),
+                    margin=dict(l=40, r=10, t=35, b=30),
+                )
+                _chart(fig_pmi)
+
+        with hf_r:
+            if "Retail Sales ex-Auto" in macro_data:
+                s = macro_data["Retail Sales ex-Auto"].last("5Y")
+                s_pct = s.pct_change(12) * 100
+                fig_rs = go.Figure(go.Scatter(
+                    x=s_pct.dropna().index, y=s_pct.dropna().values,
+                    line=dict(color="#3498db", width=1.8),
+                    fill="tozeroy", fillcolor="rgba(52,152,219,0.08)",
+                    name="YoY %",
+                ))
+                fig_rs.add_hline(y=0, line=dict(color="#ABABAB", dash="dot", width=1))
+                fig_rs.update_layout(
+                    template="purdue", height=260,
+                    title=dict(text="Retail Sales ex-Auto (YoY %)", font=dict(size=10)),
+                    yaxis=dict(title="YoY (%)", ticksuffix="%"),
+                    margin=dict(l=40, r=10, t=35, b=30),
+                )
+                _chart(fig_rs)
+
+        hf2_l, hf2_r = st.columns(2)
+        with hf2_l:
+            if "Nonfarm Payrolls (MoM k)" in macro_data:
+                s = macro_data["Nonfarm Payrolls (MoM k)"].last("5Y") / 1000
+                fig_pay = go.Figure(go.Bar(
+                    x=s.index, y=s.values,
+                    marker_color=["#2e7d32" if v >= 0 else "#c0392b" for v in s.values],
+                    name="MoM Change",
+                ))
+                fig_pay.update_layout(
+                    template="purdue", height=240,
+                    title=dict(text="Nonfarm Payrolls (MoM, thousands)", font=dict(size=10)),
+                    yaxis=dict(title="Change (k)"),
+                    margin=dict(l=40, r=10, t=35, b=30),
+                )
+                _chart(fig_pay)
+
+        with hf2_r:
+            if "Unemployment Rate (%)" in macro_data:
+                s = macro_data["Unemployment Rate (%)"].last("10Y")
+                fig_un = go.Figure(go.Scatter(
+                    x=s.index, y=s.values,
+                    line=dict(color="#c0392b", width=1.8),
+                    fill="tozeroy", fillcolor="rgba(192,57,43,0.06)",
+                    name="Unemployment %",
+                ))
+                fig_un.update_layout(
+                    template="purdue", height=240,
+                    title=dict(text="Unemployment Rate (%)", font=dict(size=10)),
+                    yaxis=dict(title="%", ticksuffix="%"),
+                    margin=dict(l=40, r=10, t=35, b=30),
+                )
+                _chart(fig_un)
+
+        _insight_note(
+            "PMI is the earliest leading indicator — it turns before GDP by 1–2 quarters. "
+            "Retail sales capture consumer revenue momentum; falling sales YoY typically precede "
+            "earnings downgrades in consumer discretionary. Payrolls above +150k/month = healthy labour market."
+        )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 3. MONEY FLOWS & LIQUIDITY — What is driving the cycle?
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
+    _label("3 · Money Flows & Liquidity — M2, Fed Balance Sheet & Sentiment")
+
+    if no_fred:
+        st.caption("Requires FRED API key.")
+    else:
+        with st.spinner("Loading money flow data…"):
+            money_data = _load_money(fred_key, start, end)
+
+        if money_data:
+            mf_l, mf_r, mf_s = st.columns(3)
+
+            with mf_l:
+                if "M2 Money Supply ($B)" in money_data:
+                    s = money_data["M2 Money Supply ($B)"].last("10Y")
+                    s_yoy = s.pct_change(12) * 100
+                    fig_m2 = go.Figure(go.Scatter(
+                        x=s_yoy.dropna().index, y=s_yoy.dropna().values,
+                        name="M2 YoY %", line=dict(color="#CFB991", width=2),
+                        fill="tozeroy", fillcolor="rgba(207,185,145,0.1)",
+                    ))
+                    fig_m2.add_hline(y=0, line=dict(color="#c0392b", dash="dash", width=1))
+                    fig_m2.update_layout(
+                        template="purdue", height=260,
+                        title=dict(text="M2 Money Supply Growth (YoY %)", font=dict(size=10)),
+                        yaxis=dict(title="YoY (%)", ticksuffix="%"),
+                        margin=dict(l=40, r=10, t=35, b=30),
+                    )
+                    _chart(fig_m2)
+
+            with mf_r:
+                if "Fed Total Assets ($B)" in money_data:
+                    s = money_data["Fed Total Assets ($B)"].last("10Y")
+                    fig_fed = go.Figure(go.Scatter(
+                        x=s.index, y=s.values / 1000,
+                        name="Fed Assets ($T)", line=dict(color="#8E6F3E", width=2),
+                        fill="tozeroy", fillcolor="rgba(142,111,62,0.1)",
+                    ))
+                    fig_fed.update_layout(
+                        template="purdue", height=260,
+                        title=dict(text="Fed Balance Sheet ($T)", font=dict(size=10)),
+                        yaxis=dict(title="Assets ($T)", tickprefix="$"),
+                        margin=dict(l=40, r=10, t=35, b=30),
+                    )
+                    _chart(fig_fed)
+
+            with mf_s:
+                if "Consumer Sentiment" in money_data:
+                    s = money_data["Consumer Sentiment"].last("5Y")
+                    avg = float(s.mean())
+                    fig_sent = go.Figure(go.Scatter(
+                        x=s.index, y=s.values, name="Consumer Sentiment",
+                        line=dict(color="#3498db", width=2),
+                    ))
+                    fig_sent.add_hline(y=avg, line=dict(color="#ABABAB", dash="dot", width=1),
+                                       annotation_text=f"Avg {avg:.0f}", annotation_font_size=8)
+                    fig_sent.update_layout(
+                        template="purdue", height=260,
+                        title=dict(text="Consumer Sentiment (Michigan)", font=dict(size=10)),
+                        yaxis=dict(title="Index"),
+                        margin=dict(l=40, r=10, t=35, b=30),
+                    )
+                    _chart(fig_sent)
+
+            _insight_note(
+                "M2 contraction (negative YoY) is historically associated with asset price stress — "
+                "the 2022 drawdown coincided with the first M2 decline since the 1930s. "
+                "Fed balance sheet expansion (QE) injects liquidity and typically lifts risk assets; "
+                "QT (reduction) tightens it. Consumer sentiment below its long-run average signals "
+                "reduced retail participation — a proxy for weakening demand-side flows."
+            )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 4. BOND YIELDS — What does the rates market price in?
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+                unsafe_allow_html=True)
+    _label("4 · Bond Yields — The Risk-Free Rate Backdrop")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -355,19 +506,15 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 _chart(fig_yld)
 
             with y_r:
-                # Spot yield curve (latest snapshot)
                 latest_yields = yields_df.iloc[-1].dropna()
                 maturities = {"3M": 0.25, "2Y": 2, "5Y": 5, "10Y": 10, "30Y": 30}
                 x_vals, y_vals = [], []
-                for label, yrs in maturities.items():
-                    if label in latest_yields.index:
+                for lbl, yrs in maturities.items():
+                    if lbl in latest_yields.index:
                         x_vals.append(yrs)
-                        y_vals.append(latest_yields[label])
-
-                fig_curve = go.Figure()
-                fig_curve.add_trace(go.Scatter(
-                    x=x_vals, y=y_vals,
-                    mode="lines+markers",
+                        y_vals.append(latest_yields[lbl])
+                fig_curve = go.Figure(go.Scatter(
+                    x=x_vals, y=y_vals, mode="lines+markers",
                     line=dict(color="#CFB991", width=2),
                     marker=dict(size=7, color="#8E6F3E"),
                     name="Yield Curve",
@@ -384,14 +531,18 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 _chart(fig_curve)
 
             _insight_note(
-                "An inverted yield curve (short rates above long rates) has preceded every US recession "
-                "since 1955. Watch the 10Y–2Y spread: negative = inversion = recession risk signal."
+                "Higher long-end yields raise the discount rate on equities, compressing valuations. "
+                "When the 10Y yield exceeds the S&P earnings yield, bonds become competitive with stocks — "
+                "watch this spread as a regime signal. A steep upward-sloping curve signals growth optimism; "
+                "a flat or inverted curve signals tightening or recession expectations."
             )
 
-    # ── SECTION 3: Yield Spreads ─────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # 5. YIELD SPREADS & CREDIT — What does the credit market say?
+    # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
-    _label("Yield Spreads & Credit Risk")
+    _label("5 · Yield Spreads & Credit Risk — Financial Conditions")
 
     if no_fred:
         st.caption("Requires FRED API key.")
@@ -403,7 +554,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             sp_l, sp_r = st.columns(2)
 
             with sp_l:
-                # Yield curve inversion
                 curve_cols = [c for c in ["10Y–2Y (Yield Curve)", "10Y–3M"] if c in spreads_df]
                 if curve_cols:
                     fig_inv = go.Figure()
@@ -426,7 +576,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     _chart(fig_inv)
 
             with sp_r:
-                # Credit spreads
                 cred_cols = [c for c in ["IG Credit Spread", "HY Credit Spread"] if c in spreads_df]
                 if cred_cols:
                     fig_cred = go.Figure()
@@ -447,15 +596,19 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     _chart(fig_cred)
 
             _insight_note(
-                "Credit spreads widen when investors demand more compensation for default risk. "
-                "HY spreads above 600bps historically signal recession; IG spreads above 200bps "
-                "indicate broad credit stress. Rising spreads = tightening financial conditions."
+                "Credit spreads are the market's real-time verdict on default risk. "
+                "They widen before equity markets sell off, making them a useful leading risk indicator. "
+                "HY spreads above 600bps have historically coincided with recessions; IG above 200bps "
+                "signals broad credit stress. An inverted yield curve alongside widening spreads = "
+                "the strongest combined recession signal."
             )
 
-    # ── SECTION 4: Valuations & Expected Earnings Growth ────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # 6. VALUATIONS & EARNINGS — Are equities priced for this environment?
+    # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
-    _label("Valuations & Expected Earnings Growth")
+    _label("6 · Valuations & Expected Earnings Growth")
 
     with st.spinner("Loading valuation data…"):
         val_df = _load_valuations()
@@ -464,10 +617,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         v_l, v_r = st.columns([1.2, 1])
 
         with v_l:
-            def _val_color(val):
-                if pd.isna(val):
-                    return ""
-                return ""
             def _pe_color(val):
                 if pd.isna(val): return ""
                 if val > 30:   return "background-color:#ffcdd2;color:#b71c1c"
@@ -493,7 +642,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             st.dataframe(styled_val, use_container_width=True, height=280)
 
         with v_r:
-            # Forward P/E bar chart
             plot_df = val_df.dropna(subset=["Forward P/E"]) if "Forward P/E" in val_df.columns else pd.DataFrame()
             if not plot_df.empty:
                 bar_colors = [
@@ -519,212 +667,86 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 _chart(fig_pe)
 
         _insight_note(
-            "Forward P/E above 20x signals expensive valuations; below 15x is historically cheap. "
-            "Earnings yield (= 1 / Forward P/E) can be compared to the 10Y bond yield to assess the "
-            "equity risk premium. Positive EPS growth with low P/E = best value setup."
+            "Forward P/E above 20x demands strong earnings growth to justify. "
+            "With rates elevated (section 4), the equity risk premium compresses — "
+            "making growth disappointments more painful. Markets priced at high multiples "
+            "with slowing PMI and widening credit spreads (sections 2 & 5) = the classic "
+            "late-cycle vulnerability setup."
         )
 
-    # ── SECTION 5: GDP, Macro & High-Freq Indicators ─────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # 7. INDEX PERFORMANCE — How have markets responded to all of the above?
+    # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
                 unsafe_allow_html=True)
-    _label("GDP, Growth & High-Frequency Indicators")
+    _label("7 · Index Performance & Market Stress — The Verdict")
 
-    if no_fred:
-        st.caption("Requires FRED API key.")
-    else:
-        with st.spinner("Loading macro indicators…"):
-            macro_data = _load_macro(fred_key, start, end)
+    perf_windows = {"1W": 5, "1M": 21, "3M": 63, "6M": 126, "YTD": None}
+    perf_start = (today - timedelta(days=400)).isoformat()
 
-        if macro_data:
-            # Latest readings KPI strip
-            kpi_keys = [
-                "Real GDP Growth (QoQ %)",
-                "ISM Manufacturing PMI",
-                "Unemployment Rate (%)",
-                "CPI YoY (%)",
-            ]
-            k_cols = st.columns(len(kpi_keys))
-            for i, key in enumerate(kpi_keys):
-                if key in macro_data and not macro_data[key].empty:
-                    s = macro_data[key]
-                    latest = s.iloc[-1]
-                    prev   = s.iloc[-2] if len(s) > 1 else latest
-                    delta  = latest - prev
-                    is_up  = delta > 0
-                    # For unemployment and CPI, up is bad
-                    good_up = key not in ("Unemployment Rate (%)", "CPI YoY (%)")
-                    _kpi(
-                        k_cols[i], key,
-                        f"{latest:.2f}{'%' if '%' in key else ''}",
-                        f"{abs(delta):.2f}",
-                        delta_up=is_up if good_up else not is_up,
-                    )
+    with st.spinner("Loading index data…"):
+        idx_prices = _load_index_perf(perf_start)
 
-            # Charts: GDP + Industrial Production | PMI + Retail Sales
-            m_l, m_r = st.columns(2)
+    if not idx_prices.empty:
+        perf_rows = []
+        for name in idx_prices.columns:
+            if name == "VIX":
+                continue
+            s = idx_prices[name].dropna()
+            if s.empty:
+                continue
+            row = {"Index": name}
+            for wlabel, wdays in perf_windows.items():
+                if wdays is None:
+                    ytd_start = pd.Timestamp(today.year, 1, 1)
+                    s_ytd = s[s.index >= ytd_start]
+                    row[wlabel] = round((s_ytd.iloc[-1] / s_ytd.iloc[0] - 1) * 100, 2) if len(s_ytd) >= 2 else None
+                else:
+                    row[wlabel] = round((s.iloc[-1] / s.iloc[-wdays - 1] - 1) * 100, 2) if len(s) > wdays else None
+            row["Latest"] = round(float(s.iloc[-1]), 2)
+            perf_rows.append(row)
 
-            with m_l:
-                gdp_key = "Real GDP Growth (QoQ %)"
-                ip_key  = "Industrial Production"
-                fig_gdp = go.Figure()
-                if gdp_key in macro_data:
-                    s = macro_data[gdp_key].last("10Y")
-                    fig_gdp.add_trace(go.Bar(
-                        x=s.index, y=s.values, name="Real GDP Growth",
-                        marker_color=["#2e7d32" if v >= 0 else "#c0392b" for v in s.values],
-                    ))
-                fig_gdp.add_hline(y=0, line=dict(color="#ABABAB", dash="dot", width=1))
-                fig_gdp.update_layout(
-                    template="purdue", height=280,
-                    title=dict(text="Real GDP Growth (QoQ %)", font=dict(size=10)),
-                    yaxis=dict(title="Growth (%)", ticksuffix="%"),
-                    margin=dict(l=40, r=10, t=35, b=30),
+        perf_df = pd.DataFrame(perf_rows).set_index("Index")
+        ret_cols = [c for c in perf_df.columns if c != "Latest"]
+
+        def _color_ret(val):
+            if pd.isna(val): return ""
+            if val > 2:  return "background-color:#c8e6c9;color:#1b5e20"
+            if val > 0:  return "background-color:#e8f5e9;color:#2e7d32"
+            if val > -2: return "background-color:#ffebee;color:#b71c1c"
+            return            "background-color:#ffcdd2;color:#b71c1c"
+
+        styled_perf = perf_df.style.applymap(_color_ret, subset=ret_cols).format(
+            {c: "{:+.2f}%" for c in ret_cols}, na_rep="—",
+        )
+        idx_l, idx_r = st.columns([1.6, 1])
+        with idx_l:
+            st.dataframe(styled_perf, use_container_width=True, height=280)
+
+        with idx_r:
+            if "VIX" in idx_prices.columns:
+                vix = idx_prices["VIX"].dropna().last("90D")
+                fig_vix = go.Figure(go.Scatter(
+                    x=vix.index, y=vix.values, name="VIX",
+                    line=dict(color="#c0392b", width=1.8),
+                    fill="tozeroy", fillcolor="rgba(192,57,43,0.08)",
+                ))
+                fig_vix.add_hline(y=20, line=dict(color="#CFB991", width=1, dash="dot"),
+                                  annotation_text="20 (Caution)", annotation_font_size=8)
+                fig_vix.add_hline(y=30, line=dict(color="#c0392b", width=1, dash="dot"),
+                                  annotation_text="30 (Fear)", annotation_font_size=8)
+                fig_vix.update_layout(
+                    template="purdue", height=260, margin=dict(l=40, r=10, t=30, b=30),
+                    title=dict(text="VIX Fear Index (90D)", font=dict(size=10)),
+                    yaxis=dict(title="VIX"), showlegend=False,
                 )
-                _chart(fig_gdp)
+                _chart(fig_vix)
 
-            with m_r:
-                pmi_key = "ISM Manufacturing PMI"
-                fig_pmi = go.Figure()
-                if pmi_key in macro_data:
-                    s = macro_data[pmi_key].last("5Y")
-                    fig_pmi.add_trace(go.Scatter(
-                        x=s.index, y=s.values, name="ISM PMI",
-                        line=dict(color="#CFB991", width=2),
-                        fill="tozeroy", fillcolor="rgba(207,185,145,0.1)",
-                    ))
-                    fig_pmi.add_hline(y=50, line=dict(color="#c0392b", dash="dash", width=1.2),
-                                      annotation_text="50 = Expansion/Contraction", annotation_font_size=8)
-                fig_pmi.update_layout(
-                    template="purdue", height=280,
-                    title=dict(text="ISM Manufacturing PMI", font=dict(size=10)),
-                    yaxis=dict(title="PMI"),
-                    margin=dict(l=40, r=10, t=35, b=30),
-                )
-                _chart(fig_pmi)
-
-            # Retail Sales + Payrolls
-            m2_l, m2_r = st.columns(2)
-
-            with m2_l:
-                rs_key = "Retail Sales ex-Auto"
-                if rs_key in macro_data:
-                    s = macro_data[rs_key].last("5Y")
-                    s_pct = s.pct_change(12) * 100
-                    fig_rs = go.Figure()
-                    fig_rs.add_trace(go.Scatter(
-                        x=s_pct.index, y=s_pct.values, name="YoY %",
-                        line=dict(color="#3498db", width=1.8),
-                        fill="tozeroy",
-                        fillcolor="rgba(52,152,219,0.08)",
-                    ))
-                    fig_rs.add_hline(y=0, line=dict(color="#ABABAB", dash="dot", width=1))
-                    fig_rs.update_layout(
-                        template="purdue", height=260,
-                        title=dict(text="Retail Sales ex-Auto (YoY %)", font=dict(size=10)),
-                        yaxis=dict(title="YoY (%)", ticksuffix="%"),
-                        margin=dict(l=40, r=10, t=35, b=30),
-                    )
-                    _chart(fig_rs)
-
-            with m2_r:
-                pay_key = "Nonfarm Payrolls (MoM k)"
-                if pay_key in macro_data:
-                    s = macro_data[pay_key].last("5Y") / 1000  # convert to thousands
-                    fig_pay = go.Figure(go.Bar(
-                        x=s.index, y=s.values,
-                        marker_color=["#2e7d32" if v >= 0 else "#c0392b" for v in s.values],
-                        name="MoM Change",
-                    ))
-                    fig_pay.update_layout(
-                        template="purdue", height=260,
-                        title=dict(text="Nonfarm Payrolls (MoM, thousands)", font=dict(size=10)),
-                        yaxis=dict(title="Change (k)"),
-                        margin=dict(l=40, r=10, t=35, b=30),
-                    )
-                    _chart(fig_pay)
-
-            _insight_note(
-                "PMI above 50 = manufacturing expanding; below 50 = contraction. "
-                "Retail sales and payrolls are key revenue indicators for consumer-facing sectors. "
-                "Declining payrolls alongside falling retail sales historically precede equity drawdowns of 15-30%."
-            )
-
-    # ── SECTION 6: Money Flows & Liquidity ───────────────────────────────────
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
-                unsafe_allow_html=True)
-    _label("Money Flows & Liquidity")
-
-    if no_fred:
-        st.caption("Requires FRED API key.")
-    else:
-        with st.spinner("Loading money flow data…"):
-            money_data = _load_money(fred_key, start, end)
-
-        if money_data:
-            mf_l, mf_r, mf_s = st.columns(3)
-
-            with mf_l:
-                if "M2 Money Supply ($B)" in money_data:
-                    s = money_data["M2 Money Supply ($B)"].last("10Y")
-                    s_yoy = s.pct_change(12) * 100
-                    fig_m2 = go.Figure()
-                    fig_m2.add_trace(go.Scatter(
-                        x=s_yoy.dropna().index, y=s_yoy.dropna().values,
-                        name="M2 YoY %", line=dict(color="#CFB991", width=2),
-                        fill="tozeroy", fillcolor="rgba(207,185,145,0.1)",
-                    ))
-                    fig_m2.add_hline(y=0, line=dict(color="#c0392b", dash="dash", width=1))
-                    fig_m2.update_layout(
-                        template="purdue", height=260,
-                        title=dict(text="M2 Money Supply Growth (YoY %)", font=dict(size=10)),
-                        yaxis=dict(title="YoY (%)", ticksuffix="%"),
-                        margin=dict(l=40, r=10, t=35, b=30),
-                    )
-                    _chart(fig_m2)
-
-            with mf_r:
-                if "Fed Total Assets ($B)" in money_data:
-                    s = money_data["Fed Total Assets ($B)"].last("10Y")
-                    fig_fed = go.Figure()
-                    fig_fed.add_trace(go.Scatter(
-                        x=s.index, y=s.values / 1000,
-                        name="Fed Assets ($T)", line=dict(color="#8E6F3E", width=2),
-                        fill="tozeroy", fillcolor="rgba(142,111,62,0.1)",
-                    ))
-                    fig_fed.update_layout(
-                        template="purdue", height=260,
-                        title=dict(text="Fed Balance Sheet ($T)", font=dict(size=10)),
-                        yaxis=dict(title="Assets ($T)", tickprefix="$"),
-                        margin=dict(l=40, r=10, t=35, b=30),
-                    )
-                    _chart(fig_fed)
-
-            with mf_s:
-                if "Consumer Sentiment" in money_data:
-                    s = money_data["Consumer Sentiment"].last("5Y")
-                    fig_sent = go.Figure()
-                    fig_sent.add_trace(go.Scatter(
-                        x=s.index, y=s.values, name="Consumer Sentiment",
-                        line=dict(color="#3498db", width=2),
-                    ))
-                    # Historical average
-                    avg = float(s.mean())
-                    fig_sent.add_hline(y=avg, line=dict(color="#ABABAB", dash="dot", width=1),
-                                       annotation_text=f"Avg {avg:.0f}", annotation_font_size=8)
-                    fig_sent.update_layout(
-                        template="purdue", height=260,
-                        title=dict(text="Consumer Sentiment (Michigan)", font=dict(size=10)),
-                        yaxis=dict(title="Index"),
-                        margin=dict(l=40, r=10, t=35, b=30),
-                    )
-                    _chart(fig_sent)
-
-            _insight_note(
-                "M2 contraction (negative YoY) is historically associated with asset price stress — "
-                "the 2022 drawdown coincided with the first M2 decline since the 1930s. "
-                "Fed balance sheet expansion (QE) injects liquidity and typically lifts risk assets; "
-                "QT (reduction) tightens liquidity. Consumer sentiment below its long-run average "
-                "signals reduced retail participation and lower consumer spending momentum."
-            )
+        _insight_note(
+            "Index performance is the cumulative market verdict on everything above. "
+            "Cross-reference with sections 1–6: strong GDP + low spreads + reasonable valuations "
+            "should explain green returns. Drawdowns alongside widening spreads or inverted curves "
+            "are the most dangerous combination — the macro backdrop confirms the price signal."
+        )
 
     _page_footer()
