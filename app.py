@@ -1133,7 +1133,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
     <li class="ni">
       <a class="lnk {'active' if current == 'macro_dashboard' else ''}" data-pg="macro_dashboard"
-         href="?page=macro_dashboard" target="_parent">Macro</a>
+         href="#" onclick="navigate('macro_dashboard');return false;">Macro</a>
     </li>
 
     <li class="ni" id="ga">
@@ -1156,7 +1156,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
     <li class="ni">
       <a class="lnk {'active' if current == 'watchlist' else ''}" data-pg="watchlist"
-         href="?page=watchlist" target="_parent">Monitor</a>
+         href="#" onclick="navigate('watchlist');return false;">Monitor</a>
     </li>
 
     <li class="ni" id="gr">
