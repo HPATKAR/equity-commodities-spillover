@@ -2,6 +2,7 @@
 CFTC Commitments of Traders (COT) — disaggregated futures loader.
 
 Downloads annual ZIP files from CFTC's public repository.
+Falls back to the CFTC Socrata public API when ZIP downloads are blocked (cloud deployments).
 Maps our commodity names to CFTC report names.
 Computes net speculative positioning and normalises to % of open interest.
 """
@@ -31,8 +32,13 @@ COT_MARKETS: dict[str, str] = {
 }
 
 _BASE_URL = "https://www.cftc.gov/files/dea/history/fut_disagg_txt_{year}.zip"
-# Alternative URL path used by some CFTC server configurations
 _ALT_URL  = "https://www.cftc.gov/sites/default/files/files/dea/history/fut_disagg_txt_{year}.zip"
+
+# CFTC public Socrata API — works from cloud IPs where direct ZIP downloads are blocked
+_SOCRATA_URL = (
+    "https://publicreporting.cftc.gov/resource/72hh-3qpy.json"
+    "?$where=report_date_as_yyyy_mm_dd >= '{since}'&$limit=50000&$order=report_date_as_yyyy_mm_dd ASC"
+)
 
 _HEADERS = {
     "User-Agent": (
@@ -44,9 +50,8 @@ _HEADERS = {
 }
 
 
-def _download_cot_year(session: "requests.Session", year: int) -> "pd.DataFrame | None":
-    """Try both URL patterns for a given year; return parsed DataFrame or None."""
-    import requests as _req
+def _download_cot_year(session, year: int) -> "pd.DataFrame | None":
+    """Try both ZIP URL patterns for a given year; return parsed DataFrame or None."""
     for url_tmpl in (_BASE_URL, _ALT_URL):
         url = url_tmpl.format(year=year)
         try:
@@ -65,12 +70,45 @@ def _download_cot_year(session: "requests.Session", year: int) -> "pd.DataFrame 
     return None
 
 
+def _load_via_socrata(session, years: int = 3) -> "pd.DataFrame | None":
+    """
+    Fallback: fetch COT data via CFTC's public Socrata API.
+    Works from cloud IPs (Hugging Face, AWS, GCP) where direct ZIP downloads are blocked.
+    Returns a DataFrame with columns normalised to match ZIP CSV naming.
+    """
+    since = f"{date.today().year - years}-01-01"
+    url = _SOCRATA_URL.format(since=since)
+    try:
+        resp = session.get(
+            url, timeout=90,
+            headers={"Accept": "application/json", "User-Agent": _HEADERS["User-Agent"]},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not data:
+            return None
+        df = pd.DataFrame(data)
+        # Socrata uses lowercase snake_case — rename to match ZIP CSV column names
+        rename = {
+            "report_date_as_yyyy_mm_dd": "Report_Date_as_YYYY-MM-DD",
+            "market_and_exchange_names":  "Market_and_Exchange_Names",
+            "noncomm_positions_long_all": "NonComm_Positions_Long_All",
+            "noncomm_positions_short_all":"NonComm_Positions_Short_All",
+            "open_interest_all":          "Open_Interest_All",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+        return df
+    except Exception:
+        return None
+
+
 # ── Downloader ──────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_cot_data(years: int = 3) -> pd.DataFrame:
     """
     Download CFTC disaggregated COT data for the last `years` annual files.
+    Tries direct ZIP downloads first; falls back to Socrata API for cloud deployments.
     Returns tidy DataFrame:
       date | market | net_speculative | net_spec_pct | oi
     """
@@ -82,8 +120,15 @@ def load_cot_data(years: int = 3) -> pd.DataFrame:
     session = requests.Session()
     session.headers.update(_HEADERS)
 
+    # Primary: try ZIP downloads
     for yr in range(current_year - years + 1, current_year + 1):
         df = _download_cot_year(session, yr)
+        if df is not None:
+            raw_frames.append(df)
+
+    # Fallback: Socrata API (works from cloud IPs)
+    if not raw_frames:
+        df = _load_via_socrata(session, years=years)
         if df is not None:
             raw_frames.append(df)
 
@@ -119,7 +164,7 @@ def load_cot_data(years: int = 3) -> pd.DataFrame:
     raw["oi"] = pd.to_numeric(raw[oi_col], errors="coerce")
     raw["net_spec_pct"] = (raw["net_speculative"] / raw["oi"].replace(0, np.nan) * 100).round(2)
 
-    # ── Filter to our markets ─────────────────────────────────────────────
+    # ── Filter to our markets ─────────────────────────────────────────
     result_rows: list[pd.DataFrame] = []
     for our_name, pattern in COT_MARKETS.items():
         mask = raw[name_col].str.contains(pattern, case=False, na=False)
@@ -237,8 +282,8 @@ def cot_extremes_table(cot_df: pd.DataFrame) -> pd.DataFrame:
             continue
         latest = float(s["net_spec_pct"].iloc[-1])
         pct    = float((s["net_spec_pct"] < latest).mean() * 100)
-        if pct > 85:   signal, sig_col = "⚠ Crowded Long - Contrarian Sell",  "#c0392b"
-        elif pct < 15: signal, sig_col = "⚠ Crowded Short - Contrarian Buy",   "#2e7d32"
+        if pct > 85:   signal, sig_col = "Crowded Long - Contrarian Sell",  "#c0392b"
+        elif pct < 15: signal, sig_col = "Crowded Short - Contrarian Buy",   "#2e7d32"
         else:          signal, sig_col = "Neutral",                             "#555960"
         rows.append({
             "Commodity":        market,
