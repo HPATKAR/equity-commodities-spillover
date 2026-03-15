@@ -533,7 +533,7 @@ def _page_footer() -> None:
         "<a href='https://business.purdue.edu/' target='_blank' class='ft-wordmark'>Purdue Daniels</a>"
     )
 
-    _comp.html(f"""<!DOCTYPE html>
+    _ft_click = _comp.html(f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -589,6 +589,16 @@ a:hover{{color:#CFB991;}}
 </style>
 </head>
 <body>
+<script>
+function nav(page) {{
+    window.parent.postMessage({{
+        isStreamlitMessage: true,
+        type: "streamlit:setComponentValue",
+        value: page,
+        dataType: "json"
+    }}, "*");
+}}
+</script>
 <div class="ft-body">
   <div class="ft-grid">
 
@@ -601,31 +611,31 @@ a:hover{{color:#CFB991;}}
     <div>
       <p class="ft-hd">Navigate</p>
       <ul>
-        <li><a href="?page=overview" target="_parent">Overview</a></li>
-        <li><a href="?page=war_impact_map" target="_parent">War Impact Map</a></li>
-        <li><a href="?page=geopolitical" target="_parent">Geopolitical Triggers</a></li>
-        <li><a href="?page=correlation" target="_parent">Correlation Analysis</a></li>
-        <li><a href="?page=spillover" target="_parent">Spillover Analytics</a></li>
-        <li><a href="?page=watchlist" target="_parent">Commodities to Watch</a></li>
+        <li><a href="#" onclick="nav('overview');return false;">Overview</a></li>
+        <li><a href="#" onclick="nav('war_impact_map');return false;">War Impact Map</a></li>
+        <li><a href="#" onclick="nav('geopolitical');return false;">Geopolitical Triggers</a></li>
+        <li><a href="#" onclick="nav('correlation');return false;">Correlation Analysis</a></li>
+        <li><a href="#" onclick="nav('spillover');return false;">Spillover Analytics</a></li>
+        <li><a href="#" onclick="nav('watchlist');return false;">Commodities to Watch</a></li>
       </ul>
     </div>
 
     <div>
       <p class="ft-hd">Strategy &amp; Research</p>
       <ul>
-        <li><a href="?page=trade_ideas" target="_parent">Trade Ideas</a></li>
-        <li><a href="?page=stress_test" target="_parent">Portfolio Stress Test</a></li>
-        <li><a href="?page=model_accuracy" target="_parent">Performance Review</a></li>
-        <li><a href="?page=ai_chat" target="_parent">AI Analyst</a></li>
+        <li><a href="#" onclick="nav('trade_ideas');return false;">Trade Ideas</a></li>
+        <li><a href="#" onclick="nav('stress_test');return false;">Portfolio Stress Test</a></li>
+        <li><a href="#" onclick="nav('model_accuracy');return false;">Performance Review</a></li>
+        <li><a href="#" onclick="nav('ai_chat');return false;">AI Analyst</a></li>
       </ul>
     </div>
 
     <div>
       <p class="ft-hd">Authors</p>
       <ul>
-        <li><a href="?page=about_heramb" target="_parent">Heramb S. Patkar</a></li>
-        <li><a href="?page=about_jiahe" target="_parent">Jiahe Miao</a></li>
-        <li><a href="?page=about_ilian" target="_parent">Ilian Zalomai</a></li>
+        <li><a href="#" onclick="nav('about_heramb');return false;">Heramb S. Patkar</a></li>
+        <li><a href="#" onclick="nav('about_jiahe');return false;">Jiahe Miao</a></li>
+        <li><a href="#" onclick="nav('about_ilian');return false;">Ilian Zalomai</a></li>
         <li><a href="https://business.purdue.edu/" target="_blank">Daniels School of Business</a></li>
       </ul>
     </div>
@@ -646,3 +656,11 @@ a:hover{{color:#CFB991;}}
   <p>&copy; {yr} Purdue University &middot; For educational purposes only &middot; Not investment advice</p>
 </div>
 </body></html>""", height=320, scrolling=False)
+    _VALID = {{'overview','war_impact_map','geopolitical','correlation','spillover',
+              'watchlist','trade_ideas','stress_test','model_accuracy','ai_chat',
+              'about_heramb','about_jiahe','about_ilian'}}
+    _ft_last = st.session_state.get("_ft_nav_last", "")
+    if _ft_click and _ft_click in _VALID and _ft_click != _ft_last:
+        st.session_state["_ft_nav_last"] = _ft_click
+        st.session_state["current_page"] = _ft_click
+        st.rerun()

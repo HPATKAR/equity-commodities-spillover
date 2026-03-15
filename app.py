@@ -387,9 +387,12 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         a.style.background=isActive?'rgba(207,185,145,.07)':'';
         a.style.borderLeftColor=isActive?'#CFB991':'transparent';
       }});
-      /* a is IN the parent document — plain href navigates it directly */
       a.href='?page='+pg;
-      a.addEventListener('click',function(){{ removeDropdown(); }});
+      a.addEventListener('click',function(e){{
+        e.preventDefault();
+        removeDropdown();
+        window.parent.postMessage({{isStreamlitMessage:true,type:"streamlit:setComponentValue",value:pg,dataType:"json"}},"*");
+      }});
       li2.appendChild(a);
       ul.appendChild(li2);
     }});
@@ -398,6 +401,15 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     ul.addEventListener('mouseleave',scheduleHide);
     _pdoc.body.appendChild(ul);
   }}
+
+  window.navigate = function navigate(page){{
+    window.parent.postMessage({{
+      isStreamlitMessage:true,
+      type:"streamlit:setComponentValue",
+      value:page,
+      dataType:"json"
+    }},"*");
+  }};
 
   document.addEventListener('DOMContentLoaded',function(){{
     /* Wire hover items */
@@ -429,7 +441,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
 <div id="nav">
   <!-- Logotype -->
-  <a class="brand" href="#" onclick="window.parent.location.href='?page=overview';return false;">
+  <a class="brand" href="#" onclick="navigate('overview');return false;">
     <div class="brand-mark">
       <span class="mk-top">E&amp;C</span>
       <span class="mk-bot">MON</span>
@@ -444,7 +456,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   <ul class="links">
     <li class="ni">
       <a class="lnk {'active' if current == 'overview' else ''}" data-pg="overview"
-         href="#" onclick="window.parent.location.href='?page=overview';return false;">Overview</a>
+         href="#" onclick="navigate('overview');return false;">Overview</a>
     </li>
 
     <li class="ni" id="ga">
@@ -492,7 +504,13 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 </div>
 </body></html>"""
 
-components.html(_NAVBAR, height=1, scrolling=False)
+_nav_click = components.html(_NAVBAR, height=1, scrolling=False)
+_nav_last = st.session_state.get("_nav_last", "")
+if _nav_click and _nav_click in _VALID_PAGES and _nav_click != _nav_last:
+    st.session_state["_nav_last"] = _nav_click
+    st.session_state["current_page"] = _nav_click
+    current = _nav_click
+    st.rerun()
 
 # ── Date range strip (hidden on About pages — they need no data range) ────────
 _is_about = current in _ABOUT_PAGES
