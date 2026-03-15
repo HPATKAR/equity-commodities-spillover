@@ -75,11 +75,13 @@ button[aria-label="Open sidebar"] {
 /* ── Content area — padded below the 72 px fixed navbar ── */
 .main .block-container {
     padding-top:    86px !important;
-    padding-bottom: 3rem !important;
+    padding-bottom: 0 !important;
     padding-left:   2.2rem !important;
     padding-right:  2.2rem !important;
     max-width: 1360px;
 }
+/* Kill any Streamlit-injected bottom chrome that creates white space */
+[data-testid="stBottom"], .reportview-container .main footer { display: none !important; }
 
 /* ── Headings ── */
 h1 { font-size: 1.25rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
@@ -385,11 +387,9 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         a.style.background=isActive?'rgba(207,185,145,.07)':'';
         a.style.borderLeftColor=isActive?'#CFB991':'transparent';
       }});
-      a.addEventListener('click',function(e){{
-        e.preventDefault();
-        removeDropdown();
-        window.parent.location.href='?page='+pg;
-      }});
+      /* a is IN the parent document — plain href navigates it directly */
+      a.href='?page='+pg;
+      a.addEventListener('click',function(){{ removeDropdown(); }});
       li2.appendChild(a);
       ul.appendChild(li2);
     }});
@@ -429,7 +429,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
 <div id="nav">
   <!-- Logotype -->
-  <a class="brand" href="?page=overview" target="_parent">
+  <a class="brand" href="#" onclick="window.parent.location.href='?page=overview';return false;">
     <div class="brand-mark">
       <span class="mk-top">E&amp;C</span>
       <span class="mk-bot">MON</span>
@@ -444,7 +444,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   <ul class="links">
     <li class="ni">
       <a class="lnk {'active' if current == 'overview' else ''}" data-pg="overview"
-         href="?page=overview" target="_parent">Overview</a>
+         href="#" onclick="window.parent.location.href='?page=overview';return false;">Overview</a>
     </li>
 
     <li class="ni" id="ga">

@@ -520,142 +520,129 @@ def _footer_logo_b64() -> str:
 
 
 def _page_footer() -> None:
+    import streamlit.components.v1 as _comp
     from datetime import datetime
     yr  = datetime.now().year
     ts  = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
     logo_src = _footer_logo_b64()
 
     logo_html = (
-        f"<img src='{logo_src}' alt='Purdue Daniels School of Business' "
-        "class='ft-logo' />"
+        f"<a href='https://business.purdue.edu/' target='_blank'>"
+        f"<img src='{logo_src}' alt='Purdue Daniels' class='ft-logo'/></a>"
         if logo_src else
-        "<span class='ft-wordmark'>Purdue Daniels</span>"
+        "<a href='https://business.purdue.edu/' target='_blank' class='ft-wordmark'>Purdue Daniels</a>"
     )
 
-    st.markdown(f"""
+    _comp.html(f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ── Footer reset ─────────────────────────────────────────────────── */
-.main .block-container{{padding-bottom:0!important;margin-bottom:0!important}}
-.main{{padding-bottom:0!important;margin-bottom:0!important}}
-[data-testid='stAppViewContainer']{{padding-bottom:0!important}}
-[data-testid='stBottom']{{display:none!important}}
-
-/* ── Footer shell ─────────────────────────────────────────────────── */
-.ec-footer{{
-  margin-top:4rem;
-  position:relative;width:100vw;
-  left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;
-  margin-bottom:-10rem;padding-bottom:0;
+*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+html,body{{
+  background:#000;
   font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
 }}
-.ec-footer-body{{
-  background:#000000;padding:44px 0 40px;
-}}
-.ec-footer-grid{{
+.ft-body{{background:#000;padding:44px 0 40px;border-top:1px solid #1a1a1a;}}
+.ft-grid{{
   display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;
   gap:28px;max-width:1280px;margin:0 auto;padding:0 48px;
 }}
-.ft-logo{{height:40px;margin-bottom:16px;display:block;}}
+.ft-logo{{height:38px;margin-bottom:16px;display:block;}}
 .ft-wordmark{{
   color:#CFB991;font-weight:800;font-size:1rem;
-  display:block;margin-bottom:16px;
+  display:block;margin-bottom:16px;text-decoration:none;
 }}
 .ft-desc{{
-  font-size:0.74rem;color:rgba(255,255,255,0.70);
-  line-height:1.65;margin:0 0 16px;max-width:260px;
+  font-size:0.74rem;color:rgba(255,255,255,0.68);
+  line-height:1.65;margin:0 0 14px;max-width:260px;
 }}
 .ft-ts{{
-  font-size:0.60rem;color:rgba(207,185,145,0.60);
+  font-size:0.58rem;color:rgba(207,185,145,0.55);
   margin:0;font-weight:600;letter-spacing:0.10em;
 }}
-.ft-col-hd{{
-  font-size:0.60rem;font-weight:700;text-transform:uppercase;
+.ft-hd{{
+  font-size:0.58rem;font-weight:700;text-transform:uppercase;
   letter-spacing:0.16em;color:#CFB991;
-  margin:0 0 14px;padding-bottom:8px;
+  margin:0 0 13px;padding-bottom:8px;
   border-bottom:1px solid rgba(207,185,145,0.15);
 }}
-.ec-footer ul{{list-style:none;padding:0;margin:0;}}
-.ec-footer li{{margin-bottom:8px;}}
-.ec-footer li:last-child{{margin-bottom:0;}}
-.ec-footer a{{
-  color:rgba(255,255,255,0.75)!important;
-  text-decoration:none!important;
-  font-size:0.74rem;font-weight:500;
-  transition:color 0.15s ease;
+ul{{list-style:none;padding:0;margin:0;}}
+li{{margin-bottom:8px;}}
+li:last-child{{margin-bottom:0;}}
+a{{
+  color:rgba(255,255,255,0.72);
+  text-decoration:none;
+  font-size:0.73rem;font-weight:400;
+  transition:color 0.14s;
+  display:inline-block;
 }}
-.ec-footer a:hover{{color:#CFB991!important;}}
-.ec-footer-bar{{
+a:hover{{color:#CFB991;}}
+.ft-bar{{
   background:#CFB991;padding:10px 48px;text-align:center;
 }}
-.ec-footer-bar p{{
-  font-size:0.58rem;color:#000000;margin:0;
+.ft-bar p{{
+  font-size:0.58rem;color:#000;margin:0;
   font-weight:600;letter-spacing:0.10em;
-  font-family:'DM Sans',-apple-system,sans-serif;
 }}
 </style>
+</head>
+<body>
+<div class="ft-body">
+  <div class="ft-grid">
 
-<div class="ec-footer">
-  <div class="ec-footer-body">
-    <div class="ec-footer-grid">
-
-      <!-- Col 1: brand -->
-      <div>
-        <a href="https://business.purdue.edu/" target="_blank">{logo_html}</a>
-        <p class="ft-desc">MGMT 69000-120 &middot; AI for Finance<br/>West Lafayette, Indiana</p>
-        <p class="ft-ts">Last updated {ts}</p>
-      </div>
-
-      <!-- Col 2: navigate -->
-      <div>
-        <p class="ft-col-hd">Navigate</p>
-        <ul>
-          <li><a href="?page=overview">Overview</a></li>
-          <li><a href="?page=war_impact_map">War Impact Map</a></li>
-          <li><a href="?page=geopolitical">Geopolitical Triggers</a></li>
-          <li><a href="?page=correlation">Correlation Analysis</a></li>
-          <li><a href="?page=spillover">Spillover Analytics</a></li>
-          <li><a href="?page=watchlist">Commodities to Watch</a></li>
-        </ul>
-      </div>
-
-      <!-- Col 3: strategy & research -->
-      <div>
-        <p class="ft-col-hd">Strategy &amp; Research</p>
-        <ul>
-          <li><a href="?page=trade_ideas">Trade Ideas</a></li>
-          <li><a href="?page=stress_test">Portfolio Stress Test</a></li>
-          <li><a href="?page=model_accuracy">Performance Review</a></li>
-          <li><a href="?page=ai_chat">AI Analyst</a></li>
-        </ul>
-      </div>
-
-      <!-- Col 4: authors -->
-      <div>
-        <p class="ft-col-hd">Authors</p>
-        <ul>
-          <li><a href="?page=about_heramb">Heramb S. Patkar</a></li>
-          <li><a href="?page=about_jiahe">Jiahe Miao</a></li>
-          <li><a href="?page=about_ilian">Ilian Zalomai</a></li>
-          <li><a href="https://business.purdue.edu/" target="_blank">Daniels School of Business</a></li>
-        </ul>
-      </div>
-
-      <!-- Col 5: data sources -->
-      <div>
-        <p class="ft-col-hd">Data Sources</p>
-        <ul>
-          <li><a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a></li>
-          <li><a href="https://fred.stlouisfed.org" target="_blank">FRED &middot; Federal Reserve</a></li>
-          <li><a href="https://financialdatasets.ai" target="_blank">FinancialDatasets</a></li>
-          <li><a href="https://www.cftc.gov" target="_blank">CFTC COT Reports</a></li>
-        </ul>
-      </div>
-
+    <div>
+      {logo_html}
+      <p class="ft-desc">MGMT 69000-120 &middot; AI for Finance<br/>West Lafayette, Indiana</p>
+      <p class="ft-ts">Last updated {ts}</p>
     </div>
-  </div>
 
-  <div class="ec-footer-bar">
-    <p>&copy; {yr} Purdue University &middot; For educational purposes only &middot; Not investment advice</p>
+    <div>
+      <p class="ft-hd">Navigate</p>
+      <ul>
+        <li><a href="?page=overview" target="_parent">Overview</a></li>
+        <li><a href="?page=war_impact_map" target="_parent">War Impact Map</a></li>
+        <li><a href="?page=geopolitical" target="_parent">Geopolitical Triggers</a></li>
+        <li><a href="?page=correlation" target="_parent">Correlation Analysis</a></li>
+        <li><a href="?page=spillover" target="_parent">Spillover Analytics</a></li>
+        <li><a href="?page=watchlist" target="_parent">Commodities to Watch</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <p class="ft-hd">Strategy &amp; Research</p>
+      <ul>
+        <li><a href="?page=trade_ideas" target="_parent">Trade Ideas</a></li>
+        <li><a href="?page=stress_test" target="_parent">Portfolio Stress Test</a></li>
+        <li><a href="?page=model_accuracy" target="_parent">Performance Review</a></li>
+        <li><a href="?page=ai_chat" target="_parent">AI Analyst</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <p class="ft-hd">Authors</p>
+      <ul>
+        <li><a href="?page=about_heramb" target="_parent">Heramb S. Patkar</a></li>
+        <li><a href="?page=about_jiahe" target="_parent">Jiahe Miao</a></li>
+        <li><a href="?page=about_ilian" target="_parent">Ilian Zalomai</a></li>
+        <li><a href="https://business.purdue.edu/" target="_blank">Daniels School of Business</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <p class="ft-hd">Data Sources</p>
+      <ul>
+        <li><a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a></li>
+        <li><a href="https://fred.stlouisfed.org" target="_blank">FRED &middot; Federal Reserve</a></li>
+        <li><a href="https://financialdatasets.ai" target="_blank">FinancialDatasets</a></li>
+        <li><a href="https://www.cftc.gov" target="_blank">CFTC COT Reports</a></li>
+      </ul>
+    </div>
+
   </div>
 </div>
-""", unsafe_allow_html=True)
+<div class="ft-bar">
+  <p>&copy; {yr} Purdue University &middot; For educational purposes only &middot; Not investment advice</p>
+</div>
+</body></html>""", height=320, scrolling=False)
