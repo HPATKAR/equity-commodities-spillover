@@ -782,12 +782,7 @@ a:hover{{color:#CFB991;}}
 }})();
 
 function nav(page) {{
-  window.parent.postMessage({{
-    isStreamlitMessage: true,
-    type: "streamlit:setComponentValue",
-    value: page,
-    dataType: "json"
-  }}, "*");
+  window.parent.location.href = '?page=' + page;
 }}
 </script>
 <div class="ft-body">

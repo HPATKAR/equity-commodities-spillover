@@ -815,12 +815,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   }}
 
   window.navigate = function navigate(page){{
-    window.parent.postMessage({{
-      isStreamlitMessage:true,
-      type:"streamlit:setComponentValue",
-      value:page,
-      dataType:"json"
-    }},"*");
+    window.parent.location.href = '?page=' + page;
   }};
 
   /* ── Dark mode engine (pure JS + localStorage, no Python round-trip) ── */
