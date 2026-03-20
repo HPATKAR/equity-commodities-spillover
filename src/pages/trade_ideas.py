@@ -133,10 +133,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "<strong>Given the current macro and correlation regime, which cross-asset positions are structurally supported?</strong> "
-        "Each idea is regime-conditioned — it only activates when the prevailing market structure matches its trigger. "
-        "The KPI strip below shows the current stance at a glance. Cards are sorted by regime match; "
-        "read the entry trigger and rationale to understand <em>why</em> the idea makes sense now."
+        "Spillover analysis is only useful if it generates actionable positioning. "
+        "<strong>Each idea here is a direct translation of a spillover or correlation regime signal into a trade.</strong> "
+        "When Granger tests show oil leading equity returns, there is a pairs trade. When the correlation "
+        "regime flips from Elevated to Decorrelated, there is a diversification opportunity. "
+        "When the macro cycle enters late-stage and commodity-equity co-movement breaks down, "
+        "there are defensive rotations. Ideas only show as active when the current regime matches "
+        "their structural trigger — dead cards mean the regime has not yet validated that setup."
     )
 
     with st.spinner("Loading data…"):
@@ -186,7 +189,6 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _ti_kpi(_sk5, "Short-First Ideas", str(_n_bear), "#c0392b")
 
     # ── Filter by regime / category ────────────────────────────────────────
-    st.markdown("---")
     c1, c2 = st.columns(2)
     show_all = c1.checkbox("Show all regimes", value=False)
     cat_filter = c2.selectbox(
@@ -298,7 +300,6 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         )
 
     # ── Download report ─────────────────────────────────────────────────────
-    st.markdown("---")
     st.markdown(
         '<p style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;'
         'text-transform:uppercase;color:#333;margin-bottom:0.5rem">'

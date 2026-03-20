@@ -621,10 +621,12 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     )
     st.markdown(
         f'<p style="{_F}font-size:0.70rem;color:#555;margin:0 0 0.8rem;line-height:1.6">'
-        f'Composite war-impact score shaded cream → deep-crimson across 150+ countries. '
-        f'Score = worst-case across three active conflicts, integrating geographic proximity, '
-        f'energy dependency, trade-route exposure, equity correlation, and alliance obligations. '
-        f'Hover any country on the globe for a full breakdown and war-period equity returns.</p>',
+        f'Active conflicts disrupt commodity supply chains — oil, wheat, metals — causing those '
+        f'commodities to decouple from their usual equity correlation. This map scores each country\'s '
+        f'<strong>structural exposure to that decoupling risk</strong>: geographic proximity, energy '
+        f'dependency, trade-route vulnerability, and alliance obligations. High-exposure markets are '
+        f'the ones where a commodity supply shock is most likely to produce an equity spillover event. '
+        f'Hover any country for a full breakdown and its realised equity returns during active war windows.</p>',
         unsafe_allow_html=True,
     )
 
@@ -931,7 +933,6 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         )
 
     # ── Top 25 table ──────────────────────────────────────────────────────────
-    st.markdown("---")
     st.subheader("Top 25 Most Affected Countries")
 
     top25 = (

@@ -55,12 +55,13 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "<strong>Is the equity-commodity correlation regime currently at an extreme — and is diversification working?</strong> "
-        "Section 1 shows the rolling pairwise correlation for any asset pair you choose. "
-        "Section 2 applies DCC-GARCH to capture time-varying, non-linear dependence. "
-        "Section 3 classifies the current regime (Decorrelated / Normal / Elevated / Crisis). "
-        "Section 4 projects the next regime using a Markov chain. "
-        "Read these four sections in order — together they answer whether cross-asset risk is building or releasing."
+        "Correlation is the <em>first observable signal</em> of spillover: when equity returns and commodity "
+        "returns start moving together, the channel between the two markets is open. "
+        "<strong>This page measures how open that channel is right now.</strong> "
+        "Rolling Pearson gives the direction and magnitude. DCC-GARCH shows whether the relationship "
+        "is structural or noise — non-linear dependence that spikes during stress is the hallmark of "
+        "a genuine spillover regime. The Markov forecast tells you where the regime is headed. "
+        "A Crisis regime here means equity shocks <em>are</em> transmitting into commodities in real time."
     )
 
     with st.spinner("Loading returns…"):

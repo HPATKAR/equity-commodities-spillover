@@ -57,13 +57,14 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "<strong>Which markets are currently exporting volatility — and which are importing it?</strong> "
-        "Correlation shows co-movement; spillover shows <em>causation and direction</em>. "
-        "Section 1 (Granger) tests statistical predictability between pairs. "
-        "Section 2 (Transfer Entropy) quantifies directional information flow. "
-        "Section 3 (Diebold-Yilmaz) decomposes forecast error variance to rank transmitters and receivers. "
-        "Section 4 draws the network. "
-        "The key output: which one or two assets are at the centre of the current risk transmission web."
+        "Correlation tells you <em>that</em> two markets move together. Spillover tells you <em>why</em> — "
+        "and more importantly, <strong>which market is driving which.</strong> "
+        "This is the analytical core of the dashboard. Granger causality tests whether past equity returns "
+        "statistically predict future commodity returns (or the reverse). Transfer entropy measures "
+        "directional information flow without assuming linearity. Diebold-Yilmaz decomposes forecast error "
+        "variance to assign a transmitter/receiver score to every asset. When equities rank as net "
+        "transmitters to commodities, the spillover is equity-led — a risk-off equity selloff is leaking "
+        "into commodity markets before prices reflect it."
     )
 
     with st.spinner("Loading returns…"):

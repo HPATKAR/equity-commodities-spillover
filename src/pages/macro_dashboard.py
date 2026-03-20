@@ -15,7 +15,7 @@ from datetime import date, timedelta
 
 from src.ui.shared import (
     _style_fig, _chart, _insight_note, _definition_block,
-    _page_footer, _section_header, _regime_banner,
+    _page_footer, _section_header, _regime_banner, _narrative_box, _page_intro,
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
@@ -438,6 +438,14 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         'margin:0 0 0.7rem">Money flows · Valuations · Bond yields · Yield spreads · '
         'Earnings growth · GDP · High-freq indicators · Retail participation</p>',
         unsafe_allow_html=True,
+    )
+    _page_intro(
+        "Macro conditions determine the <em>regime</em> under which equity-commodity spillover operates. "
+        "In early-cycle recoveries, equities and commodities tend to rise together — spillover is "
+        "bidirectional and reinforcing. In late-cycle contractions, the relationship inverts: commodity "
+        "price shocks become a <em>drag</em> on equity returns rather than a signal of growth. "
+        "Read the regime banner first. Then use the sections below to identify which macro forces "
+        "are currently setting the structural backdrop for cross-asset behaviour."
     )
 
     no_fred = not fred_key

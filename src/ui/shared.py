@@ -719,11 +719,12 @@ a{{
 }}
 a:hover{{color:#CFB991;}}
 .ft-bar{{
-  background:#CFB991;padding:10px 48px;text-align:center;
+  background:#0a0a0a;padding:10px 48px;text-align:center;
+  border-top:1px solid rgba(207,185,145,0.25);
 }}
 .ft-bar p{{
-  font-size:0.58rem;color:#000;margin:0;
-  font-weight:600;letter-spacing:0.10em;
+  font-size:0.56rem;color:rgba(207,185,145,0.55);margin:0;
+  font-weight:500;letter-spacing:0.12em;
 }}
 </style>
 </head>

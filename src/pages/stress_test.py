@@ -102,11 +102,14 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Build a custom multi-asset portfolio - mix global equity indices, commodity futures, "
-        "and any S&P 500 individual stock - assign weights via an interactive editor, "
-        "and stress-test against every historical geopolitical and macro event. "
-        "Metrics: cumulative return (pre/during/post), max drawdown, Sharpe ratio. "
-        "Not investment advice - for educational purposes only."
+        "The core finding of spillover research is that equity-commodity correlation spikes during "
+        "crises — precisely when diversification is most needed. A portfolio built assuming low "
+        "cross-asset correlation will underperform exactly when it matters most. "
+        "<strong>This page stress-tests that assumption directly.</strong> "
+        "Build any equity-commodity mix and replay it through the historical geopolitical and macro "
+        "events catalogued in this dashboard — the same events where spillover was highest. "
+        "If your portfolio survives those windows with acceptable drawdown, the diversification "
+        "assumption holds. If it does not, the spillover risk is not being priced correctly."
     )
 
     with st.spinner("Loading index and commodity price data…"):
@@ -117,7 +120,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         return
 
     # ── Section A: Indices & Commodities ────────────────────────────────────
-    st.markdown("---")
     st.subheader("Section A - Global Indices & Commodities")
     _definition_block(
         "Indices & Commodity Weights",
@@ -201,7 +203,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             weights_a[asset] = w
 
     # ── Section B: S&P 500 Individual Stocks ────────────────────────────────
-    st.markdown("---")
     st.subheader("Section B - S&P 500 Individual Stocks")
     _definition_block(
         "Stock Selection & Weight Editor",
@@ -402,7 +403,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "by a pre-shock window, an acute stress period, and a post-event recovery window — matching the "
         "same event definitions used in the Geopolitical Triggers page."
     )
-    st.markdown("---")
     st.subheader("Event Selection & Run")
 
     c3, c4 = st.columns(2)
@@ -466,7 +466,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "column first — that is the peak stress you would have experienced. Then check the 'Post' column "
         "to understand how quickly (or slowly) your specific allocation would have recovered."
     )
-    st.markdown("---")
     st.subheader("Stress Test Results")
 
     summary = pd.DataFrame([{
@@ -506,7 +505,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     k4.metric("Avg During Return",  f"{np.mean(valid_during):+.1f}%" if valid_during else "N/A")
 
     # ── Event returns heatmap (pre / during / post) ───────────────────────────
-    st.markdown("---")
     st.subheader("Event Returns: Pre / During / Post")
     _section_note(
         f"Return (%) across three windows: {pre_days}d before, event period, "
@@ -550,7 +548,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     _chart(fig_hm)
 
     # ── Max drawdown comparison ───────────────────────────────────────────────
-    st.markdown("---")
     st.subheader("Max Drawdown by Event")
 
     fig_dd = go.Figure(go.Bar(
@@ -576,7 +573,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     _chart(fig_dd)
 
     # ── Portfolio path (relative days from event start) ───────────────────────
-    st.markdown("---")
     st.subheader("Portfolio Value Path: Days from Event Start (Base = 100)")
     _section_note(
         "Each line is indexed to 100 at event start (day 0), making events "

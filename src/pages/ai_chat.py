@@ -213,8 +213,10 @@ def page_ai_chat(start: str, end: str) -> None:
     )
     st.markdown(
         '<p style="font-size:0.70rem;color:#333333;margin:0 0 0.3rem;line-height:1.65">'
-        'Cross-asset quantitative analyst with full access to live dashboard data. '
-        'Ask about correlations, spillover flows, geopolitical impacts, methodology, or trade ideas.'
+        'An analyst trained on the full equity-commodities spillover framework with live access to '
+        'all dashboard data. Ask it to interpret the current regime, explain why a specific commodity '
+        'is moving relative to equities, identify which historical event the current environment most '
+        'resembles, or challenge any trade idea against the spillover evidence. It knows the methodology.'
         '</p>',
         unsafe_allow_html=True,
     )
@@ -240,7 +242,6 @@ def page_ai_chat(start: str, end: str) -> None:
         st.session_state["chat_context_ts"] = None
 
     # ── Auto-load context on first visit ──────────────────────────────────────
-    st.markdown("---")
     status_col, btn_col = st.columns([6, 1])
     _refresh = btn_col.button("Refresh context", key="refresh_ctx", use_container_width=True)
 

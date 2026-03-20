@@ -575,7 +575,8 @@ _FD_KEY   = _get_secret("financial_datasets_key")
 _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test",
-    "model_accuracy", "ai_chat", "about_heramb", "about_jiahe", "about_ilian",
+    "model_accuracy", "ai_chat", "insights",
+    "about_heramb", "about_jiahe", "about_ilian",
 }
 _ABOUT_PAGES = {"about_heramb", "about_jiahe", "about_ilian"}
 
@@ -1088,14 +1089,18 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
     /* Mark active page + group */
     var cur={json.dumps(current)};
-    var ANALYSIS=['war_impact_map','geopolitical','correlation','spillover'];
-    var STRATEGY=['trade_ideas','stress_test'];
-    var RESEARCH=['model_accuracy','ai_chat'];
-    var ABOUT   =['about_heramb','about_jiahe','about_ilian'];
+    var OVERVIEW =['overview'];
+    var MACRO    =['macro_dashboard'];
+    var ANALYSIS =['war_impact_map','geopolitical','correlation','spillover'];
+    var STRATEGY =['trade_ideas','stress_test'];
+    var MONITOR  =['watchlist'];
+    var RESEARCH =['model_accuracy','ai_chat'];
+    var INSIGHTS =['insights'];
+    var ABOUT    =['about_heramb','about_jiahe','about_ilian'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
       if(a.dataset.pg===cur) a.classList.add('active');
     }});
-    var MAP={{'ga':ANALYSIS,'gs':STRATEGY,'gr':RESEARCH,'gab':ABOUT}};
+    var MAP={{'gov':OVERVIEW,'gm':MACRO,'ga':ANALYSIS,'gs':STRATEGY,'gmon':MONITOR,'gr':RESEARCH,'gin':INSIGHTS,'gab':ABOUT}};
     Object.keys(MAP).forEach(function(id){{
       if(MAP[id].indexOf(cur)>-1){{
         var el=document.getElementById(id);
@@ -1107,8 +1112,8 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 </script>
 
 <div id="nav">
-  <!-- Logotype -->
-  <a class="brand" href="#" onclick="navigate('overview');return false;">
+  <!-- Logotype — also a dropdown for Overview -->
+  <a class="brand" href="#" style="cursor:default;text-decoration:none;">
     <div class="brand-mark">
       <span class="mk-top">E&amp;C</span>
       <span class="mk-bot">MON</span>
@@ -1121,53 +1126,67 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   </a>
 
   <ul class="links">
-    <li class="ni">
-      <a class="lnk {'active' if current == 'overview' else ''}" data-pg="overview"
-         href="#" onclick="navigate('overview');return false;">Overview</a>
+    <!-- Every item is a dropdown so buildDropdown() handles ALL navigation -->
+    <li class="ni" id="gov">
+      <span class="lnk">Overview <span class="ct">&#9660;</span></span>
+      <ul class="drop">
+        <li><a data-pg="overview" class="{'active' if current=='overview' else ''}">Market Overview</a></li>
+      </ul>
     </li>
 
-    <li class="ni">
-      <a class="lnk {'active' if current == 'macro_dashboard' else ''}" data-pg="macro_dashboard"
-         href="#" onclick="navigate('macro_dashboard');return false;">Macro</a>
+    <li class="ni" id="gm">
+      <span class="lnk">Macro <span class="ct">&#9660;</span></span>
+      <ul class="drop">
+        <li><a data-pg="macro_dashboard" class="{'active' if current=='macro_dashboard' else ''}">Macro Intelligence Dashboard</a></li>
+      </ul>
     </li>
 
     <li class="ni" id="ga">
       <span class="lnk">Analysis <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="correlation"    href="?page=correlation"    target="_parent" class="{'active' if current=='correlation' else ''}">Correlation Analysis</a></li>
-        <li><a data-pg="spillover"      href="?page=spillover"      target="_parent" class="{'active' if current=='spillover' else ''}">Spillover Analytics</a></li>
-        <li><a data-pg="geopolitical"   href="?page=geopolitical"   target="_parent" class="{'active' if current=='geopolitical' else ''}">Geopolitical Triggers</a></li>
-        <li><a data-pg="war_impact_map" href="?page=war_impact_map" target="_parent" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
+        <li><a data-pg="correlation"    class="{'active' if current=='correlation' else ''}">Correlation Analysis</a></li>
+        <li><a data-pg="spillover"      class="{'active' if current=='spillover' else ''}">Spillover Analytics</a></li>
+        <li><a data-pg="geopolitical"   class="{'active' if current=='geopolitical' else ''}">Geopolitical Triggers</a></li>
+        <li><a data-pg="war_impact_map" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gs">
       <span class="lnk">Strategy <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="trade_ideas" href="?page=trade_ideas" target="_parent" class="{'active' if current=='trade_ideas' else ''}">Trade Ideas</a></li>
-        <li><a data-pg="stress_test" href="?page=stress_test" target="_parent" class="{'active' if current=='stress_test' else ''}">Portfolio Stress Test</a></li>
+        <li><a data-pg="trade_ideas" class="{'active' if current=='trade_ideas' else ''}">Trade Ideas</a></li>
+        <li><a data-pg="stress_test" class="{'active' if current=='stress_test' else ''}">Portfolio Stress Test</a></li>
       </ul>
     </li>
 
-    <li class="ni">
-      <a class="lnk {'active' if current == 'watchlist' else ''}" data-pg="watchlist"
-         href="#" onclick="navigate('watchlist');return false;">Monitor</a>
+    <li class="ni" id="gmon">
+      <span class="lnk">Monitor <span class="ct">&#9660;</span></span>
+      <ul class="drop">
+        <li><a data-pg="watchlist" class="{'active' if current=='watchlist' else ''}">Commodities Watchlist</a></li>
+      </ul>
     </li>
 
     <li class="ni" id="gr">
       <span class="lnk">Research <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="model_accuracy" href="?page=model_accuracy" target="_parent" class="{'active' if current=='model_accuracy' else ''}">Performance Review</a></li>
-        <li><a data-pg="ai_chat"        href="?page=ai_chat"        target="_parent" class="{'active' if current=='ai_chat' else ''}">AI Analyst</a></li>
+        <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Performance Review</a></li>
+        <li><a data-pg="ai_chat"        class="{'active' if current=='ai_chat' else ''}">AI Analyst</a></li>
+      </ul>
+    </li>
+
+    <li class="ni" id="gin">
+      <span class="lnk">Insights <span class="ct">&#9660;</span></span>
+      <ul class="drop">
+        <li><a data-pg="insights" class="{'active' if current=='insights' else ''}">Actionable Insights</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gab">
       <span class="lnk">About <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="about_heramb" href="?page=about_heramb" target="_parent" class="{'active' if current=='about_heramb' else ''}">Heramb S. Patkar</a></li>
-        <li><a data-pg="about_jiahe"  href="?page=about_jiahe"  target="_parent" class="{'active' if current=='about_jiahe' else ''}">Jiahe Miao</a></li>
-        <li><a data-pg="about_ilian"  href="?page=about_ilian"  target="_parent" class="{'active' if current=='about_ilian' else ''}">Ilian Zalomai</a></li>
+        <li><a data-pg="about_heramb" class="{'active' if current=='about_heramb' else ''}">Heramb S. Patkar</a></li>
+        <li><a data-pg="about_jiahe"  class="{'active' if current=='about_jiahe' else ''}">Jiahe Miao</a></li>
+        <li><a data-pg="about_ilian"  class="{'active' if current=='about_ilian' else ''}">Ilian Zalomai</a></li>
       </ul>
     </li>
   </ul>
@@ -1223,6 +1242,7 @@ from src.pages.stress_test     import page_stress_test
 from src.pages.macro_dashboard  import page_macro_dashboard
 from src.pages.model_accuracy   import page_model_accuracy
 from src.pages.ai_chat         import page_ai_chat
+from src.pages.insights        import page_insights
 from src.pages.about_heramb    import page_about_heramb
 from src.pages.about_jiahe     import page_about_jiahe
 from src.pages.about_ilian     import page_about_ilian
@@ -1242,6 +1262,7 @@ _PAGE_MAP = {
     "stress_test":    lambda: page_stress_test(_start, _end, _FRED_KEY),
     "model_accuracy": lambda: page_model_accuracy(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
+    "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
     "about_heramb":   page_about_heramb,
     "about_jiahe":    page_about_jiahe,
     "about_ilian":    page_about_ilian,

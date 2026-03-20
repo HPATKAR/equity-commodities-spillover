@@ -64,11 +64,13 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "This page zooms in on individual commodities. Read it in sequence: the live snapshot gives you "
-        "the current price state; the intraday charts show how today compares to recent sessions; "
-        "the daily view reveals whether short-term moves are part of a sustained trend; and the COT "
-        "positioning data shows how large speculative traders are leaning — extreme one-sided positioning "
-        "has historically preceded sharp reversals."
+        "The commodities on this page are the primary spillover conduits into equity markets. "
+        "Crude oil, gold, copper, and agricultural futures have historically led equity market "
+        "repricing during macro stress — price moves here often precede equity effects by days. "
+        "<strong>Use this page as an early warning monitor.</strong> "
+        "The COT positioning data adds a second layer: when speculative positioning in a commodity "
+        "reaches a historical extreme, mean-reversion is the base case — and that reversal typically "
+        "generates its own downstream spillover into correlated equity sectors."
     )
 
     # ── Load all data upfront ──────────────────────────────────────────────

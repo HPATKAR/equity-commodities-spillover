@@ -542,10 +542,13 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Independent validation of the four analytical signals powering this dashboard. "
-        "Regime detection uses a multi-feature composite stress index plus a walk-forward ML classifier "
-        "(logistic regression, no look-ahead bias). Each signal is backtested against realised market data "
-        "and scored against institutional performance thresholds."
+        "The spillover and correlation signals in this dashboard are only credible if they hold up "
+        "out-of-sample. <strong>This page provides that validation.</strong> "
+        "Regime detection is tested against VIX-based ground truth — does the composite stress index "
+        "actually identify the periods when equity-commodity correlation was highest? "
+        "Granger causality signals are checked for directional hit rate after a significant test fires. "
+        "The geopolitical risk score is correlated against realised VIX to verify it leads actual market stress. "
+        "COT contrarian signals are scored by win rate. A signal that fails here should not drive trade decisions."
     )
 
     with st.spinner("Loading market data…"):
@@ -602,7 +605,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         "Risk Score vs VIX",
         f"{r2_pct:.0f}%" if r2 and not np.isnan(r2) else "–",
         "Variance in VIX explained by risk score",
-        (f"Risk score explains <b>{int(np.sqrt(r2)*100)}%</b> of VIX moves"
+        (f"R²={r2_pct:.0f}% — risk score accounts for <b>{r2_pct:.0f}%</b> of variance in VIX"
          if r2 and not np.isnan(r2) else
          "Combines cross-asset correlation, commodity vol, and equity vol"),
         r2_pct, 40, "target ≥ 40%",

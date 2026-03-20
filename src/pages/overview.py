@@ -46,11 +46,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Start here. The single question this page answers: <strong>what is the current stress level "
-        "across equity and commodity markets, what is driving it, and which historical periods "
-        "looked most like today?</strong> Read the KPIs and regime badge first — they give you the "
-        "verdict in five seconds. Then work down the page: risk drivers → early warning signals → "
-        "price action → historical analogues → correlation heatmap. Each section builds on the previous."
+        "The central research question of this dashboard: <strong>do equity market shocks spill into "
+        "commodities — and in which direction?</strong> This page is your live answer. The regime badge "
+        "tells you whether equity-commodity co-movement is currently amplifying or absorbing risk. "
+        "The KPIs quantify how tight the spillover channel is right now. The heatmap shows which "
+        "specific equity-commodity pairs are most coupled. Start here before reading any other page."
     )
 
     with st.spinner("Loading market data…"):

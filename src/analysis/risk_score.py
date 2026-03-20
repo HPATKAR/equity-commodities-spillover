@@ -262,11 +262,31 @@ def plot_risk_history(
                       layer="below", line_width=0)
         fig.add_hline(y=y0, line=dict(color="#DEDAD5", width=0.5, dash="dot"))
 
-    # Event bands (last 5)
-    for ev in events[-5:]:
-        fig.add_vrect(
-            x0=str(ev["start"]), x1=str(ev["end"]),
-            fillcolor=ev["color"], opacity=0.05, layer="below", line_width=0,
+    # Event markers — vertical dashed line + label annotation at each event start
+    idx = score_series.index
+    for ev in events:
+        ev_date = str(ev["start"])
+        # Only draw if the event start falls within the data range
+        if not score_series.empty and (
+            pd.Timestamp(ev["start"]) < idx[0] or pd.Timestamp(ev["start"]) > idx[-1]
+        ):
+            continue
+        col = ev.get("color", "#8E6F3E")
+        fig.add_vline(
+            x=ev_date,
+            line=dict(color=col, width=1, dash="dot"),
+        )
+        fig.add_annotation(
+            x=ev_date,
+            y=97,
+            text=ev["label"],
+            showarrow=False,
+            textangle=-90,
+            font=dict(size=7.5, color=col, family="DM Sans, sans-serif"),
+            xanchor="right",
+            yanchor="top",
+            bgcolor="rgba(255,255,255,0.65)",
+            borderpad=2,
         )
 
     fig.add_trace(go.Scatter(

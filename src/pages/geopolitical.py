@@ -41,6 +41,15 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
         'margin:0 0 0.7rem">Event windows · Pre/During/Post performance · Vol shifts · Correlation regime change</p>',
         unsafe_allow_html=True,
     )
+    _page_intro(
+        "Geopolitical shocks are the most potent external trigger of equity-commodity decoupling. "
+        "Wars disrupt commodity supply chains — oil embargoes, grain blockades, metal sanctions — "
+        "causing commodities to reprice independently of equity fundamentals. "
+        "<strong>This page maps exactly how that decoupling has played out historically.</strong> "
+        "Select an event to see how equities and commodities behaved before, during, and after — "
+        "and whether the spillover relationship strengthened, weakened, or reversed. "
+        "The pattern you find here is the empirical basis for the geopolitical risk score used across the dashboard."
+    )
 
     with st.spinner("Loading market data…"):
         eq_p, cmd_p = load_all_prices(start, end)
