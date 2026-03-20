@@ -150,6 +150,41 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
+
+        # ── Oil-Gold geo signal detail ─────────────────────────────────────
+        og = risk_result.get("oil_gold", {})
+        if og:
+            g_z, o_z = og.get("gold_z", 0), og.get("oil_z", 0)
+            g_r, o_r = og.get("gold_ret", 0), og.get("oil_ret", 0)
+            st.markdown(
+                f'<div style="margin-top:8px;padding:6px 8px;background:#fafaf8;'
+                f'border-left:2px solid #CFB991;{_F}font-size:0.63rem;color:#444;line-height:1.6">'
+                f'<b style="color:#8E6F3E;text-transform:uppercase;font-size:0.57rem;'
+                f'letter-spacing:.12em">Oil-Gold Signal</b><br>'
+                f'Gold 20d: <b>{g_r:+.1f}%</b> (z={g_z:+.2f}) &nbsp;·&nbsp; '
+                f'Oil 20d: <b>{o_r:+.1f}%</b> (z={o_z:+.2f})'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Top active/tail events ─────────────────────────────────────────
+        evs = risk_result.get("events", [])[:3]
+        if evs:
+            rows = "".join(
+                f'<tr><td style="padding:1px 6px 1px 0;color:#555">{e["label"]}</td>'
+                f'<td style="color:#888;font-size:0.60rem">{e["status"]}</td>'
+                f'<td style="font-family:JetBrains Mono,monospace;font-weight:700;'
+                f'color:#c0392b;text-align:right">{e["score"]:.0f}</td></tr>'
+                for e in evs
+            )
+            st.markdown(
+                f'<div style="margin-top:6px;{_F}font-size:0.63rem">'
+                f'<b style="color:#8E6F3E;text-transform:uppercase;font-size:0.57rem;'
+                f'letter-spacing:.12em">Event Severity Drivers</b>'
+                f'<table style="width:100%;margin-top:3px;border-collapse:collapse">{rows}</table>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
     with gc2:
         _label("Risk Score History")
         if not score_hist.empty:
