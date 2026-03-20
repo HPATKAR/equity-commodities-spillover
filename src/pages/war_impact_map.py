@@ -272,32 +272,128 @@ def _war_period_returns(eq_r: pd.DataFrame) -> dict[str, dict[str, float]]:
     return out
 
 
-def _build_df(war_rets: dict[str, dict[str, float]]) -> pd.DataFrame:
-    # Start with all scored countries
+def _war_multipliers(cmd_r: pd.DataFrame) -> dict:
+    """
+    Compute live per-war intensity multipliers from commodity market signals.
+
+    Ukraine War      → driven by European gas dependency + broad oil spike.
+                       Natural gas z-score is the primary driver.
+    Israel-Hamas War → driven by safe-haven gold demand + Red Sea oil disruption.
+                       Gold z-score is the primary driver.
+    Iran/Hormuz      → almost entirely crude oil Strait-of-Hormuz risk.
+                       Oil z-score is the dominant driver.
+
+    Multiplier range: 0.65 (quiet/de-escalating) → 1.45 (hot escalation).
+    Baseline = 1.0. Scores are multiplied then clipped to [0, 100].
+
+    Returns dict with per-war multipliers + raw signal values for display.
+    """
+    if cmd_r.empty or len(cmd_r) < 30:
+        return {
+            "ukraine": 1.0, "hamas": 1.0, "iran": 1.0,
+            "signals": {}, "method": "fallback — insufficient data",
+        }
+
+    window = 20  # 20-trading-day rolling return for z-score
+
+    def _z(col_names: list[str]) -> float:
+        """Mean 20d cumulative return z-score for given commodity columns."""
+        cols = [c for c in col_names if c in cmd_r.columns]
+        if not cols:
+            return 0.0
+        cum = cmd_r[cols].rolling(window).sum().mean(axis=1) * 100
+        hist = cum.dropna()
+        if len(hist) < 40:
+            return 0.0
+        mu, sd = float(hist.iloc[:-1].mean()), float(hist.iloc[:-1].std())
+        if sd < 1e-6:
+            return 0.0
+        return float(np.clip((float(hist.iloc[-1]) - mu) / sd, -3.5, 3.5))
+
+    gas_z  = _z(["Natural Gas"])
+    oil_z  = _z(["WTI Crude Oil", "Brent Crude"])
+    gold_z = _z(["Gold"])
+
+    # ── Ukraine: gas z primary (0.55), oil z secondary (0.30), gold z minor (0.15) ──
+    ukraine_raw = 1.0 + 0.55 * (gas_z / 3.5) * 0.45 + 0.30 * (oil_z / 3.5) * 0.45 + 0.15 * (gold_z / 3.5) * 0.30
+    ukraine_m   = float(np.clip(ukraine_raw, 0.65, 1.45))
+
+    # ── Israel-Hamas: gold z primary (0.55), oil z secondary (0.35), gas minor (0.10) ──
+    hamas_raw = 1.0 + 0.55 * (gold_z / 3.5) * 0.40 + 0.35 * (oil_z / 3.5) * 0.40 + 0.10 * (gas_z / 3.5) * 0.20
+    hamas_m   = float(np.clip(hamas_raw, 0.65, 1.45))
+
+    # ── Iran/Hormuz: oil z dominant (0.75), gold z (0.20), gas minor (0.05) ──
+    iran_raw = 1.0 + 0.75 * (oil_z / 3.5) * 0.50 + 0.20 * (gold_z / 3.5) * 0.30 + 0.05 * (gas_z / 3.5) * 0.20
+    iran_m   = float(np.clip(iran_raw, 0.65, 1.45))
+
+    return {
+        "ukraine": round(ukraine_m, 3),
+        "hamas":   round(hamas_m,   3),
+        "iran":    round(iran_m,    3),
+        "signals": {
+            "Natural Gas z":   round(gas_z,  2),
+            "Crude Oil z":     round(oil_z,  2),
+            "Gold z":          round(gold_z, 2),
+        },
+        "method": "live 20d commodity z-scores",
+    }
+
+
+def _build_df(
+    war_rets: dict[str, dict[str, float]],
+    multipliers: dict | None = None,
+) -> pd.DataFrame:
+    """
+    Build country-level impact DataFrame.
+    If multipliers provided, baseline static scores are scaled by per-war
+    intensity multipliers derived from live commodity signals.
+    """
+    if multipliers is None:
+        multipliers = {"ukraine": 1.0, "hamas": 1.0, "iran": 1.0}
+
+    um = multipliers["ukraine"]
+    hm = multipliers["hamas"]
+    im = multipliers["iran"]
+
     scored_iso: set[str] = set()
     for w in _WAR_DATA:
         scored_iso.update(w["scores"].keys())
 
     rows = []
-    # All countries in the world - unscored get 0 (renders as cream)
     all_iso = set(_ALL_COUNTRIES) | scored_iso
     for iso in all_iso:
-        u  = _WAR_DATA[0]["scores"].get(iso, 0)
-        h  = _WAR_DATA[1]["scores"].get(iso, 0)
-        ir = _WAR_DATA[2]["scores"].get(iso, 0)
-        composite = max(u, h, ir)
+        u_base  = _WAR_DATA[0]["scores"].get(iso, 0)
+        h_base  = _WAR_DATA[1]["scores"].get(iso, 0)
+        ir_base = _WAR_DATA[2]["scores"].get(iso, 0)
+
+        # Apply dynamic multipliers
+        u  = int(np.clip(round(u_base  * um), 0, 100))
+        h  = int(np.clip(round(h_base  * hm), 0, 100))
+        ir = int(np.clip(round(ir_base * im), 0, 100))
+
+        # Dynamic composite: intensity-weighted average (not just max)
+        # Higher multiplier → that war gets more weight in composite
+        denom = um + hm + im
+        composite = int(np.clip(round(
+            (um * u + hm * h + im * ir) / denom
+            # Concurrent-war amplifier: if multiple wars are hot, boost composite
+            * (1 + 0.15 * (int(um > 1.05) + int(hm > 1.05) + int(im > 1.05)) / 3)
+        ), 0, 100))
+
         primary = max(
             (_WAR_DATA[0]["label"], u),
             (_WAR_DATA[1]["label"], h),
             (_WAR_DATA[2]["label"], ir),
             key=lambda x: x[1],
         )[0]
-        indices = _COUNTRY_INDICES.get(iso, [])
+
+        indices  = _COUNTRY_INDICES.get(iso, [])
         ret_lines = []
         for idx in indices:
             for wlbl, ret in war_rets.get(idx, {}).items():
                 sign = "+" if ret >= 0 else ""
                 ret_lines.append(f"{idx}: {sign}{ret:.1f}% ({wlbl})")
+
         rows.append({
             "iso3":          iso,
             "country":       _NAMES.get(iso, iso),
@@ -630,11 +726,12 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
-    with st.spinner("Loading equity data…"):
-        eq_r, _ = load_returns(start, end)
+    with st.spinner("Loading market data…"):
+        eq_r, cmd_r = load_returns(start, end)
 
-    war_rets = _war_period_returns(eq_r) if not eq_r.empty else {}
-    df = _build_df(war_rets)
+    war_rets    = _war_period_returns(eq_r) if not eq_r.empty else {}
+    multipliers = _war_multipliers(cmd_r)
+    df          = _build_df(war_rets, multipliers)
 
     today = date.today()
     active = [ev for ev in GEOPOLITICAL_EVENTS
@@ -690,6 +787,45 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="{_F}font-size:0.62rem;color:#444;margin-top:5px;line-height:1.55">'
                 f'{ev["description"][:130]}{"…" if len(ev["description"]) > 130 else ""}</div>'
                 f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Dynamic intensity multipliers ────────────────────────────────
+        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+                    unsafe_allow_html=True)
+        st.markdown(
+            f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 6px">'
+            f'Today\'s live intensity multipliers</p>',
+            unsafe_allow_html=True,
+        )
+        _mult_rows = [
+            ("Ukraine War",     multipliers["ukraine"], "#e74c3c"),
+            ("Israel-Hamas",    multipliers["hamas"],   "#f39c12"),
+            ("Iran/Hormuz",     multipliers["iran"],    "#c0392b"),
+        ]
+        for _wname, _m, _wc in _mult_rows:
+            _bar = int(min((_m - 0.65) / (1.45 - 0.65) * 100, 100))
+            _mc  = "#c0392b" if _m > 1.15 else "#e67e22" if _m > 1.0 else "#2e7d32"
+            st.markdown(
+                f'<div style="margin-bottom:6px">'
+                f'<div style="display:flex;justify-content:space-between;{_F}font-size:0.63rem">'
+                f'<span style="color:#444">{_wname}</span>'
+                f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;'
+                f'color:{_mc}">×{_m:.2f}</span></div>'
+                f'<div style="height:3px;background:#F0EDEA;border-radius:2px;margin-top:2px">'
+                f'<div style="width:{_bar}%;height:3px;background:{_mc};border-radius:2px">'
+                f'</div></div></div>',
+                unsafe_allow_html=True,
+            )
+        sigs = multipliers.get("signals", {})
+        if sigs:
+            sig_txt = " &nbsp;·&nbsp; ".join(
+                f'{k}: <b>{v:+.2f}σ</b>' for k, v in sigs.items()
+            )
+            st.markdown(
+                f'<div style="{_F}font-size:0.60rem;color:#888;margin-top:4px;line-height:1.6">'
+                f'{sig_txt}</div>',
                 unsafe_allow_html=True,
             )
 
