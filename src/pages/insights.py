@@ -44,39 +44,51 @@ def _insight_card(
     confidence_label: str,
 ) -> None:
     """
-    Render one expandable insight card.
-    Collapsed: emoji + bold headline + one-liner action.
-    Expanded:  data-driven reasoning in plain language.
+    Always-visible: headline + action + confidence badge.
+    Expander: full quant reasoning only.
     """
     conf_color = _GREEN if confidence >= 70 else (_AMBER if confidence >= 45 else _GREY)
-    label = f"{emoji}  {headline}"
 
-    with st.expander(label, expanded=False):
-        # Action banner
+    # ── Always-visible card ───────────────────────────────────────────────────
+    st.markdown(
+        f'<div style="{_F}border:1px solid #E8E5E0;border-left:4px solid {color};'
+        f'border-radius:0 6px 6px 0;padding:0.75rem 1rem 0.65rem;'
+        f'background:#fff;margin-bottom:0">'
+
+        # Row 1: emoji + headline
+        f'<div style="display:flex;align-items:flex-start;gap:0.55rem;margin-bottom:0.45rem">'
+        f'<span style="font-size:1.05rem;line-height:1.2">{emoji}</span>'
+        f'<span style="font-size:0.82rem;font-weight:700;color:#111;line-height:1.35">'
+        f'{headline}</span></div>'
+
+        # Row 2: action pill
+        f'<div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap">'
+        f'<span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.12em;color:{color};white-space:nowrap">▶ Action</span>'
+        f'<span style="font-size:0.77rem;font-weight:500;color:#222;line-height:1.45">'
+        f'{action}</span></div>'
+
+        # Row 3: confidence badge + mini bar
+        f'<div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.5rem">'
+        f'<span style="font-size:0.60rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.12em;color:{conf_color};white-space:nowrap">'
+        f'Confidence {confidence}%</span>'
+        f'<div style="flex:1;max-width:140px;height:4px;background:#eee;border-radius:2px">'
+        f'<div style="height:4px;width:{confidence}%;background:{conf_color};'
+        f'border-radius:2px"></div></div>'
+        f'<span style="font-size:0.58rem;color:#888;font-style:italic">'
+        f'{confidence_label}</span>'
+        f'</div>'
+
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Reasoning expander (below the card, visually attached) ───────────────
+    with st.expander("Why? — see full reasoning", expanded=False):
         st.markdown(
-            f'<div style="{_F}border-left:4px solid {color};padding:0.65rem 1rem;'
-            f'background:#fafaf8;border-radius:0 4px 4px 0;margin-bottom:0.9rem">'
-            f'<span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:{color}">What to do</span><br>'
-            f'<span style="font-size:0.82rem;font-weight:600;color:#111;line-height:1.5">'
-            f'{action}</span></div>',
-            unsafe_allow_html=True,
-        )
-        # Detail
-        st.markdown(
-            f'<div style="{_F}font-size:0.74rem;color:#333;line-height:1.75;'
-            f'margin-bottom:0.75rem">{detail_html}</div>',
-            unsafe_allow_html=True,
-        )
-        # Confidence bar
-        st.markdown(
-            f'<div style="margin-top:0.5rem">'
-            f'<span style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:{conf_color}">'
-            f'Signal confidence: {confidence}% — {confidence_label}</span>'
-            f'<div style="height:4px;background:#eee;border-radius:2px;margin-top:4px">'
-            f'<div style="height:4px;width:{confidence}%;background:{conf_color};'
-            f'border-radius:2px;transition:width .4s"></div></div></div>',
+            f'<div style="{_F}font-size:0.74rem;color:#333;line-height:1.75">'
+            f'{detail_html}</div>',
             unsafe_allow_html=True,
         )
 
