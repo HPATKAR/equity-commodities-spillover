@@ -200,6 +200,70 @@ def _event_severity_score() -> tuple[float, list[dict]]:
     return score, scored_sorted
 
 
+# ── Dynamic weight engine ─────────────────────────────────────────────────
+
+# Base weights — long-run priors
+_BASE_W = {
+    "corr":   0.25,
+    "vol":    0.20,
+    "vix":    0.15,
+    "og":     0.25,
+    "events": 0.15,
+}
+
+# Hard floors — a component is never fully suppressed regardless of activation
+_FLOOR_W = {
+    "corr":   0.08,
+    "vol":    0.06,
+    "vix":    0.05,
+    "og":     0.08,
+    "events": 0.05,
+}
+
+
+def _dynamic_weights(c1: float, c2: float, c3: float, c4: float, c5: float) -> dict:
+    """
+    Compute today's weights dynamically from each component's current activation.
+
+    Activation = |score - 50| / 50  (0 = perfectly neutral, 1 = pegged at extreme).
+
+    Final weight = 0.45 × base_weight + 0.55 × activation_share
+    then clipped to floor and re-normalised to sum to 1.
+
+    Hard overrides (regime-based floors):
+      • VIX > 30  → vix floor raised to 0.20 (fear gauge is most informative)
+      • og  > 70  → og floor raised to 0.28  (oil-gold geo signal dominant)
+      • events > 60 → events floor raised to 0.20 (active conflict driving everything)
+    """
+    scores = {"corr": c1, "vol": c2, "vix": c3, "og": c4, "events": c5}
+
+    # Activation per component
+    act = {k: abs(v - 50) / 50 for k, v in scores.items()}
+    total_act = sum(act.values()) + 1e-9
+    act_share = {k: v / total_act for k, v in act.items()}
+
+    # Blend base + activation
+    ALPHA = 0.45
+    raw = {k: ALPHA * _BASE_W[k] + (1 - ALPHA) * act_share[k] for k in _BASE_W}
+
+    # Apply hard floors (raise floor for dominant regimes)
+    floors = dict(_FLOOR_W)
+    if c3 > 30 * (95 / 45):   # VIX score proxy > ~63 ≈ VIX 30
+        floors["vix"] = max(floors["vix"], 0.20)
+    if c4 > 70:
+        floors["og"] = max(floors["og"], 0.28)
+    if c5 > 60:
+        floors["events"] = max(floors["events"], 0.20)
+
+    w = {k: max(raw[k], floors[k]) for k in raw}
+
+    # Normalise to sum = 1
+    total_w = sum(w.values())
+    w = {k: v / total_w for k, v in w.items()}
+
+    return w
+
+
 # ── Main scorer ────────────────────────────────────────────────────────────
 
 def compute_risk_score(
@@ -207,22 +271,26 @@ def compute_risk_score(
     cmd_r: pd.DataFrame,
 ) -> dict:
     """
-    Compute composite geopolitical risk score (0-100).
+    Compute composite geopolitical risk score (0-100) with dynamic weights.
 
-    Returns dict with score, label, color, components, raw values.
+    Weights shift daily based on each component's current activation level —
+    a spiking oil-gold signal gets more weight; a calm VIX gets less.
+    Returns dict with score, label, color, weights, components, raw values.
     """
     c1 = _corr_percentile_score(avg_corr)
     c2 = _vol_zscore_score(cmd_r)
-    c3, vix_level = _vix_score()
+    c3, vix_level       = _vix_score()
     c4, oil_gold_detail = _oil_gold_signal(cmd_r)
     c5, event_detail    = _event_severity_score()
 
+    w = _dynamic_weights(c1, c2, c3, c4, c5)
+
     total = float(np.clip(
-        0.25 * c1
-        + 0.20 * c2
-        + 0.15 * c3
-        + 0.25 * c4
-        + 0.15 * c5,
+        w["corr"]   * c1
+        + w["vol"]    * c2
+        + w["vix"]    * c3
+        + w["og"]     * c4
+        + w["events"] * c5,
         0, 100,
     ))
 
@@ -231,22 +299,27 @@ def compute_risk_score(
     elif total < 75: label, color = "Elevated", "#e67e22"
     else:            label, color = "High",     "#c0392b"
 
+    # Component labels include today's actual dynamic weight
+    def _lbl(name: str, key: str, pct: bool = False) -> str:
+        return f"{name} ({w[key]*100:.0f}%)"
+
     return {
         "score":        round(total, 1),
         "label":        label,
         "color":        color,
+        "weights":      {k: round(v, 3) for k, v in w.items()},
         "vix_level":    round(vix_level, 1) if not np.isnan(vix_level) else None,
         "oil_gold":     oil_gold_detail,
         "events":       event_detail,
         "corr_pct":     round(c1, 1),
-        "cmd_vol_z":    round((c2 - 50) / 15, 2),   # back to z-score for display
-        "eq_vol_z":     0.0,                          # populated by callers if available
+        "cmd_vol_z":    round((c2 - 50) / 15, 2),
+        "eq_vol_z":     0.0,
         "components": {
-            "Cross-Asset Correlation (25%)":  round(c1, 1),
-            "Commodity Vol Z-Score (20%)":    round(c2, 1),
-            "VIX Level Score (15%)":          round(c3, 1),
-            "Oil-Gold Geo Signal (25%)":      round(c4, 1),
-            "Event Severity Score (15%)":     round(c5, 1),
+            _lbl("Cross-Asset Correlation", "corr"):  round(c1, 1),
+            _lbl("Commodity Vol Z-Score",   "vol"):   round(c2, 1),
+            _lbl("VIX Level Score",         "vix"):   round(c3, 1),
+            _lbl("Oil-Gold Geo Signal",     "og"):    round(c4, 1),
+            _lbl("Event Severity Score",    "events"):round(c5, 1),
         },
     }
 

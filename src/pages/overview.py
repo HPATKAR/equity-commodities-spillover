@@ -151,6 +151,27 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
+        # ── Dynamic weights today ─────────────────────────────────────────
+        dw = risk_result.get("weights", {})
+        if dw:
+            _key_map = {"corr": "Correlation", "vol": "Cmd Vol",
+                        "vix": "VIX", "og": "Oil-Gold", "events": "Events"}
+            wt_rows = "".join(
+                f'<td style="text-align:center;padding:2px 4px">'
+                f'<div style="font-size:0.60rem;color:#888">{_key_map.get(k,k)}</div>'
+                f'<div style="font-family:JetBrains Mono,monospace;font-weight:700;'
+                f'font-size:0.68rem;color:#8E6F3E">{v*100:.0f}%</div>'
+                f'</td>'
+                for k, v in dw.items()
+            )
+            st.markdown(
+                f'<div style="margin-top:8px;{_F}font-size:0.57rem;color:#8E6F3E;'
+                f'text-transform:uppercase;letter-spacing:.12em;font-weight:700;'
+                f'margin-bottom:3px">Today\'s dynamic weights</div>'
+                f'<table style="width:100%;border-collapse:collapse"><tr>{wt_rows}</tr></table>',
+                unsafe_allow_html=True,
+            )
+
         # ── Oil-Gold geo signal detail ─────────────────────────────────────
         og = risk_result.get("oil_gold", {})
         if og:
