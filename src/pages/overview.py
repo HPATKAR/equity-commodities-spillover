@@ -149,7 +149,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
 
-    _fi_k1, _fi_k2, _fi_k3, _fi_k4, _fi_k5 = st.columns(5)
+    _fi_k1, _fi_k2, _fi_k3, _fi_k4, _fi_k5, _fi_k6, _fi_k7 = st.columns(7)
 
     # TLT 30d return
     _tlt_30d = None
@@ -231,16 +231,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
               delta="EM credit bid" if _emb_30d is not None and _emb_30d > 0 else "EM credit stress" if _emb_30d is not None else "",
               delta_up=True if _emb_30d is not None and _emb_30d > 0 else False if _emb_30d is not None else None)
 
-    # ── India / Rupee KPI strip ───────────────────────────────────────────
-    st.markdown(
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.14em;color:#16a085;margin:0.6rem 0 0.3rem">'
-        f'India & Rupee</p>',
-        unsafe_allow_html=True,
-    )
-    _in_k1, _in_k2, _in_k3, _in_k4 = st.columns(4)
-
-    # USD/INR 30d (rising = INR weakening)
+    # USD/INR 30d
     _inr_30d = None
     try:
         if not fx_r.empty and "USD/INR" in fx_r.columns:
@@ -249,57 +240,24 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 _inr_30d = float(_inr_s.iloc[-21:].sum() * 100)
     except Exception:
         pass
-    _dark_kpi(_in_k1, "USD/INR 30d",
+    _dark_kpi(_fi_k6, "USD/INR 30d",
               f"{_inr_30d:+.1f}%" if _inr_30d is not None else "-",
-              delta="INR weakening" if _inr_30d is not None and _inr_30d > 1 else "INR strengthening" if _inr_30d is not None and _inr_30d < -1 else "INR stable",
+              delta="INR weak" if _inr_30d is not None and _inr_30d > 1 else "INR strong" if _inr_30d is not None and _inr_30d < -1 else "INR stable",
               delta_up=False if _inr_30d is not None and _inr_30d > 1 else True if _inr_30d is not None and _inr_30d < -1 else None)
 
     # Nifty 50 30d
-    _nifty_30d = None
+    _nifty_30d_ov = None
     try:
-        _eq_r_ov, _ = load_returns(start, end)
-        _nifty_col_ov = next((c for c in _eq_r_ov.columns if "Nifty" in c), None)
-        if _nifty_col_ov and len(_eq_r_ov) >= 21:
-            _nifty_30d = float(_eq_r_ov[_nifty_col_ov].dropna().iloc[-21:].sum() * 100)
+        _eq_r_ov2, _ = load_returns(start, end)
+        _nifty_col_ov = next((c for c in _eq_r_ov2.columns if "Nifty" in c), None)
+        if _nifty_col_ov and len(_eq_r_ov2) >= 21:
+            _nifty_30d_ov = float(_eq_r_ov2[_nifty_col_ov].dropna().iloc[-21:].sum() * 100)
     except Exception:
         pass
-    _dark_kpi(_in_k2, "Nifty 50 30d",
-              f"{_nifty_30d:+.1f}%" if _nifty_30d is not None else "-",
-              delta="Outperforming" if _nifty_30d is not None and _nifty_30d > 2 else "Underperforming" if _nifty_30d is not None and _nifty_30d < -2 else "Flat",
-              delta_up=True if _nifty_30d is not None and _nifty_30d > 0 else False if _nifty_30d is not None else None)
-
-    # Nifty vs S&P 500 divergence
-    _nifty_spx_div = None
-    try:
-        _spx_col_ov = next((c for c in _eq_r_ov.columns if "S&P 500" in c or "GSPC" in c), None) if not _eq_r_ov.empty else None
-        if _nifty_col_ov and _spx_col_ov and len(_eq_r_ov) >= 21:
-            _spx_30d_ov = float(_eq_r_ov[_spx_col_ov].dropna().iloc[-21:].sum() * 100)
-            if _nifty_30d is not None:
-                _nifty_spx_div = _nifty_30d - _spx_30d_ov
-    except Exception:
-        pass
-    _dark_kpi(_in_k3, "Nifty vs S&P (30d)",
-              f"{_nifty_spx_div:+.1f}pp" if _nifty_spx_div is not None else "-",
-              delta="India leading" if _nifty_spx_div is not None and _nifty_spx_div > 2 else "India lagging" if _nifty_spx_div is not None and _nifty_spx_div < -2 else "In-line",
-              delta_up=None)
-
-    # INR vs Gold correlation signal (India gold import sensitivity)
-    _inr_gold_note = None
-    try:
-        if not fx_r.empty and "USD/INR" in fx_r.columns:
-            _inr_60 = float(fx_r["USD/INR"].dropna().iloc[-60:].sum() * 100) if len(fx_r) >= 60 else None
-            if _inr_60 is not None and _inr_60 > 3:
-                _inr_gold_note = f"INR -60d: {_inr_60:.1f}% - import cost risk"
-            elif _inr_60 is not None and _inr_60 < -3:
-                _inr_gold_note = f"INR 60d: {_inr_60:.1f}% - import cost relief"
-            else:
-                _inr_gold_note = "Import cost pressure neutral"
-    except Exception:
-        pass
-    _dark_kpi(_in_k4, "India Import Signal",
-              "High" if _inr_gold_note and "risk" in _inr_gold_note else "Relief" if _inr_gold_note and "relief" in _inr_gold_note else "Neutral",
-              delta=_inr_gold_note or "Crude + gold import cost",
-              delta_up=False if _inr_gold_note and "risk" in _inr_gold_note else True if _inr_gold_note and "relief" in _inr_gold_note else None)
+    _dark_kpi(_fi_k7, "Nifty 50 30d",
+              f"{_nifty_30d_ov:+.1f}%" if _nifty_30d_ov is not None else "-",
+              delta="Positive" if _nifty_30d_ov is not None and _nifty_30d_ov > 0 else "Negative" if _nifty_30d_ov is not None else "",
+              delta_up=True if _nifty_30d_ov is not None and _nifty_30d_ov > 0 else False if _nifty_30d_ov is not None else None)
 
     st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
