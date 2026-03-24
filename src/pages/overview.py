@@ -149,7 +149,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
 
-    _fi_k1, _fi_k2, _fi_k3, _fi_k4, _fi_k5, _fi_k6, _fi_k7 = st.columns(7)
+    _fi_k1, _fi_k2, _fi_k3, _fi_k4, _fi_k5 = st.columns(5)
 
     # TLT 30d return
     _tlt_30d = None
@@ -230,34 +230,6 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
               f"{_emb_30d:+.1f}%" if _emb_30d is not None else "-",
               delta="EM credit bid" if _emb_30d is not None and _emb_30d > 0 else "EM credit stress" if _emb_30d is not None else "",
               delta_up=True if _emb_30d is not None and _emb_30d > 0 else False if _emb_30d is not None else None)
-
-    # USD/INR 30d
-    _inr_30d = None
-    try:
-        if not fx_r.empty and "USD/INR" in fx_r.columns:
-            _inr_s = fx_r["USD/INR"].dropna()
-            if len(_inr_s) >= 21:
-                _inr_30d = float(_inr_s.iloc[-21:].sum() * 100)
-    except Exception:
-        pass
-    _dark_kpi(_fi_k6, "USD/INR 30d",
-              f"{_inr_30d:+.1f}%" if _inr_30d is not None else "-",
-              delta="INR weak" if _inr_30d is not None and _inr_30d > 1 else "INR strong" if _inr_30d is not None and _inr_30d < -1 else "INR stable",
-              delta_up=False if _inr_30d is not None and _inr_30d > 1 else True if _inr_30d is not None and _inr_30d < -1 else None)
-
-    # Nifty 50 30d
-    _nifty_30d_ov = None
-    try:
-        _eq_r_ov2, _ = load_returns(start, end)
-        _nifty_col_ov = next((c for c in _eq_r_ov2.columns if "Nifty" in c), None)
-        if _nifty_col_ov and len(_eq_r_ov2) >= 21:
-            _nifty_30d_ov = float(_eq_r_ov2[_nifty_col_ov].dropna().iloc[-21:].sum() * 100)
-    except Exception:
-        pass
-    _dark_kpi(_fi_k7, "Nifty 50 30d",
-              f"{_nifty_30d_ov:+.1f}%" if _nifty_30d_ov is not None else "-",
-              delta="Positive" if _nifty_30d_ov is not None and _nifty_30d_ov > 0 else "Negative" if _nifty_30d_ov is not None else "",
-              delta_up=True if _nifty_30d_ov is not None and _nifty_30d_ov > 0 else False if _nifty_30d_ov is not None else None)
 
     st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
