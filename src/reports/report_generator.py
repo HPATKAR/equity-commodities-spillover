@@ -4,14 +4,14 @@ Purdue University · Daniels School of Business
 MGMT 69000-120 · AI for Finance
 
 Narrative structure:
-  1. Cover page          — branding, contributors, metadata
-  2. Executive Summary   — regime panel + interpretation
-  3. Regime Timeline     — avg |corr| history with regime shading   [CHART]
-  4. Correlation Matrix  — cross-asset heatmap                       [CHART]
-  5. Market Stress       — composite stress index 0-100              [CHART]
-  6. Commodity Performance — indexed price returns                   [CHART]
-  7. Trade Ideas         — active cards + pair correlation chart     [CHART]
-  8. Geopolitical Context — event cards
+  1. Cover page          - branding, contributors, metadata
+  2. Executive Summary   - regime panel + interpretation
+  3. Regime Timeline     - avg |corr| history with regime shading   [CHART]
+  4. Correlation Matrix  - equity-commodities heatmap                       [CHART]
+  5. Market Stress       - composite stress index 0-100              [CHART]
+  6. Commodity Performance - indexed price returns                   [CHART]
+  7. Trade Ideas         - active cards + pair correlation chart     [CHART]
+  8. Geopolitical Context - event cards
   9. Methodology & Data Sources
   10. Disclaimer
 """
@@ -464,7 +464,7 @@ def _cover_page(canvas, doc):
     c.setFillColor(colors.HexColor("#9D9795"))
     c.setFont("Helvetica", 8.5)
     for i, line in enumerate([
-        "Quantitative cross-asset analysis across 15 global equity indices and 17",
+        "Quantitative equity-commodities analysis across 15 global equity indices and 17",
         "commodity futures. Covers correlation regime detection, geopolitical risk",
         "transmission, spillover analytics, and regime-triggered trade ideas.",
     ]):
@@ -676,7 +676,7 @@ def generate_report(
         buf, pagesize=A4,
         leftMargin=15*mm, rightMargin=15*mm,
         topMargin=20*mm, bottomMargin=18*mm,
-        title="Equity & Commodities Spillover Monitor",
+        title="Equity-Commodities Spillover Monitor",
         author="Purdue University · Daniels School of Business",
         subject="Cross-Asset Research Report",
     )
@@ -802,7 +802,7 @@ def generate_report(
     story += _section_header("Correlation Regime History")
     story += [
         Paragraph(
-            "The chart below shows the 60-day rolling average of absolute cross-asset correlation "
+            "The chart below shows the 60-day rolling average of absolute equity-commodities correlation "
             "across all equity-commodity pairs. Background shading indicates the detected regime "
             "(green = Decorrelated, grey = Normal, orange = Elevated, red = Crisis).",
             S["body"],
@@ -810,7 +810,7 @@ def generate_report(
         Spacer(1, 8),
         _chart_regime_timeline(avg_corr_series, regimes, w_mm=cw / mm, h_mm=72),
         _chart_caption(
-            "Figure 1: Rolling 60-day avg |cross-asset correlation| with adaptive percentile regime "
+            "Figure 1: Rolling 60-day avg |equity-commodities correlation| with adaptive percentile regime "
             "bands. Regime classification uses median smoothing, hysteresis, and a 10-day persistence gate.",
             S,
         ),
@@ -842,7 +842,7 @@ def generate_report(
     story += [
         Paragraph(
             "The Composite Stress Index (0–100) blends four signals: equity realised volatility "
-            "(45%, VIX proxy), slow cross-asset correlation (35%), commodity energy+metals volatility "
+            "(45%, VIX proxy), slow equity-commodities correlation (35%), commodity energy+metals volatility "
             "(15%), and fast correlation acceleration (5%). Z-score mapping preserves absolute level "
             "information, critical for detecting VIX threshold breaches.",
             S["body"],
@@ -892,7 +892,7 @@ def generate_report(
         Paragraph(
             f"<b>{len(active_trades)}</b> trade idea{'s' if len(active_trades) != 1 else ''} "
             f"triggered for the current <b>{r_name}</b> regime. Each idea is grounded in "
-            "historical spillover patterns and cross-asset regime analysis.",
+            "historical spillover patterns and equity-commodities regime analysis.",
             S["body"],
         ),
         Spacer(1, 8),
@@ -951,7 +951,7 @@ def generate_report(
         story += [
             Paragraph(
                 "Geopolitical and macroeconomic events identified as structurally significant "
-                "for cross-asset correlation and commodity pricing. Active events continue to "
+                "for equity-commodities correlation and commodity pricing. Active events continue to "
                 "embed a risk premium into current market pricing.",
                 S["body"],
             ),
@@ -1014,7 +1014,7 @@ def generate_report(
          "(Energy, Precious Metals, Industrial Metals, Agriculture) from Yahoo Finance. "
          "Macro series (VIX, 10Y/2Y yields, CPI, DXY) from FRED. Daily log returns computed."),
         ("Correlation Regime Detection",
-         "Rolling 60-day Pearson correlations computed pairwise. Mean |cross-asset corr| "
+         "Rolling 60-day Pearson correlations computed pairwise. Mean |equity-commodities corr| "
          "is the primary stress signal. Regimes use percentile thresholds (20th/55th/80th), "
          "5-day median smoothing, ±5pp hysteresis bands, and a 10-day persistence gate for Crisis."),
         ("Composite Stress Index",
@@ -1073,7 +1073,7 @@ def generate_report(
                 "It does not constitute investment advice, a solicitation, or a recommendation "
                 "to buy or sell any security or financial instrument. Past performance is not "
                 "indicative of future results. All trade ideas are illustrative examples of "
-                "cross-asset analytical frameworks and must not be implemented without independent "
+                "equity-commodities analytical frameworks and must not be implemented without independent "
                 "professional due diligence, risk assessment, and regulatory review. "
                 "The authors accept no liability for any financial loss arising from reliance on "
                 "this material. Market data is sourced from public providers and may contain "

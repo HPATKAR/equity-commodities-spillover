@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_jiahe() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.70rem;line-height:1.75;"
 
     photo = _photo_html("photo_jiahe.jpeg", "Jiahe Miao")
 
@@ -58,11 +58,11 @@ def page_about_jiahe() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.75;margin:0 0 10px 0;'>"
+            f"<p style='{_f}margin:0 0 10px 0;'>"
             "Passionate about the intersection of quantitative finance and global capital markets. "
             "With hands-on experience in securities research, banking operations, and venture-backed "
             "pitch development, I enjoy building financial models that translate data into decisions.</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.75;margin:0;'>"
+            f"<p style='{_f}margin:0;'>"
             "A background in information systems gives me an edge in structuring and automating "
             "analytical workflows. Always eager to connect and exchange ideas on markets, "
             "modeling, and finance.</p>"
@@ -74,10 +74,10 @@ def page_about_jiahe() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.75;margin:0 0 12px 0;'>"
-            "Contributed to the Equity &amp; Commodities Spillover Monitor as Course Project 3 for "
+            f"<p style='{_f}margin:0 0 12px 0;'>"
+            "Contributed to the Equity-Commodities Spillover Monitor as Course Project 3 for "
             "Prof. Cinder Zhang's MGMT 69000-120. Focused on the quantitative architecture behind "
-            "correlation regime detection, spillover analytics, and cross-asset trade idea generation.</p>"
+            "correlation regime detection, spillover analytics, and equity-commodities trade idea generation.</p>"
             "<div class='stat-row'>"
             "<div class='stat-item'><p class='stat-num'>4</p><p class='stat-label'>Regime States</p></div>"
             "<div class='stat-item'><p class='stat-num'>10</p><p class='stat-label'>Dashboard Pages</p></div>"
@@ -164,7 +164,7 @@ def page_about_jiahe() -> None:
             "<div class='about-card'>"
             "<p class='about-card-title'>Acknowledgments</p>"
             "<p class='ack-text'><strong>Prof. Cinder Zhang</strong>, MGMT 69000: "
-            "Regime-based thinking and cross-asset spillover framework design</p>"
+            "Regime-based thinking and equity-commodities spillover framework design</p>"
             "</div>",
             unsafe_allow_html=True,
         )

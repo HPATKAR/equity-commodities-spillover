@@ -37,16 +37,16 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
         'font-weight:700;margin-bottom:0.1rem">Geopolitical Trigger Analysis</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
         'margin:0 0 0.7rem">Event windows · Pre/During/Post performance · Vol shifts · Correlation regime change</p>',
         unsafe_allow_html=True,
     )
     _page_intro(
         "Geopolitical shocks are the most potent external trigger of equity-commodity decoupling. "
-        "Wars disrupt commodity supply chains — oil embargoes, grain blockades, metal sanctions — "
+        "Wars disrupt commodity supply chains - oil embargoes, grain blockades, metal sanctions - "
         "causing commodities to reprice independently of equity fundamentals. "
         "<strong>This page maps exactly how that decoupling has played out historically.</strong> "
-        "Select an event to see how equities and commodities behaved before, during, and after — "
+        "Select an event to see how equities and commodities behaved before, during, and after - "
         "and whether the spillover relationship strengthened, weakened, or reversed. "
         "The pattern you find here is the empirical basis for the geopolitical risk score used across the dashboard."
     )
@@ -233,13 +233,43 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 pre_days=pre_days, post_days=post_days,
             )
             if not corr_shift.empty:
-                def _colour_shift(val):
-                    if pd.isna(val): return ""
-                    if val > 0.1:  return "background-color:#fde8e8;color:#c0392b"
-                    if val < -0.1: return "background-color:#e8f5e9;color:#2e7d32"
-                    return ""
-                styled = corr_shift.style.applymap(_colour_shift, subset=["Shift"])
-                st.dataframe(styled, use_container_width=True, height=320)
+                _TBL_CSS = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+                headers = list(corr_shift.columns)
+                header_html = "".join(f"<th>{h}</th>" for h in headers)
+                rows_html = ""
+                for _, row in corr_shift.iterrows():
+                    cells = ""
+                    for col in headers:
+                        val = row[col]
+                        if col == "Shift" and not pd.isna(val):
+                            if val > 0.1:
+                                style = "color:#f87171"
+                            elif val < -0.1:
+                                style = "color:#4ade80"
+                            else:
+                                style = "color:#e8e9ed"
+                            cells += f"<td style='{style}'>{val:.4f}</td>"
+                        else:
+                            cells += f"<td style='color:#b8bec8'>{val if not (isinstance(val, float) and pd.isna(val)) else '-'}</td>"
+                    rows_html += f"<tr>{cells}</tr>"
+                html_tbl = (
+                    _TBL_CSS
+                    + "<table class='ec-table'>"
+                    + f"<thead><tr>{header_html}</tr></thead>"
+                    + f"<tbody>{rows_html}</tbody>"
+                    + "</table>"
+                )
+                st.markdown(html_tbl, unsafe_allow_html=True)
                 _insight_note(
                     "Shows whether the event changed how closely equities and commodities moved "
                     "together. A large positive Shift value (red) means two assets that used to "

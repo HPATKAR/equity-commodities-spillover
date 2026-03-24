@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Equity-Commodities Spillover | Purdue Daniels",
+    page_title="Cross-Asset Spillover Monitor | Purdue Daniels",
     page_icon=None,
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -36,23 +36,27 @@ st.markdown("""
     --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --gold:       #CFB991;
-    --black:      #000000;
-    --ink-soft:   #333333;
-    --ink-muted:  #444444;
-    --ink-faint:  #666666;
-    --bg:         #ffffff;
-    --bg-warm:    #fafaf8;
-    --rule:       #E8E5E0;
+    --black:      #e8e9ed;
+    --ink-soft:   #c8cdd8;
+    --ink-muted:  #b8bec8;
+    --ink-faint:  #8890a1;
+    --bg:         #0f1117;
+    --bg-warm:    #1a1d27;
+    --rule:       #2a2d3a;
     --red:        #c0392b;
     --green:      #2e7d32;
 }
 
 * { box-sizing: border-box; }
 
-html, body, [data-testid="stAppViewContainer"] {
+html, body, [data-testid="stAppViewContainer"],
+[data-testid="stApp"], section[data-testid="stMain"],
+.main, .main .block-container,
+[data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"],
+[data-testid="stColumn"] {
     font-family: var(--font-sans);
-    background: var(--bg);
-    color: var(--black);
+    background: var(--bg) !important;
+    color: var(--black) !important;
 }
 
 /* ── Hide Streamlit chrome + sidebar ── */
@@ -72,7 +76,7 @@ button[aria-label="Open sidebar"] {
     overflow: hidden !important;
 }
 
-/* ── Content area — padded below the 72 px fixed navbar ── */
+/* ── Content area - padded below the 72 px fixed navbar ── */
 .main .block-container {
     padding-top:    86px !important;
     padding-bottom: 0 !important;
@@ -84,52 +88,71 @@ button[aria-label="Open sidebar"] {
 [data-testid="stBottom"], .reportview-container .main footer { display: none !important; }
 
 /* ── Headings ── */
-h1 { font-size: 1.25rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
-h2 { font-size: 0.95rem !important; font-weight: 700 !important; margin-top: 1.4rem !important; }
-h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1rem !important; }
+h1 { font-size: 1.25rem !important; font-weight: 700 !important; letter-spacing: -0.01em; color: #CFB991 !important; }
+h2 { font-size: 0.95rem !important; font-weight: 700 !important; margin-top: 1.4rem !important; color: #c4ae88 !important; }
+h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1rem !important; color: #b8a27a !important; }
 
 /* ── Metric cards ── */
 [data-testid="metric-container"] {
-    background: var(--bg-warm); border: 1px solid var(--rule);
+    background: #1a1d27 !important; border: 1px solid #2a2d3a !important;
     border-radius: 4px; padding: 0.6rem 0.8rem; transition: box-shadow 0.2s;
 }
-[data-testid="metric-container"]:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-color: var(--gold); }
+[data-testid="metric-container"]:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.3); border-color: var(--gold) !important; }
 [data-testid="stMetricLabel"] {
     font-size: 0.58rem !important; font-weight: 600 !important;
-    letter-spacing: 0.14em !important; text-transform: uppercase !important; color: #555960 !important;
+    letter-spacing: 0.14em !important; text-transform: uppercase !important; color: #8890a1 !important;
 }
 [data-testid="stMetricValue"] {
-    font-family: var(--font-mono) !important; font-size: 1.05rem !important; font-weight: 700 !important;
+    font-family: var(--font-mono) !important; font-size: 1.05rem !important; font-weight: 700 !important; color: #CFB991 !important;
 }
 
 /* ── Tabs ── */
-[data-testid="stTabs"] [data-baseweb="tab-list"] { border-bottom: 1px solid var(--rule); gap: 0; }
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    border-bottom: 1px solid #2a2d3a !important; gap: 0; background: #0f1117 !important;
+}
 [data-testid="stTabs"] button[role="tab"] {
     font-size: 0.7rem !important; font-weight: 500 !important;
     letter-spacing: 0.04em !important; text-transform: uppercase !important;
-    color: var(--ink-muted) !important; padding: 0.5rem 1rem !important;
+    color: #8890a1 !important; padding: 0.5rem 1rem !important;
     border-bottom: 2px solid transparent; transition: all 0.2s;
 }
 [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-    color: var(--black) !important; border-bottom-color: var(--gold) !important; font-weight: 700 !important;
+    color: #CFB991 !important; border-bottom-color: var(--gold) !important; font-weight: 700 !important;
 }
 
 /* ── Buttons ── */
 .stButton > button {
-    background: var(--black) !important; color: var(--gold) !important;
-    border: 1px solid var(--black) !important; border-radius: 3px !important;
+    background: #1a1d27 !important; color: var(--gold) !important;
+    border: 1px solid #CFB991 !important; border-radius: 3px !important;
     font-size: 0.68rem !important; font-weight: 600 !important;
     letter-spacing: 0.06em !important; text-transform: uppercase !important;
     padding: 0.45rem 1.4rem !important; transition: all 0.2s !important;
 }
-.stButton > button:hover { background: var(--gold) !important; color: var(--black) !important; border-color: var(--gold) !important; }
+.stButton > button:hover { background: var(--gold) !important; color: #000 !important; border-color: var(--gold) !important; }
 
 /* ── Form controls ── */
 [data-testid="stSelectbox"] label, [data-testid="stMultiSelect"] label,
 [data-testid="stSlider"] label, .stCheckbox label span {
     font-size: 0.65rem !important; font-weight: 600 !important;
-    letter-spacing: 0.08em !important; text-transform: uppercase !important; color: var(--ink-soft) !important;
+    letter-spacing: 0.08em !important; text-transform: uppercase !important; color: #8890a1 !important;
 }
+[data-baseweb="select"] > div, [data-baseweb="input"] > div {
+    background: #1a1d27 !important; border-color: #2a2d3a !important; color: #e8e9ed !important;
+}
+[data-baseweb="select"] input, [data-baseweb="input"] input { color: #e8e9ed !important; }
+[data-baseweb="popover"] > div { background: #1a1d27 !important; }
+[role="option"] { background: #1a1d27 !important; color: #e8e9ed !important; }
+[role="option"]:hover { background: #252a3a !important; }
+[data-baseweb="tag"] { background: #252a3a !important; color: #CFB991 !important; }
+[data-testid="stExpander"] { border-color: #2a2d3a !important; background: #1a1d27 !important; }
+[data-testid="stExpander"] summary { color: #CFB991 !important; }
+[data-testid="stExpander"] > div { background: #1a1d27 !important; }
+[data-testid="stMarkdownContainer"] * { color: #e8e9ed; }
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 { color: #CFB991 !important; }
+hr { border-top-color: rgba(207,185,145,0.2) !important; }
+::-webkit-scrollbar-thumb { background: #2a2d3a !important; }
 
 /* ── Date inputs in the control strip ── */
 [data-testid="stDateInput"] label {
@@ -166,7 +189,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 .main .block-container > div { animation: fadeInUp 0.28s ease; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FORMALIZATION — Tighter, institutional-grade UI polish
+   FORMALIZATION - Tighter, institutional-grade UI polish
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Streamlit column gap tightening ── */
@@ -231,10 +254,10 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 /* ── Plotly chart container borders ── */
 .stPlotlyChart { border: 1px solid var(--rule) !important; border-radius: 4px !important; overflow: hidden; }
 
-/* ── KPI number in stMetric — enforce mono font ── */
+/* ── KPI number in stMetric - enforce mono font ── */
 [data-testid="stMetricValue"] > div { font-family: var(--font-mono) !important; }
 
-/* ── Primary button — refined ── */
+/* ── Primary button - refined ── */
 .stButton > button[kind="primary"] {
     background: var(--gold) !important;
     color: #000 !important;
@@ -273,7 +296,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 # ── Dark mode CSS (injected by JS from navbar iframe into parent document) ────
 _DM_CSS = """
 /* ════════════════════════════════════════════════════════════════════════════
-   DARK MODE — Equity & Commodities Spillover Dashboard
+   DARK MODE - Equity-Commodities Spillover Dashboard
    All inline-style overrides use !important which wins over non-!important
    inline styles per CSS cascade spec.
    ════════════════════════════════════════════════════════════════════════════ */
@@ -513,7 +536,7 @@ iframe { background: transparent !important; }
 [data-testid="stRadio"]   label:has([aria-checked="true"]) { color: #CFB991 !important; }
 
 /* ════════════════════════════════════════════════════════════════
-   PURDUE GOLD ACCENTS  (dark mode — tasteful, not loud)
+   PURDUE GOLD ACCENTS  (dark mode - tasteful, not loud)
    ════════════════════════════════════════════════════════════════ */
 
 /* Page titles */
@@ -527,7 +550,7 @@ h3 { color: #b8a27a !important; }
 /* Metric values */
 [data-testid="stMetricValue"] { color: #CFB991 !important; }
 
-/* Active tab — gold underline + text */
+/* Active tab - gold underline + text */
 [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
     color: #CFB991 !important;
     border-bottom: 2px solid #CFB991 !important;
@@ -559,6 +582,41 @@ hr { border-top-color: rgba(207,185,145,0.25) !important; }
 /* Inline <code> snippets → warm gold tint */
 code:not(pre code) { color: #CFB991 !important; background: rgba(207,185,145,0.10) !important; }
 
+/* ════════════════════════════════════════════════════════════════
+   PLOTLY SVG TEXT OVERRIDES
+   Plotly renders labels/titles as SVG text elements - CSS color
+   has no effect on SVG; must use fill instead.
+   ════════════════════════════════════════════════════════════════ */
+
+/* All chart text → off-white */
+.js-plotly-plot text { fill: #c8cdd8 !important; }
+/* Chart title → Purdue gold */
+.js-plotly-plot .gtitle { fill: #CFB991 !important; }
+/* Axis titles → muted */
+.js-plotly-plot .xtitle,
+.js-plotly-plot .ytitle { fill: #8890a1 !important; }
+/* Axis tick labels */
+.js-plotly-plot .xtick text,
+.js-plotly-plot .ytick text { fill: #8890a1 !important; }
+/* Legend text */
+.js-plotly-plot .legendtext { fill: #b8bec8 !important; }
+/* Legend title */
+.js-plotly-plot .g-gtitle text { fill: #CFB991 !important; }
+/* Hover label text */
+.js-plotly-plot .hoverlayer .nums text,
+.js-plotly-plot .hoverlayer .name text { fill: #e8e9ed !important; }
+/* Modebar (camera, zoom icons) */
+.js-plotly-plot .modebar { background: rgba(15,17,23,0.80) !important; border-radius: 4px; }
+.js-plotly-plot .modebar-btn path { fill: #6b7280 !important; }
+.js-plotly-plot .modebar-btn:hover path { fill: #CFB991 !important; }
+/* Colorbar title + tick text */
+.js-plotly-plot .colorbar .cbtitle text { fill: #8890a1 !important; }
+.js-plotly-plot .colorbar .ytick text  { fill: #8890a1 !important; }
+/* Annotation text */
+.js-plotly-plot .annotation-text { fill: #c8cdd8 !important; }
+/* Pie/donut slice labels */
+.js-plotly-plot .slice text { fill: #e8e9ed !important; }
+
 """
 
 # ── API keys ──────────────────────────────────────────────────────────────────
@@ -589,7 +647,7 @@ if "current_page" not in st.session_state:
 
 current = st.session_state["current_page"]
 
-# ── Navbar (rendered via components.html — no sanitisation; JS fixes it to top) ─
+# ── Navbar (rendered via components.html - no sanitisation; JS fixes it to top) ─
 _fred_dot = "●" if _FRED_KEY else "○"
 _fred_col = "#CFB991" if _FRED_KEY else "rgba(255,255,255,0.22)"
 _fd_dot   = "●" if _FD_KEY   else "○"
@@ -828,34 +886,114 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     paper_bgcolor: '#0f1117',
     plot_bgcolor:  '#1a1d27',
     'font.color':  '#e8e9ed',
-    'xaxis.gridcolor':            '#2a2d3a',
-    'xaxis.zerolinecolor':        '#2a2d3a',
-    'xaxis.tickfont.color':       '#8890a1',
-    'xaxis.rangeselector.bgcolor':'#1e2130',
+    /* Chart title */
+    'title.font.color': '#CFB991',
+    /* Primary axes */
+    'xaxis.gridcolor':              '#2a2d3a',
+    'xaxis.zerolinecolor':          '#2a2d3a',
+    'xaxis.linecolor':              '#2a2d3a',
+    'xaxis.tickfont.color':         '#8890a1',
+    'xaxis.title.font.color':       '#8890a1',
+    'xaxis.rangeselector.bgcolor':  '#1e2130',
     'xaxis.rangeselector.font.color':'#c8cdd8',
-    'xaxis.rangeslider.bgcolor':  '#1a1d27',
-    'yaxis.gridcolor':            '#2a2d3a',
-    'yaxis.zerolinecolor':        '#2a2d3a',
-    'yaxis.tickfont.color':       '#8890a1',
-    'legend.font.color':          '#c8cdd8',
-    'legend.bgcolor':             'rgba(15,17,23,0.5)'
+    'xaxis.rangeselector.activecolor':'#2a3050',
+    'xaxis.rangeslider.bgcolor':    '#1a1d27',
+    'yaxis.gridcolor':              '#2a2d3a',
+    'yaxis.zerolinecolor':          '#2a2d3a',
+    'yaxis.linecolor':              '#2a2d3a',
+    'yaxis.tickfont.color':         '#8890a1',
+    'yaxis.title.font.color':       '#8890a1',
+    /* Secondary axes (overlay charts) */
+    'xaxis2.gridcolor':             '#2a2d3a',
+    'xaxis2.zerolinecolor':         '#2a2d3a',
+    'xaxis2.tickfont.color':        '#8890a1',
+    'xaxis2.title.font.color':      '#8890a1',
+    'yaxis2.gridcolor':             '#2a2d3a',
+    'yaxis2.zerolinecolor':         '#2a2d3a',
+    'yaxis2.linecolor':             '#2a2d3a',
+    'yaxis2.tickfont.color':        '#8890a1',
+    'yaxis2.title.font.color':      '#8890a1',
+    'yaxis3.gridcolor':             '#2a2d3a',
+    'yaxis3.tickfont.color':        '#8890a1',
+    'yaxis3.title.font.color':      '#8890a1',
+    /* Legend */
+    'legend.font.color':            '#c8cdd8',
+    'legend.bgcolor':               'rgba(15,17,23,0.7)',
+    'legend.bordercolor':           '#2a2d3a',
+    'legend.title.font.color':      '#8890a1',
+    /* Colorbar */
+    'coloraxis.colorbar.tickfont.color':   '#8890a1',
+    'coloraxis.colorbar.title.font.color': '#8890a1',
+    'coloraxis.colorbar.bgcolor':          'rgba(15,17,23,0)',
+    /* Polar charts */
+    'polar.bgcolor':                '#1a1d27',
+    'polar.angularaxis.gridcolor':  '#2a2d3a',
+    'polar.angularaxis.linecolor':  '#2a2d3a',
+    'polar.angularaxis.tickfont.color': '#8890a1',
+    'polar.radialaxis.gridcolor':   '#2a2d3a',
+    'polar.radialaxis.linecolor':   '#2a2d3a',
+    'polar.radialaxis.tickfont.color': '#8890a1',
+    /* Geo / choropleth */
+    'geo.bgcolor':                  '#1a1d27',
+    'geo.landcolor':                '#252a3a',
+    'geo.subunitcolor':             '#2a2d3a',
+    'geo.showframe':                false,
+    /* Ternary */
+    'ternary.bgcolor':              '#1a1d27',
+    'ternary.aaxis.gridcolor':      '#2a2d3a',
+    'ternary.baxis.gridcolor':      '#2a2d3a',
+    'ternary.caxis.gridcolor':      '#2a2d3a',
+    /* Annotations */
+    'annotationdefaults.font.color':'#c8cdd8',
+    'annotationdefaults.arrowcolor':'#4a5060',
   }};
 
   var DM_PLOT_LIGHT = {{
     paper_bgcolor: '#ffffff',
     plot_bgcolor:  '#fafaf8',
     'font.color':  '#000000',
-    'xaxis.gridcolor':            '#EEEBE6',
-    'xaxis.zerolinecolor':        '#EEEBE6',
-    'xaxis.tickfont.color':       '#000000',
-    'xaxis.rangeselector.bgcolor':'#f0ede8',
+    'title.font.color': '#000000',
+    'xaxis.gridcolor':              '#EEEBE6',
+    'xaxis.zerolinecolor':          '#EEEBE6',
+    'xaxis.linecolor':              '#EEEBE6',
+    'xaxis.tickfont.color':         '#000000',
+    'xaxis.title.font.color':       '#000000',
+    'xaxis.rangeselector.bgcolor':  '#f0ede8',
     'xaxis.rangeselector.font.color':'#000000',
-    'xaxis.rangeslider.bgcolor':  '#ffffff',
-    'yaxis.gridcolor':            '#EEEBE6',
-    'yaxis.zerolinecolor':        '#EEEBE6',
-    'yaxis.tickfont.color':       '#000000',
-    'legend.font.color':          '#000000',
-    'legend.bgcolor':             'rgba(255,255,255,0)'
+    'xaxis.rangeselector.activecolor':'#e0dbd3',
+    'xaxis.rangeslider.bgcolor':    '#ffffff',
+    'yaxis.gridcolor':              '#EEEBE6',
+    'yaxis.zerolinecolor':          '#EEEBE6',
+    'yaxis.linecolor':              '#EEEBE6',
+    'yaxis.tickfont.color':         '#000000',
+    'yaxis.title.font.color':       '#000000',
+    'xaxis2.gridcolor':             '#EEEBE6',
+    'xaxis2.tickfont.color':        '#000000',
+    'xaxis2.title.font.color':      '#000000',
+    'yaxis2.gridcolor':             '#EEEBE6',
+    'yaxis2.zerolinecolor':         '#EEEBE6',
+    'yaxis2.linecolor':             '#EEEBE6',
+    'yaxis2.tickfont.color':        '#000000',
+    'yaxis2.title.font.color':      '#000000',
+    'yaxis3.gridcolor':             '#EEEBE6',
+    'yaxis3.tickfont.color':        '#000000',
+    'yaxis3.title.font.color':      '#000000',
+    'legend.font.color':            '#000000',
+    'legend.bgcolor':               'rgba(255,255,255,0)',
+    'legend.bordercolor':           '#E8E5E0',
+    'legend.title.font.color':      '#000000',
+    'coloraxis.colorbar.tickfont.color':   '#000000',
+    'coloraxis.colorbar.title.font.color': '#000000',
+    'polar.bgcolor':                '#fafaf8',
+    'polar.angularaxis.gridcolor':  '#EEEBE6',
+    'polar.angularaxis.tickfont.color': '#000000',
+    'polar.radialaxis.gridcolor':   '#EEEBE6',
+    'polar.radialaxis.tickfont.color': '#000000',
+    'geo.bgcolor':                  '#fafaf8',
+    'geo.landcolor':                '#f5f2ee',
+    'geo.subunitcolor':             '#EEEBE6',
+    'annotationdefaults.font.color':'#000000',
+    'annotationdefaults.arrowcolor':'#888888',
   }};
 
   function _dmRelayoutAll(on) {{
@@ -920,7 +1058,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
         /* 2. TEXT COLOR: dark gray / black → light
            Only patch achromatic/near-achromatic darks (all channels < 115).
-           Saturated colours (green, red, gold) are kept — they have at
+           Saturated colours (green, red, gold) are kept - they have at
            least one channel well above the others. */
         var col = el.style.color;
         if (col && col!=='' && col!=='transparent' && col!=='inherit') {{
@@ -980,17 +1118,29 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
   var DF_DARK_CSS = [
     'html,body{{background:#0f1117!important;color:#e8e9ed!important}}',
-    '.dvn-scroller,.dvn-scroll-inner,.clip-region{{background:#0f1117!important}}',
+    /* Glide Data Grid (st.dataframe canvas wrapper) */
+    '.dvn-scroller,.dvn-scroll-inner,.clip-region,.dvn-underlay{{background:#0f1117!important}}',
+    '.gdg-style,.gdg-container{{background:#0f1117!important;color:#e8e9ed!important}}',
     '[role="columnheader"],[role="rowheader"],.gdg-header,.gdg-group-header{{',
-    '  background:#1a1d27!important;color:#CFB991!important;border-color:#2a2d3a!important}}',
-    'table{{background:#0f1117!important;border-color:#2a2d3a!important}}',
-    'thead,thead tr,thead th{{background:#1a1d27!important;color:#CFB991!important;border-color:#2a2d3a!important}}',
+    '  background:#1a1d27!important;color:#CFB991!important;border-color:#2a2d3a!important;font-weight:600!important}}',
+    '[role="gridcell"]{{color:#e8e9ed!important;border-color:#2a2d3a!important}}',
+    /* Standard HTML table (st.table / Pandas Styler) */
+    'table{{background:#0f1117!important;border-collapse:collapse!important;border-color:#2a2d3a!important}}',
+    'thead,thead tr{{background:#1a1d27!important}}',
+    'thead th{{background:#1a1d27!important;color:#CFB991!important;border-bottom:1px solid rgba(207,185,145,0.3)!important;',
+    '  padding:6px 10px!important;font-size:0.78rem!important;letter-spacing:0.05em!important;text-transform:uppercase!important}}',
     'tbody tr{{background:#0f1117!important;color:#e8e9ed!important}}',
-    'tbody tr:nth-child(even){{background:#141720!important}}',
-    'tbody tr:hover{{background:#1e2130!important}}',
-    'td,th{{color:#e8e9ed!important;border-color:#2a2d3a!important}}',
+    'tbody tr:nth-child(even){{background:#131620!important}}',
+    'tbody tr:hover{{background:#1e2230!important}}',
+    'td{{color:#e8e9ed!important;border-color:#2a2d3a!important;padding:5px 10px!important}}',
     '[data-testid="stFullScreenFrame"]{{background:#0f1117!important}}',
     'button,select,input{{background:#1a1d27!important;color:#e8e9ed!important;border-color:#2a2d3a!important}}',
+    /* Scrollbars inside the frame */
+    '::-webkit-scrollbar{{width:6px;height:6px}}',
+    '::-webkit-scrollbar-track{{background:#0f1117}}',
+    '::-webkit-scrollbar-thumb{{background:#2a2d3a;border-radius:3px}}',
+    '::-webkit-scrollbar-thumb:hover{{background:#3a3f52}}',
+    /* Inline style patches */
     'div[style*="rgb(255"]{{background:#0f1117!important;color:#e8e9ed!important}}',
     'div[style*="rgb(250"]{{background:#161920!important;color:#e8e9ed!important}}',
     'span[style*="color: rgb(0"]{{color:#e8e9ed!important}}',
@@ -1069,16 +1219,17 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   }};
 
   document.addEventListener('DOMContentLoaded',function(){{
-    /* Restore dark mode from localStorage on every load */
-    try {{
-      if (localStorage.getItem(DM_KEY) === '1') {{
-        /* Two passes: first CSS+Plotly at 400ms, then inline-style patch at 900ms
-           (Streamlit may still be mounting components at 400ms) */
-        setTimeout(function() {{ _dmApply(true); }}, 400);
-        setTimeout(function() {{ _dmPatchInlineStyles(true); }}, 900);
-        setTimeout(function() {{ _dmStyleDataframes(true); }}, 1200);
-      }}
-    }} catch(e) {{}}
+    /* Dark mode is ON by default; only off if user explicitly toggled it off */
+    var stored;
+    try {{ stored = localStorage.getItem(DM_KEY); }} catch(e) {{ stored = null; }}
+    var isDark = (stored === null || stored === '1');
+    if (isDark) {{
+      /* Two passes: first CSS+Plotly at 400ms, then inline-style patch at 900ms
+         (Streamlit may still be mounting components at 400ms) */
+      setTimeout(function() {{ _dmApply(true); }}, 400);
+      setTimeout(function() {{ _dmPatchInlineStyles(true); }}, 900);
+      setTimeout(function() {{ _dmStyleDataframes(true); }}, 1200);
+    }}
 
     /* Wire hover items */
     document.querySelectorAll('li.ni').forEach(function(li){{
@@ -1112,15 +1263,15 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 </script>
 
 <div id="nav">
-  <!-- Logotype — also a dropdown for Overview -->
+  <!-- Logotype - also a dropdown for Overview -->
   <a class="brand" href="#" style="cursor:default;text-decoration:none;">
     <div class="brand-mark">
-      <span class="mk-top">E&amp;C</span>
-      <span class="mk-bot">MON</span>
+      <span class="mk-top">X</span>
+      <span class="mk-bot">ASSET</span>
     </div>
     <div class="brand-div"></div>
     <div class="brand-text">
-      <span class="bm">Equity <em>&amp;</em> Commodities Spillover</span>
+      <span class="bm">Cross-Asset Spillover Monitor</span>
       <span class="bs">Purdue Daniels &middot; MGMT&nbsp;69000&ndash;120</span>
     </div>
   </a>
@@ -1195,7 +1346,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     <div class="dsi"><span class="dot" style="color:#CFB991">&#9679;</span><span style="color:rgba(255,255,255,.40)">Yahoo Finance</span></div>
     <div class="dsi"><span class="dot" style="color:{_fred_col}">{_fred_dot}</span><span style="color:{_fred_col}">FRED</span></div>
     <div class="dsi"><span class="dot" style="color:{_fd_col}">{_fd_dot}</span><span style="color:{_fd_col}">FinancialDatasets</span></div>
-    <a id="dm-btn" class="dm-toggle" href="#" onclick="ecToggleDark();return false;" title="Toggle dark mode">&#x1F319;</a>
+    <a id="dm-btn" class="dm-toggle" href="#" onclick="ecToggleDark();return false;" title="Toggle dark mode">&#x2600;</a>
   </div>
 </div>
 </body></html>"""
@@ -1210,7 +1361,7 @@ if _nav_click and _nav_click != _nav_last:
         current = _nav_click
         st.rerun()
 
-# ── Date range strip (hidden on About pages — they need no data range) ────────
+# ── Date range strip (hidden on About pages - they need no data range) ────────
 _is_about = current in _ABOUT_PAGES
 
 if not _is_about:

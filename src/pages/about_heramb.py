@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_heramb() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.70rem;line-height:1.7;"
 
     photo = _photo_html("photo_heramb.jpeg", "Heramb S. Patkar")
 
@@ -58,13 +58,13 @@ def page_about_heramb() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.7;margin:0 0 10px 0;'>"
+            f"<p style='{_f}margin:0 0 10px 0;'>"
             "Driven by curiosity about how businesses create impact and grow stronger. "
             "With a background in engineering and experience in global equity research, "
             "I enjoy analysing industries, building financial models, and uncovering insights "
             "that drive smarter decisions. Excited by opportunities where analytical thinking "
             "and creativity intersect to solve complex problems and deliver meaningful value.</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.7;margin:0;'>"
+            f"<p style='{_f}margin:0;'>"
             "Beyond work, I enjoy exploring new places, listening to Carnatic music, "
             "and learning from different cultures and perspectives. Always open to connecting"
             ", feel free to reach out.</p>"
@@ -75,9 +75,9 @@ def page_about_heramb() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.7;margin:0 0 12px 0;'>"
-            "Built the Equity &amp; Commodities Spillover Monitor as Course Project 3 for "
-            "Prof. Cinder Zhang's MGMT 69000-120: a quantitative dashboard that tracks cross-asset "
+            f"<p style='{_f}margin:0 0 12px 0;'>"
+            "Built the Equity-Commodities Spillover Monitor as Course Project 3 for "
+            "Prof. Cinder Zhang's MGMT 69000-120: a quantitative dashboard that tracks equity-commodities "
             "correlation regimes, geopolitical spillover, and generates institutional-grade trade ideas "
             "across global equity and commodity markets.</p>"
             "<div class='stat-row'>"
@@ -177,7 +177,7 @@ def page_about_heramb() -> None:
             "<p class='exp-org'>Purdue Daniels &middot; MGMT 69000-119 (Prof. X. Zhang)</p>"
             "<p class='exp-desc'>Built a quantitative dashboard for JGB repricing as the BOJ "
             "exits YCC, using regime filters (MS/HMM/GARCH), yield PCA, DCC spillovers, and "
-            "cross-asset transfer entropy to auto-generate trade signals.</p></div>"
+            "equity-commodities transfer entropy to auto-generate trade signals.</p></div>"
 
             "<div class='exp-item'>"
             "<p class='exp-role'>Eli Lilly / Madrigal Pharmaceuticals M&amp;A</p>"
@@ -194,9 +194,9 @@ def page_about_heramb() -> None:
             "EPS accretion for a proposed acquisition of Vita Coco by PepsiCo.</p></div>"
 
             "<div class='exp-item'>"
-            "<p class='exp-role'>Equity &amp; Commodities Spillover Monitor</p>"
+            "<p class='exp-role'>Equity-Commodities Spillover Monitor</p>"
             "<p class='exp-org'>Purdue Daniels &middot; MGMT 69000-120 (Prof. X. Zhang)</p>"
-            "<p class='exp-desc'>This dashboard. Quantitative cross-asset correlation and spillover "
+            "<p class='exp-desc'>This dashboard. Quantitative equity-commodities correlation and spillover "
             "monitor tracking geopolitical shocks, macro regimes, and commodity supply disruptions "
             "across 15 equity indices and 17 commodity futures.</p></div>"
 

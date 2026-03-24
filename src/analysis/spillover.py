@@ -181,8 +181,8 @@ def diebold_yilmaz(
     Uses VAR(lag_order) fitted on the first `top_n` columns of `returns`.
 
     Returns:
-      spillover_table: pd.DataFrame — from/to variance decomposition
-      total_spillover: float — aggregate spillover index (%)
+      spillover_table: pd.DataFrame - from/to variance decomposition
+      total_spillover: float - aggregate spillover index (%)
     """
     data = returns.dropna(how="all").iloc[:, :top_n]
     data = data.dropna()

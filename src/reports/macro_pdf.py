@@ -1,5 +1,5 @@
 """
-Macro Intelligence Dashboard — PDF Report Generator
+Macro Intelligence Dashboard - PDF Report Generator
 Produces an institutional-style PDF snapshot of all macro sections.
 Uses reportlab + matplotlib (already in requirements).
 """
@@ -127,7 +127,7 @@ def _data_table(df: pd.DataFrame, S, col_widths=None) -> Table:
     headers = [Paragraph(str(c), S["kpi_label"]) for c in df.columns]
     rows = [headers]
     for _, row in df.iterrows():
-        rows.append([Paragraph(str(v) if not pd.isna(v) else "—", S["body"]) for v in row])
+        rows.append([Paragraph(str(v) if not pd.isna(v) else "-", S["body"]) for v in row])
     ncols = len(df.columns)
     cw = col_widths or [(W - 20 * mm) / ncols] * ncols
     t = Table(rows, colWidths=cw, repeatRows=1)
@@ -481,7 +481,7 @@ def build_macro_pdf(
     story.append(Paragraph(
         "This report provides a structured macro intelligence brief covering economic growth, "
         "high-frequency indicators, money flows, bond yields, yield spreads, equity valuations, "
-        "and index performance. Read it sequentially — each section builds on the previous to "
+        "and index performance. Read it sequentially - each section builds on the previous to "
         "form a coherent view of the current macro regime.",
         S["cover_meta"]))
     # Switch to body template BEFORE the page break so the next page uses Body
@@ -499,7 +499,7 @@ def build_macro_pdf(
     # ── Executive Summary (narrative) ─────────────────────────────────────────
     if narrative.strip():
         story += _section_header("Executive Summary",
-                                  "Data-driven macro synthesis — implications for equities and commodities.")
+                                  "Data-driven macro synthesis - implications for equities and commodities.")
         for para in narrative.strip().split("\n\n"):
             if para.strip():
                 story.append(Paragraph(para.strip(), S["body"]))
@@ -544,7 +544,7 @@ def build_macro_pdf(
             "Industrial production leads earnings revisions by approximately one quarter.",
             S["caption"]))
     else:
-        story.append(Paragraph("GDP data unavailable — FRED API key required.", S["caption"]))
+        story.append(Paragraph("GDP data unavailable - FRED API key required.", S["caption"]))
 
     story.append(Spacer(1, 4 * mm))
 
@@ -575,7 +575,7 @@ def build_macro_pdf(
             "Watch PMI new orders sub-index as the earliest signal of demand change.",
             S["caption"]))
     else:
-        story.append(Paragraph("High-freq data unavailable — FRED API key required.", S["caption"]))
+        story.append(Paragraph("High-freq data unavailable - FRED API key required.", S["caption"]))
 
     story.append(PageBreak())
 
@@ -603,7 +603,7 @@ def build_macro_pdf(
             "Consumer sentiment below its long-run average signals reduced retail participation.",
             S["caption"]))
     else:
-        story.append(Paragraph("Money flow data unavailable — FRED API key required.", S["caption"]))
+        story.append(Paragraph("Money flow data unavailable - FRED API key required.", S["caption"]))
 
     story.append(Spacer(1, 4 * mm))
 
@@ -623,12 +623,12 @@ def build_macro_pdf(
         except Exception:
             pass
         story.append(Paragraph(
-            "When the 10Y yield exceeds the S&P 500 earnings yield, bonds become competitive with equities — "
+            "When the 10Y yield exceeds the S&P 500 earnings yield, bonds become competitive with equities - "
             "watch this spread as a regime signal. The spot yield curve (right) shows the current shape: "
             "a flat or inverted curve signals recession expectations.",
             S["caption"]))
     else:
-        story.append(Paragraph("Yield data unavailable — FRED API key required.", S["caption"]))
+        story.append(Paragraph("Yield data unavailable - FRED API key required.", S["caption"]))
 
     story.append(PageBreak())
 
@@ -641,12 +641,12 @@ def build_macro_pdf(
         except Exception:
             pass
         story.append(Paragraph(
-            "Credit spreads widen before equity markets sell off — they are a useful leading risk indicator. "
+            "Credit spreads widen before equity markets sell off - they are a useful leading risk indicator. "
             "HY spreads above 600bps have historically coincided with recessions. "
             "An inverted yield curve alongside widening spreads is the strongest combined recession signal.",
             S["caption"]))
     else:
-        story.append(Paragraph("Spread data unavailable — FRED API key required.", S["caption"]))
+        story.append(Paragraph("Spread data unavailable - FRED API key required.", S["caption"]))
 
     story.append(Spacer(1, 4 * mm))
 
@@ -659,10 +659,10 @@ def build_macro_pdf(
         disp = val_df[show_cols].copy()
         for c in ["Trailing P/E", "Forward P/E", "Earnings Yield %"]:
             if c in disp.columns:
-                disp[c] = disp[c].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "—")
+                disp[c] = disp[c].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "-")
         if "Fwd EPS Growth %" in disp.columns:
             disp["Fwd EPS Growth %"] = disp["Fwd EPS Growth %"].apply(
-                lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
+                lambda x: f"{x:+.1f}%" if pd.notna(x) else "-")
         story.append(_data_table(disp, S))
         story.append(Spacer(1, 3 * mm))
         try:
@@ -673,7 +673,7 @@ def build_macro_pdf(
             pass
         story.append(Paragraph(
             "Forward P/E above 20x demands strong earnings growth to justify. "
-            "With elevated rates (section 4), the equity risk premium compresses — "
+            "With elevated rates (section 4), the equity risk premium compresses - "
             "making growth disappointments more painful for high-multiple markets.",
             S["caption"]))
     else:
@@ -701,7 +701,7 @@ def build_macro_pdf(
         story.append(Paragraph(
             "Cross-reference with sections 1–6: strong GDP and low spreads should explain positive returns. "
             "Drawdowns alongside widening credit spreads or inverted yield curves confirm the macro signal. "
-            "VIX above 30 indicates fear-driven positioning — historically a contrarian buy signal when "
+            "VIX above 30 indicates fear-driven positioning - historically a contrarian buy signal when "
             "fundamentals have not yet deteriorated.",
             S["caption"]))
     else:

@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.data.loader import load_returns
+from src.data.loader import load_returns, load_fixed_income_returns, load_fx_returns
 from src.data.config import GEOPOLITICAL_EVENTS
 from src.analysis.correlations import average_cross_corr_series, detect_correlation_regime
 from src.analysis.risk_score import compute_risk_score
@@ -56,6 +56,33 @@ def _build_market_context(start: str, end: str) -> str:
     cmd_vol  = cmd_r.iloc[-n:].std() * np.sqrt(252) * 100
     vol_str  = ", ".join(f"{k} ({v:.0f}% ann.)" for k, v in cmd_vol.nlargest(3).items()) if not cmd_vol.empty else "N/A"
 
+    # FI context
+    try:
+        fi_r_ctx = load_fixed_income_returns(start, end)
+        if not fi_r_ctx.empty:
+            n_fi = min(22, len(fi_r_ctx))
+            fi_perf = fi_r_ctx.iloc[-n_fi:].sum() * 100
+            fi_top = ", ".join(f"{k} ({v:+.1f}%)" for k, v in fi_perf.nlargest(3).items())
+            fi_bot = ", ".join(f"{k} ({v:+.1f}%)" for k, v in fi_perf.nsmallest(3).items())
+        else:
+            fi_top = fi_bot = "N/A"
+    except Exception:
+        fi_top = fi_bot = "N/A"
+
+    # FX context
+    try:
+        fx_r_ctx = load_fx_returns(start, end)
+        if not fx_r_ctx.empty:
+            n_fx = min(22, len(fx_r_ctx))
+            fx_perf = fx_r_ctx.iloc[-n_fx:].sum() * 100
+            dxy_30d = float(fx_r_ctx["DXY (Dollar Index)"].iloc[-22:].sum() * 100) if "DXY (Dollar Index)" in fx_r_ctx.columns else None
+        else:
+            dxy_30d = None
+            fx_perf = None
+    except Exception:
+        dxy_30d = None
+        fx_perf = None
+
     today  = datetime.date.today()
     active = [e for e in GEOPOLITICAL_EVENTS if e["end"] >= today]
     active_str = "\n".join(
@@ -79,6 +106,11 @@ def _build_market_context(start: str, end: str) -> str:
         f"  Equity laggards:   {eq_bot}\n"
         f"  Commodity leaders: {cmd_top}\n"
         f"  Commodity laggards:{cmd_bot}\n\n"
+        f"1-MONTH FIXED INCOME PERFORMANCE\n"
+        f"  Leaders: {fi_top}\n"
+        f"  Laggards: {fi_bot}\n\n"
+        f"FX / DOLLAR\n"
+        f"  DXY 1M: {f'{dxy_30d:+.1f}%' if dxy_30d is not None else 'N/A'}\n\n"
         f"HIGH-VOL COMMODITIES (1M ANN.)\n"
         f"  {vol_str}\n\n"
         f"ACTIVE GEOPOLITICAL EVENTS\n"
@@ -93,20 +125,20 @@ def _build_market_context(start: str, end: str) -> str:
 
 _SYSTEM_TEMPLATE = """\
 You are a senior quantitative cross-asset analyst at a macro hedge fund, \
-embedded in the Equity-Commodities Spillover Monitor built by Purdue University \
+embedded in the Cross-Asset Spillover Monitor built by Purdue University \
 Daniels School of Business. You have full access to live dashboard data and \
 answer questions with institutional precision.
 
 DASHBOARD STRUCTURE
-  01 Overview              KPIs, regime status, risk gauge, correlation heatmap
+  01 Overview              KPIs (equity, commodity, fixed income, FX), regime status, risk gauge, heatmap
   02 Geopolitical Triggers  Event timeline, pre/during/post returns, vol and corr shifts
-  03 Correlation Analysis   Rolling correlations, DCC-GARCH, regime detection, pair explorer
-  04 Spillover Analytics    Granger causality, transfer entropy, Diebold-Yilmaz FEVD, network graph
+  03 Correlation Analysis   Rolling correlations, DCC-GARCH, regime detection, pair explorer (FI/FX included)
+  04 Spillover Analytics    Granger causality, transfer entropy, Diebold-Yilmaz FEVD, cross-asset rates/FX section
   05 Commodities to Watch   Live snapshot, intraday hourly charts, CFTC COT positioning
-  06 Trade Ideas            Regime-triggered cross-asset trade cards (entry/exit/risk)
-  07 Portfolio Stress Test  Custom allocation tested against every historical event window
+  06 Trade Ideas            Regime-triggered cross-asset trade cards including FI (TLT/HYG, TIP/TLT, EMB/DXY)
+  07 Portfolio Stress Test  Custom allocation (equities, commodities, fixed income) tested against all events
   08 Performance Review     Signal backtests: regime detection F1, Granger hit rate, VIX R2, COT accuracy
-  09 AI Analyst             This interface
+  09 AI Analyst             This interface - also has private credit bubble risk and FI/FX context
 
 ANALYTICAL METHODS
   Correlation Regime     60d rolling avg |correlation|, 4-level K-means classification
@@ -116,6 +148,52 @@ ANALYTICAL METHODS
   Diebold-Yilmaz FEVD    VAR forecast error variance decomposition; net transmitter = outflows - inflows
   COT Contrarian         Net speculative % OI extremes (>+25% crowded long, <-25% crowded short)
   Geopolitical Risk Score 40% corr percentile + 30% commodity vol z-score + 20% VIX + 10% active events
+  FX-Commodity Link      Dollar (DXY) strength compresses dollar-denominated commodity prices; DXY -5% = Gold +3-5%, metals +2-5%
+  Equity-Bond Regime     Negative TLT/SPX correlation = flight-to-quality hedge working; positive = 60/40 breakdown (crisis)
+  Duration Signal        TLT vs SHY 60d alpha: negative = bear steepening (rates higher for longer); positive = bull flattening
+  EM Credit Channel      EMB prices inverse to DXY; EM sovereign stress appears in spreads 1-2Q before GDP data confirms
+  Breakeven Inflation    TIP vs TLT spread = market's inflation expectation; rising = commodity price pressures not transitory
+
+PRIVATE CREDIT RISK MONITOR
+  Structural thesis  Private credit AUM ~$2T+ (2024); primarily floating-rate direct lending at 5–7× leverage.
+                     SOFR at 4.3%+ → all-in borrower costs 9–12%. Interest coverage ratios <1.5× at many
+                     portfolio companies. Quarterly mark-to-model obscures stress until it cannot be hidden.
+  Observable proxies HY OAS (BAMLH0A0HYM2): spread percentile + 90d trend; BKLN ETF: leveraged loan proxy;
+                     BDC basket (ARCC/OBDC/FSK): NAV/price stress; CDX HY: liquid short vehicle
+  Bubble signals     HY OAS at historical low percentile (<30th); BKLN/BDC outperforming SPY; issuance boom
+  Burst signals      HY OAS widening >35bps/90d; BKLN underperforming SPY >5%; BDC discount-to-book widening;
+                     SLOS (DRTSCILM) tightening >30%; redemption pressure in interval/NAV funds
+  Bust mechanism     Redemption pressure → forced sales → price discovery → contagion to public HY →
+                     financial sector equity de-rating → commodity demand destruction (copper, oil)
+  Spillover path     Private credit bust → leveraged buyout sector stress → industrial/manufacturing demand
+                     destruction → copper/oil sell-off → EM equity pressure (commodity exporters)
+  Current view       Dashboard owner believes private credit bubble is approaching burst. Acknowledge this
+                     thesis when asked, and reference the PC Bubble Risk Score on the Insights page.
+
+INDIA / RUPEE MACRO FRAMEWORK
+  Macro role         India is the world's 5th-largest economy and a major commodity importer. Unlike China,
+                     India does not produce significant oil or gold - it imports both at scale.
+  Crude oil          India is the #3 crude oil importer globally (~5 mb/d; ~85% import dependency).
+                     Every $10/bbl rise in Brent costs India ~$15B/year in additional import expenditure.
+                     Oil-INR transmission: Brent +20% historically correlates with USD/INR +3–5%.
+  Gold               India is the #2 gold consumer globally (~800-900 tonnes/year).
+                     Gold demand surges during geopolitical stress, festival seasons, and INR depreciation.
+                     RBI holds ~800 tonnes in reserves; gold's local INR price is Brent's USD price × USD/INR.
+  Currency           USD/INR (USDINR=X in yfinance). INR weakens during: (1) oil spikes, (2) global risk-off,
+                     (3) capital outflows, (4) US dollar strengthening. RBI defends INR using ~$620B forex reserves.
+                     RBI repo rate: ~6.50% (as of 2024). Inflation target: 4% ±2%.
+  Equity (Nifty 50)  ^NSEI in yfinance. Key drivers: domestic consumption, IT exports (TCS, Infosys),
+                     crude oil price (net negative), USD/INR (net negative for importers),
+                     FII (foreign institutional investor) flows, and RBI monetary policy.
+                     Nifty 50 correlation with S&P 500: ~0.65-0.75 in normal regimes, rising to >0.85 in crisis.
+  Spillover paths    WTI/Brent spike → INR depreciation → Nifty Energy sector benefit, Nifty Consumer stress
+                     Dollar strength (DXY up) → USD/INR rises → India CAD widens → FII outflows → Nifty down
+                     Gold spike + INR weak → India gold import cost surge → CA deficit pressure
+                     India-Pakistan geopolitical tensions → Nifty volatility spike, rupee depreciation
+  Key tickers        ^NSEI (Nifty 50), ^BSESN (Sensex), USDINR=X (USD/INR), INFY/TCS.NS (IT bellwethers)
+  Trade ideas        Long Gold / Short INR on geopolitical stress (India's gold safe-haven demand + INR weakness)
+                     Long Brent / Short Nifty on oil supply shock (India's 85% crude import dependency)
+                     Long Nifty / Short USDINR on dollar weakness cycle (EM relief + India tech export boost)
 
 LIVE MARKET CONTEXT
 {context}
@@ -140,6 +218,8 @@ _SUGGESTED = [
     "Which geopolitical event caused the largest correlation shift?",
     "Is speculative positioning crowded in any commodity right now?",
     "How do I interpret the Granger causality grid?",
+    "How does a Brent oil spike affect the Indian rupee and Nifty 50?",
+    "What is the India private credit / RBI rate outlook right now?",
 ]
 
 
@@ -150,27 +230,52 @@ def page_ai_chat(start: str, end: str) -> None:
     # ── Inline CSS: style native chat_message components ────────────────────
     st.markdown("""
     <style>
-    /* Assistant bubble text */
+    /* Chat message bubbles */
+    div[data-testid="stChatMessage"] {
+        background: #1a1d27 !important;
+        border: 1px solid #2a2d3a !important;
+        border-radius: 6px !important;
+        margin-bottom: 0.5rem !important;
+    }
+    /* Assistant/user bubble text */
     div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
-        font-size: 0.72rem !important;
+        font-size: 0.78rem !important;
         line-height: 1.72 !important;
-        color: #111111 !important;
+        color: #e8e9ed !important;
+    }
+    div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p,
+    div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] li,
+    div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] span {
+        color: #e8e9ed !important;
+    }
+    div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] strong {
+        color: #CFB991 !important;
+    }
+    div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] code {
+        background: #0f1117 !important;
+        color: #CFB991 !important;
+        padding: 1px 4px !important;
+        border-radius: 3px !important;
     }
     /* Chat input textarea */
+    textarea[data-testid="stTextArea"],
     [data-testid="stChatInput"] textarea {
         font-family: 'DM Sans', sans-serif !important;
         font-size: 0.74rem !important;
-        border: 1px solid #E8E5E0 !important;
+        background: #1a1d27 !important;
+        border: 1px solid #2a2d3a !important;
         border-radius: 3px !important;
-        color: #111111 !important;
+        color: #e8e9ed !important;
     }
+    textarea[data-testid="stTextArea"]:focus,
     [data-testid="stChatInput"] textarea:focus {
         border-color: #CFB991 !important;
         box-shadow: 0 0 0 1px #CFB991 !important;
     }
-    /* Submit button - hide the broken Material Icons text, show clean arrow */
+    /* Submit button */
     [data-testid="stChatInputSubmitButton"] button {
-        background: #000 !important;
+        background: #1a1d27 !important;
+        border: 1px solid #CFB991 !important;
         font-size: 0 !important;
         border-radius: 3px !important;
         width: 36px !important;
@@ -185,20 +290,15 @@ def page_ai_chat(start: str, end: str) -> None:
         font-family: 'DM Sans', sans-serif !important;
         color: #CFB991 !important;
     }
-    [data-testid="stChatInputSubmitButton"] button * {
-        font-size: 0 !important;
-        display: none !important;
-    }
-    [data-testid="stChatInputSubmitButton"] button svg {
-        display: none !important;
-    }
-    /* Avatar - clean minimal style */
+    [data-testid="stChatInputSubmitButton"] button * { font-size: 0 !important; display: none !important; }
+    [data-testid="stChatInputSubmitButton"] button svg { display: none !important; }
+    /* Avatar */
     [data-testid="stChatMessageAvatarUser"],
     [data-testid="stChatMessageAvatarAssistant"] {
-        background: #f0ede8 !important;
-        border: 1px solid #E8E5E0 !important;
+        background: #0f1117 !important;
+        border: 1px solid #2a2d3a !important;
         font-size: 0.58rem !important;
-        color: #555960 !important;
+        color: #CFB991 !important;
         font-weight: 700 !important;
         font-family: 'JetBrains Mono', monospace !important;
     }
@@ -212,7 +312,7 @@ def page_ai_chat(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-size:0.70rem;color:#333333;margin:0 0 0.3rem;line-height:1.65">'
+        '<p style="font-size:0.70rem;color:#8890a1;margin:0 0 0.3rem;line-height:1.65">'
         'An analyst trained on the full equity-commodities spillover framework with live access to '
         'all dashboard data. Ask it to interpret the current regime, explain why a specific commodity '
         'is moving relative to equities, identify which historical event the current environment most '
@@ -261,7 +361,7 @@ def page_ai_chat(start: str, end: str) -> None:
     _ctx_ok  = st.session_state["chat_context"] and not st.session_state["chat_context"].startswith("Market data unavailable")
     _age_col = "#CFB991" if _ctx_ok else "#c0392b"
     status_col.markdown(
-        f'<p style="font-size:0.62rem;color:#333333;margin:0;padding-top:0.45rem">'
+        f'<p style="font-size:0.62rem;color:#8890a1;margin:0;padding-top:0.45rem">'
         f'Market context:&nbsp;<span style="color:{_age_col};font-family:\'JetBrains Mono\',monospace;font-weight:600">'
         f'{_age}</span>'
         f'&nbsp;&nbsp;&middot;&nbsp;&nbsp;Regime, risk score, movers, and active events injected into every query.'
@@ -269,7 +369,7 @@ def page_ai_chat(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── No API key warning (non-blocking — chat input still shown below) ──────
+    # ── No API key warning (non-blocking - chat input still shown below) ──────
     if not _has_key:
         st.warning(
             "No API key configured. Add one of the following to `.streamlit/secrets.toml` to enable responses:\n\n"
@@ -282,17 +382,16 @@ def page_ai_chat(start: str, end: str) -> None:
     if not st.session_state["chat_messages"]:
         st.markdown(
             '<p style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;'
-            'text-transform:uppercase;color:#333333;margin:0.8rem 0 0.4rem">Suggested questions</p>',
+            'text-transform:uppercase;color:#6b7280;margin:0.8rem 0 0.4rem">Suggested questions</p>',
             unsafe_allow_html=True,
         )
         cols = st.columns(2)
         for i, q in enumerate(_SUGGESTED):
             if cols[i % 2].button(q, key=f"sq_{i}", use_container_width=True):
-                st.session_state["chat_messages"].append({"role": "user", "content": q})
-                st.rerun()
+                st.session_state["_sq_input"] = q
 
     st.markdown(
-        '<div style="border-top:1px solid #E8E5E0;margin:0.8rem 0 0"></div>',
+        '<div style="border-top:1px solid #2a2d3a;margin:0.8rem 0 0"></div>',
         unsafe_allow_html=True,
     )
 
@@ -311,7 +410,8 @@ def page_ai_chat(start: str, end: str) -> None:
         key="chat_textarea",
     )
     _send = _btn_col.button("Send", type="primary", key="send_chat", use_container_width=True)
-    user_input = _typed.strip() if (_send and _typed.strip()) else None
+    _sq   = st.session_state.pop("_sq_input", None)
+    user_input = _sq or (_typed.strip() if (_send and _typed.strip()) else None)
 
     # ── Message history ───────────────────────────────────────────────────────
     for msg in st.session_state["chat_messages"]:
@@ -356,36 +456,32 @@ def page_ai_chat(start: str, end: str) -> None:
                     if _provider == "anthropic":
                         import anthropic as _ant
                         _client = _ant.Anthropic(api_key=anthropic_key)
-                        # Extract system from messages and pass separately
                         _user_msgs = [m for m in api_messages if m["role"] != "system"]
                         with _client.messages.stream(
-                            model="claude-haiku-4-5-20251001",
-                            max_tokens=700,
+                            model="claude-sonnet-4-6",
+                            max_tokens=1024,
                             system=system_prompt,
                             messages=_user_msgs,
                         ) as _stream:
-                            response = st.write_stream(
-                                chunk.delta.text
-                                for chunk in _stream.text_stream
-                            )
+                            response = st.write_stream(_stream.text_stream)
                     else:
                         from openai import OpenAI as _OpenAI
                         _client = _OpenAI(api_key=openai_key)
                         _stream = _client.chat.completions.create(
                             model="gpt-4o",
                             messages=api_messages,
-                            max_tokens=700,
+                            max_tokens=1024,
                             temperature=0.25,
                             stream=True,
                         )
                         response = st.write_stream(
-                            chunk.choices[0].delta.content or ""
-                            for chunk in _stream
-                            if chunk.choices[0].delta.content
+                            c.choices[0].delta.content
+                            for c in _stream
+                            if c.choices[0].delta.content
                         )
                 except Exception as e:
-                    response = f"Request failed: {e}"
-                    st.markdown(response)
+                    response = f"⚠ Request failed: {e}"
+                    st.error(response)
 
             st.session_state["chat_messages"].append(
                 {"role": "assistant", "content": response}
@@ -404,8 +500,8 @@ def page_ai_chat(start: str, end: str) -> None:
         st.code(context, language="text")
 
     st.markdown(
-        '<p style="font-size:0.58rem;color:#444444;margin-top:1rem;line-height:1.6">'
-        'Powered by GPT-4o · Context refreshed on demand from live yfinance data · '
+        '<p style="font-size:0.58rem;color:#6b7280;margin-top:1rem;line-height:1.6">'
+        'Powered by GPT-4o / Claude · Context refreshed on demand from live yfinance + FRED data · '
         'For educational and research purposes only. Not investment advice.</p>',
         unsafe_allow_html=True,
     )

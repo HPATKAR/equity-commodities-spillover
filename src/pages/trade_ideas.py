@@ -116,13 +116,113 @@ _TRADE_LIBRARY = [
         "direction": ["Long", "Long", "Short", "Short"],
         "category":  "Crisis Hedge",
     },
+    {
+        "regime":    [2, 3],
+        "trigger":   "Private credit stress / HY spread widening + BDC underperformance",
+        "name":      "Short BDC Basket / Long HY Credit Protection",
+        "rationale": "Private credit ($2T+ AUM) is illiquid and marked-to-model quarterly. "
+                     "When HY OAS widens >35bps in 90 days and BKLN underperforms SPY, "
+                     "BDC equity (ARCC, OBDC, FSK) reprices before private marks surface - "
+                     "a lagged NAV writedown is typically confirmed 1–2 quarters later. "
+                     "The CDX HY 5Y index provides liquid short exposure to the same credit universe. "
+                     "Gold long captures contagion into safe-haven flows as financial sector sells off.",
+        "entry":     "HY OAS >350bps and rising >30bps/month; BKLN below 200d MA; "
+                     "BDC basket -5% vs SPY on 60d basis; elevated/crisis equity-commodity regime",
+        "exit":      "HY OAS stabilises <300bps; Fed emergency rate cut signal; "
+                     "BDC premiums re-compress; credit facilities extended at par",
+        "risk":      "Fed emergency cuts collapse floating-rate costs rapidly; "
+                     "sponsor rescue financing delays visible defaults; "
+                     "interval fund gates mask redemption pressure for 12–18 months",
+        "assets":    ["Ares Capital (ARCC)", "Blue Owl (OBDC)", "Gold"],
+        "direction": ["Short", "Short", "Long"],
+        "category":  "Private Credit",
+    },
+    {
+        "regime":    [2, 3],
+        "trigger":   "Flight to quality - elevated/crisis correlation regime",
+        "name":      "Long TLT / Short HYG (Flight to Quality)",
+        "rationale": "In elevated and crisis correlation regimes, investors rotate from credit risk to duration safety. "
+                     "TLT captures the safe-haven Treasury bid while HYG shorts the credit spread widening. "
+                     "The trade isolates the quality spread compression that accompanies every risk-off episode.",
+        "entry":     "Crisis/Elevated regime active; HY OAS rising >30bps in 30 days; VIX >25; TLT above 200d MA",
+        "exit":      "Regime drops to Normal; HY OAS stabilises; Fed pivot signal",
+        "risk":      "Bear steepening (long rates rise with HY spreads simultaneously); fiscal dominance narrative",
+        "assets":    ["US 20Y+ Treasury (TLT)", "HY Corporate (HYG)"],
+        "direction": ["Long", "Short"],
+        "category":  "Fixed Income",
+    },
+    {
+        "regime":    [1, 2],
+        "trigger":   "Inflation breakeven expansion / stagflation risk",
+        "name":      "Long TIP / Short TLT (Inflation Breakeven Trade)",
+        "rationale": "When commodity prices spike (energy, food) and the Fed is behind the curve, "
+                     "real yields compress while nominal yields stay elevated. "
+                     "TIPS outperform nominal Treasuries as breakeven inflation widens. "
+                     "This trade directly monetises the commodity-to-bond inflation transmission channel.",
+        "entry":     "5Y breakeven inflation rising >20bps in 60 days; WTI or wheat up >15% in 30 days; CPI surprise positive",
+        "exit":      "Breakeven inflation peaks; commodity prices mean-revert; Fed delivers credible inflation response",
+        "risk":      "Demand destruction flips inflation to deflation; recession pricing overrides inflation premium",
+        "assets":    ["TIPS / Inflation (TIP)", "US 20Y+ Treasury (TLT)"],
+        "direction": ["Long", "Short"],
+        "category":  "Fixed Income",
+    },
+    {
+        "regime":    [2, 3],
+        "trigger":   "Oil spike + INR depreciation (India crude import stress)",
+        "name":      "Long Brent Crude / Short Nifty 50 (India Import Shock)",
+        "rationale": "India imports ~85% of its crude oil needs (~5 mb/d). "
+                     "When Brent spikes >15% in 60 days and USD/INR is depreciating simultaneously, "
+                     "India's current account deficit widens sharply - historically correlating with "
+                     "Nifty 50 underperformance of -6% to -12% vs global peers. "
+                     "The long Brent / short Nifty trade monetises the commodity-to-EM-equity transmission channel specific to India.",
+        "entry":     "Brent up >15% in 60 days AND USD/INR rising >3% in 30 days; elevated/crisis regime active",
+        "exit":      "Oil supply restored; INR stabilises / RBI intervention; India CAD narrows",
+        "risk":      "RBI forex reserve intervention caps INR weakness; India domestic demand surprises to upside; OPEC+ production cut reversal",
+        "assets":    ["Brent Crude", "Nifty 50"],
+        "direction": ["Long", "Short"],
+        "category":  "India/EM",
+    },
+    {
+        "regime":    [2, 3],
+        "trigger":   "Geopolitical stress + dollar strength - India gold import sensitivity",
+        "name":      "Long Gold / Short INR (India Geopolitical Hedge)",
+        "rationale": "India is the world's #2 gold consumer (~800-900 tonnes/year). "
+                     "During geopolitical stress (Middle East escalation, South Asia tensions), "
+                     "gold demand surges from Indian households as a safe-haven AND currency hedge. "
+                     "Simultaneously, USD/INR typically rises (INR weakens) under global risk-off conditions. "
+                     "The long gold / short INR (via USD/INR long) trade captures both legs of this transmission.",
+        "entry":     "Crisis/Elevated regime; VIX >25; USD/INR rising >2% in 20 days; Gold 20d momentum positive",
+        "exit":      "Geopolitical de-escalation; gold mean-reverts -8% from peak; INR stabilises on RBI action",
+        "risk":      "RBI aggressively defends INR using $620B forex reserves; Gold sell-off on Fed hawkish surprise",
+        "assets":    ["Gold", "USD/INR"],
+        "direction": ["Long", "Long"],
+        "category":  "India/EM",
+    },
+    {
+        "regime":    [0, 1],
+        "trigger":   "Dollar weakness cycle / EM credit rally",
+        "name":      "Long EMB / Short DXY (Dollar Debasement - EM Relief)",
+        "rationale": "A weakening dollar reduces dollar-denominated debt service costs for EM sovereigns, "
+                     "compresses EM credit spreads, and attracts capital inflows into EM assets. "
+                     "EMB captures the bond price appreciation; short DXY amplifies the currency leg. "
+                     "Gold is the commodity expression of the same dollar debasement theme.",
+        "entry":     "DXY down >3% in 60 days; Fed on hold or cutting; EM current accounts improving; commodity prices rising",
+        "exit":      "Dollar reversal; Fed hawkish pivot; EM-specific credit event; commodity demand collapse",
+        "risk":      "EM-specific credit events (sovereign default, political crisis); commodity demand collapse flips EM outlook",
+        "assets":    ["EM USD Bonds (EMB)", "DXY (Dollar Index)", "Gold"],
+        "direction": ["Long", "Short", "Long"],
+        "category":  "Fixed Income",
+    },
 ]
 
 _CATEGORY_COLORS = {
-    "Crisis Hedge": "#c0392b",
-    "Geopolitical": "#e67e22",
-    "Macro":        "#2980b9",
-    "Growth":       "#2e7d32",
+    "Crisis Hedge":   "#c0392b",
+    "Geopolitical":   "#e67e22",
+    "Macro":          "#2980b9",
+    "Growth":         "#2e7d32",
+    "Private Credit": "#8e44ad",
+    "Fixed Income":   "#2980b9",
+    "India/EM":       "#16a085",
 }
 
 
@@ -139,7 +239,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "regime flips from Elevated to Decorrelated, there is a diversification opportunity. "
         "When the macro cycle enters late-stage and commodity-equity co-movement breaks down, "
         "there are defensive rotations. Ideas only show as active when the current regime matches "
-        "their structural trigger — dead cards mean the regime has not yet validated that setup."
+        "their structural trigger - dead cards mean the regime has not yet validated that setup."
     )
 
     with st.spinner("Loading data…"):
@@ -193,7 +293,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     show_all = c1.checkbox("Show all regimes", value=False)
     cat_filter = c2.selectbox(
         "Filter by category",
-        ["All", "Crisis Hedge", "Geopolitical", "Macro", "Growth"],
+        ["All", "Crisis Hedge", "Geopolitical", "Macro", "Growth", "India/EM", "Private Credit", "Fixed Income"],
     )
 
     active_trades = [
@@ -206,7 +306,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         st.info(f"No trade ideas for {r_name} regime. Enable 'Show all regimes' to see all.")
     else:
         st.markdown(
-            f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;color:#555;'
+            f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;color:#8890a1;'
             f'margin-bottom:0.6rem">'
             f'<b>{len(active_trades)}</b> idea{"s" if len(active_trades)>1 else ""} '
             f'{"shown" if show_all else "triggered"} for <b style=\'color:{r_color}\'>{r_name}</b></p>',
@@ -302,12 +402,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown(
         '<p style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;'
-        'text-transform:uppercase;color:#333;margin-bottom:0.5rem">'
+        'text-transform:uppercase;color:#CFB991;margin-bottom:0.5rem">'
         'Institution Report Download</p>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-size:0.72rem;color:#555960;line-height:1.7;margin-bottom:0.8rem">'
+        '<p style="font-size:0.72rem;color:#8890a1;line-height:1.7;margin-bottom:0.8rem">'
         'Generate a professionally formatted A4 research report covering the current regime, '
         'all active trade ideas, geopolitical context, and methodology - suitable for '
         'academic submission or institutional review.</p>',

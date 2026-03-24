@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_ilian() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.70rem;line-height:1.75;"
 
     photo = _photo_html("photo_ilian.jpeg", "Ilian Zalomai")
 
@@ -58,12 +58,12 @@ def page_about_ilian() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>Profile</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.75;margin:0 0 10px 0;'>"
+            f"<p style='{_f}margin:0 0 10px 0;'>"
             "Experienced in payment systems, fraud prevention, and banking technology consulting. "
             "I have spent four years building and managing risk and security operations across "
             "high-volume travel fintech platforms, and have contributed to banking transformation "
             "initiatives at Deloitte across Germany.</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.75;margin:0;'>"
+            f"<p style='{_f}margin:0;'>"
             "The MSF at Purdue's Financial Analytics track is deepening my foundation in "
             "quantitative methods and derivatives - bringing rigor to the intersection of "
             "risk management, data analytics, and financial markets.</p>"
@@ -75,8 +75,8 @@ def page_about_ilian() -> None:
         st.markdown(
             "<div class='about-card'>"
             "<p class='about-card-title'>This Project</p>"
-            f"<p style='{_f}color:#1a1a1a;font-size:0.70rem;line-height:1.75;margin:0 0 12px 0;'>"
-            "Contributed to the Equity &amp; Commodities Spillover Monitor as Course Project 3 for "
+            f"<p style='{_f}margin:0 0 12px 0;'>"
+            "Contributed to the Equity-Commodities Spillover Monitor as Course Project 3 for "
             "Prof. Cinder Zhang's MGMT 69000-120. Focused on geopolitical context analysis, "
             "war impact mapping, and the narrative framework connecting macro events to market regimes.</p>"
             "<div class='stat-row'>"

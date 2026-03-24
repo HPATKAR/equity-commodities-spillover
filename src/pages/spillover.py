@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.data.loader import load_returns
+from src.data.loader import load_returns, load_fixed_income_returns, load_fx_returns
 from src.data.config import PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.analysis.spillover import (
     granger_grid, transfer_entropy_matrix, net_flow_matrix, diebold_yilmaz,
@@ -43,7 +43,7 @@ def _label(txt: str) -> None:
 
 def _panel_note(txt: str) -> None:
     st.markdown(
-        f'<p style="{_F}font-size:0.64rem;color:#666;line-height:1.5;margin:4px 0 0 0">{txt}</p>',
+        f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.5;margin:4px 0 0 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -52,18 +52,18 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
         'font-weight:700;margin-bottom:0.1rem">Spillover Analytics</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
         'margin:0 0 0.7rem">Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph</p>',
         unsafe_allow_html=True,
     )
     _page_intro(
-        "Correlation tells you <em>that</em> two markets move together. Spillover tells you <em>why</em> — "
+        "Correlation tells you <em>that</em> two markets move together. Spillover tells you <em>why</em> - "
         "and more importantly, <strong>which market is driving which.</strong> "
         "This is the analytical core of the dashboard. Granger causality tests whether past equity returns "
         "statistically predict future commodity returns (or the reverse). Transfer entropy measures "
         "directional information flow without assuming linearity. Diebold-Yilmaz decomposes forecast error "
         "variance to assign a transmitter/receiver score to every asset. When equities rank as net "
-        "transmitters to commodities, the spillover is equity-led — a risk-off equity selloff is leaking "
+        "transmitters to commodities, the spillover is equity-led - a risk-off equity selloff is leaking "
         "into commodity markets before prices reflect it."
     )
 
@@ -96,7 +96,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     sel_cmd = [c for c in sel_cmd if c in cmd_r.columns] or def_cmd
     sel_all = [c for c in sel_all if c in all_r.columns]  or def_all
 
-    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -128,17 +128,19 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     z=pivot.values,
                     x=pivot.columns.tolist(),
                     y=pivot.index.tolist(),
-                    colorscale=[[0,"#c0392b"],[0.05,"#e74c3c"],[0.1,"#f9f3ea"],[1,"#ffffff"]],
+                    colorscale=[[0,"#c0392b"],[0.05,"#e74c3c"],[0.1,"#1e2130"],[1,"#0f1117"]],
                     zmin=0, zmax=0.1,
                     text=pivot.round(3).values,
                     texttemplate="%{text}",
-                    textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                    textfont=dict(size=8, family="JetBrains Mono, monospace", color="#e8e9ed"),
                     colorbar=dict(title="p-val", thickness=10),
                 ))
                 fig_gc.update_layout(
                     template="purdue", height=320,
-                    xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
-                    yaxis=dict(tickfont=dict(size=8)),
+                    paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                    font=dict(color="#e8e9ed"),
+                    xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
+                    yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
                     margin=dict(l=100, r=40, t=20, b=90),
                 )
                 _chart(fig_gc)
@@ -155,16 +157,49 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             # Top pairs table in expander
             if not sig_df.empty:
                 with st.expander(f"Top significant pairs ({len(sig_df)})"):
-                    st.dataframe(
+                    _TBL_CSS = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+                    tbl_df = (
                         sig_df[["cause","effect","direction","min_p","best_lag"]]
-                        .sort_values("min_p").head(20),
-                        use_container_width=True, hide_index=True,
+                        .sort_values("min_p").head(20)
                     )
+                    rows_html = ""
+                    for _, row in tbl_df.iterrows():
+                        p_val = row["min_p"]
+                        p_color = "#4ade80" if p_val < 0.01 else "#e8e9ed"
+                        rows_html += (
+                            f"<tr>"
+                            f"<td style='color:#b8bec8'>{row['cause']}</td>"
+                            f"<td style='color:#b8bec8'>{row['effect']}</td>"
+                            f"<td style='color:#8890a1'>{row['direction']}</td>"
+                            f"<td style='color:{p_color}'>{p_val:.4f}</td>"
+                            f"<td style='color:#8890a1'>{row['best_lag']}</td>"
+                            f"</tr>"
+                        )
+                    html_tbl = (
+                        _TBL_CSS
+                        + "<table class='ec-table'>"
+                        + "<thead><tr>"
+                        + "<th>Cause</th><th>Effect</th><th>Direction</th><th>Min P</th><th>Best Lag</th>"
+                        + "</tr></thead><tbody>"
+                        + rows_html
+                        + "</tbody></table>"
+                    )
+                    st.markdown(html_tbl, unsafe_allow_html=True)
 
     # ── Panel 2: Transfer Entropy ──────────────────────────────────────────
     _thread(
         "Granger causality tells you whether a predictive relationship exists. Transfer entropy "
-        "below goes further — it measures how much information is actually flowing in each "
+        "below goes further - it measures how much information is actually flowing in each "
         "direction, filtering out spurious correlations and isolating the true signal channel."
     )
     with col_te:
@@ -180,17 +215,19 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 z=net_te.values.astype(float),
                 x=net_te.columns.tolist(),
                 y=net_te.index.tolist(),
-                colorscale=[[0,"#c0392b"],[0.5,"#ffffff"],[1,"#2e7d32"]],
+                colorscale=[[0,"#c0392b"],[0.5,"#1e2130"],[1,"#2e7d32"]],
                 zmid=0,
                 text=net_te.round(4).values.astype(float),
                 texttemplate="%{text:.3f}",
-                textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                textfont=dict(size=8, family="JetBrains Mono, monospace", color="#e8e9ed"),
                 colorbar=dict(title="Net TE", thickness=10),
             ))
             fig_te.update_layout(
                 template="purdue", height=320,
-                xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
-                yaxis=dict(tickfont=dict(size=8)),
+                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                font=dict(color="#e8e9ed"),
+                xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
+                yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
                 margin=dict(l=100, r=40, t=20, b=90),
             )
             _chart(fig_te)
@@ -202,12 +239,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 "This goes beyond correlation by capturing the directionality of influence."
             )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Transfer entropy identifies direction; Diebold-Yilmaz measures magnitude. The FEVD "
         "table below shows what fraction of each asset's price variance is explained by shocks "
-        "originating elsewhere — the higher the number, the more that asset is a price-taker "
+        "originating elsewhere - the higher the number, the more that asset is a price-taker "
         "rather than a price-setter."
     )
 
@@ -248,8 +285,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             ))
             fig_dy.update_layout(
                 template="purdue", height=340,
-                xaxis=dict(tickangle=-35, tickfont=dict(size=8)),
-                yaxis=dict(tickfont=dict(size=8)),
+                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                font=dict(color="#e8e9ed"),
+                xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
+                yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
                 margin=dict(l=100, r=40, t=20, b=90),
             )
             _chart(fig_dy)
@@ -302,10 +341,164 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _chart(plot_granger_network(G_gr,
                         title="Granger Causality Network (p < 0.05)", layout=layout))
 
+    # ══════════════════════════════════════════════════════════════════════
+    # SECTION: Cross-Asset Spillover: Rates & FX
+    # ══════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2d3a"></div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        'color:#CFB991;margin-bottom:0.2rem">Cross-Asset Spillover: Rates &amp; FX</h2>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
+        'Targeted Granger causality across the 6 most representative cross-asset signals</p>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        fi_r = load_fixed_income_returns(start, end)
+        fx_r = load_fx_returns(start, end)
+
+        # Build focused universe
+        _CA_ASSETS_SOURCES = {
+            "S&P 500":                 eq_r,
+            "Gold":                    cmd_r,
+            "WTI Crude Oil":           cmd_r,
+            "US 20Y+ Treasury (TLT)":  fi_r,
+            "HY Corporate (HYG)":      fi_r,
+            "DXY (Dollar Index)":      fx_r,
+        }
+
+        _ca_series = {}
+        for _name, _src in _CA_ASSETS_SOURCES.items():
+            if not _src.empty and _name in _src.columns:
+                _ca_series[_name] = _src[_name]
+
+        if len(_ca_series) >= 4:
+            _ca_df = pd.DataFrame(_ca_series).dropna(how="all")
+
+            if len(_ca_df) >= 60:
+                with st.spinner("Running cross-asset Granger causality (6-asset universe)…"):
+                    _ca_assets = list(_ca_df.columns)
+                    _granger_results = {}
+                    for _cause in _ca_assets:
+                        for _effect in _ca_assets:
+                            if _cause == _effect:
+                                continue
+                            try:
+                                from statsmodels.tsa.stattools import grangercausalitytests
+                                _data = _ca_df[[_effect, _cause]].dropna()
+                                if len(_data) < 30:
+                                    continue
+                                _gc = grangercausalitytests(_data, maxlag=5, verbose=False)
+                                _min_p = min(
+                                    _gc[lag][0]["ssr_ftest"][1]
+                                    for lag in range(1, 6)
+                                    if lag in _gc
+                                )
+                                _granger_results[(_cause, _effect)] = _min_p
+                            except Exception:
+                                pass
+
+                if _granger_results:
+                    _pivot_data = {}
+                    for _effect in _ca_assets:
+                        _pivot_data[_effect] = {}
+                        for _cause in _ca_assets:
+                            if _cause == _effect:
+                                _pivot_data[_effect][_cause] = None
+                            else:
+                                _pivot_data[_effect][_cause] = _granger_results.get((_cause, _effect))
+
+                    _pivot_df = pd.DataFrame(_pivot_data).T
+
+                    # Build HTML table with color-coded p-values
+                    _TBL_CSS_CA = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+                    _header_cells = "<th>Effect \\ Cause</th>" + "".join(
+                        f"<th>{c}</th>" for c in _pivot_df.columns
+                    )
+                    _body_rows = ""
+                    for _eff, _row in _pivot_df.iterrows():
+                        _cells = f"<td style='color:#b8bec8;font-weight:600'>{_eff}</td>"
+                        for _caus in _pivot_df.columns:
+                            _p = _row.get(_caus)
+                            if _p is None:
+                                _cells += "<td style='color:#8890a1'>-</td>"
+                            elif _p < 0.05:
+                                _cells += f"<td style='color:#4ade80;font-weight:700'>{_p:.3f}</td>"
+                            elif _p < 0.10:
+                                _cells += f"<td style='color:#e67e22;font-weight:600'>{_p:.3f}</td>"
+                            else:
+                                _cells += f"<td style='color:#8890a1'>{_p:.3f}</td>"
+                        _body_rows += f"<tr>{_cells}</tr>"
+
+                    _html_ca = (
+                        _TBL_CSS_CA
+                        + "<table class='ec-table'>"
+                        + f"<thead><tr>{_header_cells}</tr></thead>"
+                        + f"<tbody>{_body_rows}</tbody>"
+                        + "</table>"
+                    )
+                    st.markdown(_html_ca, unsafe_allow_html=True)
+                    st.markdown(
+                        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.64rem;color:#8890a1;'
+                        f'margin-top:6px;line-height:1.6">'
+                        f'<span style="color:#4ade80;font-weight:700">Green p&lt;0.05</span> = significant Granger causality at 5%. '
+                        f'<span style="color:#e67e22;font-weight:700">Amber p&lt;0.10</span> = marginal signal. '
+                        f'<span style="color:#8890a1">Grey</span> = not significant. '
+                        f'Row = effect; Column = cause. E.g. row TLT, col S&P 500 = "does S&P 500 Granger-cause TLT?"</p>',
+                        unsafe_allow_html=True,
+                    )
+
+                    # Net transmitter score
+                    _transmitter_scores = {}
+                    for _asset in _ca_assets:
+                        _sent = sum(
+                            1 for (_c, _e), _p in _granger_results.items()
+                            if _c == _asset and _p < 0.05
+                        )
+                        _recv = sum(
+                            1 for (_c, _e), _p in _granger_results.items()
+                            if _e == _asset and _p < 0.05
+                        )
+                        _transmitter_scores[_asset] = _sent - _recv
+
+                    _primary_tx = max(_transmitter_scores, key=_transmitter_scores.get)
+                    _primary_score = _transmitter_scores[_primary_tx]
+                    _tx_color = "#4ade80" if _primary_score > 0 else "#f87171" if _primary_score < 0 else "#8890a1"
+                    st.markdown(
+                        f'<div style="border:1px solid #2a2d3a;border-left:4px solid {_tx_color};'
+                        f'border-radius:0 6px 6px 0;padding:0.65rem 1rem;background:#1a1d27;margin-top:0.6rem">'
+                        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
+                        f'text-transform:uppercase;letter-spacing:0.12em;color:{_tx_color};margin-bottom:3px">'
+                        f'Primary Cross-Asset Transmitter</div>'
+                        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;font-weight:700;'
+                        f'color:#e8e9ed">{_primary_tx} '
+                        f'<span style="font-size:0.70rem;color:#8890a1">'
+                        f'(net score: {_primary_score:+d} significant Granger links)</span></div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.info("Insufficient data for cross-asset Granger analysis. Extend the date range.")
+        else:
+            st.info("Fixed income or FX data unavailable. Cross-asset spillover requires internet connectivity.")
+    except Exception as _e:
+        st.warning(f"Cross-asset spillover section unavailable: {_e}")
+
     _page_conclusion(
         "Transmission Map",
-        "Assets identified as strong transmitters across all three methods — Granger, Transfer "
-        "Entropy, and Diebold-Yilmaz — are your first-order risk factors. A price move in a "
+        "Assets identified as strong transmitters across all three methods - Granger, Transfer "
+        "Entropy, and Diebold-Yilmaz - are your first-order risk factors. A price move in a "
         "high-transmitter commodity is not isolated; it will propagate. Use this map to identify "
         "which equity markets to hedge when a key commodity breaks out."
     )

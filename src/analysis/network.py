@@ -235,16 +235,16 @@ def _base_layout(height: int, title: str, annotations: list) -> dict:
         showlegend=True,
         legend=dict(
             orientation="v", x=1.01, y=1, font=dict(size=9),
-            bgcolor="rgba(255,255,255,0.9)",
-            bordercolor="#E8E5E0", borderwidth=1,
+            bgcolor="rgba(20,22,32,0.85)",
+            bordercolor="rgba(150,150,160,0.3)", borderwidth=1,
         ),
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False,
                    showspikes=False, range=[-2.6, 2.6]),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False,
                    showspikes=False, range=[-2.6, 2.6]),
         margin=dict(l=20, r=180, t=55, b=20),
-        paper_bgcolor="#ffffff",
-        plot_bgcolor="#fafaf8",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         annotations=annotations,
     )
 

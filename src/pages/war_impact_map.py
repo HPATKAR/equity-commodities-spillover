@@ -291,7 +291,7 @@ def _war_multipliers(cmd_r: pd.DataFrame) -> dict:
     if cmd_r.empty or len(cmd_r) < 30:
         return {
             "ukraine": 1.0, "hamas": 1.0, "iran": 1.0,
-            "signals": {}, "method": "fallback — insufficient data",
+            "signals": {}, "method": "fallback - insufficient data",
         }
 
     window = 20  # 20-trading-day rolling return for z-score
@@ -410,7 +410,7 @@ def _build_df(
 
 # ── Local GeoJSON loader ──────────────────────────────────────────────────────
 # Reads the pre-processed compact GeoJSON bundled with the project.
-# No network request — 100% reliable in any deployment context.
+# No network request - 100% reliable in any deployment context.
 
 _ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
 _GEO_FILE = _ASSETS / "ne_110m_countries_compact.geojson"
@@ -427,9 +427,9 @@ def _load_globe_geojson() -> list[dict]:
 
 # ── D3 Orthographic Globe template ───────────────────────────────────────────
 # Engine: D3 v7 geoOrthographic + canvas.
-# Drag: setPointerCapture — works inside Streamlit iframes.
-# Hover: proj.invert(mouse) → d3.geoContains(feature, point) — 100% reliable.
-# GeoJSON: injected server-side — no client fetch, no CORS issues.
+# Drag: setPointerCapture - works inside Streamlit iframes.
+# Hover: proj.invert(mouse) → d3.geoContains(feature, point) - 100% reliable.
+# GeoJSON: injected server-side - no client fetch, no CORS issues.
 
 _GLOBE_HTML = r"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -483,13 +483,13 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
 </div>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script>
-/* ── injected from Python (no client fetch — data embedded server-side) ── */
+/* ── injected from Python (no client fetch - data embedded server-side) ── */
 const CDATA    = __COUNTRY_DATA__;     // {ISO3:{score}}
 const HOVER    = __HOVER_DATA__;       // {ISO3:html}
 const HT       = __HOMETURF__;         // [{lat,lng,name,war,note}]
 const GEO_RAW  = __GEO_FEATURES__;     // [{iso,name,g:{type,coordinates}}]
 
-/* ── canvas setup — size after layout ── */
+/* ── canvas setup - size after layout ── */
 const wrap   = document.getElementById('wrap');
 const canvas = document.getElementById('gc');
 const panel  = document.getElementById('panel');
@@ -550,7 +550,7 @@ function draw() {
     ctx.fillStyle = iso===hoverIso ? 'rgba(255,210,72,0.96)' : sc((CDATA[iso]||{}).score||0);
     ctx.fill();
   }
-  /* country borders (separate pass — avoids fill bleeding over stroke) */
+  /* country borders (separate pass - avoids fill bleeding over stroke) */
   for (const {f,iso} of featData) {
     ctx.beginPath(); pathGen(f);
     if (iso===hoverIso) { ctx.strokeStyle='rgba(255,210,72,1.0)'; ctx.lineWidth=1.6; }
@@ -601,7 +601,7 @@ function handleHover(mx, my) {
   const dx=mx-cx, dy=my-cy;
   if (dx*dx+dy*dy > R0*R0) { setHover(null,null); canvas.style.cursor='grab'; return; }
   const ll = proj.invert([mx,my]); if (!ll) { setHover(null,null); return; }
-  /* reject back-hemisphere (proj.invert is purely mathematical — no clipping) */
+  /* reject back-hemisphere (proj.invert is purely mathematical - no clipping) */
   if (d3.geoDistance(ll, [-rot[0],-rot[1]]) >= Math.PI/2) { setHover(null,null); return; }
   for (const {f,iso,name} of featData) {
     if (d3.geoContains(f, ll)) { setHover(iso,name); canvas.style.cursor='crosshair'; return; }
@@ -609,7 +609,7 @@ function handleHover(mx, my) {
   setHover(null,null); canvas.style.cursor='grab';
 }
 
-/* ── pointer-capture drag (works in Streamlit iframes — no window listener needed) ── */
+/* ── pointer-capture drag (works in Streamlit iframes - no window listener needed) ── */
 let velX=0, velY=0, lastX=0, lastY=0, lastT=0, inertiaId=null, dragging=false;
 
 function clampPhi() { rot[1]=Math.max(-89,Math.min(89,rot[1])); }
@@ -666,7 +666,7 @@ canvas.addEventListener('wheel', e => {
   draw();
 }, {passive:false});
 
-/* ── build feature index from injected data (synchronous — no fetch needed) ── */
+/* ── build feature index from injected data (synchronous - no fetch needed) ── */
 featData = GEO_RAW.map(d => ({
   f:    {type: 'Feature', geometry: d.g, properties: {ISO_A3: d.iso}},
   iso:  d.iso,
@@ -687,7 +687,7 @@ def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
          "name": h["name"], "war": h["war"], "note": h["note"]}
         for h in _HOMETURF_WARS
     ]
-    # Server-side GeoJSON — injected directly, no browser fetch required
+    # Server-side GeoJSON - injected directly, no browser fetch required
     geo_features = _load_globe_geojson()
     html = (
         _GLOBE_HTML
@@ -716,8 +716,8 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<p style="{_F}font-size:0.70rem;color:#555;margin:0 0 0.8rem;line-height:1.6">'
-        f'Active conflicts disrupt commodity supply chains — oil, wheat, metals — causing those '
+        f'<p style="{_F}font-size:0.70rem;color:#8890a1;margin:0 0 0.8rem;line-height:1.6">'
+        f'Active conflicts disrupt commodity supply chains - oil, wheat, metals - causing those '
         f'commodities to decouple from their usual equity correlation. This map scores each country\'s '
         f'<strong>structural exposure to that decoupling risk</strong>: geographic proximity, energy '
         f'dependency, trade-route vulnerability, and alliance obligations. High-exposure markets are '
@@ -810,7 +810,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="margin-bottom:6px">'
                 f'<div style="display:flex;justify-content:space-between;{_F}font-size:0.63rem">'
-                f'<span style="color:#444">{_wname}</span>'
+                f'<span style="color:#c8cdd8">{_wname}</span>'
                 f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;'
                 f'color:{_mc}">×{_m:.2f}</span></div>'
                 f'<div style="height:3px;background:#F0EDEA;border-radius:2px;margin-top:2px">'
@@ -851,7 +851,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="width:11px;height:11px;background:{c};border-radius:2px;'
                 f'flex-shrink:0;{"border:1px solid #ccc" if c == "#f5f2ee" else ""}"></div>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;'
-                f'color:#444">{lbl}</span></div>',
+                f'color:#c8cdd8">{lbl}</span></div>',
                 unsafe_allow_html=True,
             )
 
@@ -862,9 +862,9 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8E6F3E;margin:0 0 5px">Composite Score</p>'
-            f'<p style="{_F}font-size:0.64rem;color:#555;line-height:1.6;margin:0">'
+            f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.6;margin:0">'
             f'<code style="font-size:0.62rem;background:#f0ede8;padding:1px 4px;'
-            f'border-radius:2px">max(Ukraine, Hamas, Hormuz)</code> — the worst-case '
+            f'border-radius:2px">max(Ukraine, Hamas, Hormuz)</code> - the worst-case '
             f'conflict score across all three tracked wars. Five factors: geographic '
             f'proximity, energy dependency, trade-route exposure, equity-market '
             f'correlation, and alliance obligations.</p>',
@@ -934,7 +934,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     with st.expander("Technical Scoring Methodology", expanded=False):
         st.markdown(
             """
-**Model class:** Structured Expert Judgment (SEJ) composite index — not the output of a
+**Model class:** Structured Expert Judgment (SEJ) composite index - not the output of a
 statistical model or machine learning pipeline. Scores are expert-calibrated on a 0–100
 ordinal-interval scale, anchored at known extremes and validated against observed market
 reactions to each conflict.
@@ -954,7 +954,7 @@ S_c(i) = w1·P(i) + w2·E(i) + w3·T(i) + w4·R(i) + w5·A(i)
 |--------|-----------|--------------|-------------------|
 | P(i) | **Geographic Proximity** | 18 – 33 % | Geodesic distance from conflict epicentre; border states score ≥ 80. Decays ~−15 pts per degree of separation for adjacent states, flattening to a floor of ~5 beyond 5,000 km. For Iran/Hormuz, P also captures *military projection proximity* (naval basing, carrier group presence). |
 | E(i) | **Energy Dependency** | 18 – 32 % | Share of oil, gas, and LNG imports transiting disrupted corridors or sourced from conflict-adjacent exporters. Calibrated against IEA bilateral trade matrices; Russian-gas reliance (EU states) and Gulf-crude reliance (East Asia) are primary inputs. |
-| T(i) | **Trade Route Exposure** | 11 – 28 % | Fraction of annual merchandise trade value transiting threatened chokepoints (Black Sea, Suez/Red Sea, Strait of Hormuz). Proxied from UNCTAD maritime freight statistics and Lloyd's voyage data. For Iran/Hormuz, T is intentionally down-weighted — ~85 % of Hormuz traffic is energy already captured by E; non-energy cargo represents only ~15 % of Hormuz transit. |
+| T(i) | **Trade Route Exposure** | 11 – 28 % | Fraction of annual merchandise trade value transiting threatened chokepoints (Black Sea, Suez/Red Sea, Strait of Hormuz). Proxied from UNCTAD maritime freight statistics and Lloyd's voyage data. For Iran/Hormuz, T is intentionally down-weighted - ~85 % of Hormuz traffic is energy already captured by E; non-energy cargo represents only ~15 % of Hormuz transit. |
 | R(i) | **Equity-Market Correlation** | 14 – 17 % | 252-day rolling Pearson correlation of the domestic equity index with a conflict commodity basket (crude oil, natural gas, wheat), averaged over the 12 months preceding conflict onset, rescaled linearly from [−1, 1] → [0, 100]. |
 | A(i) | **Alliance & Sanctions Exposure** | 7 – 15 % | Ordinal measure: NATO Article 5 obligation (max weight), EU sanctions participation, UN resolution co-sponsorship, formal alignment with a conflict party. Scored on a 0/25/50/75/100 step scale. Also captures direct military engagement (USA in Iran/Hormuz) and fiscal obligations (Germany's Zeitenwende, Baltic defense build-up). |
 
@@ -968,9 +968,9 @@ S_c(i) = w1·P(i) + w2·E(i) + w3·T(i) + w4·R(i) + w5·A(i)
 
 | Conflict | P | E | T | R | A | Primary rationale |
 |----------|---|---|---|---|---|---|
-| Russia-Ukraine War | **33 %** | **30 %** | 11 % | 14 % | 12 % | P and E dominate (border exposure + Russian-gas lock-in). R raised from prior 10 % — DAX–gas correlation was the dominant market narrative throughout 2022. A raised from 10 % to reflect NATO fiscal obligations and EU sanctions depth. T reduced: Black Sea grain corridor is real but secondary to the energy channel. |
-| Israel-Hamas War | 22 % | 18 % | **28 %** | 17 % | 15 % | T is the lead factor (Suez/Red Sea shipping-cost spike was the primary global transmission mechanism). P raised slightly — Jordan and Egypt border analysis shows regional proximity is more discriminating than 20 % implied. E raised from 15 %: Middle East oil import dependency for South/Southeast Asia is a genuine scored channel (Pakistan 28, India 25, Indonesia 22). R moderated: global equity correlation to this conflict is less systematic than energy-channel conflicts. |
-| Iran / Hormuz Crisis | 18 % | **32 %** | 28 % | 15 % | 7 % | E is dominant: Hormuz crude dependency is the single most discriminating variable (Japan 68, Korea 65, India 62 vs. Canada 15, Brazil 12). T reduced from prior 35 % to avoid double-counting with E. P raised from 15 % — Gulf chokepoint states (Oman, Qatar, UAE) derive exposure from literal proximity to the strait. A raised from 5 %: USA's direct military role (carrier group, strike operations) cannot be adequately represented at 5 %. |
+| Russia-Ukraine War | **33 %** | **30 %** | 11 % | 14 % | 12 % | P and E dominate (border exposure + Russian-gas lock-in). R raised from prior 10 % - DAX–gas correlation was the dominant market narrative throughout 2022. A raised from 10 % to reflect NATO fiscal obligations and EU sanctions depth. T reduced: Black Sea grain corridor is real but secondary to the energy channel. |
+| Israel-Hamas War | 22 % | 18 % | **28 %** | 17 % | 15 % | T is the lead factor (Suez/Red Sea shipping-cost spike was the primary global transmission mechanism). P raised slightly - Jordan and Egypt border analysis shows regional proximity is more discriminating than 20 % implied. E raised from 15 %: Middle East oil import dependency for South/Southeast Asia is a genuine scored channel (Pakistan 28, India 25, Indonesia 22). R moderated: global equity correlation to this conflict is less systematic than energy-channel conflicts. |
+| Iran / Hormuz Crisis | 18 % | **32 %** | 28 % | 15 % | 7 % | E is dominant: Hormuz crude dependency is the single most discriminating variable (Japan 68, Korea 65, India 62 vs. Canada 15, Brazil 12). T reduced from prior 35 % to avoid double-counting with E. P raised from 15 % - Gulf chokepoint states (Oman, Qatar, UAE) derive exposure from literal proximity to the strait. A raised from 5 %: USA's direct military role (carrier group, strike operations) cannot be adequately represented at 5 %. |
 
 ---
 
@@ -989,8 +989,8 @@ unrelated risk channels; averaging would understate the dominant exposure.
 
 #### Anchor Calibration
 
-- **Score = 100** — Direct conflict party on home soil (Ukraine, Israel/Palestine, Iran).
-- **Score = 0** — No measurable exposure via any of the five channels.
+- **Score = 100** - Direct conflict party on home soil (Ukraine, Israel/Palestine, Iran).
+- **Score = 0** - No measurable exposure via any of the five channels.
 
 All intermediate scores triangulate from these anchors, cross-checked against:
 1. Observed equity drawdowns at conflict onset (DAX −4 % on 24 Feb 2022; TA-35 −8 % on 7 Oct 2023).
@@ -1038,34 +1038,57 @@ All intermediate scores triangulate from these anchors, cross-checked against:
                 "Iran/Hormuz (%)":   w.get("Iran/Hormuz Crisis", None),
             })
 
+    _TBL_CSS = """
+    <style>
+    .wim-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+    .wim-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+        border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+        letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+    .wim-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+    .wim-table tr:nth-child(even) td{background:#141720}
+    .wim-table tr:nth-child(odd) td{background:#0f1117}
+    .wim-table tr:hover td{background:#1e2230}
+    </style>"""
+
+    def _score_badge(s):
+        if s >= 75: bg, fg = "#d73027", "#fff"
+        elif s >= 50: bg, fg = "#fc8d59", "#000"
+        elif s >= 25: bg, fg = "#fee08b", "#000"
+        else: bg, fg = "#91cf60", "#000"
+        return f'<span style="background:{bg};color:{fg};padding:2px 7px;border-radius:3px;font-weight:700">{s:.0f}</span>'
+
+    def _ret_cell(v):
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return '<span style="color:#4a5060">-</span>'
+        if v > 5:   c = "#4ade80"
+        elif v > 0: c = "#86efac"
+        elif v > -10: c = "#fb923c"
+        else: c = "#f87171"
+        return f'<span style="color:{c};font-weight:600">{v:+.1f}%</span>'
+
     if tracked_rows:
         tdf = (
             pd.DataFrame(tracked_rows)
             .sort_values("Impact Score", ascending=False)
             .reset_index(drop=True)
         )
-
-        def _fmt(v):
-            if v is None or (isinstance(v, float) and np.isnan(v)):
-                return "-"
-            return f"{v:+.1f}%"
-
-        def _sty(v):
-            if v is None or (isinstance(v, float) and np.isnan(v)):
-                return ""
-            if v > 5:   return "color:#2e7d32;font-weight:600"
-            if v > 0:   return "color:#4a8a4e;font-weight:500"
-            if v > -10: return "color:#e67e22;font-weight:600"
-            return "color:#c0392b;font-weight:700"
-
-        st.dataframe(
-            tdf.style
-            .applymap(_sty, subset=["Ukraine War (%)", "Israel War (%)", "Iran/Hormuz (%)"])
-            .format({"Impact Score": "{:.0f}", "Ukraine War (%)": _fmt,
-                     "Israel War (%)": _fmt, "Iran/Hormuz (%)": _fmt})
-            .background_gradient(subset=["Impact Score"], cmap="RdYlGn_r", vmin=0, vmax=100),
-            use_container_width=True,
-            hide_index=True,
+        rows_html = ""
+        for _, r in tdf.iterrows():
+            rows_html += (
+                f"<tr><td>{r['Country']}</td>"
+                f"<td style='color:#b8bec8'>{r['Equity Index']}</td>"
+                f"<td>{_score_badge(r['Impact Score'])}</td>"
+                f"<td>{_ret_cell(r['Ukraine War (%)'])}</td>"
+                f"<td>{_ret_cell(r['Israel War (%)'])}</td>"
+                f"<td>{_ret_cell(r['Iran/Hormuz (%)'])}</td></tr>"
+            )
+        st.markdown(
+            _TBL_CSS +
+            "<table class='wim-table'><thead><tr>"
+            "<th>Country</th><th>Equity Index</th><th>Impact Score</th>"
+            "<th>Ukraine War %</th><th>Israel War %</th><th>Iran/Hormuz %</th>"
+            f"</tr></thead><tbody>{rows_html}</tbody></table>",
+            unsafe_allow_html=True,
         )
 
     # ── Top 25 table ──────────────────────────────────────────────────────────
@@ -1086,14 +1109,24 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         })
         .reset_index(drop=True)
     )
-    top25.index += 1
 
-    st.dataframe(
-        top25.style
-        .background_gradient(subset=["Impact Score"], cmap="RdYlGn_r", vmin=0, vmax=100)
-        .format({"Impact Score": "{:.0f}", "Ukraine War": "{:.0f}",
-                 "Israel-Hamas War": "{:.0f}", "Iran/Hormuz": "{:.0f}"}),
-        use_container_width=True,
+    rows25_html = ""
+    for _, r in top25.iterrows():
+        rows25_html += (
+            f"<tr><td>{r['Country']}</td>"
+            f"<td>{_score_badge(r['Impact Score'])}</td>"
+            f"<td style='color:#b8bec8'>{r['Ukraine War']:.0f}</td>"
+            f"<td style='color:#b8bec8'>{r['Israel-Hamas War']:.0f}</td>"
+            f"<td style='color:#b8bec8'>{r['Iran/Hormuz']:.0f}</td>"
+            f"<td style='color:#8890a1;font-size:0.72rem'>{r['Tracked Index']}</td></tr>"
+        )
+    st.markdown(
+        _TBL_CSS +
+        "<table class='wim-table'><thead><tr>"
+        "<th>Country</th><th>Impact Score</th><th>Ukraine War</th>"
+        "<th>Israel-Hamas War</th><th>Iran/Hormuz</th><th>Tracked Index</th>"
+        f"</tr></thead><tbody>{rows25_html}</tbody></table>",
+        unsafe_allow_html=True,
     )
 
     _page_conclusion(

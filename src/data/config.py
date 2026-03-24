@@ -1,5 +1,5 @@
 """
-Equity-Commodities Spillover Dashboard — Data Config
+Equity-Commodities Spillover Dashboard - Data Config
 Tickers, geopolitical event windows, FRED series, display metadata.
 """
 
@@ -49,11 +49,11 @@ COMMODITY_TICKERS = {
     "Natural Gas":      "NG=F",
     "Gasoline (RBOB)":  "RB=F",
     "Heating Oil":      "HO=F",
-    # Metals — precious
+    # Metals - precious
     "Gold":             "GC=F",
     "Silver":           "SI=F",
     "Platinum":         "PL=F",
-    # Metals — industrial
+    # Metals - industrial
     "Copper":           "HG=F",
     "Aluminum":         "ALI=F",
     "Nickel":           "NI=F",
@@ -74,6 +74,41 @@ COMMODITY_GROUPS = {
     "Agriculture":     ["Wheat", "Corn", "Soybeans", "Sugar #11", "Coffee", "Cotton"],
 }
 
+# ── Fixed Income tickers (yfinance ETFs) ───────────────────────────────────
+FIXED_INCOME_TICKERS: dict[str, str] = {
+    "US 20Y+ Treasury (TLT)":  "TLT",
+    "US 7-10Y Treasury (IEF)": "IEF",
+    "US 1-3Y Treasury (SHY)":  "SHY",
+    "IG Corporate (LQD)":      "LQD",
+    "HY Corporate (HYG)":      "HYG",
+    "EM USD Bonds (EMB)":      "EMB",
+    "TIPS / Inflation (TIP)":  "TIP",
+}
+
+FIXED_INCOME_GROUPS: dict[str, list[str]] = {
+    "Government":    ["US 20Y+ Treasury (TLT)", "US 7-10Y Treasury (IEF)", "US 1-3Y Treasury (SHY)"],
+    "Credit":        ["IG Corporate (LQD)", "HY Corporate (HYG)"],
+    "International": ["EM USD Bonds (EMB)"],
+    "Inflation":     ["TIPS / Inflation (TIP)"],
+}
+
+# ── FX tickers (yfinance) ───────────────────────────────────────────────────
+FX_TICKERS: dict[str, str] = {
+    "DXY (Dollar Index)": "UUP",
+    "EUR/USD":            "EURUSD=X",
+    "USD/JPY":            "USDJPY=X",
+    "GBP/USD":            "GBPUSD=X",
+    "USD/CNY":            "USDCNY=X",
+    "USD/BRL":            "USDBRL=X",
+    "USD/INR":            "USDINR=X",
+}
+
+FX_GROUPS: dict[str, list[str]] = {
+    "Dollar Index": ["DXY (Dollar Index)"],
+    "G3":           ["EUR/USD", "USD/JPY", "GBP/USD"],
+    "Emerging":     ["USD/CNY", "USD/BRL", "USD/INR"],
+}
+
 # ── FRED series ────────────────────────────────────────────────────────────
 FRED_SERIES = {
     "VIX":         "VIXCLS",
@@ -85,6 +120,26 @@ FRED_SERIES = {
     "OIL_PRICE":   "DCOILWTICO", # WTI daily (FRED backup)
     "GOLD_PRICE":  "GOLDAMGBD228NLBM",
     "WHEAT_PPI":   "WPU012",
+    "TIPS_BREAKEVEN_5Y":  "T5YIE",
+    "TIPS_BREAKEVEN_10Y": "T10YIE",
+    "REAL_RATE_10Y":      "DFII10",
+    "HY_OAS":             "BAMLH0A0HYM2",
+    "IG_OAS":             "BAMLC0A0CM",
+}
+
+# ── Private Credit Proxy Tickers (yfinance) ────────────────────────────────
+# Used for private credit bubble risk scoring in Insights page.
+# BKLN: Invesco Senior Loan ETF - best liquid proxy for leveraged loan market
+# ARCC: Ares Capital - largest BDC by AUM (~$22B); direct lending benchmark
+# OBDC: Blue Owl Capital - large mid-market direct lender
+# FSK:  FS KKR Capital - more aggressive credit, higher default sensitivity
+# JBBB: Janus Henderson CLO BBB - CLO mezzanine tranche stress signal
+PC_PROXY_TICKERS: dict[str, str] = {
+    "BKLN":  "BKLN",   # Invesco Senior Loan ETF
+    "ARCC":  "ARCC",   # Ares Capital (BDC)
+    "OBDC":  "OBDC",   # Blue Owl (BDC)
+    "FSK":   "FSK",    # FS KKR Capital (BDC)
+    "JBBB":  "JBBB",   # Janus CLO BBB
 }
 
 # ── Geopolitical / macro event windows ─────────────────────────────────────
@@ -130,7 +185,7 @@ GEOPOLITICAL_EVENTS = [
         "color":       "#d35400",
         "category":    "Geopolitical",
         "description": "Drone strikes on Saudi Aramco facilities cut ~5% of global oil supply. "
-                       "Brent spikes +15% in a single session — largest intraday surge on record.",
+                       "Brent spikes +15% in a single session - largest intraday surge on record.",
     },
     {
         "label":       "COVID-19",
@@ -212,6 +267,20 @@ GEOPOLITICAL_EVENTS = [
                        "Oil risk premium embedded; gold hits ATH $2,400+.",
     },
     {
+        "label":       "India-Pakistan",
+        "name":        "India-Pakistan Military Escalation",
+        "start":       date(2025, 5, 7),    # Operation Sindoor - Indian strikes on Pakistan
+        "end":         date.today(),
+        "color":       "#f39c12",
+        "category":    "Geopolitical",
+        "description": "India launched Operation Sindoor (May 7, 2025) striking Pakistani militant infrastructure "
+                       "following a terrorist attack in Pahalgam, Kashmir that killed 26 civilians. "
+                       "Pakistan responded with artillery fire and airspace closures. "
+                       "Both nations are nuclear-armed. Elevated cross-border tensions spike Nifty 50 volatility, "
+                       "weaken the rupee (INR -1 to -3% during escalation), and raise India's geopolitical risk premium. "
+                       "South Asia conflict historically boosts gold (safe-haven) and pressures EM equities.",
+    },
+    {
         "label":       "Iran/Hormuz",
         "name":        "Iran Military Conflict & Strait of Hormuz Crisis",
         "start":       date(2025, 6, 13),
@@ -226,7 +295,7 @@ GEOPOLITICAL_EVENTS = [
     },
 ]
 
-# ── Commodities watchlist — curated display metadata ──────────────────────
+# ── Commodities watchlist - curated display metadata ──────────────────────
 WATCHLIST = [
     # (ticker, display_name, group, alert_reason)
     ("CL=F",  "WTI Crude Oil",    "Energy",           "Iran & Ukraine war premium"),
@@ -243,23 +312,23 @@ WATCHLIST = [
 
 # ── Colour palette ─────────────────────────────────────────────────────────
 PALETTE = [
-    "#000000",  # Black      — strong anchor (equities lead)
-    "#c0392b",  # Red        — crisis / energy
-    "#2980b9",  # Blue       — liquid / financials
-    "#2e7d32",  # Green      — growth / metals
-    "#e67e22",  # Orange     — grain / soft commodities
-    "#8e44ad",  # Purple     — diversification
-    "#16a085",  # Teal       — EM / Asia
-    "#DAAA00",  # Rush Gold  — Purdue brand accent
-    "#555960",  # Steel      — additional series
-    "#CFB991",  # Boilermaker Gold — lighter accent
-    "#8E6F3E",  # Aged Brown — tertiary
-    "#6F727B",  # Cool Gray  — fallback
+    "#000000",  # Black      - strong anchor (equities lead)
+    "#c0392b",  # Red        - crisis / energy
+    "#2980b9",  # Blue       - liquid / financials
+    "#2e7d32",  # Green      - growth / metals
+    "#e67e22",  # Orange     - grain / soft commodities
+    "#8e44ad",  # Purple     - diversification
+    "#16a085",  # Teal       - EM / Asia
+    "#DAAA00",  # Rush Gold  - Purdue brand accent
+    "#555960",  # Steel      - additional series
+    "#CFB991",  # Boilermaker Gold - lighter accent
+    "#8E6F3E",  # Aged Brown - tertiary
+    "#6F727B",  # Cool Gray  - fallback
 ]
 
 # High-contrast palette explicitly for multi-line charts (equity + commodity mixed).
-# Equities use solid lines; commodities use dash patterns — see _EQUITY_DASH / _CMD_DASH.
-CHART_PALETTE = PALETTE  # alias — update PALETTE to change all charts
+# Equities use solid lines; commodities use dash patterns - see _EQUITY_DASH / _CMD_DASH.
+CHART_PALETTE = PALETTE  # alias - update PALETTE to change all charts
 
 CATEGORY_COLORS = {
     "Geopolitical": "#c0392b",

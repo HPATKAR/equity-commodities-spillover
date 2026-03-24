@@ -1,12 +1,12 @@
 """
-Geopolitical Risk Score — composite 0-100 index.
+Geopolitical Risk Score - composite 0-100 index.
 
 Components (weights):
-  1. Cross-asset correlation percentile   25%  — market coupling signal
-  2. Commodity volatility z-score         20%  — energy/metals stress
-  3. VIX level score                      15%  — equity fear gauge
-  4. Oil-Gold geopolitical signal         25%  — strongest direct geo-risk market signal
-  5. Event severity score                 15%  — severity-weighted, recency-decayed catalogue
+  1. Cross-asset correlation percentile   25%  - market coupling signal
+  2. Commodity volatility z-score         20%  - energy/metals stress
+  3. VIX level score                      15%  - equity fear gauge
+  4. Oil-Gold geopolitical signal         25%  - strongest direct geo-risk market signal
+  5. Event severity score                 15%  - severity-weighted, recency-decayed catalogue
 
 The oil-gold signal is the core geopolitical indicator:
   - Gold rising + Oil rising simultaneously = supply-shock/conflict premium
@@ -82,7 +82,7 @@ def _vix_score() -> tuple[float, float]:
 
 def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict]:
     """
-    Oil-Gold geopolitical signal — the most direct market-based measure of
+    Oil-Gold geopolitical signal - the most direct market-based measure of
     geopolitical stress.
 
     Logic:
@@ -176,7 +176,7 @@ def _event_severity_score() -> tuple[float, list[dict]]:
         ev_end   = ev.get("end", today)
 
         if ev_start <= today <= ev_end:
-            # Active: recency multiplier — freshest events score highest
+            # Active: recency multiplier - freshest events score highest
             days_active = max((today - ev_start).days, 1)
             # Recency: peaks at start (1.0), decays to 0.5 at 180 days
             recency = max(0.5, 1.0 - days_active / 360)
@@ -202,7 +202,7 @@ def _event_severity_score() -> tuple[float, list[dict]]:
 
 # ── Dynamic weight engine ─────────────────────────────────────────────────
 
-# Base weights — long-run priors
+# Base weights - long-run priors
 _BASE_W = {
     "corr":   0.25,
     "vol":    0.20,
@@ -211,7 +211,7 @@ _BASE_W = {
     "events": 0.15,
 }
 
-# Hard floors — a component is never fully suppressed regardless of activation
+# Hard floors - a component is never fully suppressed regardless of activation
 _FLOOR_W = {
     "corr":   0.08,
     "vol":    0.06,
@@ -273,7 +273,7 @@ def compute_risk_score(
     """
     Compute composite geopolitical risk score (0-100) with dynamic weights.
 
-    Weights shift daily based on each component's current activation level —
+    Weights shift daily based on each component's current activation level -
     a spiking oil-gold signal gets more weight; a calm VIX gets less.
     Returns dict with score, label, color, weights, components, raw values.
     """
@@ -333,7 +333,7 @@ def risk_score_history(
     window: int = 252,
 ) -> pd.Series:
     """
-    Rolling daily risk score — same 5-component structure as compute_risk_score.
+    Rolling daily risk score - same 5-component structure as compute_risk_score.
 
     Components (weights):
       25% cross-asset correlation percentile
@@ -448,13 +448,13 @@ def plot_risk_gauge(result: dict, height: int = 260) -> go.Figure:
             axis=dict(range=[0, 100], tickwidth=1,
                       tickcolor="#ABABAB", tickfont=dict(size=9)),
             bar=dict(color=color, thickness=0.25),
-            bgcolor="white",
+            bgcolor="rgba(30,33,45,0.6)",
             borderwidth=0,
             steps=[
-                dict(range=[0,  25], color="#e8f5e9"),
-                dict(range=[25, 50], color="#f5f5f5"),
-                dict(range=[50, 75], color="#fff3e0"),
-                dict(range=[75, 100], color="#ffebee"),
+                dict(range=[0,  25], color="rgba(46,125,50,0.18)"),
+                dict(range=[25, 50], color="rgba(120,120,130,0.12)"),
+                dict(range=[50, 75], color="rgba(230,126,34,0.18)"),
+                dict(range=[75, 100], color="rgba(192,57,43,0.22)"),
             ],
             threshold=dict(
                 line=dict(color=color, width=3),
@@ -465,7 +465,8 @@ def plot_risk_gauge(result: dict, height: int = 260) -> go.Figure:
     fig.update_layout(
         height=height,
         margin=dict(l=30, r=30, t=60, b=10),
-        paper_bgcolor="#ffffff",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="DM Sans, sans-serif"),
     )
     return fig
@@ -483,18 +484,18 @@ def plot_risk_history(
 
     fig = go.Figure()
 
-    # Coloured regime bands
+    # Coloured regime bands - transparent tints work in both light and dark mode
     for y0, y1, col, lbl in [
-        (0,  25,  "#e8f5e9", "Low"),
-        (25, 50,  "#f5f5f5", "Moderate"),
-        (50, 75,  "#fff3e0", "Elevated"),
-        (75, 100, "#ffebee", "High"),
+        (0,  25,  "rgba(46,125,50,0.12)",   "Low"),
+        (25, 50,  "rgba(100,100,100,0.06)", "Moderate"),
+        (50, 75,  "rgba(230,126,34,0.12)",  "Elevated"),
+        (75, 100, "rgba(192,57,43,0.18)",   "High"),
     ]:
-        fig.add_hrect(y0=y0, y1=y1, fillcolor=col, opacity=0.4,
+        fig.add_hrect(y0=y0, y1=y1, fillcolor=col, opacity=1.0,
                       layer="below", line_width=0)
-        fig.add_hline(y=y0, line=dict(color="#DEDAD5", width=0.5, dash="dot"))
+        fig.add_hline(y=y0, line=dict(color="rgba(150,150,150,0.25)", width=0.5, dash="dot"))
 
-    # Event markers — vertical dashed line + label annotation at each event start
+    # Event markers - vertical dashed line + label annotation at each event start
     idx = score_series.index
     for ev in events:
         ev_date = str(ev["start"])
@@ -517,7 +518,7 @@ def plot_risk_history(
             font=dict(size=7.5, color=col, family="DM Sans, sans-serif"),
             xanchor="right",
             yanchor="top",
-            bgcolor="rgba(255,255,255,0.65)",
+            bgcolor="rgba(10,12,20,0.70)",
             borderpad=2,
         )
 

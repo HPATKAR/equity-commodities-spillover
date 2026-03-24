@@ -1,6 +1,6 @@
 """
 Page 1 - Overview
-KPIs, cross-asset correlation heatmap snapshot, regime status, recent events.
+KPIs, equity-commodities correlation heatmap snapshot, regime status, recent events.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.data.loader import load_returns, load_all_prices
+from src.data.loader import load_returns, load_all_prices, load_fixed_income_returns, load_fx_returns
 from src.data.config import GEOPOLITICAL_EVENTS, EQUITY_REGIONS, COMMODITY_GROUPS, PALETTE
 from src.analysis.correlations import (
     cross_asset_corr, average_cross_corr_series, detect_correlation_regime,
@@ -40,14 +40,14 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
         'font-weight:700;margin-bottom:0.1rem">Equity-Commodities Spillover Monitor</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
         'margin:0 0 0.8rem 0">15 equity indices · 17 commodity futures · '
         'Correlation regimes · Geopolitical risk · Spillover signals</p>',
         unsafe_allow_html=True,
     )
     _page_intro(
         "The central research question of this dashboard: <strong>do equity market shocks spill into "
-        "commodities — and in which direction?</strong> This page is your live answer. The regime badge "
+        "commodities - and in which direction?</strong> This page is your live answer. The regime badge "
         "tells you whether equity-commodity co-movement is currently amplifying or absorbing risk. "
         "The KPIs quantify how tight the spillover channel is right now. The heatmap shows which "
         "specific equity-commodity pairs are most coupled. Start here before reading any other page."
@@ -84,11 +84,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     def _kpi(col, label, value, delta="", dcolor=""):
         col.markdown(
             f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
-            f'padding:0.55rem 0.75rem;background:#fff">'
+            f'padding:0.55rem 0.75rem;background:#1a1d27">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#666;margin-bottom:3px">{label}</div>'
+            f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
-            f'font-weight:700;color:#000;line-height:1.2">{value}</div>'
+            f'font-weight:700;color:#e8e9ed;line-height:1.2">{value}</div>'
             + (f'<div style="{_F}font-size:0.62rem;color:{dcolor};margin-top:2px">{delta}</div>' if delta else "")
             + '</div>',
             unsafe_allow_html=True,
@@ -96,9 +96,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     k1.markdown(
         f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
-        f'padding:0.55rem 0.75rem;background:#fff;border-left:3px solid {regime_color}">'
+        f'padding:0.55rem 0.75rem;background:#1a1d27;border-left:3px solid {regime_color}">'
         f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
-        f'text-transform:uppercase;color:#666;margin-bottom:3px">Correlation Regime</div>'
+        f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">Correlation Regime</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
         f'font-weight:700;color:{regime_color}">{regime_name}</div></div>',
         unsafe_allow_html=True,
@@ -112,10 +112,199 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _kpi(k5, "Best Commodity (1M)", best_cmd,
          f"{recent_cmd[best_cmd]*100:+.1f}%", "#2e7d32")
 
-    st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+    # ── Load FI and FX data ────────────────────────────────────────────────
+    try:
+        fi_r = load_fixed_income_returns(start, end)
+    except Exception:
+        fi_r = __import__("pandas").DataFrame()
+    try:
+        fx_r = load_fx_returns(start, end)
+    except Exception:
+        fx_r = __import__("pandas").DataFrame()
+
+    # ── FI / FX KPI strip ────────────────────────────────────────────────
+    st.markdown(
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.14em;color:#8E6F3E;margin:0.7rem 0 0.3rem">'
+        f'Fixed Income & FX Context</p>',
+        unsafe_allow_html=True,
+    )
+
+    def _dark_kpi(col, label, value, delta="", delta_up=None):
+        if delta_up is True:
+            d_color = "#2e7d32"
+        elif delta_up is False:
+            d_color = "#c0392b"
+        else:
+            d_color = "#8890a1"
+        col.markdown(
+            f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
+            f'padding:0.55rem 0.75rem;background:#1a1d27">'
+            f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
+            f'font-weight:700;color:#e8e9ed;line-height:1.2">{value}</div>'
+            + (f'<div style="{_F}font-size:0.62rem;color:{d_color};margin-top:2px">{delta}</div>' if delta else "")
+            + '</div>',
+            unsafe_allow_html=True,
+        )
+
+    _fi_k1, _fi_k2, _fi_k3, _fi_k4, _fi_k5 = st.columns(5)
+
+    # TLT 30d return
+    _tlt_30d = None
+    try:
+        if not fi_r.empty and "US 20Y+ Treasury (TLT)" in fi_r.columns:
+            _tlt = fi_r["US 20Y+ Treasury (TLT)"].dropna()
+            if len(_tlt) >= 21:
+                _tlt_30d = float(_tlt.iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _dark_kpi(_fi_k1, "TLT 30d Return", f"{_tlt_30d:+.1f}%" if _tlt_30d is not None else "-",
+              delta="Long duration" if _tlt_30d and _tlt_30d > 0 else "Duration pressure" if _tlt_30d is not None else "",
+              delta_up=True if _tlt_30d and _tlt_30d > 0 else False if _tlt_30d is not None else None)
+
+    # HYG vs LQD spread (credit stress)
+    _hyg_30d = _lqd_30d = None
+    try:
+        if not fi_r.empty:
+            if "HY Corporate (HYG)" in fi_r.columns:
+                _s = fi_r["HY Corporate (HYG)"].dropna()
+                if len(_s) >= 21:
+                    _hyg_30d = float(_s.iloc[-21:].sum() * 100)
+            if "IG Corporate (LQD)" in fi_r.columns:
+                _s = fi_r["IG Corporate (LQD)"].dropna()
+                if len(_s) >= 21:
+                    _lqd_30d = float(_s.iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _credit_spread_signal = None
+    if _hyg_30d is not None and _lqd_30d is not None:
+        _credit_spread_signal = float(_hyg_30d - _lqd_30d)
+    _dark_kpi(_fi_k2, "HYG vs LQD (30d alpha)",
+              f"{_credit_spread_signal:+.1f}%" if _credit_spread_signal is not None else "-",
+              delta="HY outperforming" if _credit_spread_signal is not None and _credit_spread_signal > 0 else "HY stress signal" if _credit_spread_signal is not None else "",
+              delta_up=True if _credit_spread_signal is not None and _credit_spread_signal > 0 else False if _credit_spread_signal is not None else None)
+
+    # DXY trend
+    _dxy_30d = None
+    try:
+        if not fx_r.empty and "DXY (Dollar Index)" in fx_r.columns:
+            _dxy = fx_r["DXY (Dollar Index)"].dropna()
+            if len(_dxy) >= 21:
+                _dxy_30d = float(_dxy.iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _dark_kpi(_fi_k3, "DXY 30d Return", f"{_dxy_30d:+.1f}%" if _dxy_30d is not None else "-",
+              delta="Dollar strengthening" if _dxy_30d is not None and _dxy_30d > 0 else "Dollar weakening" if _dxy_30d is not None else "",
+              delta_up=None)
+
+    # TLT vs SPY divergence (equity-bond correlation signal)
+    _spx_30d = None
+    try:
+        _spx_col = next((c for c in ["S&P 500"] if c in eq_r.columns), None)
+        if _spx_col:
+            _spx_s = eq_r[_spx_col].dropna()
+            if len(_spx_s) >= 21:
+                _spx_30d = float(_spx_s.iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _tlt_spx_div = None
+    if _tlt_30d is not None and _spx_30d is not None:
+        _tlt_spx_div = _tlt_30d - _spx_30d
+    _dark_kpi(_fi_k4, "TLT vs SPX Divergence",
+              f"{_tlt_spx_div:+.1f}pp" if _tlt_spx_div is not None else "-",
+              delta="Bonds/equities decoupling" if _tlt_spx_div is not None and abs(_tlt_spx_div) > 5 else "Normal co-movement" if _tlt_spx_div is not None else "",
+              delta_up=None)
+
+    # EMB 30d return
+    _emb_30d = None
+    try:
+        if not fi_r.empty and "EM USD Bonds (EMB)" in fi_r.columns:
+            _emb = fi_r["EM USD Bonds (EMB)"].dropna()
+            if len(_emb) >= 21:
+                _emb_30d = float(_emb.iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _dark_kpi(_fi_k5, "EMB 30d Return",
+              f"{_emb_30d:+.1f}%" if _emb_30d is not None else "-",
+              delta="EM credit bid" if _emb_30d is not None and _emb_30d > 0 else "EM credit stress" if _emb_30d is not None else "",
+              delta_up=True if _emb_30d is not None and _emb_30d > 0 else False if _emb_30d is not None else None)
+
+    # ── India / Rupee KPI strip ───────────────────────────────────────────
+    st.markdown(
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.14em;color:#16a085;margin:0.6rem 0 0.3rem">'
+        f'India & Rupee</p>',
+        unsafe_allow_html=True,
+    )
+    _in_k1, _in_k2, _in_k3, _in_k4 = st.columns(4)
+
+    # USD/INR 30d (rising = INR weakening)
+    _inr_30d = None
+    try:
+        if not fx_r.empty and "USD/INR" in fx_r.columns:
+            _inr_s = fx_r["USD/INR"].dropna()
+            if len(_inr_s) >= 21:
+                _inr_30d = float(_inr_s.iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _dark_kpi(_in_k1, "USD/INR 30d",
+              f"{_inr_30d:+.1f}%" if _inr_30d is not None else "-",
+              delta="INR weakening" if _inr_30d is not None and _inr_30d > 1 else "INR strengthening" if _inr_30d is not None and _inr_30d < -1 else "INR stable",
+              delta_up=False if _inr_30d is not None and _inr_30d > 1 else True if _inr_30d is not None and _inr_30d < -1 else None)
+
+    # Nifty 50 30d
+    _nifty_30d = None
+    try:
+        _eq_r_ov, _ = load_returns(start, end)
+        _nifty_col_ov = next((c for c in _eq_r_ov.columns if "Nifty" in c), None)
+        if _nifty_col_ov and len(_eq_r_ov) >= 21:
+            _nifty_30d = float(_eq_r_ov[_nifty_col_ov].dropna().iloc[-21:].sum() * 100)
+    except Exception:
+        pass
+    _dark_kpi(_in_k2, "Nifty 50 30d",
+              f"{_nifty_30d:+.1f}%" if _nifty_30d is not None else "-",
+              delta="Outperforming" if _nifty_30d is not None and _nifty_30d > 2 else "Underperforming" if _nifty_30d is not None and _nifty_30d < -2 else "Flat",
+              delta_up=True if _nifty_30d is not None and _nifty_30d > 0 else False if _nifty_30d is not None else None)
+
+    # Nifty vs S&P 500 divergence
+    _nifty_spx_div = None
+    try:
+        _spx_col_ov = next((c for c in _eq_r_ov.columns if "S&P 500" in c or "GSPC" in c), None) if not _eq_r_ov.empty else None
+        if _nifty_col_ov and _spx_col_ov and len(_eq_r_ov) >= 21:
+            _spx_30d_ov = float(_eq_r_ov[_spx_col_ov].dropna().iloc[-21:].sum() * 100)
+            if _nifty_30d is not None:
+                _nifty_spx_div = _nifty_30d - _spx_30d_ov
+    except Exception:
+        pass
+    _dark_kpi(_in_k3, "Nifty vs S&P (30d)",
+              f"{_nifty_spx_div:+.1f}pp" if _nifty_spx_div is not None else "-",
+              delta="India leading" if _nifty_spx_div is not None and _nifty_spx_div > 2 else "India lagging" if _nifty_spx_div is not None and _nifty_spx_div < -2 else "In-line",
+              delta_up=None)
+
+    # INR vs Gold correlation signal (India gold import sensitivity)
+    _inr_gold_note = None
+    try:
+        if not fx_r.empty and "USD/INR" in fx_r.columns:
+            _inr_60 = float(fx_r["USD/INR"].dropna().iloc[-60:].sum() * 100) if len(fx_r) >= 60 else None
+            if _inr_60 is not None and _inr_60 > 3:
+                _inr_gold_note = f"INR -60d: {_inr_60:.1f}% - import cost risk"
+            elif _inr_60 is not None and _inr_60 < -3:
+                _inr_gold_note = f"INR 60d: {_inr_60:.1f}% - import cost relief"
+            else:
+                _inr_gold_note = "Import cost pressure neutral"
+    except Exception:
+        pass
+    _dark_kpi(_in_k4, "India Import Signal",
+              "High" if _inr_gold_note and "risk" in _inr_gold_note else "Relief" if _inr_gold_note and "relief" in _inr_gold_note else "Neutral",
+              delta=_inr_gold_note or "Crude + gold import cost",
+              delta_up=False if _inr_gold_note and "risk" in _inr_gold_note else True if _inr_gold_note and "relief" in _inr_gold_note else None)
+
+    st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
     _thread(
-        "The numbers above give the level of stress. The section below breaks down its source — "
+        "The numbers above give the level of stress. The section below breaks down its source - "
         "which geopolitical conflicts are active and how severely each is scoring."
     )
 
@@ -132,7 +321,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _chart(plot_risk_gauge(risk_result, height=220))
         _insight_note(
             "Displays the current market stress level on a gauge from 0 (calm) to 100 (crisis). "
-            "Readings above 60 indicate cross-asset turbulence is building. "
+            "Readings above 60 indicate equity-commodities turbulence is building. "
             "This is the single most important number on the dashboard."
         )
         comp = risk_result["components"]
@@ -142,10 +331,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="margin-bottom:5px">'
                 f'<div style="display:flex;justify-content:space-between;{_F}font-size:0.66rem;margin-bottom:2px">'
-                f'<span style="color:#444">{name}</span>'
+                f'<span style="color:#b8bec8">{name}</span>'
                 f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;color:{col_c}">{val:.0f}</span>'
                 f'</div>'
-                f'<div style="height:3px;background:#F0EDEA;border-radius:2px">'
+                f'<div style="height:3px;background:#2a2d3a;border-radius:2px">'
                 f'<div style="width:{pct:.0f}%;height:3px;background:{col_c};border-radius:2px"></div>'
                 f'</div></div>',
                 unsafe_allow_html=True,
@@ -158,7 +347,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                         "vix": "VIX", "og": "Oil-Gold", "events": "Events"}
             wt_rows = "".join(
                 f'<td style="text-align:center;padding:2px 4px">'
-                f'<div style="font-size:0.60rem;color:#888">{_key_map.get(k,k)}</div>'
+                f'<div style="font-size:0.60rem;color:#6b7280">{_key_map.get(k,k)}</div>'
                 f'<div style="font-family:JetBrains Mono,monospace;font-weight:700;'
                 f'font-size:0.68rem;color:#8E6F3E">{v*100:.0f}%</div>'
                 f'</td>'
@@ -178,8 +367,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             g_z, o_z = og.get("gold_z", 0), og.get("oil_z", 0)
             g_r, o_r = og.get("gold_ret", 0), og.get("oil_ret", 0)
             st.markdown(
-                f'<div style="margin-top:8px;padding:6px 8px;background:#fafaf8;'
-                f'border-left:2px solid #CFB991;{_F}font-size:0.63rem;color:#444;line-height:1.6">'
+                f'<div style="margin-top:8px;padding:6px 8px;background:#1a1d27;'
+                f'border-left:2px solid #CFB991;{_F}font-size:0.63rem;color:#b8bec8;line-height:1.6">'
                 f'<b style="color:#8E6F3E;text-transform:uppercase;font-size:0.57rem;'
                 f'letter-spacing:.12em">Oil-Gold Signal</b><br>'
                 f'Gold 20d: <b>{g_r:+.1f}%</b> (z={g_z:+.2f}) &nbsp;·&nbsp; '
@@ -192,8 +381,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         evs = risk_result.get("events", [])[:3]
         if evs:
             rows = "".join(
-                f'<tr><td style="padding:1px 6px 1px 0;color:#555">{e["label"]}</td>'
-                f'<td style="color:#888;font-size:0.60rem">{e["status"]}</td>'
+                f'<tr><td style="padding:1px 6px 1px 0;color:#8890a1">{e["label"]}</td>'
+                f'<td style="color:#6b7280;font-size:0.60rem">{e["status"]}</td>'
                 f'<td style="font-family:JetBrains Mono,monospace;font-weight:700;'
                 f'color:#c0392b;text-align:right">{e["score"]:.0f}</td></tr>'
                 for e in evs
@@ -216,7 +405,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 "Sustained readings above 60 have historically preceded equity drawdowns of 10% or more."
             )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Knowing the score is useful; knowing whether it is triggering actionable signals is more "
@@ -247,13 +436,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _label("Early Warning System")
         st.markdown(
             f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.75rem;'
-            f'background:#fff;border-top:3px solid {comp_color}">'
+            f'background:#1a1d27;border-top:3px solid {comp_color}">'
             f'<div style="{_F}font-size:0.56rem;font-weight:700;letter-spacing:0.12em;'
-            f'text-transform:uppercase;color:#888;margin-bottom:4px">Composite Score</div>'
+            f'text-transform:uppercase;color:#6b7280;margin-bottom:4px">Composite Score</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:2.2rem;'
             f'font-weight:700;color:{comp_color};line-height:1">{comp_ews:.0f}'
-            f'<span style="font-size:0.75rem;color:#bbb">/100</span></div>'
-            f'<div style="background:#F0EDEA;border-radius:3px;height:6px;margin:6px 0">'
+            f'<span style="font-size:0.75rem;color:#6b7280">/100</span></div>'
+            f'<div style="background:#2a2d3a;border-radius:3px;height:6px;margin:6px 0">'
             f'<div style="width:{comp_ews:.0f}%;background:{comp_color};height:6px;border-radius:3px"></div>'
             f'</div>'
             f'<div style="{_F}font-size:0.65rem;font-weight:600;color:{comp_color}">'
@@ -268,25 +457,25 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             s = data["score"]; c = _ews_score_color(s)
             col.markdown(
                 f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.6rem 0.55rem;'
-                f'background:#fff;border-top:2px solid {c}">'
+                f'background:#1a1d27;border-top:2px solid {c}">'
                 f'<div style="{_F}font-size:0.54rem;font-weight:700;letter-spacing:0.10em;'
-                f'text-transform:uppercase;color:#999;margin-bottom:3px">{name}</div>'
+                f'text-transform:uppercase;color:#6b7280;margin-bottom:3px">{name}</div>'
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.1rem;'
                 f'font-weight:700;color:{c}">{s:.0f}'
-                f'<span style="{_F}font-size:0.60rem;color:#ccc">/100</span></div>'
-                f'<div style="background:#F0EDEA;border-radius:2px;height:3px;margin:4px 0">'
+                f'<span style="{_F}font-size:0.60rem;color:#6b7280">/100</span></div>'
+                f'<div style="background:#2a2d3a;border-radius:2px;height:3px;margin:4px 0">'
                 f'<div style="width:{s:.0f}%;background:{c};height:3px;border-radius:2px"></div>'
                 f'</div>'
-                f'<div style="{_F}font-size:0.64rem;color:#666;line-height:1.45;margin-top:3px">'
+                f'<div style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.45;margin-top:3px">'
                 f'{data["desc"]}</div></div>',
                 unsafe_allow_html=True,
             )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Alerts tell you something is wrong. The correlation timeline below tells you how that "
-        "stress is transmitting — when equities and commodities start moving together, a shock "
+        "stress is transmitting - when equities and commodities start moving together, a shock "
         "in one will hit the other."
     )
 
@@ -314,7 +503,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             "Dark cool colours mean they are moving in opposite directions (safe-haven flows or diverging fundamentals)."
         )
         _thread(
-            "Correlation shows the mechanism. The performance chart below shows the outcome — "
+            "Correlation shows the mechanism. The performance chart below shows the outcome - "
             "which assets have actually moved and by how much."
         )
 
@@ -360,26 +549,26 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             for a in ews["analogues"]:
                 sim_pct = a["sim"]
                 rows_html += (
-                    f'<tr style="border-bottom:1px solid #F5F2EE">'
-                    f'<td style="padding:4px 6px;font-family:JetBrains Mono,monospace;font-size:0.66rem;font-weight:600">{a["date"]}</td>'
+                    f'<tr style="border-bottom:1px solid #2a2d3a">'
+                    f'<td style="padding:4px 6px;font-family:JetBrains Mono,monospace;font-size:0.66rem;font-weight:600;color:#e8e9ed">{a["date"]}</td>'
                     f'<td style="padding:4px 6px;font-size:0.66rem;color:{_r_colors.get(list({0:"Decorrelated",1:"Normal",2:"Elevated",3:"Crisis"}.values()).index(a["regime"]) if a["regime"] in list({0:"Decorrelated",1:"Normal",2:"Elevated",3:"Crisis"}.values()) else 1,_r_colors[1])};font-weight:600">{a["regime"]}</td>'
                     f'<td style="padding:4px 6px;font-size:0.66rem;color:{_r_colors.get(a["r30_int"],_r_colors[1])};font-weight:600">{a["r30"]}</td>'
                     f'<td style="padding:4px 6px;font-size:0.66rem;color:{_r_colors.get(a["r90_int"],_r_colors[1])};font-weight:600">{a["r90"]}</td>'
                     f'<td style="padding:4px 6px">'
-                    f'<div style="background:#F0EDEA;border-radius:2px;height:4px;width:50px">'
+                    f'<div style="background:#2a2d3a;border-radius:2px;height:4px;width:50px">'
                     f'<div style="width:{sim_pct:.0f}%;background:#CFB991;height:4px;border-radius:2px"></div>'
                     f'</div>'
-                    f'<div style="{_F}font-size:0.60rem;color:#999;margin-top:1px">{sim_pct:.0f}%</div>'
+                    f'<div style="{_F}font-size:0.60rem;color:#6b7280;margin-top:1px">{sim_pct:.0f}%</div>'
                     f'</td></tr>'
                 )
             st.markdown(
                 f'<table style="width:100%;border-collapse:collapse;{_F}">'
-                f'<thead><tr style="background:#F5F2EE">'
-                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">Date</th>'
-                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">Then</th>'
-                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">+30d</th>'
-                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">+90d</th>'
-                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">Sim</th>'
+                f'<thead><tr style="background:#1a1d27">'
+                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Date</th>'
+                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Then</th>'
+                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">+30d</th>'
+                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">+90d</th>'
+                f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Sim</th>'
                 f'</tr></thead>'
                 f'<tbody>{rows_html}</tbody>'
                 f'</table>',
@@ -387,7 +576,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             )
             best = ews["analogues"][0]
             st.markdown(
-                f'<p style="{_F}font-size:0.65rem;color:#555;line-height:1.55;margin-top:8px">'
+                f'<p style="{_F}font-size:0.65rem;color:#8890a1;line-height:1.55;margin-top:8px">'
                 f'Closest match: <b>{best["date"]}</b> ({best["sim"]:.0f}% similar). '
                 f'Regime moved to <b>{best["r30"]}</b> within 30d, '
                 f'<b>{best["r90"]}</b> within 90d.</p>',
@@ -395,13 +584,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             )
         else:
             st.markdown(
-                f'<p style="{_F}font-size:0.70rem;color:#888;margin-top:1rem">'
+                f'<p style="{_F}font-size:0.70rem;color:#6b7280;margin-top:1rem">'
                 f'Historical analogue matching requires ≥ 200 days of regime history.</p>',
                 unsafe_allow_html=True,
             )
 
         # Active events stacked below analogues
-        st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
+        st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
                     unsafe_allow_html=True)
         _label("Active Geopolitical Events")
         from datetime import date as _date
@@ -411,16 +600,16 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             for ev in active:
                 st.markdown(
                     f'<div style="border-left:2px solid {ev["color"]};'
-                    f'padding:0.35rem 0.6rem;margin-bottom:5px;background:#fafaf8">'
+                    f'padding:0.35rem 0.6rem;margin-bottom:5px;background:#1a1d27">'
                     f'<div style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
                     f'letter-spacing:0.08em;color:{ev["color"]}">{ev["category"]} · {ev["label"]}</div>'
-                    f'<div style="{_F}font-size:0.70rem;color:#111;font-weight:600;margin:1px 0">{ev["name"]}</div>'
-                    f'<div style="{_F}font-size:0.64rem;color:#444;line-height:1.5">{ev["description"][:120]}{"…" if len(ev["description"])>120 else ""}</div>'
+                    f'<div style="{_F}font-size:0.70rem;color:#e8e9ed;font-weight:600;margin:1px 0">{ev["name"]}</div>'
+                    f'<div style="{_F}font-size:0.64rem;color:#b8bec8;line-height:1.5">{ev["description"][:120]}{"…" if len(ev["description"])>120 else ""}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
 
     # ── ROW: Heatmap | Window control ─────────────────────────────────────
@@ -435,7 +624,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             label_visibility="collapsed",
         )
         st.markdown(
-            f'<p style="{_F}font-size:0.64rem;color:#555;line-height:1.6;margin-top:8px">'
+            f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.6;margin-top:8px">'
             f'<b style="color:#c0392b">Red</b> = positive correlation (risk-off, inflation). '
             f'<b style="color:#2980b9">Blue</b> = negative (safe-haven divergence). '
             f'White = decorrelated.</p>',
@@ -446,7 +635,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
                 f'<div style="width:10px;height:10px;border-radius:2px;background:{regime_colors[r_id]};flex-shrink:0"></div>'
-                f'<span style="{_F}font-size:0.64rem;color:#444">{r_name}</span></div>',
+                f'<span style="{_F}font-size:0.64rem;color:#b8bec8">{r_name}</span></div>',
                 unsafe_allow_html=True,
             )
 
@@ -458,11 +647,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 z=corr_mat.values,
                 x=corr_mat.columns.tolist(),
                 y=corr_mat.index.tolist(),
-                colorscale=[[0.0,"#2980b9"],[0.5,"#ffffff"],[1.0,"#c0392b"]],
+                colorscale=[[0.0,"#2980b9"],[0.5,"#1e2130"],[1.0,"#c0392b"]],
                 zmid=0, zmin=-1, zmax=1,
                 text=corr_mat.round(2).values,
                 texttemplate="%{text}",
-                textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                textfont=dict(size=8, family="JetBrains Mono, monospace", color="#e8e9ed"),
                 colorbar=dict(title="Corr", thickness=10, len=0.8,
                               tickfont=dict(size=8, family="JetBrains Mono, monospace")),
                 hoverongaps=False,
@@ -470,8 +659,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             fig_heat.update_layout(
                 template="purdue",
                 height=420,
-                xaxis=dict(tickangle=-40, tickfont=dict(size=8)),
-                yaxis=dict(tickfont=dict(size=8)),
+                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                font=dict(color="#e8e9ed"),
+                xaxis=dict(tickangle=-40, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
+                yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
                 margin=dict(l=110, r=20, t=20, b=110),
             )
             _chart(fig_heat)
@@ -481,7 +672,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 "Dark cool colours mean they are moving in opposite directions (safe-haven flows or diverging fundamentals)."
             )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
 
     # ── AI Narrative (always visible, auto-generated) ──────────────────────
@@ -505,7 +696,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             _active_events = [e["label"] for e in GEOPOLITICAL_EVENTS
                               if e["end"] >= _dt.date.today()]
             _prompt = (
-                f"You are a quantitative cross-asset analyst at a macro hedge fund. "
+                f"You are a quantitative equity-commodities analyst at a macro hedge fund. "
                 f"Write a concise 2-paragraph market commentary (150-200 words).\n\n"
                 f"Correlation Regime: {regime_name} (60d avg corr: {current_avg_corr:.3f})\n"
                 f"Risk Score: {risk_result['score']}/100 ({risk_result['label']})\n"
@@ -549,8 +740,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     else:
         st.markdown(
             f'<div style="border-left:4px solid {regime_color};padding:0.8rem 1rem;'
-            f'background:#fafaf8;border-radius:0 4px 4px 0;margin-bottom:0.8rem">'
-            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#2A2A2A;line-height:1.75">'
+            f'background:#1a1d27;border-radius:0 4px 4px 0;margin-bottom:0.8rem">'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#e8e9ed;line-height:1.75">'
             f'{_narrative_val.replace(chr(10), "<br>")}</div></div>',
             unsafe_allow_html=True,
         )

@@ -1,5 +1,5 @@
 """
-Data loader — LSEG (primary) + yfinance (fallback) + FRED.
+Data loader - LSEG (primary) + yfinance (fallback) + FRED.
 Returns log-return DataFrames and raw price DataFrames.
 
 LSEG setup (Purdue account):
@@ -127,7 +127,7 @@ def _fetch_lseg(names: list[str], start: str, end: str) -> pd.DataFrame:
         if raw is None or raw.empty:
             return pd.DataFrame()
 
-        # get_history may return MultiIndex columns — flatten to RICs
+        # get_history may return MultiIndex columns - flatten to RICs
         if isinstance(raw.columns, pd.MultiIndex):
             raw = raw.xs("TRDPRC_1", level=0, axis=1) if "TRDPRC_1" in raw.columns.get_level_values(0) \
                   else raw.droplevel(0, axis=1)
@@ -588,3 +588,59 @@ def load_live_snapshot(tickers: dict[str, str]) -> pd.DataFrame:
         except Exception:
             pass
     return pd.DataFrame(rows).set_index("Name") if rows else pd.DataFrame()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_fixed_income_prices(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """Daily close prices for fixed income ETF proxies."""
+    from src.data.config import FIXED_INCOME_TICKERS
+    return _fill_gaps(_fetch_yf(FIXED_INCOME_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_fixed_income_returns(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """Daily log returns for fixed income ETF proxies."""
+    return _log_returns(load_fixed_income_prices(start, end))
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_fx_prices(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """Daily close prices for FX pairs and dollar index."""
+    from src.data.config import FX_TICKERS
+    return _fill_gaps(_fetch_yf(FX_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_fx_returns(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """Daily log returns for FX pairs."""
+    return _log_returns(load_fx_prices(start, end))
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_private_credit_proxies(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """
+    BDC equity + leveraged loan ETF prices as private credit market proxies.
+      BKLN  - Invesco Senior Loan ETF (liquid proxy for $1.4T leveraged loan market)
+      ARCC  - Ares Capital (largest BDC, direct lending benchmark)
+      OBDC  - Blue Owl Capital (mid-market direct lending)
+      FSK   - FS KKR Capital (more aggressive credit, higher default sensitivity)
+      JBBB  - Janus Henderson CLO BBB tranche ETF
+    Returns price DataFrame indexed by date.
+    """
+    from src.data.config import PC_PROXY_TICKERS
+    return _fill_gaps(_fetch_yf(PC_PROXY_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))

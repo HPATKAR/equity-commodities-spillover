@@ -10,9 +10,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.data.loader import load_returns
+from src.data.loader import load_returns, load_fixed_income_returns, load_fx_returns
 from src.data.config import (
     GEOPOLITICAL_EVENTS, EQUITY_REGIONS, COMMODITY_GROUPS, PALETTE,
+    FIXED_INCOME_GROUPS, FX_GROUPS,
 )
 from src.analysis.correlations import (
     rolling_correlation, cross_asset_corr, dcc_correlation,
@@ -41,7 +42,7 @@ def _label(txt: str) -> None:
 
 def _panel_note(txt: str) -> None:
     st.markdown(
-        f'<p style="{_F}font-size:0.64rem;color:#666;line-height:1.55;margin:4px 0 0 0">{txt}</p>',
+        f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.55;margin:4px 0 0 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -50,7 +51,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
         'font-weight:700;margin-bottom:0.1rem">Correlation Analysis</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
         'margin:0 0 0.7rem">Rolling Pearson · DCC-GARCH · Regime Detection · Markov Forecast</p>',
         unsafe_allow_html=True,
     )
@@ -59,7 +60,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         "returns start moving together, the channel between the two markets is open. "
         "<strong>This page measures how open that channel is right now.</strong> "
         "Rolling Pearson gives the direction and magnitude. DCC-GARCH shows whether the relationship "
-        "is structural or noise — non-linear dependence that spikes during stress is the hallmark of "
+        "is structural or noise - non-linear dependence that spikes during stress is the hallmark of "
         "a genuine spillover regime. The Markov forecast tells you where the regime is headed. "
         "A Crisis regime here means equity shocks <em>are</em> transmitting into commodities in real time."
     )
@@ -71,12 +72,30 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         st.error("Market data unavailable.")
         return
 
+    try:
+        fi_r = load_fixed_income_returns(start, end)
+    except Exception:
+        fi_r = pd.DataFrame()
+    try:
+        fx_r = load_fx_returns(start, end)
+    except Exception:
+        fx_r = pd.DataFrame()
+
     avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
     regimes  = detect_correlation_regime(avg_corr)
-    all_r    = pd.concat([eq_r, cmd_r], axis=1)
+
+    # Build combined returns including FI and FX
+    _r_frames = [eq_r, cmd_r]
+    if not fi_r.empty:
+        _r_frames.append(fi_r)
+    if not fx_r.empty:
+        _r_frames.append(fx_r)
+    all_r = pd.concat(_r_frames, axis=1)
 
     eq_options  = list(eq_r.columns)
     cmd_options = list(cmd_r.columns)
+    fi_options  = list(fi_r.columns) if not fi_r.empty else []
+    fx_options  = list(fx_r.columns) if not fx_r.empty else []
 
     current_r = int(regimes.dropna().iloc[-1]) if not regimes.empty else 1
 
@@ -89,7 +108,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     with col_rc:
         _label("Rolling Pairwise Correlation")
         ca1, ca2, ca3 = st.columns([1, 1, 0.8])
-        all_opts = eq_options + cmd_options
+        all_opts = eq_options + cmd_options + fi_options + fx_options
         asset_a = ca1.selectbox("Asset A", all_opts, index=0, key="rc_a", label_visibility="collapsed")
         asset_b = ca2.selectbox("Asset B", all_opts, index=len(eq_options), key="rc_b", label_visibility="collapsed")
         window  = ca3.select_slider("Win", [21, 42, 63, 126, 252], value=63, label_visibility="collapsed")
@@ -161,8 +180,8 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     with col_dcc:
         _label("DCC-GARCH Dynamic Conditional Correlation")
         cd1, cd2 = st.columns(2)
-        dcc_eq  = cd1.selectbox("Equity",    eq_options,  index=0, key="dcc_eq", label_visibility="collapsed")
-        dcc_cmd = cd2.selectbox("Commodity", cmd_options, index=0, key="dcc_cmd", label_visibility="collapsed")
+        dcc_eq  = cd1.selectbox("Asset A (Equity / FI / FX)", eq_options + fi_options + fx_options, index=0, key="dcc_eq", label_visibility="collapsed")
+        dcc_cmd = cd2.selectbox("Asset B (Commodity / FI / FX)", cmd_options + fi_options + fx_options, index=0, key="dcc_cmd", label_visibility="collapsed")
 
         if dcc_eq in eq_r.columns and dcc_cmd in cmd_r.columns:
             with st.spinner("Computing DCC-GARCH…"):
@@ -220,11 +239,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     "Use this view to identify which commodity pairs are most tightly linked to the selected equity market."
                 )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2d3a"></div>',
                 unsafe_allow_html=True)
     _thread(
-        "Knowing the exact correlation number is useful. Knowing which regime you are in — and "
-        "how stable that regime has been — is more actionable. Below, we classify the market "
+        "Knowing the exact correlation number is useful. Knowing which regime you are in - and "
+        "how stable that regime has been - is more actionable. Below, we classify the market "
         "into three states: low coupling (diversification working), medium (partial), and high "
         "(breakdown)."
     )
@@ -252,7 +271,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             fig_reg.add_trace(go.Scatter(
                 x=avg_corr.index, y=avg_corr.values,
                 name="Avg |Corr|",
-                line=dict(color="#000000", width=1.2),
+                line=dict(color="#e8e9ed", width=1.2),
                 showlegend=False,
             ))
             for thresh, label, color in [
@@ -285,20 +304,20 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     f'<tr><td style="padding:3px 8px;{is_cur}font-size:0.66rem;'
                     f'color:{c}">{_REGIME_NAMES[i]}</td>'
                     f'<td style="padding:3px 8px;font-family:JetBrains Mono,monospace;'
-                    f'font-size:0.66rem;{is_cur}">{regime_counts[i]}</td>'
-                    f'<td style="padding:3px 8px;font-size:0.66rem;{is_cur}">{pct:.1f}%</td>'
+                    f'font-size:0.66rem;{is_cur}color:#e8e9ed">{regime_counts[i]}</td>'
+                    f'<td style="padding:3px 8px;font-size:0.66rem;{is_cur}color:#e8e9ed">{pct:.1f}%</td>'
                     f'<td style="padding:3px 8px;width:80px">'
-                    f'<div style="background:#F0EDEA;height:4px;border-radius:2px">'
+                    f'<div style="background:#2a2d3a;height:4px;border-radius:2px">'
                     f'<div style="width:{pct:.0f}%;height:4px;background:{c};border-radius:2px"></div>'
                     f'</div></td></tr>'
                 )
             st.markdown(
                 f'<table style="width:100%;border-collapse:collapse;{_F};margin-top:4px">'
-                f'<thead><tr style="background:#F5F2EE">'
-                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">Regime</th>'
-                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">Days</th>'
-                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">% Time</th>'
-                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#666;text-align:left">Bar</th>'
+                f'<thead><tr style="background:#1a1d27">'
+                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Regime</th>'
+                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Days</th>'
+                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">% Time</th>'
+                f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Bar</th>'
                 f'</tr></thead><tbody>{rows}</tbody></table>',
                 unsafe_allow_html=True,
             )
@@ -329,11 +348,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
 
             fig_tm = go.Figure(go.Heatmap(
                 z=z_vals, x=r_labels, y=r_labels,
-                colorscale=[[0,"#f5f2ee"],[0.2,"#fde0c8"],[0.5,"#e05c3a"],[1,"#7a0e0e"]],
+                colorscale=[[0,"#1a1d27"],[0.2,"#fde0c8"],[0.5,"#e05c3a"],[1,"#7a0e0e"]],
                 zmin=0, zmax=100,
                 text=[[f"{v:.0f}%" for v in row] for row in z_vals],
                 texttemplate="%{text}",
-                textfont=dict(size=11, family="JetBrains Mono, monospace"),
+                textfont=dict(size=11, family="JetBrains Mono, monospace", color="#e8e9ed"),
                 colorbar=dict(title="P(%)", thickness=10, len=0.7,
                               tickfont=dict(size=8, family="JetBrains Mono, monospace")),
             ))
@@ -344,9 +363,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             )
             fig_tm.update_layout(
                 template="purdue", height=260,
+                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                font=dict(color="#e8e9ed"),
                 margin=dict(l=90, r=60, t=20, b=80),
-                xaxis=dict(title="To Regime", tickfont=dict(size=10)),
-                yaxis=dict(title="From Regime", tickfont=dict(size=10)),
+                xaxis=dict(title="To Regime", tickfont=dict(size=10, color="#8890a1"), rangeslider=dict(visible=False)),
+                yaxis=dict(title="From Regime", tickfont=dict(size=10, color="#8890a1")),
             )
             _chart(fig_tm)
             _insight_note(
@@ -368,7 +389,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                         f'<span style="{_F}font-size:0.64rem;color:{c};font-weight:600">{_REGIME_NAMES[i]}</span>'
                         f'<span style="font-family:JetBrains Mono,monospace;font-size:0.64rem;font-weight:700">{pct:.1f}%</span>'
                         f'</div>'
-                        f'<div style="background:#F0EDEA;height:3px;border-radius:2px;margin-bottom:5px">'
+                        f'<div style="background:#2a2d3a;height:3px;border-radius:2px;margin-bottom:5px">'
                         f'<div style="width:{pct:.0f}%;height:3px;background:{c};border-radius:2px"></div>'
                         f'</div>',
                         unsafe_allow_html=True,
@@ -401,7 +422,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                         f'<span style="{_F}font-size:0.64rem;color:{_REGIME_COLORS[i]}">{_REGIME_NAMES[i]}</span>'
                         f'<span style="font-family:JetBrains Mono,monospace;font-size:0.64rem;font-weight:700">{avg_d:.1f}d avg</span>'
                         f'</div>'
-                        f'<div style="{_F}font-size:0.58rem;color:#aaa">max {max_d}d</div>'
+                        f'<div style="{_F}font-size:0.58rem;color:#6b7280">max {max_d}d</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
@@ -414,11 +435,47 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 f"Transition to Crisis: <b>{p_crisis:.1f}%</b>"
             )
 
+    # ── Equity-Bond Correlation Regime Note ───────────────────────────────────
+    if not fi_r.empty and "US 20Y+ Treasury (TLT)" in fi_r.columns and "S&P 500" in eq_r.columns:
+        try:
+            _tlt_spx_rc = rolling_correlation(all_r["S&P 500"], all_r["US 20Y+ Treasury (TLT)"], 63)
+            _latest_tlt_spx = float(_tlt_spx_rc.dropna().iloc[-1]) if not _tlt_spx_rc.dropna().empty else None
+            if _latest_tlt_spx is not None:
+                _corr_signal = "POSITIVE" if _latest_tlt_spx > 0 else "NEGATIVE"
+                _corr_color = "#c0392b" if _latest_tlt_spx > 0.1 else "#2e7d32" if _latest_tlt_spx < -0.1 else "#e67e22"
+                _corr_interp = (
+                    "60/40 HEDGE BREAKDOWN: equities and bonds are both falling together. "
+                    "This is a classic inflationary or fiscal dominance regime where traditional diversification fails."
+                    if _latest_tlt_spx > 0.1 else
+                    "60/40 HEDGE WORKING: bonds rising when equities fall (negative correlation). "
+                    "Traditional portfolio diversification is functioning normally."
+                    if _latest_tlt_spx < -0.1 else
+                    "NEUTRAL: equity-bond correlation near zero. No clear flight-to-quality signal."
+                )
+                st.markdown(
+                    f'<div style="border:1px solid #2a2d3a;border-left:4px solid {_corr_color};'
+                    f'border-radius:0 6px 6px 0;padding:0.75rem 1rem;background:#1a1d27;margin:0.8rem 0">'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
+                    f'text-transform:uppercase;letter-spacing:0.12em;color:{_corr_color};margin-bottom:4px">'
+                    f'Equity-Bond Correlation Regime</div>'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.80rem;font-weight:700;'
+                    f'color:#e8e9ed;margin-bottom:4px">S&P 500 / TLT 63d Correlation: '
+                    f'<span style="color:{_corr_color}">{_latest_tlt_spx:+.3f}</span> ({_corr_signal})</div>'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#b8bec8;line-height:1.55">'
+                    f'{_corr_interp}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        except Exception:
+            pass
+
     _page_conclusion(
         "Regime & Diversification Signal",
         "If correlation is elevated and the Markov model assigns high probability of remaining "
-        "in the high-coupling regime, treat your equity and commodity positions as one risk — "
+        "in the high-coupling regime, treat your equity and commodity positions as one risk - "
         "not two. Hedge accordingly or reduce gross exposure. Low correlation with a high "
-        "probability of staying low is the green light for diversified positioning."
+        "probability of staying low is the green light for diversified positioning. "
+        "Monitor the equity-bond correlation regime above: when TLT and S&P 500 become positively "
+        "correlated, the traditional 60/40 hedge breaks down and requires alternative protection."
     )
     _page_footer()

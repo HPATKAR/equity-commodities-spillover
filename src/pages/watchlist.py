@@ -59,17 +59,17 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
         'font-weight:700;margin-bottom:0.1rem">Commodities to Watch</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#555;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
         'margin:0 0 0.7rem">Live Snapshot · Intraday Prices · Daily Historical · CFTC COT Positioning</p>',
         unsafe_allow_html=True,
     )
     _page_intro(
         "The commodities on this page are the primary spillover conduits into equity markets. "
         "Crude oil, gold, copper, and agricultural futures have historically led equity market "
-        "repricing during macro stress — price moves here often precede equity effects by days. "
+        "repricing during macro stress - price moves here often precede equity effects by days. "
         "<strong>Use this page as an early warning monitor.</strong> "
         "The COT positioning data adds a second layer: when speculative positioning in a commodity "
-        "reaches a historical extreme, mean-reversion is the base case — and that reversal typically "
+        "reaches a historical extreme, mean-reversion is the base case - and that reversal typically "
         "generates its own downstream spillover into correlated equity sectors."
     )
 
@@ -122,17 +122,48 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         snapshot = load_live_snapshot(watch_tickers)
 
     if not snapshot.empty:
-        def _colour_cell(val):
-            if isinstance(val, (int, float)):
-                if val > 0: return "color:#2e7d32;font-weight:600"
-                if val < 0: return "color:#c0392b;font-weight:600"
-            return ""
-        styled = (
-            snapshot.style
-            .applymap(_colour_cell, subset=["1D %", "5D %", "YTD %"])
-            .format({"Last": "{:.2f}", "1D %": "{:+.2f}%", "5D %": "{:+.2f}%", "YTD %": "{:+.2f}%"})
+        _TBL_CSS_SNAP = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+        snap_pct_cols = ["1D %", "5D %", "YTD %"]
+        snap_cols = list(snapshot.columns)
+        snap_header = "<th>Asset</th>" + "".join(f"<th>{c}</th>" for c in snap_cols)
+        snap_rows = ""
+        for asset_name, row in snapshot.iterrows():
+            cells = f"<td style='color:#b8bec8'>{asset_name}</td>"
+            for col in snap_cols:
+                v = row[col]
+                is_nan = pd.isna(v) if not isinstance(v, str) else False
+                if is_nan:
+                    cells += "<td style='color:#8890a1'>-</td>"
+                elif col == "Last":
+                    cells += f"<td style='color:#e8e9ed'>{v:.2f}</td>"
+                elif col in snap_pct_cols:
+                    if v > 0:
+                        cells += f"<td style='color:#4ade80;font-weight:600'>{v:+.2f}%</td>"
+                    elif v < 0:
+                        cells += f"<td style='color:#f87171;font-weight:600'>{v:+.2f}%</td>"
+                    else:
+                        cells += f"<td style='color:#8890a1'>{v:+.2f}%</td>"
+                else:
+                    cells += f"<td style='color:#e8e9ed'>{v}</td>"
+            snap_rows += f"<tr>{cells}</tr>"
+        html_snap = (
+            _TBL_CSS_SNAP
+            + "<table class='ec-table'>"
+            + f"<thead><tr>{snap_header}</tr></thead>"
+            + f"<tbody>{snap_rows}</tbody>"
+            + "</table>"
         )
-        st.dataframe(styled, use_container_width=True, height=300)
+        st.markdown(html_snap, unsafe_allow_html=True)
         _insight_note(
             "Real-time price snapshot across all watched commodities. "
             "The 1D % column shows today's price move - the quickest read on which "
@@ -144,7 +175,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         st.warning("Live snapshot unavailable. Check yfinance connectivity.")
 
     _thread(
-        "The snapshot above is a single moment. The intraday charts below add the dimension of time — "
+        "The snapshot above is a single moment. The intraday charts below add the dimension of time - "
         "showing how each commodity has moved through recent trading sessions and whether current "
         "volatility is normal or elevated."
     )
@@ -452,7 +483,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════
     _thread(
         "Price charts show what has happened. The CFTC Commitments of Traders data below shows what "
-        "large speculative traders expect to happen next — and when their positioning becomes extreme, "
+        "large speculative traders expect to happen next - and when their positioning becomes extreme, "
         "it often marks the turning point."
     )
     _label("CFTC Commitments of Traders: Speculative Positioning")
@@ -477,12 +508,46 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
             _label("Current Positioning Extremes")
             ext_tbl = cot_extremes_table(cot_df)
             if not ext_tbl.empty:
-                def _sig_col(val):
-                    if "Crowded Long"  in str(val): return "color:#c0392b;font-weight:700"
-                    if "Crowded Short" in str(val): return "color:#2e7d32;font-weight:700"
-                    return ""
-                styled_cot = ext_tbl.style.applymap(_sig_col, subset=["Signal"])
-                st.dataframe(styled_cot, use_container_width=True, hide_index=True, height=320)
+                _TBL_CSS_COT = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+                cot_cols = list(ext_tbl.columns)
+                cot_header = "".join(f"<th>{c}</th>" for c in cot_cols)
+                cot_rows = ""
+                for _, row in ext_tbl.iterrows():
+                    cells = ""
+                    for col in cot_cols:
+                        v = row[col]
+                        if col == "Signal":
+                            if "Crowded Long" in str(v):
+                                cells += f"<td style='color:#f87171;font-weight:700'>{v}</td>"
+                            elif "Crowded Short" in str(v):
+                                cells += f"<td style='color:#4ade80;font-weight:700'>{v}</td>"
+                            else:
+                                cells += f"<td style='color:#8890a1'>{v}</td>"
+                        else:
+                            is_nan = pd.isna(v) if not isinstance(v, str) else False
+                            if is_nan:
+                                cells += "<td style='color:#8890a1'>-</td>"
+                            else:
+                                cells += f"<td style='color:#b8bec8'>{v}</td>"
+                    cot_rows += f"<tr>{cells}</tr>"
+                html_cot = (
+                    _TBL_CSS_COT
+                    + "<table class='ec-table'>"
+                    + f"<thead><tr>{cot_header}</tr></thead>"
+                    + f"<tbody>{cot_rows}</tbody>"
+                    + "</table>"
+                )
+                st.markdown(html_cot, unsafe_allow_html=True)
                 _insight_note(
                     "Flags when speculative traders are all-in on one side of a commodity. "
                     "A 'Crowded Long' means too many people are betting on price rises - "

@@ -15,6 +15,7 @@ from datetime import date
 
 from src.data.loader import (
     load_all_prices, load_sp500_prices, get_sp500_constituents,
+    load_fixed_income_prices,
 )
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.ui.shared import (
@@ -103,11 +104,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     )
     _page_intro(
         "The core finding of spillover research is that equity-commodity correlation spikes during "
-        "crises — precisely when diversification is most needed. A portfolio built assuming low "
+        "crises - precisely when diversification is most needed. A portfolio built assuming low "
         "cross-asset correlation will underperform exactly when it matters most. "
         "<strong>This page stress-tests that assumption directly.</strong> "
         "Build any equity-commodity mix and replay it through the historical geopolitical and macro "
-        "events catalogued in this dashboard — the same events where spillover was highest. "
+        "events catalogued in this dashboard - the same events where spillover was highest. "
         "If your portfolio survives those windows with acceptable drawdown, the diversification "
         "assumption holds. If it does not, the spillover risk is not being priced correctly."
     )
@@ -118,6 +119,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     if eq_p.empty or cmd_p.empty:
         st.error("Market data unavailable.")
         return
+
+    try:
+        fi_prices = load_fixed_income_prices(start, end)
+    except Exception:
+        fi_prices = pd.DataFrame()
 
     # ── Section A: Indices & Commodities ────────────────────────────────────
     st.subheader("Section A - Global Indices & Commodities")
@@ -151,7 +157,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     # ── Free-form ticker entry ─────────────────────────────────────────────
     st.markdown(
         '<p style="font-size:0.60rem;font-weight:600;letter-spacing:0.12em;'
-        'text-transform:uppercase;color:#555960;margin:0.6rem 0 0.2rem">'
+        'text-transform:uppercase;color:#8890a1;margin:0.6rem 0 0.2rem">'
         'Or enter stock tickers directly (comma-separated)</p>',
         unsafe_allow_html=True,
     )
@@ -201,6 +207,44 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 value=float(default_w), step=1.0, key=f"w_{asset}",
             )
             weights_a[asset] = w
+
+    # ── Section C: Fixed Income ──────────────────────────────────────────────
+    st.subheader("Section C - Fixed Income")
+    _definition_block(
+        "Fixed Income Weights",
+        "Treasuries, IG/HY Credit, TIPS, EM Bonds. "
+        "Select instruments and enter weights (%). "
+        "Weights are combined with Sections A and B and renormalised to 100%.",
+    )
+
+    _fi_asset_names = list(fi_prices.columns) if not fi_prices.empty else [
+        "US 20Y+ Treasury (TLT)", "US 7-10Y Treasury (IEF)", "US 1-3Y Treasury (SHY)",
+        "IG Corporate (LQD)", "HY Corporate (HYG)", "EM USD Bonds (EMB)", "TIPS / Inflation (TIP)",
+    ]
+
+    with st.expander("Fixed Income asset selector", expanded=False):
+        _fi_selected = st.multiselect(
+            "Select fixed income instruments",
+            _fi_asset_names,
+            default=[],
+            key="st_fi_assets",
+            placeholder="Add Treasuries, credit, or TIPS to portfolio…",
+        )
+
+    weights_c: dict[str, float] = {}
+    if _fi_selected and not fi_prices.empty:
+        st.markdown("**Fixed Income Weights (%)**")
+        _fi_weight_cols = st.columns(min(len(_fi_selected), 5))
+        for i, asset in enumerate(_fi_selected):
+            if asset in fi_prices.columns:
+                _default_fi_w = round(100 / len(_fi_selected), 1)
+                _w_fi = _fi_weight_cols[i % 5].number_input(
+                    asset, min_value=0.0, max_value=100.0,
+                    value=float(_default_fi_w), step=1.0, key=f"wfi_{asset}",
+                )
+                weights_c[asset] = _w_fi
+    elif _fi_selected and fi_prices.empty:
+        st.warning("Fixed income price data unavailable. Check connectivity.")
 
     # ── Section B: S&P 500 Individual Stocks ────────────────────────────────
     st.subheader("Section B - S&P 500 Individual Stocks")
@@ -314,25 +358,25 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
         total_b = sum(weights_b.values())
         st.markdown(
-            f'<p style="font-size:0.70rem;color:#333333;margin:0.3rem 0">'
+            f'<p style="font-size:0.70rem;color:#d1d5db;margin:0.3rem 0">'
             f'Section B total: <b>{total_b:.1f}%</b> across {n_stocks} stocks</p>',
             unsafe_allow_html=True,
         )
 
     # ── Combined weight summary & validation ─────────────────────────────────
-    combined_weights_raw = {**weights_a, **weights_b}
+    combined_weights_raw = {**weights_a, **weights_c, **weights_b}
     total_w = sum(combined_weights_raw.values())
 
     if total_w > 0:
         # Color-coded total weight indicator
         if total_w > 100.5:
-            tw_color, tw_bg = "#e67e22", "#fff8f0"
+            tw_color, tw_bg = "#e67e22", "#1c1e2a"
             tw_status = "Exceeds 100% - will normalize on run"
         elif abs(total_w - 100.0) < 0.5:
-            tw_color, tw_bg = "#2e7d32", "#f0f7f0"
+            tw_color, tw_bg = "#2e7d32", "#1a1d27"
             tw_status = "✓ Fully allocated"
         else:
-            tw_color, tw_bg = "#555960", "#f5f5f5"
+            tw_color, tw_bg = "#555960", "#1a1d27"
             tw_status = f"{100 - total_w:.1f}% unallocated - will normalize on run"
 
         tw_col, norm_col, _ = st.columns([3, 1, 2])
@@ -341,7 +385,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             f'background:{tw_bg};margin:0.5rem 0;font-size:0.70rem;border-radius:0 4px 4px 0">'
             f'<b style="color:{tw_color};font-family:JetBrains Mono,monospace">'
             f'Total weight: {total_w:.1f}%</b>'
-            f'<span style="color:#555960;margin-left:10px;font-size:0.64rem">'
+            f'<span style="color:#8890a1;margin-left:10px;font-size:0.64rem">'
             f'{tw_status}</span></div>',
             unsafe_allow_html=True,
         )
@@ -363,7 +407,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 summary_txt += f" &nbsp;+&nbsp; {remaining} more"
             st.markdown(
                 f'<div style="border-left:3px solid #CFB991;padding:0.4rem 0.8rem;'
-                f'background:#fafaf8;margin:0.4rem 0 0.6rem;font-size:0.70rem;color:#333333">'
+                f'background:#1a1d27;margin:0.4rem 0 0.6rem;font-size:0.70rem;color:#d1d5db">'
                 f'<b>Normalised portfolio</b> ({len(norm_weights)} assets): {summary_txt}</div>',
                 unsafe_allow_html=True,
             )
@@ -400,7 +444,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     # ── Event selector & stress test controls ───────────────────────────────
     _thread(
         "Portfolio built. Now select which historical stress scenarios to apply. Each event is defined "
-        "by a pre-shock window, an acute stress period, and a post-event recovery window — matching the "
+        "by a pre-shock window, an acute stress period, and a post-event recovery window - matching the "
         "same event definitions used in the Geopolitical Triggers page."
     )
     st.subheader("Event Selection & Run")
@@ -432,7 +476,10 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Load stock prices if needed ──────────────────────────────────────────
     # eq_p may already include custom tickers added above
-    all_prices = pd.concat([eq_p, cmd_p], axis=1)
+    _price_frames = [eq_p, cmd_p]
+    if not fi_prices.empty:
+        _price_frames.append(fi_prices)
+    all_prices = pd.concat(_price_frames, axis=1)
 
     if weights_b:
         with st.spinner(f"Fetching prices for {len(weights_b)} individual stocks…"):
@@ -463,7 +510,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     # ── Summary table ────────────────────────────────────────────────────────
     _thread(
         "Results below decompose your portfolio's behaviour across three phases. Focus on the 'During' "
-        "column first — that is the peak stress you would have experienced. Then check the 'Post' column "
+        "column first - that is the peak stress you would have experienced. Then check the 'Post' column "
         "to understand how quickly (or slowly) your specific allocation would have recovered."
     )
     st.subheader("Stress Test Results")
@@ -478,23 +525,56 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "Sharpe":     round(r["sharpe"],    2) if r["sharpe"] and not np.isnan(r["sharpe"]) else None,
     } for r in results])
 
-    def _col_pct(val):
-        if pd.isna(val): return ""
-        if val > 0:  return "color:#2e7d32;font-weight:600"
-        if val < 0:  return "color:#c0392b;font-weight:600"
-        return ""
-
-    styled = (
-        summary.style
-        .applymap(_col_pct, subset=["Pre (%)", "During (%)", "Post (%)"])
-        .applymap(lambda v: "color:#c0392b;font-weight:600" if isinstance(v, float) and v < -10 else "",
-                  subset=["Max DD (%)"])
-        .format({
-            "Pre (%)": "{:+.2f}%", "During (%)": "{:+.2f}%",
-            "Post (%)": "{:+.2f}%", "Max DD (%)": "{:.2f}%", "Sharpe": "{:.2f}",
-        }, na_rep="-")
+    _TBL_CSS_ST = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+    st_pct_cols = ["Pre (%)", "During (%)", "Post (%)"]
+    st_rows_html = ""
+    for _, row in summary.iterrows():
+        cells = (
+            f"<td style='color:#b8bec8'>{row.get('Event','')}</td>"
+            f"<td style='color:#8890a1'>{row.get('Name','')}</td>"
+        )
+        for col in st_pct_cols:
+            v = row.get(col)
+            if v is None or (isinstance(v, float) and pd.isna(v)):
+                cells += "<td style='color:#8890a1'>-</td>"
+            elif v > 0:
+                cells += f"<td style='color:#4ade80;font-weight:600'>{v:+.2f}%</td>"
+            else:
+                cells += f"<td style='color:#f87171;font-weight:600'>{v:+.2f}%</td>"
+        dd_v = row.get("Max DD (%)")
+        if dd_v is None or (isinstance(dd_v, float) and pd.isna(dd_v)):
+            cells += "<td style='color:#8890a1'>-</td>"
+        elif dd_v < -10:
+            cells += f"<td style='color:#f87171;font-weight:700'>{dd_v:.2f}%</td>"
+        else:
+            cells += f"<td style='color:#e8e9ed'>{dd_v:.2f}%</td>"
+        sharpe_v = row.get("Sharpe")
+        if sharpe_v is None or (isinstance(sharpe_v, float) and pd.isna(sharpe_v)):
+            cells += "<td style='color:#8890a1'>-</td>"
+        else:
+            cells += f"<td style='color:#e8e9ed'>{sharpe_v:.2f}</td>"
+        st_rows_html += f"<tr>{cells}</tr>"
+    html_st = (
+        _TBL_CSS_ST
+        + "<table class='ec-table'>"
+        + "<thead><tr>"
+        + "<th>Event</th><th>Name</th><th>Pre (%)</th><th>During (%)</th>"
+        + "<th>Post (%)</th><th>Max DD (%)</th><th>Sharpe</th>"
+        + "</tr></thead><tbody>"
+        + st_rows_html
+        + "</tbody></table>"
     )
-    st.dataframe(styled, use_container_width=True, hide_index=True, height=340)
+    st.markdown(html_st, unsafe_allow_html=True)
 
     valid_during = [r["during_ret"] for r in results if not np.isnan(r["during_ret"])]
     valid_dd     = [r["max_dd"]     for r in results if not np.isnan(r["max_dd"])]
@@ -527,20 +607,22 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     fig_hm = go.Figure(go.Heatmap(
         z=hm_z, x=hm_metrics, y=hm_y,
-        colorscale=[[0, "#c0392b"], [0.5, "#f9f9f7"], [1, "#2e7d32"]],
+        colorscale=[[0, "#c0392b"], [0.5, "#1e2130"], [1, "#2e7d32"]],
         zmid=0, zmin=-abs_max, zmax=abs_max,
         text=hm_text,
         texttemplate="%{text}",
-        textfont=dict(size=10, family="JetBrains Mono, monospace"),
+        textfont=dict(size=10, family="JetBrains Mono, monospace", color="#e8e9ed"),
         hovertemplate="%{y} | %{x}: %{text}<extra></extra>",
         colorbar=dict(title="Return (%)", thickness=12, len=0.8, ticksuffix="%"),
     ))
     fig_hm.update_layout(
         template="purdue",
         height=max(300, len(results) * 30 + 80),
-        xaxis=dict(side="top", tickfont=dict(size=10)),
+        paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+        font=dict(color="#e8e9ed"),
+        xaxis=dict(side="top", tickfont=dict(size=10, color="#8890a1"), rangeslider=dict(visible=False)),
         yaxis=dict(
-            tickfont=dict(size=9, family="JetBrains Mono, monospace"),
+            tickfont=dict(size=9, family="JetBrains Mono, monospace", color="#8890a1"),
             autorange="reversed",
         ),
         margin=dict(l=130, r=40, t=60, b=20),
@@ -635,7 +717,38 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 "Portfolio Wt (%)": round(norm_w, 2),
             })
         stock_sum_df = pd.DataFrame(stock_summary).sort_values("Portfolio Wt (%)", ascending=False)
-        st.dataframe(stock_sum_df, use_container_width=True, hide_index=True)
+        _TBL_CSS_STK = """
+<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#141720}
+.ec-table tr:nth-child(odd) td{background:#0f1117}
+.ec-table tr:hover td{background:#1e2230}
+</style>"""
+        stk_rows_html = ""
+        for _, row in stock_sum_df.iterrows():
+            wt = row.get("Portfolio Wt (%)", 0)
+            stk_rows_html += (
+                f"<tr>"
+                f"<td style='color:#CFB991;font-weight:600'>{row.get('Ticker','')}</td>"
+                f"<td style='color:#b8bec8'>{row.get('Company','')}</td>"
+                f"<td style='color:#8890a1'>{row.get('Sector','')}</td>"
+                f"<td style='color:#e8e9ed'>{wt:.2f}%</td>"
+                f"</tr>"
+            )
+        html_stk = (
+            _TBL_CSS_STK
+            + "<table class='ec-table'>"
+            + "<thead><tr>"
+            + "<th>Ticker</th><th>Company</th><th>Sector</th><th>Portfolio Wt (%)</th>"
+            + "</tr></thead><tbody>"
+            + stk_rows_html
+            + "</tbody></table>"
+        )
+        st.markdown(html_stk, unsafe_allow_html=True)
 
     worst_ev    = min(results, key=lambda r: r["during_ret"] if not np.isnan(r["during_ret"]) else 0)
     best_ev     = max(results, key=lambda r: r["during_ret"] if not np.isnan(r["during_ret"]) else 0)

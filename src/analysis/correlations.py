@@ -32,7 +32,7 @@ def rolling_correlation_matrix(
     window: int = 60,
 ) -> pd.DataFrame:
     """
-    Rolling pairwise correlations — returns a tidy DataFrame:
+    Rolling pairwise correlations - returns a tidy DataFrame:
     columns [date, asset_a, asset_b, correlation].
     """
     rows = []
@@ -82,12 +82,12 @@ def detect_correlation_regime(
     Adaptive, percentile-based regime classification with smoothing and hysteresis.
 
     Improvements over fixed-threshold version:
-      1. Percentile thresholds — calibrated to the actual data distribution, not
+      1. Percentile thresholds - calibrated to the actual data distribution, not
          hardcoded values that can miss regime shifts when the vol environment changes.
-      2. Median smoothing (smooth_window days) — removes single-day flickers.
-      3. Hysteresis — exit thresholds are 5pp lower than entry thresholds, preventing
+      2. Median smoothing (smooth_window days) - removes single-day flickers.
+      3. Hysteresis - exit thresholds are 5pp lower than entry thresholds, preventing
          rapid oscillation near the boundary.
-      4. Persistence filter — Crisis (3) requires the smoothed series to exceed the
+      4. Persistence filter - Crisis (3) requires the smoothed series to exceed the
          elevated threshold for the majority of a rolling window.
 
     Regimes:
@@ -190,10 +190,10 @@ def compute_regime_features(
     All features are backward-looking (no look-ahead).
 
     Columns:
-      avg_corr_slow  — precomputed 60d avg |cross-asset corr| (pass to avoid recompute)
-      avg_corr_fast  — 20d rolling |corr| of equal-weight composites (fast stress signal)
-      equity_vol     — 20d realised vol of equal-weight equity universe (ann. %)
-      cmd_vol        — 20d realised vol of energy+metals basket (ann. %)
+      avg_corr_slow  - precomputed 60d avg |cross-asset corr| (pass to avoid recompute)
+      avg_corr_fast  - 20d rolling |corr| of equal-weight composites (fast stress signal)
+      equity_vol     - 20d realised vol of equal-weight equity universe (ann. %)
+      cmd_vol        - 20d realised vol of energy+metals basket (ann. %)
     """
     combined = pd.concat([equity_returns, commodity_returns], axis=1).dropna(how="all")
     eq_cols  = [c for c in equity_returns.columns  if c in combined.columns]
@@ -211,13 +211,13 @@ def compute_regime_features(
     # Equity realised vol (equal-weight; strong proxy for VIX)
     eq_vol = combined[eq_cols].rolling(vol_window, min_periods=vol_window // 2).std().mean(axis=1) * np.sqrt(252) * 100
 
-    # Commodity vol — energy + metals
+    # Commodity vol - energy + metals
     em_cols = [c for c in _ENERGY_METALS if c in combined.columns]
     if not em_cols:
         em_cols = cmd_cols[:6]
     cmd_vol = combined[em_cols].rolling(vol_window, min_periods=vol_window // 2).std().mean(axis=1) * np.sqrt(252) * 100
 
-    # Slow correlation — reuse precomputed series if supplied and sufficiently dense
+    # Slow correlation - reuse precomputed series if supplied and sufficiently dense
     if avg_corr_slow is not None:
         slow_reindexed = avg_corr_slow.reindex(combined.index)
         # Fall back to dense proxy when the supplied series is too sparse (< 50% coverage).
@@ -251,10 +251,10 @@ def composite_stress_index(
     0–100 composite stress index with research-calibrated blending.
 
     Weights:
-      45%  equity_vol     (z-score mapped — direct VIX proxy, strongest single predictor)
-      35%  avg_corr_slow  (rolling percentile — relative stress in cross-asset linkage)
-      15%  cmd_vol        (z-score mapped — energy/metals risk premium)
-       5%  avg_corr_fast  (rolling percentile — short-term correlation acceleration)
+      45%  equity_vol     (z-score mapped - direct VIX proxy, strongest single predictor)
+      35%  avg_corr_slow  (rolling percentile - relative stress in cross-asset linkage)
+      15%  cmd_vol        (z-score mapped - energy/metals risk premium)
+       5%  avg_corr_fast  (rolling percentile - short-term correlation acceleration)
 
     Vol components use z-score → 0-100 mapping (z=0→50, z=+2→80, z=-2→20) rather
     than empirical percentiles so that absolute vol level information is preserved.
@@ -283,7 +283,7 @@ def composite_stress_index(
 
     def _zscore_score(s: pd.Series) -> pd.Series:
         """z-score → 0-100: z=0→50, z=+2→80, z=-2→20 (z clipped ±3).
-        Preserves absolute level information — equates to VIX level, not just rank."""
+        Preserves absolute level information - equates to VIX level, not just rank."""
         mean = s.rolling(lookback, min_periods=min_periods).mean()
         std  = s.rolling(lookback, min_periods=min_periods).std().replace(0, np.nan)
         z    = (s - mean) / std

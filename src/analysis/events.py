@@ -103,7 +103,7 @@ def pre_post_volatility(
     """
     Annualised volatility (std * sqrt(252)) for:
       pre-event  : [event_start - window, event_start)
-      post-event : (event_end, event_end + window]  — capped at today
+      post-event : (event_end, event_end + window]  - capped at today
     """
     today = pd.Timestamp(date.today())
     t0 = pd.Timestamp(event_start)

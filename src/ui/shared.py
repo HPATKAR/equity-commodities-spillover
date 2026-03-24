@@ -63,7 +63,7 @@ _COMMODITY_NAMES = {"WTI Crude Oil","Brent Crude","Gold","Silver","Copper","Natu
                     "Wheat","Corn","Soybeans","Platinum","Palladium","Sugar","Coffee",
                     "Cotton","Crude Oil"}
 
-# Four clearly distinct dash styles — rotate within equities and commodities separately
+# Four clearly distinct dash styles - rotate within equities and commodities separately
 _EQ_DASHES  = ["solid", "dash", "dot", "dashdot"]
 _CMD_DASHES = ["longdash", "longdashdot", "solid", "dash"]
 
@@ -147,7 +147,7 @@ def _add_event_bands(
             annotation_text=ev["label"] if show_labels else "",
             annotation_position="top left",
             annotation_font=dict(size=8, color=color),
-            annotation_bgcolor="rgba(255,255,255,0.6)",
+            annotation_bgcolor="rgba(10,12,20,0.65)",
         )
     return fig
 
@@ -157,8 +157,8 @@ def _add_event_bands(
 def _page_intro(text: str) -> None:
     st.markdown(
         f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.76rem;
-        color:#333333;line-height:1.75;max-width:860px;margin:0 0 1.0rem;
-        padding-left:0.85rem;border-left:3px solid #E8E5E0">{text}</p>""",
+        color:#b8bec8;line-height:1.75;max-width:860px;margin:0 0 1.0rem;
+        padding-left:0.85rem;border-left:3px solid #2a2d3a">{text}</p>""",
         unsafe_allow_html=True,
     )
 
@@ -184,8 +184,8 @@ def _definition_block(title: str, body: str) -> None:
           <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.65rem 1rem;font-size:0.70rem;color:#333333;
-        line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
+        <div style="padding:0.65rem 1rem;font-size:0.70rem;color:#c8cdd8;
+        background:#1a1d27;line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -224,7 +224,7 @@ def _thread(text: str) -> None:
     """Narrative connector paragraph between page sections."""
     st.markdown(
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;'
-        f'color:#555;line-height:1.7;margin:0.1rem 0 0.55rem;font-style:italic">'
+        f'color:#8890a1;line-height:1.7;margin:0.1rem 0 0.55rem;font-style:italic">'
         f'{text}</p>',
         unsafe_allow_html=True,
     )
@@ -262,7 +262,7 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
 
 
 def _section_header(number: str, title: str, subtitle: str = "") -> None:
-    """Numbered section header — establishes reading sequence within a page."""
+    """Numbered section header - establishes reading sequence within a page."""
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.64rem;'
         f'color:#888;font-weight:400;margin-left:0.6rem;font-style:italic">{subtitle}</span>'
@@ -282,7 +282,7 @@ def _section_header(number: str, title: str, subtitle: str = "") -> None:
 
 
 def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
-    """Full-width coloured regime banner — place at the very top of a page to surface the verdict."""
+    """Full-width coloured regime banner - place at the very top of a page to surface the verdict."""
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
         f'color:rgba(255,255,255,0.72);margin-left:0.75rem">{sub}</span>'
@@ -348,13 +348,13 @@ def _about_page_styles():
     st.markdown("""<style>
     /* ── Hero banner ───────────────────────────────────── */
     .about-hero {
-        background: #ffffff;
+        background: #1a1d27;
         border-radius: 12px;
         padding: 0;
         margin-bottom: 1.2rem;
         overflow: hidden;
-        border: 1px solid #e8e5e2;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        border: 1px solid #2a2d3a;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.25);
     }
     .about-hero-inner {
         display: flex;
@@ -383,7 +383,7 @@ def _about_page_styles():
         font-family: 'DM Sans', sans-serif;
         font-size: 1.25rem;
         font-weight: 700;
-        color: #1a1a1a;
+        color: #CFB991;
         margin: 0 0 0.15rem 0;
         letter-spacing: -0.02em;
         line-height: 1.15;
@@ -394,20 +394,20 @@ def _about_page_styles():
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.18em;
-        color: #8E6F3E;
+        color: #c4ae88;
         margin: 0 0 0.35rem 0;
     }
     .about-hero .subtitle {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.74rem;
-        color: #555;
+        color: #8890a1;
         margin: 0 0 0.45rem 0;
         font-weight: 500;
     }
     .about-hero .tagline {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.70rem;
-        color: #777;
+        color: #8890a1;
         margin: 0 0 0.65rem 0;
         line-height: 1.6;
     }
@@ -420,32 +420,32 @@ def _about_page_styles():
         font-family: 'DM Sans', sans-serif;
         font-size: 0.60rem;
         font-weight: 600;
-        color: #8E6F3E;
+        color: #CFB991;
         text-decoration: none;
         padding: 0.22rem 0.7rem;
-        border: 1px solid rgba(142,111,62,0.3);
+        border: 1px solid rgba(207,185,145,0.3);
         border-radius: 4px;
         transition: all 0.2s ease;
         letter-spacing: 0.02em;
     }
     .about-hero .links a:hover {
-        background: rgba(207,185,145,0.1);
-        border-color: #8E6F3E;
+        background: rgba(207,185,145,0.15);
+        border-color: #CFB991;
     }
 
     /* ── Cards ─────────────────────────────────────────── */
     .about-card {
-        background: #fff;
-        border: 1px solid #e8e5e2;
+        background: #1a1d27;
+        border: 1px solid #2a2d3a;
         border-radius: 12px;
         padding: 1.1rem 1.3rem;
         margin-bottom: 0.75rem;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        box-shadow: 0 1px 6px rgba(0,0,0,0.18);
         transition: all 0.2s ease;
     }
     .about-card:hover {
         border-color: #CFB991;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.30);
     }
     .about-card-title {
         font-family: 'DM Sans', sans-serif;
@@ -453,15 +453,15 @@ def _about_page_styles():
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.16em;
-        color: #8E6F3E;
+        color: #CFB991;
         margin: 0 0 0.65rem 0;
         padding-bottom: 0.4rem;
-        border-bottom: 1px solid #f0eeeb;
+        border-bottom: 1px solid #2a2d3a;
     }
 
     /* ── Experience timeline ───────────────────────────── */
     .exp-item {
-        border-left: 2px solid #e8e5e2;
+        border-left: 2px solid #2a2d3a;
         padding-left: 1rem;
         margin-bottom: 0.75rem;
         padding-bottom: 0.35rem;
@@ -472,26 +472,26 @@ def _about_page_styles():
         font-family: 'DM Sans', sans-serif;
         font-size: 0.78rem;
         font-weight: 700;
-        color: #1a1a1a;
+        color: #e8e9ed;
         margin: 0 0 0.1rem 0;
     }
     .exp-org {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.74rem;
         font-weight: 600;
-        color: #8E6F3E;
+        color: #CFB991;
         margin: 0 0 0.12rem 0;
     }
     .exp-meta {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.65rem;
-        color: #888;
+        color: #8890a1;
         margin: 0 0 0.28rem 0;
     }
     .exp-desc {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.70rem;
-        color: #444;
+        color: #8890a1;
         line-height: 1.6;
         margin: 0;
     }
@@ -499,33 +499,33 @@ def _about_page_styles():
     /* ── Education ─────────────────────────────────────── */
     .edu-item {
         padding: 0.55rem 0;
-        border-bottom: 1px solid #f0eeeb;
+        border-bottom: 1px solid #2a2d3a;
     }
     .edu-item:last-child { border-bottom: none; }
     .edu-school {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.78rem;
         font-weight: 700;
-        color: #1a1a1a;
+        color: #e8e9ed;
         margin: 0 0 0.1rem 0;
     }
     .edu-dept {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.70rem;
-        color: #8E6F3E;
+        color: #CFB991;
         margin: 0 0 0.1rem 0;
         font-weight: 500;
     }
     .edu-degree {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.70rem;
-        color: #444;
+        color: #8890a1;
         margin: 0 0 0.1rem 0;
     }
     .edu-year {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.65rem;
-        color: #999;
+        color: #8890a1;
         margin: 0;
     }
 
@@ -537,27 +537,27 @@ def _about_page_styles():
         font-family: 'DM Sans', sans-serif;
         font-size: 0.74rem;
         font-weight: 600;
-        color: #1a1a1a;
+        color: #e8e9ed;
         margin: 0 0 0.22rem 0;
         line-height: 1.55;
     }
     .pub-authors {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.70rem;
-        color: #555;
+        color: #8890a1;
         margin: 0 0 0.12rem 0;
     }
     .pub-journal {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.65rem;
-        color: #8E6F3E;
+        color: #c4ae88;
         font-style: italic;
         margin: 0 0 0.1rem 0;
     }
     .pub-detail {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.65rem;
-        color: #999;
+        color: #8890a1;
         margin: 0 0 0.35rem 0;
     }
     .pub-link {
@@ -574,20 +574,20 @@ def _about_page_styles():
     /* ── Certifications ────────────────────────────────── */
     .cert-item {
         padding: 0.38rem 0;
-        border-bottom: 1px solid #f5f4f2;
+        border-bottom: 1px solid #2a2d3a;
     }
     .cert-item:last-child { border-bottom: none; }
     .cert-name {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.74rem;
         font-weight: 600;
-        color: #1a1a1a;
+        color: #e8e9ed;
         margin: 0 0 0.08rem 0;
     }
     .cert-issuer {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.65rem;
-        color: #999;
+        color: #8890a1;
         margin: 0;
     }
 
@@ -602,25 +602,25 @@ def _about_page_styles():
         margin: 0.12rem;
     }
     .interest-gold {
-        background: rgba(207,185,145,0.12);
-        color: #8E6F3E;
-        border: 1px solid rgba(207,185,145,0.25);
+        background: rgba(207,185,145,0.15);
+        color: #CFB991;
+        border: 1px solid rgba(207,185,145,0.3);
     }
     .interest-neutral {
-        background: #f5f4f2;
-        color: #555;
-        border: 1px solid #e8e5e2;
+        background: rgba(207,185,145,0.08);
+        color: #c4ae88;
+        border: 1px solid rgba(207,185,145,0.18);
     }
 
     /* ── Acknowledgments ───────────────────────────────── */
     .ack-text {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.70rem;
-        color: #555;
+        color: #8890a1;
         line-height: 1.6;
         margin: 0;
     }
-    .ack-text strong { color: #1a1a1a; }
+    .ack-text strong { color: #e8e9ed; }
 
     /* ── Stats row ─────────────────────────────────────── */
     .stat-row {
@@ -642,7 +642,7 @@ def _about_page_styles():
         font-size: 0.56rem;
         text-transform: uppercase;
         letter-spacing: 0.12em;
-        color: #888;
+        color: #8890a1;
         margin: 2px 0 0 0;
         font-family: 'DM Sans', sans-serif;
     }

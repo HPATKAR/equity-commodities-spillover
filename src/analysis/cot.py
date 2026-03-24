@@ -1,5 +1,5 @@
 """
-CFTC Commitments of Traders (COT) — disaggregated futures loader.
+CFTC Commitments of Traders (COT) - disaggregated futures loader.
 
 Downloads annual ZIP files from CFTC's public repository.
 Falls back to the CFTC Socrata public API when ZIP downloads are blocked (cloud deployments).
@@ -34,7 +34,7 @@ COT_MARKETS: dict[str, str] = {
 _BASE_URL = "https://www.cftc.gov/files/dea/history/fut_disagg_txt_{year}.zip"
 _ALT_URL  = "https://www.cftc.gov/sites/default/files/files/dea/history/fut_disagg_txt_{year}.zip"
 
-# CFTC public Socrata API — works from cloud IPs where direct ZIP downloads are blocked
+# CFTC public Socrata API - works from cloud IPs where direct ZIP downloads are blocked
 _SOCRATA_URL = (
     "https://publicreporting.cftc.gov/resource/72hh-3qpy.json"
     "?$where=report_date_as_yyyy_mm_dd >= '{since}'&$limit=50000&$order=report_date_as_yyyy_mm_dd ASC"
@@ -195,8 +195,8 @@ def plot_cot_overlay(
 ) -> go.Figure:
     """
     Dual-axis chart:
-      Left  — commodity price (line, if provided)
-      Right — net speculative positioning as bars + % OI line
+      Left  - commodity price (line, if provided)
+      Right - net speculative positioning as bars + % OI line
 
     Contrarian signal bands at ±25% net_spec_pct.
     """
@@ -207,9 +207,9 @@ def plot_cot_overlay(
     fig = go.Figure()
 
     # ── Extreme positioning bands ─────────────────────────────────────
-    fig.add_hrect(y0=25,  y1=100, fillcolor="#ffebee", opacity=0.35,
+    fig.add_hrect(y0=25,  y1=100, fillcolor="rgba(192,57,43,0.12)", opacity=1.0,
                   layer="below", line_width=0)
-    fig.add_hrect(y0=-100, y1=-25, fillcolor="#e8f5e9", opacity=0.35,
+    fig.add_hrect(y0=-100, y1=-25, fillcolor="rgba(46,125,50,0.12)", opacity=1.0,
                   layer="below", line_width=0)
     fig.add_hline(y=0, line=dict(color="#ABABAB", width=1, dash="dot"))
     fig.add_hline(y=25,  line=dict(color="#c0392b", width=0.8, dash="dot"),
