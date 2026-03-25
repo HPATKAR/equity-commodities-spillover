@@ -106,12 +106,44 @@ def _build_doc(buf: io.BytesIO) -> BaseDocTemplate:
         topMargin=15 * mm, bottomMargin=15 * mm,
     )
 
+    _AUTHORS = [
+        ("Heramb S. Patkar", "hpatkar.github.io"),
+        ("Jiahe Miao",       "linkedin.com/in/jiahe-miao071"),
+        ("Ilian Zalomai",    "linkedin.com/in/ilian-zalomai-55iz"),
+    ]
+
     def _cover_bg(canvas, doc):
         canvas.saveState()
         canvas.setFillColor(BLACK)
         canvas.rect(0, 0, W, H, fill=1, stroke=0)
         canvas.setFillColor(GOLD)
         canvas.rect(0, H - 3 * mm, W, 3 * mm, fill=1, stroke=0)
+
+        # Contributors panel
+        contrib_y = H - 222 * mm
+        canvas.setFillColor(colors.HexColor("#0d0d0d"))
+        canvas.setStrokeColor(AGED)
+        canvas.setLineWidth(0.5)
+        canvas.rect(18 * mm, contrib_y, W - 36 * mm, 22 * mm, fill=1, stroke=1)
+
+        canvas.setFillColor(GOLD)
+        canvas.setFont("Helvetica-Bold", 6.5)
+        canvas.drawString(24 * mm, contrib_y + 15.5 * mm, "AUTHORS")
+
+        for (name, link), x in zip(_AUTHORS, [24 * mm, 90 * mm, 156 * mm]):
+            canvas.setFillColor(WHITE)
+            canvas.setFont("Helvetica-Bold", 8.5)
+            canvas.drawString(x, contrib_y + 9 * mm, name)
+            canvas.setFillColor(GRAY)
+            canvas.setFont("Helvetica", 7)
+            canvas.drawString(x, contrib_y + 3.5 * mm, link)
+
+        canvas.setFillColor(BLACK)
+        canvas.setFont("Helvetica-Bold", 6.5)
+        canvas.drawCentredString(
+            W / 2, 3.5 * mm,
+            "FOR EDUCATIONAL PURPOSES ONLY · NOT INVESTMENT ADVICE · PURDUE UNIVERSITY",
+        )
         canvas.restoreState()
 
     def _body_page(canvas, doc):
