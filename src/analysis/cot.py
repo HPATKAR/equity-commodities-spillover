@@ -153,8 +153,9 @@ def load_cot_data(years: int = 3) -> pd.DataFrame:
     raw["date"] = pd.to_datetime(raw[date_col], errors="coerce")
     raw = raw.dropna(subset=["date"])
 
-    long_col  = "NonComm_Positions_Long_All"
-    short_col = "NonComm_Positions_Short_All"
+    # Disaggregated report uses M_Money columns; legacy report uses NonComm columns
+    long_col  = "M_Money_Positions_Long_All" if "M_Money_Positions_Long_All" in raw.columns else "NonComm_Positions_Long_All"
+    short_col = "M_Money_Positions_Short_All" if "M_Money_Positions_Short_All" in raw.columns else "NonComm_Positions_Short_All"
     oi_col    = "Open_Interest_All"
     name_col  = "Market_and_Exchange_Names"
 
