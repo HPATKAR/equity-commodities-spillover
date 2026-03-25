@@ -887,4 +887,27 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
         _insight_card(**card)
         st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
 
+    # ── PDF Download ──────────────────────────────────────────────────────────
+    st.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0 0 0.5rem">'
+        f'Export all insights with full reasoning to an institutional-format PDF.</p>',
+        unsafe_allow_html=True,
+    )
+    if st.button("Generate PDF Report", type="primary", key="insights_pdf_btn"):
+        with st.spinner("Building PDF…"):
+            try:
+                from src.reports.insights_pdf import build_insights_pdf
+                pdf_bytes = build_insights_pdf(cards, start, end)
+                fname = f"actionable_insights_{__import__('datetime').date.today().strftime('%Y%m%d')}.pdf"
+                st.download_button(
+                    label="Download PDF",
+                    data=pdf_bytes,
+                    file_name=fname,
+                    mime="application/pdf",
+                    key="insights_pdf_dl",
+                )
+            except Exception as e:
+                st.error(f"PDF generation failed: {e}")
+
     _page_footer()
