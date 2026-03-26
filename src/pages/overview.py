@@ -24,6 +24,8 @@ from src.ui.shared import (
     _definition_block, _takeaway_block, _page_conclusion,
     _page_footer, _add_event_bands, _insight_note,
 )
+from src.analysis.proactive_alerts import compute_alerts
+from src.ui.alert_banner import render_alert_banner
 
 _F = "font-family:'DM Sans',sans-serif;"
 
@@ -242,6 +244,28 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     with st.spinner("Computing risk score…"):
         risk_result = compute_risk_score(avg_corr, cmd_r)
         score_hist  = risk_score_history(avg_corr, cmd_r, eq_r=eq_r)
+
+    # ── Proactive AI alert feed ─────────────────────────────────────────────
+    try:
+        from src.analysis.cot import load_cot_data
+        _cot_df = load_cot_data(years=2)
+    except Exception:
+        _cot_df = None
+    _alerts = compute_alerts(
+        eq_r=eq_r, cmd_r=cmd_r, avg_corr=avg_corr, regimes=regimes,
+        risk_score=float(risk_result["score"]),
+        risk_history=score_hist if isinstance(score_hist, pd.Series) else pd.Series(dtype=float),
+        cot_df=_cot_df,
+    )
+    # Build a minimal context string for the AI briefing
+    _ctx_brief = (
+        f"Regime: {regime_name} (level {int(current_regime)}/3). "
+        f"Risk score: {risk_result['score']:.0f}/100. "
+        f"60d avg |corr|: {float(current_avg_corr):.3f}. "
+        f"Best equity 1M: {best_eq}. Worst equity 1M: {worst_eq}. "
+        f"Best commodity 1M: {best_cmd}. Worst commodity 1M: {worst_cmd}."
+    )
+    render_alert_banner(_alerts, market_context=_ctx_brief)
 
     _r_colors = {0: "#2e7d32", 1: "#555960", 2: "#e67e22", 3: "#c0392b"}
 
