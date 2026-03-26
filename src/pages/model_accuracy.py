@@ -1182,4 +1182,41 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         "The risk score's <b>R² against VIX</b> confirms the composite approach tracks market fear "
         "better than any single-signal proxy.",
     )
+
+    # ── AI Signal Auditor ──────────────────────────────────────────────────
+    try:
+        from src.agents.signal_auditor import run as _sa_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("signal_auditor"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _sa_ctx: dict = {
+                "n_signals": 4,
+                "avg_hit_rate": stats.get("balanced_acc") or 50.0,
+                "granger_hit_rates": {
+                    "Regime Detector": stats.get("balanced_acc") or 50.0,
+                    "Risk Score vs VIX": r2_pct if r2 and not np.isnan(r2) else 0.0,
+                },
+                "signal_decay": (stats.get("balanced_acc") or 50.0) < 55,
+            }
+
+            with st.spinner("AI Signal Auditor calibrating…"):
+                _sa_result = _sa_run(_sa_ctx, _provider, _api_key)
+
+            if _sa_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("signal_auditor", _sa_result)
+    except Exception:
+        pass
+
     _page_footer()

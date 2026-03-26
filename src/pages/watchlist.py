@@ -586,4 +586,63 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "setups for a reversal. Cross-reference with the Spillover page to confirm the commodity is also "
         "a price transmitter into equity markets.",
     )
+    # ── AI Commodities Specialist ──────────────────────────────────────────
+    try:
+        from src.agents.commodities_specialist import run as _cs_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("commodities_specialist"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            # Build context
+            _cs_ctx: dict = {}
+            try:
+                if not cmd_r.empty and len(cmd_r) >= 5:
+                    _w5 = cmd_r.iloc[-5:].sum() * 100
+                    _top3  = sorted(zip(_w5.index, _w5.values), key=lambda x: -x[1])[:3]
+                    _bot3  = sorted(zip(_w5.index, _w5.values), key=lambda x: x[1])[:3]
+                    _cs_ctx["top_performers"]   = [(n, v) for n, v in _top3 if v > 0]
+                    _cs_ctx["worst_performers"]  = [(n, v) for n, v in _bot3 if v < 0]
+                from src.analysis.correlations import average_cross_corr_series
+                from src.data.loader import load_returns as _lr2
+                _eq_r2, _ = _lr2(start, end)
+                if not _eq_r2.empty and not cmd_r.empty:
+                    _avg_c = average_cross_corr_series(_eq_r2, cmd_r, window=60)
+                    if not _avg_c.empty:
+                        _cs_ctx["avg_corr"] = float(_avg_c.iloc[-1])
+                # COT crowded positions
+                if "cot_df" in dir() and cot_df is not None and not cot_df.empty:
+                    _longs  = [(m, float(cot_df[cot_df["market"]==m]["net_spec_pct"].iloc[-1]))
+                               for m in cot_df["market"].unique()
+                               if not cot_df[cot_df["market"]==m].empty
+                               and cot_df[cot_df["market"]==m]["net_spec_pct"].iloc[-1] >= 25]
+                    _shorts = [(m, float(cot_df[cot_df["market"]==m]["net_spec_pct"].iloc[-1]))
+                               for m in cot_df["market"].unique()
+                               if not cot_df[cot_df["market"]==m].empty
+                               and cot_df[cot_df["market"]==m]["net_spec_pct"].iloc[-1] <= -25]
+                    if _longs:
+                        _cs_ctx["crowded_longs"] = _longs
+                    if _shorts:
+                        _cs_ctx["crowded_shorts"] = _shorts
+            except Exception:
+                pass
+
+            with st.spinner("AI Commodities Specialist analysing…"):
+                _cs_result = _cs_run(_cs_ctx, _provider, _api_key)
+
+            if _cs_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("commodities_specialist", _cs_result)
+    except Exception:
+        pass
+
     _page_footer()

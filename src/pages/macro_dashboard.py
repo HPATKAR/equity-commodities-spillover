@@ -1484,4 +1484,46 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             except Exception as e:
                 st.error(f"PDF generation failed: {e}")
 
+    # ── AI Macro Strategist ────────────────────────────────────────────────
+    try:
+        from src.agents.macro_strategist import run as _ms_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("macro_strategist"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            # Build context from data loaded on this page
+            _ms_ctx: dict = {}
+            try:
+                _sp_data = _load_spreads(fred_key, start, end) if fred_key else pd.DataFrame()
+                if not _sp_data.empty and "10Y–2Y (Yield Curve)" in _sp_data.columns:
+                    _ms_ctx["yield_curve_spread"] = float(_sp_data["10Y–2Y (Yield Curve)"].iloc[-1])
+                _mc_data = _load_macro(fred_key, start, end) if fred_key else {}
+                if _mc_data.get("CPI YoY (%)") is not None and not _mc_data["CPI YoY (%)"].empty:
+                    _ms_ctx["cpi_yoy"] = float(_mc_data["CPI YoY (%)"].iloc[-1])
+                if _mc_data.get("ISM Manufacturing PMI") is not None and not _mc_data["ISM Manufacturing PMI"].empty:
+                    _ms_ctx["ism_pmi"] = float(_mc_data["ISM Manufacturing PMI"].iloc[-1])
+                if _mc_data.get("Real GDP Growth (QoQ %)") is not None and not _mc_data["Real GDP Growth (QoQ %)"].empty:
+                    _ms_ctx["gdp_growth"] = float(_mc_data["Real GDP Growth (QoQ %)"].iloc[-1])
+            except Exception:
+                pass
+
+            with st.spinner("AI Macro Strategist analysing…"):
+                _ms_result = _ms_run(_ms_ctx, _provider, _api_key)
+
+            if _ms_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("macro_strategist", _ms_result)
+    except Exception:
+        pass
+
     _page_footer()

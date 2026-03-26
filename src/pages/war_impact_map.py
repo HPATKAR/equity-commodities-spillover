@@ -1138,4 +1138,51 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         "disruptions via energy supply chains, shipping routes (Suez, Black Sea, Strait of Hormuz), "
         "refugee/fiscal spillovers, or direct military involvement.",
     )
+
+    # ── AI Geopolitical Analyst (War Map view) ──────────────────────────────
+    try:
+        from src.agents.geopolitical_analyst import run as _ga_run2
+        from src.ui.agent_panel import render_agent_output_block, render_activity_feed
+        from src.analysis.agent_state import is_enabled, get_agent
+        from src.data.config import GEOPOLITICAL_EVENTS as _GEO_EVENTS
+
+        if is_enabled("geopolitical_analyst"):
+            _a_state = get_agent("geopolitical_analyst")
+            if _a_state.get("last_output"):
+                # Already ran from geopolitical.py this session — just show cached output
+                st.markdown("---")
+                render_agent_output_block("geopolitical_analyst",
+                                         {"narrative": _a_state["last_output"]})
+            else:
+                _anthropic_key = _openai_key = ""
+                try:
+                    _keys = st.secrets.get("keys", {})
+                    _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                    _openai_key    = _keys.get("openai_api_key",    "") or ""
+                except Exception:
+                    pass
+                _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+                _api_key  = _anthropic_key or _openai_key
+
+                import datetime as _dt2
+                _today2 = _dt2.date.today()
+                _geo_ctx2 = {
+                    "n_events":      len(_GEO_EVENTS),
+                    "high_severity": sum(1 for e in _GEO_EVENTS if e.get("category","") in ("War","Conflict","Crisis")),
+                    "active_events": [
+                        {"name": e.get("name",""), "severity": e.get("category",""),
+                         "commodity_impact": e.get("commodity_impact","")}
+                        for e in _GEO_EVENTS[:6]
+                    ],
+                }
+                with st.spinner("AI Geopolitical Analyst assessing war map…"):
+                    _ga_result2 = _ga_run2(_geo_ctx2, _provider, _api_key)
+                if _ga_result2.get("narrative"):
+                    st.markdown("---")
+                    render_agent_output_block("geopolitical_analyst", _ga_result2)
+
+        render_activity_feed(max_entries=8, collapsible=True)
+    except Exception:
+        pass
+
     _page_footer()

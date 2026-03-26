@@ -464,4 +464,70 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "normal regimes favour growth-correlated long positioning. "
         "Use Granger and transfer entropy results from the Spillover page to validate lead-lag direction."
     )
+
+    # ── AI Trade Structurer + Pending Review Panel ─────────────────────────
+    try:
+        from src.agents.trade_structurer import run as _ts_run
+        from src.ui.agent_panel import render_agent_output_block, render_pending_review
+        from src.analysis.agent_state import is_enabled, get_agent
+
+        if is_enabled("trade_structurer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            # Build context from what's been computed on this page
+            _ts_ctx: dict = {
+                "regime_name":   r_name,
+                "regime_level":  current,
+                "avg_corr":      float(avg_corr.iloc[-1]) if not avg_corr.empty else 0.0,
+            }
+            try:
+                from src.analysis.risk_score import compute_risk_score
+                from src.data.loader import load_returns as _lr3
+                _eq_r3, _cmd_r3 = _lr3(start, end)
+                from src.analysis.correlations import average_cross_corr_series as _acs
+                _avg_c3 = _acs(_eq_r3, _cmd_r3, window=60)
+                _rs = compute_risk_score(_avg_c3, _cmd_r3, _eq_r3)
+                _ts_ctx["risk_score"] = float(_rs.get("score", 0))
+                if len(_cmd_r3) >= 5:
+                    _w5c = _cmd_r3.iloc[-5:].sum()
+                    _ts_ctx["top_commodity"]     = str(_w5c.idxmax())
+                    _ts_ctx["top_commodity_ret"] = float(_w5c.max()) * 100
+                if len(_eq_r3) >= 5:
+                    _w5e = _eq_r3.iloc[-5:].sum()
+                    _ts_ctx["worst_equity"]      = str(_w5e.idxmin())
+                    _ts_ctx["worst_equity_ret"]  = float(_w5e.min()) * 100
+            except Exception:
+                pass
+
+            # Include peer agent outputs
+            _peer_signals = {}
+            for _pid in ("macro_strategist", "geopolitical_analyst"):
+                _pa = get_agent(_pid)
+                if _pa.get("last_output"):
+                    _peer_signals[_pid] = _pa["last_output"][:120]
+            if _peer_signals:
+                _ts_ctx["peer_signals"] = _peer_signals
+
+            with st.spinner("AI Trade Structurer generating idea…"):
+                _ts_result = _ts_run(_ts_ctx, _provider, _api_key)
+
+            if _ts_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("trade_structurer", _ts_result)
+
+        # Always show the review queue on this page
+        st.markdown("---")
+        render_pending_review()
+
+    except Exception:
+        pass
+
     _page_footer()

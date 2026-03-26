@@ -1381,6 +1381,13 @@ else:
     start_date = st.session_state.get("g_start", date(2010, 1, 1))
     end_date   = st.session_state.get("g_end",   date.today())
 
+# ── AI Workforce — Agent Control Panel (all pages except About) ───────────────
+if not _is_about:
+    from src.analysis.agent_state import init_agents
+    from src.ui.agent_panel import render_agent_panel
+    init_agents()
+    render_agent_panel()
+
 # ── Router ────────────────────────────────────────────────────────────────────
 from src.pages.overview        import page_overview
 from src.pages.war_impact_map  import page_war_impact_map

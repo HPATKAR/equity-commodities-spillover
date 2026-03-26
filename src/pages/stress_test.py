@@ -772,4 +772,46 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "Combine with the Spillover Network to understand contagion channels "
         "and with Correlation Analysis to see how regime shifts affect your allocation.",
     )
+
+    # ── AI Stress Engineer ────────────────────────────────────────────────
+    try:
+        from src.agents.stress_engineer import run as _se_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("stress_engineer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _se_ctx: dict = {
+                "n_scenarios": len(results),
+                "scenarios": [
+                    {
+                        "name": r["event"],
+                        "impact_pct": r.get("during_ret", 0),
+                        "transmission": "equity-commodity correlation spike",
+                    }
+                    for r in results[:5]
+                ],
+                "worst_scenario": worst_ev["event"],
+                "worst_impact":   worst_ev.get("during_ret", 0),
+                "avg_impact":     avg_ret,
+            }
+
+            with st.spinner("AI Stress Engineer assessing…"):
+                _se_result = _se_run(_se_ctx, _provider, _api_key)
+
+            if _se_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("stress_engineer", _se_result)
+    except Exception:
+        pass
+
     _page_footer()

@@ -707,4 +707,48 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "a specific region or commodity group is the classic early-warning pattern. Drill into "
         "the Analysis pages for the quantitative breakdown."
     )
+
+    # ── Agent Activity Feed ────────────────────────────────────────────────
+    try:
+        from src.ui.agent_panel import render_activity_feed, render_pending_review
+        from src.analysis.agent_state import (
+            log_activity, set_output, pending_count, init_agents,
+        )
+        init_agents()
+
+        # Register Risk Officer output in shared agent state
+        if _alerts:
+            log_activity(
+                "risk_officer", "morning briefing dispatched",
+                f"{len(_alerts)} signal(s) — regime: {regime_name}",
+                "critical" if any(a.severity == "critical" for a in _alerts) else "warning",
+            )
+            set_output(
+                "risk_officer",
+                _ctx_brief,
+                confidence=min(0.5 + float(risk_result["score"]) / 200, 0.95),
+            )
+            # Route to specialists based on alert categories
+            _route_cats = set(a.category for a in _alerts)
+            if "cot" in _route_cats:
+                log_activity("risk_officer", "COT extremes detected",
+                             "routing to Commodities Specialist",
+                             "warning", routed_to="commodities_specialist")
+            if "stress" in _route_cats and risk_result["score"] >= 50:
+                log_activity("risk_officer", "elevated stress confirmed",
+                             "routing to Stress Engineer",
+                             "warning", routed_to="stress_engineer")
+
+        # Activity feed — full view on Overview
+        st.markdown("---")
+        render_activity_feed(max_entries=20, collapsible=False)
+
+        # Pending review summary
+        _n_pend = pending_count()
+        if _n_pend > 0:
+            st.markdown("---")
+            render_pending_review()
+    except Exception:
+        pass
+
     _page_footer()

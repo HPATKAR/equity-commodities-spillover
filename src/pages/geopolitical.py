@@ -284,4 +284,61 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
+    # ── AI Geopolitical Analyst ────────────────────────────────────────────
+    try:
+        from src.agents.geopolitical_analyst import run as _ga_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("geopolitical_analyst"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            # Build context from geopolitical events config
+            _geo_ctx: dict = {}
+            try:
+                import datetime as _dt
+                _today = _dt.date.today()
+                _active = [
+                    e for e in GEOPOLITICAL_EVENTS
+                    if e.get("end", _today) >= _today or
+                       (_today - e.get("end", _today)).days <= 365
+                ]
+                _hi_sev = [e for e in _active if e.get("category", "") in
+                           ("War", "Conflict", "Sanctions", "Crisis")]
+                _geo_ctx["n_events"]         = len(_active)
+                _geo_ctx["high_severity"]    = len(_hi_sev)
+                _geo_ctx["active_events"]    = [
+                    {"name": e.get("name",""), "severity": e.get("category",""),
+                     "region": e.get("region",""), "commodity_impact": e.get("commodity_impact","")}
+                    for e in _active[:8]
+                ]
+                # Extract affected commodities from event descriptions
+                _cmd_keywords = ["oil", "gas", "wheat", "gold", "copper", "grain", "energy", "nickel"]
+                _affected_cmds = []
+                for e in _active:
+                    desc = (e.get("description","") + e.get("name","")).lower()
+                    for kw in _cmd_keywords:
+                        if kw in desc and kw.title() not in _affected_cmds:
+                            _affected_cmds.append(kw.title())
+                _geo_ctx["affected_commodities"] = _affected_cmds[:5]
+            except Exception:
+                pass
+
+            with st.spinner("AI Geopolitical Analyst assessing…"):
+                _ga_result = _ga_run(_geo_ctx, _provider, _api_key)
+
+            if _ga_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("geopolitical_analyst", _ga_result)
+    except Exception:
+        pass
+
     _page_footer()
