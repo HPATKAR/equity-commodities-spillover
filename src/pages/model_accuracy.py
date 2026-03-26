@@ -902,9 +902,10 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     )
 
     # ══════════════════════════════════════════════════════════════════════
-    # ROW 2 - Granger Hit Rate (wider) | COT Contrarian (narrower)
+    # ROW 2 - Granger Hit Rate | COT Contrarian (stacked for chart room)
     # ══════════════════════════════════════════════════════════════════════
-    col_gr, col_cot = st.columns([1.1, 1], gap="medium")
+    col_gr = st.container()
+    col_cot = st.container()
 
     # ── Panel 3: Granger Hit Rate ──────────────────────────────────────────
     with col_gr:
