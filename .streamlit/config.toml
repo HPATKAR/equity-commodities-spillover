@@ -7,7 +7,9 @@ textColor          = "#e8e9ed"
 font               = "sans serif"
 
 [server]
-headless           = true
+headless             = true
+enableCORS           = false
+enableXsrfProtection = false
 
 [browser]
 gatherUsageStats   = false
