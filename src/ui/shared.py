@@ -665,9 +665,9 @@ def _page_footer() -> None:
     ts  = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
     logo_html = (
         "<div style='display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
-        "width:44px;height:44px;background:#CFB991;border-radius:6px;margin-bottom:16px;gap:0;'>"
-        "<span style='font-size:0.68rem;font-weight:800;color:#000;line-height:1;letter-spacing:0.02em;'>X</span>"
-        "<span style='font-size:0.38rem;font-weight:600;color:#000;line-height:1;letter-spacing:0.10em;opacity:0.75;'>ASSET</span>"
+        "width:72px;height:72px;background:#CFB991;border-radius:9px;margin-bottom:18px;gap:2px;'>"
+        "<span style='font-size:1.15rem;font-weight:800;color:#000;line-height:1;letter-spacing:0.02em;'>X</span>"
+        "<span style='font-size:0.58rem;font-weight:600;color:#000;line-height:1;letter-spacing:0.14em;opacity:0.75;'>ASSET</span>"
         "</div>"
     )
 
