@@ -663,13 +663,12 @@ def _page_footer() -> None:
     from datetime import datetime
     yr  = datetime.now().year
     ts  = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
-    logo_src = _footer_logo_b64()
-
     logo_html = (
-        f"<a href='https://business.purdue.edu/' target='_blank'>"
-        f"<img src='{logo_src}' alt='Purdue Daniels' class='ft-logo'/></a>"
-        if logo_src else
-        "<a href='https://business.purdue.edu/' target='_blank' class='ft-wordmark'>Purdue Daniels</a>"
+        "<div style='display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
+        "width:44px;height:44px;background:#CFB991;border-radius:6px;margin-bottom:16px;gap:0;'>"
+        "<span style='font-size:0.68rem;font-weight:800;color:#000;line-height:1;letter-spacing:0.02em;'>X</span>"
+        "<span style='font-size:0.38rem;font-weight:600;color:#000;line-height:1;letter-spacing:0.10em;opacity:0.75;'>ASSET</span>"
+        "</div>"
     )
 
     _ft_click = _comp.html(f"""<!DOCTYPE html>
@@ -840,7 +839,7 @@ function nav(page) {{
   </div>
 </div>
 <div class="ft-bar">
-  <p>&copy; {yr} Purdue University &middot; For educational purposes only &middot; Not investment advice</p>
+  <p>&copy; {yr} Cross-Asset Spillover Monitor &middot; Purdue Daniels &middot; MGMT 69000-120 &middot; For educational purposes only &middot; Not investment advice</p>
 </div>
 </body></html>""", height=380, scrolling=False)
     _VALID = {'overview','war_impact_map','geopolitical','correlation','spillover',
