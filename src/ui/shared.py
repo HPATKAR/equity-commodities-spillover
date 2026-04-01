@@ -671,8 +671,8 @@ def _page_footer() -> None:
     if _logo_src:
         logo_html = (
             f"<img src='{_logo_src}' alt='Cross-Asset Spillover Monitor' "
-            "style='width:72px;height:72px;object-fit:contain;"
-            "margin-bottom:14px;display:block;' />"
+            "style='width:160px;height:160px;object-fit:contain;"
+            "margin-bottom:10px;display:block;' />"
         )
     else:
         logo_html = (
