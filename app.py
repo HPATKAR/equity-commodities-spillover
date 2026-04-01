@@ -672,7 +672,7 @@ _FD_KEY   = _get_secret("financial_datasets_key")
 # ── Navigation state ──────────────────────────────────────────────────────────
 _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
-    "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test",
+    "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "insights", "strait_watch",
     "about_heramb", "about_jiahe", "about_ilian",
 }
@@ -1281,7 +1281,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var OVERVIEW =['overview'];
     var MACRO    =['macro_dashboard'];
     var ANALYSIS =['war_impact_map','geopolitical','correlation','spillover','strait_watch'];
-    var STRATEGY =['trade_ideas','stress_test'];
+    var STRATEGY =['trade_ideas','stress_test','scenario_engine'];
     var MONITOR  =['watchlist'];
     var RESEARCH =['model_accuracy','ai_chat'];
     var INSIGHTS =['insights'];
@@ -1346,6 +1346,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       <ul class="drop">
         <li><a data-pg="trade_ideas" class="{'active' if current=='trade_ideas' else ''}">Trade Ideas</a></li>
         <li><a data-pg="stress_test" class="{'active' if current=='stress_test' else ''}">Portfolio Stress Test</a></li>
+        <li><a data-pg="scenario_engine" class="{'active' if current=='scenario_engine' else ''}">Scenario Engine</a></li>
       </ul>
     </li>
 
@@ -1580,6 +1581,7 @@ from src.pages.spillover       import page_spillover
 from src.pages.watchlist       import page_watchlist
 from src.pages.trade_ideas     import page_trade_ideas
 from src.pages.stress_test     import page_stress_test
+from src.pages.scenario_engine import page_scenario_engine
 from src.pages.macro_dashboard  import page_macro_dashboard
 from src.pages.model_accuracy   import page_model_accuracy
 from src.pages.ai_chat         import page_ai_chat
@@ -1602,6 +1604,7 @@ _PAGE_MAP = {
     "macro_dashboard":  lambda: page_macro_dashboard(_start, _end, _FRED_KEY),
     "trade_ideas":      lambda: page_trade_ideas(_start, _end, _FRED_KEY),
     "stress_test":    lambda: page_stress_test(_start, _end, _FRED_KEY),
+    "scenario_engine": lambda: page_scenario_engine(_start, _end, _FRED_KEY),
     "model_accuracy": lambda: page_model_accuracy(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
