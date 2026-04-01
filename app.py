@@ -726,9 +726,8 @@ html,body{{height:72px;overflow:visible;background:#000;
 .brand:hover{{opacity:.82}}
 /* Logo image tile */
 .brand-logo{{
-  width:44px;height:44px;flex-shrink:0;
-  border-radius:6px;object-fit:contain;
-  background:#fff;padding:2px;
+  width:38px;height:38px;flex-shrink:0;
+  object-fit:contain;
   display:block;
 }}
 /* Divider */
@@ -1308,7 +1307,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 <div id="nav">
   <!-- Logotype - also a dropdown for Overview -->
   <a class="brand" href="#" style="cursor:default;text-decoration:none;">
-    {'<img class="brand-logo" src="' + _LOGO_B64 + '" alt="Cross-Asset Spillover Monitor" />' if _LOGO_B64 else '<div class="brand-logo" style="background:#CFB991;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:#000">X</div>'}
+    {('<img class="brand-logo" src="' + _LOGO_B64 + '" alt="Cross-Asset Spillover Monitor" />') if _LOGO_B64 else '<div class="brand-logo" style="background:#CFB991;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:#000">X</div>'}
     <div class="brand-div"></div>
     <div class="brand-text">
       <span class="bm">Cross-Asset Spillover Monitor</span>
