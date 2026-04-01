@@ -54,7 +54,7 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
     conf_html = _conf_bar(conf) if conf is not None else ""
 
     st.markdown(
-        f'<div style="{_F}background:#111318;border:1px solid #1e2130;'
+        f'<div style="{_F}background:#131313;border:1px solid #1e1e1e;'
         f'border-left:3px solid {ag_meta.get("color","#CFB991")};'
         f'border-radius:0 4px 4px 0;padding:0.75rem 1rem;margin:0.8rem 0">'
 
@@ -71,7 +71,7 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
         f'</div>'
 
         # Narrative
-        f'<div style="font-size:0.74rem;color:#c8cdd8;line-height:1.7;margin-bottom:0.4rem">'
+        f'<div style="font-size:0.74rem;color:#c8c8c8;line-height:1.7;margin-bottom:0.4rem">'
         f'{narrative}</div>'
 
         # Confidence
@@ -108,7 +108,7 @@ def _conf_bar(conf: float | None) -> str:
         f'<div style="margin-top:4px">'
         f'<div style="{_F}font-size:0.48rem;color:#8890a1;margin-bottom:2px">'
         f'Confidence {pct}%</div>'
-        f'<div style="background:#2a2d3a;border-radius:2px;height:3px;width:100%">'
+        f'<div style="background:#2a2a2a;border-radius:2px;height:3px;width:100%">'
         f'<div style="background:{bar_color};width:{pct}%;height:3px;border-radius:2px"></div>'
         f'</div></div>'
     )
@@ -116,105 +116,85 @@ def _conf_bar(conf: float | None) -> str:
 
 # ── Agent Control Panel strip ─────────────────────────────────────────────────
 
-def render_agent_panel(show_panel: bool = True) -> None:
-    """
-    Render the agent control panel inside a collapsible expander.
-    All 7 tiles live in one pure-HTML flex row so they never wrap.
-    Toggle buttons sit in a single st.columns(7) row below the tiles.
-    """
-    init_agents()
+def _render_workforce_content(agents_state: dict, agent_list: list,
+                               n_pending: int, key_prefix: str = "") -> None:
+    """Render agent tiles + toggles inline (no expander wrapper)."""
+    tiles_html = (
+        '<div style="display:flex;gap:5px;margin-bottom:6px;'
+        'flex-wrap:wrap">'
+    )
+    for aid, meta in agent_list:
+        a           = agents_state.get(aid, {})
+        status_key  = a.get("status", "idle")
+        status_meta = STATUSES.get(status_key, STATUSES["idle"])
+        enabled     = a.get("enabled", True)
+        conf        = a.get("confidence")
+        last_run    = a.get("last_run")
 
-    n_pending    = pending_count()
-    agents_state = st.session_state["agents"]
-    agent_list   = list(AGENTS.items())   # ordered, length 7
+        opacity     = "1" if enabled else "0.38"
+        left_border = f"border-left:2px solid {meta['color']}" if enabled \
+                      else "border-left:2px solid #2a2a2a"
+        conf_html   = ""
+        if conf is not None:
+            pct     = int(conf * 100)
+            bar_col = "#27ae60" if pct >= 70 else ("#e67e22" if pct >= 45 else "#c0392b")
+            conf_html = (
+                f'<div style="margin-top:3px">'
+                f'<div style="background:#222;border-radius:1px;height:2px">'
+                f'<div style="background:{bar_col};width:{pct}%;height:2px;'
+                f'border-radius:1px"></div></div></div>'
+            )
 
-    # ── Build expander label with live status summary ──────────────────────
-    n_active = sum(1 for a in agents_state.values() if a.get("enabled", True))
-    n_inv    = sum(1 for a in agents_state.values() if a.get("status") == "investigating")
-    pend_tag = f"  ·  ⚠ {n_pending} pending" if n_pending else ""
-    inv_tag  = f"  ·  {n_inv} investigating" if n_inv else ""
-    exp_label = f"AI Workforce  ·  {n_active}/7 active{inv_tag}{pend_tag}"
-
-    with st.expander(exp_label, expanded=False):
-
-        # ── Pure-HTML flex row — all 7 tiles always on one line ───────────
-        tiles_html = (
-            '<div style="display:flex;gap:8px;margin-bottom:8px;'
-            'overflow-x:auto;padding-bottom:2px">'
+        tiles_html += (
+            f'<div style="{_F}width:calc(25% - 4px);min-width:80px;background:#161616;'
+            f'border:1px solid #222;{left_border};'
+            f'border-radius:2px;padding:0.35rem 0.5rem;opacity:{opacity}">'
+            f'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">'
+            f'<span style="font-size:0.62rem;flex-shrink:0">{meta["icon"]}</span>'
+            f'<span style="font-size:0.52rem;font-weight:700;color:#c8c8c8;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">'
+            f'{meta["short"]}</span>'
+            f'</div>'
+            f'<span style="font-size:0.40rem;font-weight:700;letter-spacing:0.06em;'
+            f'text-transform:uppercase;color:{status_meta["color"]}">'
+            f'{status_meta["label"]}</span>'
+            f'<div style="font-size:0.40rem;color:#444;margin-top:2px">'
+            f'{_ts(last_run) if last_run else "—"}</div>'
+            + conf_html +
+            f'</div>'
         )
-        for aid, meta in agent_list:
-            a           = agents_state.get(aid, {})
-            status_key  = a.get("status", "idle")
-            status_meta = STATUSES.get(status_key, STATUSES["idle"])
-            enabled     = a.get("enabled", True)
-            conf        = a.get("confidence")
-            last_run    = a.get("last_run")
+    tiles_html += '</div>'
+    st.markdown(tiles_html, unsafe_allow_html=True)
 
-            opacity     = "1" if enabled else "0.40"
-            left_border = f"border-left:2px solid {meta['color']}" if enabled \
-                          else "border-left:2px solid #3a3d4a"
-            conf_html   = ""
-            if conf is not None:
-                pct       = int(conf * 100)
-                bar_col   = "#27ae60" if pct >= 70 else ("#e67e22" if pct >= 45 else "#c0392b")
-                conf_html = (
-                    f'<div style="margin-top:5px">'
-                    f'<div style="{_F}font-size:0.43rem;color:#555960;margin-bottom:2px">'
-                    f'Conf {pct}%</div>'
-                    f'<div style="background:#2a2d3a;border-radius:2px;height:2px">'
-                    f'<div style="background:{bar_col};width:{pct}%;height:2px;'
-                    f'border-radius:2px"></div></div></div>'
-                )
+    # Toggle buttons — 4 per row to fit popover width
+    cols_a = st.columns(4, gap="small")
+    cols_b = st.columns(4, gap="small")
+    for i, (aid, meta) in enumerate(agent_list):
+        enabled = agents_state.get(aid, {}).get("enabled", True)
+        label   = meta["short"]
+        col = (cols_a if i < 4 else cols_b)[i % 4]
+        with col:
+            btn_type = "secondary" if enabled else "primary"
+            if st.button(
+                ("● " if enabled else "○ ") + label,
+                key=f"{key_prefix}agent_toggle_{aid}",
+                use_container_width=True,
+                help=f"{'Disable' if enabled else 'Enable'} {meta['name']}",
+            ):
+                toggle_agent(aid)
+                st.rerun()
 
-            tiles_html += (
-                f'<div style="{_F}flex:1;min-width:0;background:#1a1d27;'
-                f'border:1px solid #2a2d3a;{left_border};'
-                f'border-radius:4px;padding:0.5rem 0.65rem;opacity:{opacity}">'
+    if n_pending:
+        st.markdown(
+            f'<p style="{_F}font-size:0.52rem;color:#e67e22;margin:6px 0 0">'
+            f'⚠ {n_pending} pending review — Trade Ideas page</p>',
+            unsafe_allow_html=True,
+        )
 
-                # Icon + short name
-                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
-                f'<span style="font-size:0.70rem;flex-shrink:0">{meta["icon"]}</span>'
-                f'<span style="font-size:0.58rem;font-weight:700;color:#e8e9ed;'
-                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">'
-                f'{meta["short"]}</span>'
-                f'</div>'
 
-                # Status badge
-                f'<span style="font-size:0.43rem;font-weight:700;letter-spacing:0.08em;'
-                f'text-transform:uppercase;color:{status_meta["color"]};'
-                f'background:rgba(0,0,0,0.35);padding:1px 4px;border-radius:2px">'
-                f'{status_meta["label"]}</span>'
-
-                # Last run
-                f'<div style="font-size:0.43rem;color:#555960;margin-top:3px">'
-                f'{_ts(last_run) if last_run else "not run"}</div>'
-
-                + conf_html +
-
-                f'</div>'
-            )
-        tiles_html += '</div>'
-        st.markdown(tiles_html, unsafe_allow_html=True)
-
-        # ── Toggle buttons — one st.columns(7) row ────────────────────────
-        btn_cols = st.columns(7, gap="small")
-        for i, (aid, meta) in enumerate(agent_list):
-            enabled = agents_state.get(aid, {}).get("enabled", True)
-            label   = "Disable" if enabled else "Enable"
-            with btn_cols[i]:
-                if st.button(label, key=f"agent_toggle_{aid}",
-                             use_container_width=True):
-                    toggle_agent(aid)
-                    st.rerun()
-
-        # ── Pending notice (inside expander) ─────────────────────────────
-        if n_pending:
-            st.markdown(
-                f'<p style="{_F}font-size:0.55rem;color:#e67e22;margin:6px 0 0">'
-                f'⚠ {n_pending} trade idea(s) awaiting your review — '
-                f'see the Trade Ideas page.</p>',
-                unsafe_allow_html=True,
-            )
+def render_agent_panel(show_panel: bool = True) -> None:
+    """Kept for backward compatibility — no longer used in main layout."""
+    pass
 
 
 # ── Activity Feed ─────────────────────────────────────────────────────────────
@@ -257,7 +237,7 @@ def render_activity_feed(max_entries: int = 20, collapsible: bool = False) -> No
 
             rows_html += (
                 f'<div style="display:flex;gap:0.6rem;align-items:flex-start;'
-                f'padding:0.35rem 0;border-bottom:1px solid #1e2130">'
+                f'padding:0.35rem 0;border-bottom:1px solid #1e1e1e">'
 
                 # Timestamp
                 f'<span style="{_M}font-size:0.52rem;color:#555960;flex-shrink:0;'
@@ -275,7 +255,7 @@ def render_activity_feed(max_entries: int = 20, collapsible: bool = False) -> No
                 f'background:{sev_col};flex-shrink:0;margin-top:5px"></span>'
 
                 # Action + detail + routing
-                f'<span style="{_F}font-size:0.62rem;color:#c8cdd8;line-height:1.5">'
+                f'<span style="{_F}font-size:0.62rem;color:#c8c8c8;line-height:1.5">'
                 f'<strong style="color:#e8e9ed">{entry["action"]}</strong> '
                 f'— {entry["detail"]}'
                 f'{routed_html}</span>'
@@ -284,7 +264,7 @@ def render_activity_feed(max_entries: int = 20, collapsible: bool = False) -> No
             )
 
         st.markdown(
-            f'<div style="background:#111318;border:1px solid #1e2130;'
+            f'<div style="background:#131313;border:1px solid #1e1e1e;'
             f'border-radius:4px;padding:0.4rem 0.7rem;'
             f'max-height:280px;overflow-y:auto">'
             f'{rows_html}'
@@ -342,7 +322,7 @@ def render_pending_review() -> None:
             conf_pct = int(item["confidence"] * 100)
 
             st.markdown(
-                f'<div style="{_F}background:#1a1d27;border:1px solid #2a2d3a;'
+                f'<div style="{_F}background:#1c1c1c;border:1px solid #2a2a2a;'
                 f'border-left:3px solid {border_col};border-radius:0 4px 4px 0;'
                 f'padding:0.7rem 1rem;margin-bottom:0.6rem">'
 
@@ -358,7 +338,7 @@ def render_pending_review() -> None:
                 f'</div>'
 
                 # Summary
-                f'<div style="font-size:0.70rem;color:#c8cdd8;margin-bottom:0.35rem">'
+                f'<div style="font-size:0.70rem;color:#c8c8c8;margin-bottom:0.35rem">'
                 f'{item["summary"]}</div>'
 
                 # Confidence + timestamp
@@ -374,7 +354,7 @@ def render_pending_review() -> None:
             # Rationale preview
             with st.expander("Rationale", expanded=False):
                 st.markdown(
-                    f'<div style="{_F}font-size:0.70rem;color:#c8cdd8;'
+                    f'<div style="{_F}font-size:0.70rem;color:#c8c8c8;'
                     f'line-height:1.7;padding:0.4rem">{item["rationale"]}</div>',
                     unsafe_allow_html=True,
                 )
@@ -407,13 +387,13 @@ def render_pending_review() -> None:
                     st.markdown(
                         f'<div style="{_F}display:flex;align-items:center;'
                         f'gap:0.6rem;padding:0.3rem 0;'
-                        f'border-bottom:1px solid #1e2130">'
+                        f'border-bottom:1px solid #1e1e1e">'
                         f'<span style="font-size:0.52rem;font-weight:700;'
                         f'text-transform:uppercase;color:{status_color};'
                         f'min-width:60px">{item["status"].upper()}</span>'
                         f'<span style="font-size:0.62rem;color:#8890a1">'
                         f'{item["agent_name"]}</span>'
-                        f'<span style="font-size:0.65rem;color:#c8cdd8">'
+                        f'<span style="font-size:0.65rem;color:#c8c8c8">'
                         f'{item["title"]}</span>'
                         f'</div>',
                         unsafe_allow_html=True,

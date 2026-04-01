@@ -1,8 +1,9 @@
 """
 Shared agent state manager.
-Manages the session_state schema for all 7 AI agents:
+Manages the session_state schema for all 8 AI agents:
   risk_officer, macro_strategist, commodities_specialist,
-  geopolitical_analyst, stress_engineer, signal_auditor, trade_structurer
+  geopolitical_analyst, stress_engineer, signal_auditor, trade_structurer,
+  quality_officer
 
 All functions operate on st.session_state directly. Call init_agents() once
 per app load (idempotent — skips if already initialised).
@@ -72,6 +73,15 @@ AGENTS = {
         "pages": ["trade_ideas"],
         "color": "#CFB991",
         "desc":  "Trade ideas · Entry/exit · Awaiting human approval",
+    },
+    "quality_officer": {
+        "name":  "AI Chief Quality Officer",
+        "short": "CQO",
+        "icon":  "🚨",
+        "pages": ["spillover", "correlation", "geopolitical", "war_impact_map",
+                  "trade_ideas", "stress_test", "insights", "overview", "strait_watch"],
+        "color": "#e74c3c",
+        "desc":  "Data integrity · Assumption auditing · Bullshit detection",
     },
 }
 

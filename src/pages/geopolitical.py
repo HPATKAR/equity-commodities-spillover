@@ -236,13 +236,13 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 _TBL_CSS = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
                 headers = list(corr_shift.columns)
                 header_html = "".join(f"<th>{h}</th>" for h in headers)
@@ -260,7 +260,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                                 style = "color:#e8e9ed"
                             cells += f"<td style='{style}'>{val:.4f}</td>"
                         else:
-                            cells += f"<td style='color:#b8bec8'>{val if not (isinstance(val, float) and pd.isna(val)) else '-'}</td>"
+                            cells += f"<td style='color:#b8b8b8'>{val if not (isinstance(val, float) and pd.isna(val)) else '-'}</td>"
                     rows_html += f"<tr>{cells}</tr>"
                 html_tbl = (
                     _TBL_CSS
@@ -338,6 +338,48 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             if _ga_result.get("narrative"):
                 st.markdown("---")
                 render_agent_output_block("geopolitical_analyst", _ga_result)
+    except Exception:
+        pass
+
+    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    try:
+        from src.agents.quality_officer import run as _cqo_run
+        from src.ui.agent_panel import render_agent_output_block as _rab
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("quality_officer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _n_obs = len(all_returns.dropna(how="all"))
+            _cqo_ctx = {
+                "n_obs":            _n_obs,
+                "date_range":       f"{start} to {end}",
+                "n_events":         1,  # single event selected at a time
+                "event_window_days": pre_days + post_days,
+                "model":            "Indexed price normalisation + pre/during/post return comparison",
+                "assumption_count": 3,
+                "notes": [
+                    f"Single event selected: '{ev['label']}' — n=1 events, no statistical inference possible",
+                    f"Pre-event window ({pre_days}d) and post-event window ({post_days}d) are user-selected, not data-driven",
+                    "Correlation shift uses Pearson — non-robust to outliers present in crisis windows",
+                    "Event dates in config are manually assigned — start/end choice materially affects all metrics",
+                    "No counterfactual: cannot isolate event impact from concurrent macro moves",
+                    "Volatility comparison uses annualised std — assumes constant vol within each sub-period",
+                ],
+            }
+            with st.spinner("CQO auditing event analysis…"):
+                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Geopolitical Event Analysis")
+            if _cqo_result.get("narrative"):
+                st.markdown("---")
+                _rab("quality_officer", _cqo_result)
     except Exception:
         pass
 

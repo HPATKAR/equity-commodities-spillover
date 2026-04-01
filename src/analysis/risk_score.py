@@ -533,7 +533,7 @@ def plot_risk_history(
         template="purdue",
         height=height,
         xaxis=dict(
-            rangeslider=dict(visible=True, thickness=0.04),
+            rangeslider=dict(visible=False),
             type="date",
         ),
         yaxis=dict(range=[0, 100], title="Score",

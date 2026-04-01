@@ -47,9 +47,9 @@ def _insight_card(
     conf_color = _GREEN if confidence >= 70 else (_AMBER if confidence >= 45 else _GREY)
 
     st.markdown(
-        f'<div style="{_F}border:1px solid #2a2d3a;border-left:4px solid {color};'
+        f'<div style="{_F}border:1px solid #2a2a2a;border-left:4px solid {color};'
         f'border-radius:0 6px 6px 0;padding:0.85rem 1.1rem 0.85rem;'
-        f'background:#1a1d27;margin-bottom:0">'
+        f'background:#1c1c1c;margin-bottom:0">'
 
         # Row 1: emoji + headline
         f'<div style="display:flex;align-items:flex-start;gap:0.55rem;margin-bottom:0.5rem">'
@@ -61,12 +61,12 @@ def _insight_card(
         f'<div style="display:flex;align-items:flex-start;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem">'
         f'<span style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.12em;color:{color};white-space:nowrap;margin-top:2px">▶ Action</span>'
-        f'<span style="font-size:0.78rem;font-weight:500;color:#c8cdd8;line-height:1.5">'
+        f'<span style="font-size:0.78rem;font-weight:500;color:#c8c8c8;line-height:1.5">'
         f'{action}</span></div>'
 
         # Row 3: reasoning snippet (first sentence of detail_html, stripped of tags)
         f'<div style="font-size:0.72rem;color:#8890a1;line-height:1.6;'
-        f'border-top:1px solid #2a2d3a;padding-top:0.5rem;margin-bottom:0.55rem">'
+        f'border-top:1px solid #2a2a2a;padding-top:0.5rem;margin-bottom:0.55rem">'
         f'{detail_html}</div>'
 
         # Row 4: confidence bar
@@ -74,7 +74,7 @@ def _insight_card(
         f'<span style="font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.12em;color:{conf_color};white-space:nowrap">'
         f'Confidence {confidence}%</span>'
-        f'<div style="flex:1;max-width:120px;height:3px;background:#2a2d3a;border-radius:2px">'
+        f'<div style="flex:1;max-width:120px;height:3px;background:#2a2a2a;border-radius:2px">'
         f'<div style="height:3px;width:{confidence}%;background:{conf_color};'
         f'border-radius:2px"></div></div>'
         f'<span style="font-size:0.57rem;color:#6b7280;font-style:italic">'
@@ -909,5 +909,46 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
                 )
             except Exception as e:
                 st.error(f"PDF generation failed: {e}")
+
+    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    try:
+        from src.agents.quality_officer import run as _cqo_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("quality_officer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _n_obs = len(eq_r.dropna(how="all"))
+            _n_cards = len(cards) if "cards" in dir() and cards else 0
+            _cqo_ctx = {
+                "n_obs":            _n_obs,
+                "date_range":       f"{start} to {end}",
+                "model":            "Multi-factor composite risk score + rule-based insight cards",
+                "assumption_count": 6,
+                "notes": [
+                    f"{_n_cards} insight cards generated — thresholds for card activation are hardcoded, not data-driven",
+                    "Composite risk score stacks correlation, volatility, and commodity z-scores — weights are arbitrary",
+                    "Private credit bubble score uses BDC equity proxies (ARCC, OBDC) — equity prices ≠ credit spreads",
+                    "Leading/lagging commodity detection uses cross-correlation lag — spurious at short samples",
+                    "Regime-conditional insights assume regime is stable — mean reversion risk in volatile periods",
+                    "All insight thresholds (e.g. corr > 0.45 = elevated) lack empirical validation",
+                ],
+            }
+            with st.spinner("CQO auditing insights methodology…"):
+                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Actionable Insights")
+            if _cqo_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("quality_officer", _cqo_result)
+    except Exception:
+        pass
 
     _page_footer()

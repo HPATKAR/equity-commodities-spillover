@@ -447,7 +447,7 @@ def _mini_bar(value: float, max_val: float = 100.0, color: str = "#CFB991") -> s
     """Horizontal progress bar for a metric value."""
     pct = min(max(value / max_val * 100, 0), 100)
     return (
-        f'<div style="height:3px;background:#2a2d3a;border-radius:2px;margin:3px 0 6px;">'
+        f'<div style="height:3px;background:#2a2a2a;border-radius:2px;margin:3px 0 6px;">'
         f'<div style="height:3px;width:{pct:.0f}%;background:{color};border-radius:2px;"></div>'
         f'</div>'
     )
@@ -480,7 +480,7 @@ def _signal_card(col, title, primary_metric, primary_label,
                 f'<span style="font-size:0.58rem;color:#6b7280;">{lbl}</span>'
                 f'<span style="font-family:JetBrains Mono,monospace;font-size:0.60rem;font-weight:600;color:#d1d5db;">{val:.0f}%</span>'
                 f'</div>'
-                f'<div style="height:3px;background:#2a2d3a;border-radius:2px;margin-bottom:5px;">'
+                f'<div style="height:3px;background:#2a2a2a;border-radius:2px;margin-bottom:5px;">'
                 f'<div style="height:3px;width:{pct:.0f}%;background:{bcol};border-radius:2px;"></div>'
                 f'</div>'
             )
@@ -489,7 +489,7 @@ def _signal_card(col, title, primary_metric, primary_label,
     # Main progress bar
     pct_main = min(max(badge_val / 100 * 100, 0), 100)
     bar_main = (
-        f'<div style="height:3px;background:#2a2d3a;border-radius:2px;margin:4px 0 8px;">'
+        f'<div style="height:3px;background:#2a2a2a;border-radius:2px;margin:4px 0 8px;">'
         f'<div style="height:3px;width:{pct_main:.0f}%;background:{accent};border-radius:2px;"></div>'
         f'</div>'
     )
@@ -510,7 +510,7 @@ def _signal_card(col, title, primary_metric, primary_label,
 
     html = (
         f'<div style="border:1px solid #E8E5E0;border-radius:5px;'
-        f'padding:1rem 1.1rem 0.9rem;background:#1a1d27;'
+        f'padding:1rem 1.1rem 0.9rem;background:#1c1c1c;'
         f'border-top:3px solid {accent};">'
         f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.16em;'
         f'text-transform:uppercase;color:#6b7280;margin-bottom:0.5rem;">{title}</div>'
@@ -519,7 +519,7 @@ def _signal_card(col, title, primary_metric, primary_label,
         f'<div style="{_F}font-size:0.60rem;color:#6b7280;margin-top:2px;margin-bottom:0.3rem;">{primary_label}</div>'
         f'{bar_main}'
         f'{bars_html}'
-        f'<div style="{_F}font-size:0.62rem;color:#b8bec8;margin-bottom:0.6rem;line-height:1.5;">{secondary_metric}</div>'
+        f'<div style="{_F}font-size:0.62rem;color:#b8b8b8;margin-bottom:0.6rem;line-height:1.5;">{secondary_metric}</div>'
         f'{badge_html}'
         f'</div>'
     )
@@ -617,7 +617,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         51, 50, "run below to score",
     )
 
-    st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -657,14 +657,14 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 z=cm,
                 x=["Pred: Normal", "Pred: Crisis"],
                 y=["Actual: Normal", "Actual: Crisis"],
-                colorscale=[[0, "#0f1117"], [0.5, "#EBD99F"], [1, "#CFB991"]],
+                colorscale=[[0, "#111111"], [0.5, "#EBD99F"], [1, "#CFB991"]],
                 text=cm, texttemplate="%{text:,}",
                 textfont=dict(size=12, family="JetBrains Mono, monospace", color="#e8e9ed"),
                 showscale=False,
             ))
             fig_cm.update_layout(
                 template="purdue", height=240,
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 font=dict(color="#e8e9ed"),
                 title=dict(text=f"Confusion Matrix (VIX>{vix_threshold})", font=dict(size=10, color="#CFB991")),
                 margin=dict(l=110, r=10, t=40, b=70),
@@ -797,14 +797,14 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                             z=ml_cm,
                             x=["Pred: Normal","Pred: Crisis"],
                             y=["Act: Normal","Act: Crisis"],
-                            colorscale=[[0,"#0f1117"],[0.5,"#d7b8f3"],[1,"#8e44ad"]],
+                            colorscale=[[0,"#111111"],[0.5,"#d7b8f3"],[1,"#8e44ad"]],
                             text=ml_cm, texttemplate="%{text:,}",
                             textfont=dict(size=11, family="JetBrains Mono, monospace", color="#e8e9ed"),
                             showscale=False,
                         ))
                         fig_ml_cm.update_layout(
                             template="purdue", height=260,
-                            paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                            paper_bgcolor="#111111", plot_bgcolor="#111111",
                             font=dict(color="#e8e9ed"),
                             title=dict(text="ML Confusion Matrix", font=dict(size=10, color="#CFB991")),
                             margin=dict(l=110, r=10, t=40, b=70),
@@ -892,7 +892,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 "early warning system."
             )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
     _thread(
@@ -954,13 +954,13 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     _TBL_CSS = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
                     rows_html = ""
                     for _, row in hr_df.iterrows():
@@ -986,8 +986,8 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         shr_str = f"{shr:.1f}%" if not _is_nan(shr) else "–"
                         rows_html += (
                             f"<tr>"
-                            f"<td style='color:#b8bec8'>{row.get('Cause','')}</td>"
-                            f"<td style='color:#b8bec8'>{row.get('Effect','')}</td>"
+                            f"<td style='color:#b8b8b8'>{row.get('Cause','')}</td>"
+                            f"<td style='color:#b8b8b8'>{row.get('Effect','')}</td>"
                             f"<td style='color:#8890a1'>{pval_str}</td>"
                             f"<td style='color:#e8e9ed'>{lhr_str}</td>"
                             f"<td style='color:#e8e9ed'>{shr_str}</td>"
@@ -1085,13 +1085,13 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     _TBL_CSS2 = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
                     def _acc_style(val):
                         if val is None or (isinstance(val, float) and pd.isna(val)):
@@ -1107,7 +1107,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         sa_style, sa_str = _acc_style(row.get("Short Accuracy (%)"))
                         rows_html += (
                             f"<tr>"
-                            f"<td style='color:#b8bec8'>{row.get('Commodity','')}</td>"
+                            f"<td style='color:#b8b8b8'>{row.get('Commodity','')}</td>"
                             f"<td style='{la_style}'>{la_str}</td>"
                             f"<td style='{sa_style}'>{sa_str}</td>"
                             f"</tr>"

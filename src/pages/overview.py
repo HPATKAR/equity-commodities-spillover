@@ -39,14 +39,33 @@ def _label(txt: str) -> None:
 
 
 def page_overview(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Equity-Commodities Spillover Monitor</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.8rem 0">15 equity indices · 17 commodity futures · '
-        'Correlation regimes · Geopolitical risk · Spillover signals</p>',
-        unsafe_allow_html=True,
-    )
+    _hdr_col, _btn_col = st.columns([5, 1])
+    with _hdr_col:
+        st.markdown(
+            '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
+            'font-weight:700;margin-top:0;margin-bottom:0.1rem">Equity-Commodities Spillover Monitor</h1>'
+            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
+            'margin:0 0 0.6rem 0">15 equity indices · 17 commodity futures · '
+            'Correlation regimes · Geopolitical risk · Spillover signals</p>',
+            unsafe_allow_html=True,
+        )
+    with _btn_col:
+        st.markdown('<div style="height:0.25rem"></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="background:#131313;border:1px solid #2a2a2a;border-left:3px solid #CFB991;'
+            'border-radius:0 3px 3px 0;padding:0.5rem 0.75rem;margin-bottom:0.4rem">'
+            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
+            'letter-spacing:0.12em;text-transform:uppercase;color:#CFB991;margin:0 0 3px 0">'
+            'Interactive AI Analyst</p>'
+            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;color:#8890a1;'
+            'margin:0;line-height:1.5">'
+            'Live access to all dashboard data — regimes, spillovers, geo risk, trade ideas.</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Open Analyst", key="hdr_ai_analyst_btn", type="primary", use_container_width=True):
+            st.session_state["current_page"] = "ai_chat"
+            st.rerun()
     _page_intro(
         "The central research question of this dashboard: <strong>do equity market shocks spill into "
         "commodities - and in which direction?</strong> This page is your live answer. The regime badge "
@@ -86,7 +105,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     def _kpi(col, label, value, delta="", dcolor=""):
         col.markdown(
             f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
-            f'padding:0.55rem 0.75rem;background:#1a1d27">'
+            f'padding:0.55rem 0.75rem;background:#1c1c1c">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
@@ -98,7 +117,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     k1.markdown(
         f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
-        f'padding:0.55rem 0.75rem;background:#1a1d27;border-left:3px solid {regime_color}">'
+        f'padding:0.55rem 0.75rem;background:#1c1c1c;border-left:3px solid {regime_color}">'
         f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
         f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">Correlation Regime</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
@@ -141,7 +160,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             d_color = "#8890a1"
         col.markdown(
             f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
-            f'padding:0.55rem 0.75rem;background:#1a1d27">'
+            f'padding:0.55rem 0.75rem;background:#1c1c1c">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
@@ -233,7 +252,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
               delta="EM credit bid" if _emb_30d is not None and _emb_30d > 0 else "EM credit stress" if _emb_30d is not None else "",
               delta_up=True if _emb_30d is not None and _emb_30d > 0 else False if _emb_30d is not None else None)
 
-    st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.7rem 0 0.5rem;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "The numbers above give the level of stress. The section below breaks down its source - "
@@ -285,10 +304,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="margin-bottom:5px">'
                 f'<div style="display:flex;justify-content:space-between;{_F}font-size:0.66rem;margin-bottom:2px">'
-                f'<span style="color:#b8bec8">{name}</span>'
+                f'<span style="color:#b8b8b8">{name}</span>'
                 f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;color:{col_c}">{val:.0f}</span>'
                 f'</div>'
-                f'<div style="height:3px;background:#2a2d3a;border-radius:2px">'
+                f'<div style="height:3px;background:#2a2a2a;border-radius:2px">'
                 f'<div style="width:{pct:.0f}%;height:3px;background:{col_c};border-radius:2px"></div>'
                 f'</div></div>',
                 unsafe_allow_html=True,
@@ -321,8 +340,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             g_z, o_z = og.get("gold_z", 0), og.get("oil_z", 0)
             g_r, o_r = og.get("gold_ret", 0), og.get("oil_ret", 0)
             st.markdown(
-                f'<div style="margin-top:8px;padding:6px 8px;background:#1a1d27;'
-                f'border-left:2px solid #CFB991;{_F}font-size:0.63rem;color:#b8bec8;line-height:1.6">'
+                f'<div style="margin-top:8px;padding:6px 8px;background:#1c1c1c;'
+                f'border-left:2px solid #CFB991;{_F}font-size:0.63rem;color:#b8b8b8;line-height:1.6">'
                 f'<b style="color:#8E6F3E;text-transform:uppercase;font-size:0.57rem;'
                 f'letter-spacing:.12em">Oil-Gold Signal</b><br>'
                 f'Gold 20d: <b>{g_r:+.1f}%</b> (z={g_z:+.2f}) &nbsp;·&nbsp; '
@@ -359,7 +378,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 "Sustained readings above 60 have historically preceded equity drawdowns of 10% or more."
             )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Knowing the score is useful; knowing whether it is triggering actionable signals is more "
@@ -390,13 +409,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _label("Early Warning System")
         st.markdown(
             f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.75rem;'
-            f'background:#1a1d27;border-top:3px solid {comp_color}">'
+            f'background:#1c1c1c;border-top:3px solid {comp_color}">'
             f'<div style="{_F}font-size:0.56rem;font-weight:700;letter-spacing:0.12em;'
             f'text-transform:uppercase;color:#6b7280;margin-bottom:4px">Composite Score</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:2.2rem;'
             f'font-weight:700;color:{comp_color};line-height:1">{comp_ews:.0f}'
             f'<span style="font-size:0.75rem;color:#6b7280">/100</span></div>'
-            f'<div style="background:#2a2d3a;border-radius:3px;height:6px;margin:6px 0">'
+            f'<div style="background:#2a2a2a;border-radius:3px;height:6px;margin:6px 0">'
             f'<div style="width:{comp_ews:.0f}%;background:{comp_color};height:6px;border-radius:3px"></div>'
             f'</div>'
             f'<div style="{_F}font-size:0.65rem;font-weight:600;color:{comp_color}">'
@@ -411,13 +430,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             s = data["score"]; c = _ews_score_color(s)
             col.markdown(
                 f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.6rem 0.55rem;'
-                f'background:#1a1d27;border-top:2px solid {c}">'
+                f'background:#1c1c1c;border-top:2px solid {c}">'
                 f'<div style="{_F}font-size:0.54rem;font-weight:700;letter-spacing:0.10em;'
                 f'text-transform:uppercase;color:#6b7280;margin-bottom:3px">{name}</div>'
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.1rem;'
                 f'font-weight:700;color:{c}">{s:.0f}'
                 f'<span style="{_F}font-size:0.60rem;color:#6b7280">/100</span></div>'
-                f'<div style="background:#2a2d3a;border-radius:2px;height:3px;margin:4px 0">'
+                f'<div style="background:#2a2a2a;border-radius:2px;height:3px;margin:4px 0">'
                 f'<div style="width:{s:.0f}%;background:{c};height:3px;border-radius:2px"></div>'
                 f'</div>'
                 f'<div style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.45;margin-top:3px">'
@@ -425,7 +444,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Alerts tell you something is wrong. The correlation timeline below tells you how that "
@@ -503,13 +522,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             for a in ews["analogues"]:
                 sim_pct = a["sim"]
                 rows_html += (
-                    f'<tr style="border-bottom:1px solid #2a2d3a">'
+                    f'<tr style="border-bottom:1px solid #2a2a2a">'
                     f'<td style="padding:4px 6px;font-family:JetBrains Mono,monospace;font-size:0.66rem;font-weight:600;color:#e8e9ed">{a["date"]}</td>'
                     f'<td style="padding:4px 6px;font-size:0.66rem;color:{_r_colors.get(list({0:"Decorrelated",1:"Normal",2:"Elevated",3:"Crisis"}.values()).index(a["regime"]) if a["regime"] in list({0:"Decorrelated",1:"Normal",2:"Elevated",3:"Crisis"}.values()) else 1,_r_colors[1])};font-weight:600">{a["regime"]}</td>'
                     f'<td style="padding:4px 6px;font-size:0.66rem;color:{_r_colors.get(a["r30_int"],_r_colors[1])};font-weight:600">{a["r30"]}</td>'
                     f'<td style="padding:4px 6px;font-size:0.66rem;color:{_r_colors.get(a["r90_int"],_r_colors[1])};font-weight:600">{a["r90"]}</td>'
                     f'<td style="padding:4px 6px">'
-                    f'<div style="background:#2a2d3a;border-radius:2px;height:4px;width:50px">'
+                    f'<div style="background:#2a2a2a;border-radius:2px;height:4px;width:50px">'
                     f'<div style="width:{sim_pct:.0f}%;background:#CFB991;height:4px;border-radius:2px"></div>'
                     f'</div>'
                     f'<div style="{_F}font-size:0.60rem;color:#6b7280;margin-top:1px">{sim_pct:.0f}%</div>'
@@ -517,7 +536,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 )
             st.markdown(
                 f'<table style="width:100%;border-collapse:collapse;{_F}">'
-                f'<thead><tr style="background:#1a1d27">'
+                f'<thead><tr style="background:#1c1c1c">'
                 f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Date</th>'
                 f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Then</th>'
                 f'<th style="padding:4px 6px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">+30d</th>'
@@ -544,7 +563,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             )
 
         # Active events stacked below analogues
-        st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
+        st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
                     unsafe_allow_html=True)
         _label("Active Geopolitical Events")
         from datetime import date as _date
@@ -554,16 +573,16 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             for ev in active:
                 st.markdown(
                     f'<div style="border-left:2px solid {ev["color"]};'
-                    f'padding:0.35rem 0.6rem;margin-bottom:5px;background:#1a1d27">'
+                    f'padding:0.35rem 0.6rem;margin-bottom:5px;background:#1c1c1c">'
                     f'<div style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
                     f'letter-spacing:0.08em;color:{ev["color"]}">{ev["category"]} · {ev["label"]}</div>'
                     f'<div style="{_F}font-size:0.70rem;color:#e8e9ed;font-weight:600;margin:1px 0">{ev["name"]}</div>'
-                    f'<div style="{_F}font-size:0.64rem;color:#b8bec8;line-height:1.5">{ev["description"][:120]}{"…" if len(ev["description"])>120 else ""}</div>'
+                    f'<div style="{_F}font-size:0.64rem;color:#b8b8b8;line-height:1.5">{ev["description"][:120]}{"…" if len(ev["description"])>120 else ""}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
     # ── ROW: Heatmap | Window control ─────────────────────────────────────
@@ -589,7 +608,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
                 f'<div style="width:10px;height:10px;border-radius:2px;background:{regime_colors[r_id]};flex-shrink:0"></div>'
-                f'<span style="{_F}font-size:0.64rem;color:#b8bec8">{r_name}</span></div>',
+                f'<span style="{_F}font-size:0.64rem;color:#b8b8b8">{r_name}</span></div>',
                 unsafe_allow_html=True,
             )
 
@@ -601,7 +620,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 z=corr_mat.values,
                 x=corr_mat.columns.tolist(),
                 y=corr_mat.index.tolist(),
-                colorscale=[[0.0,"#2980b9"],[0.5,"#1e2130"],[1.0,"#c0392b"]],
+                colorscale=[[0.0,"#2980b9"],[0.5,"#1e1e1e"],[1.0,"#c0392b"]],
                 zmid=0, zmin=-1, zmax=1,
                 text=corr_mat.round(2).values,
                 texttemplate="%{text}",
@@ -613,7 +632,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             fig_heat.update_layout(
                 template="purdue",
                 height=420,
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 font=dict(color="#e8e9ed"),
                 xaxis=dict(tickangle=-40, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                 yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
@@ -626,7 +645,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                 "Dark cool colours mean they are moving in opposite directions (safe-haven flows or diverging fundamentals)."
             )
 
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
     # ── AI Narrative (always visible, auto-generated) ──────────────────────
@@ -694,7 +713,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     else:
         st.markdown(
             f'<div style="border-left:4px solid {regime_color};padding:0.8rem 1rem;'
-            f'background:#1a1d27;border-radius:0 4px 4px 0;margin-bottom:0.8rem">'
+            f'background:#1c1c1c;border-radius:0 4px 4px 0;margin-bottom:0.8rem">'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#e8e9ed;line-height:1.75">'
             f'{_narrative_val.replace(chr(10), "<br>")}</div></div>',
             unsafe_allow_html=True,

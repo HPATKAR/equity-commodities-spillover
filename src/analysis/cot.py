@@ -268,7 +268,7 @@ def plot_cot_overlay(
         ),
         legend=dict(orientation="h", y=1.08),
         xaxis=dict(
-            rangeslider=dict(visible=True, thickness=0.04),
+            rangeslider=dict(visible=False),
             type="date",
         ),
         margin=dict(l=50, r=60, t=55, b=40),

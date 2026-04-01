@@ -893,19 +893,19 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             _TBL_CSS_VAL = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
             val_cols = list(display_df.columns)
             val_header_html = "<th>Market</th>" + "".join(f"<th>{c}</th>" for c in val_cols)
             val_rows_html = ""
             for mkt, row in display_df.iterrows():
-                cells = f"<td style='color:#b8bec8'>{mkt}</td>"
+                cells = f"<td style='color:#b8b8b8'>{mkt}</td>"
                 for col in val_cols:
                     v = row[col]
                     is_nan = pd.isna(v) if not isinstance(v, str) else False
@@ -1026,19 +1026,19 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             _TBL_CSS_PERF = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
             perf_all_cols = ["Latest"] + ret_cols
             perf_header = "<th>Index</th>" + "".join(f"<th>{c}</th>" for c in perf_all_cols)
             perf_rows_html = ""
             for idx_name, row in perf_df.iterrows():
-                cells = f"<td style='color:#b8bec8'>{idx_name}</td>"
+                cells = f"<td style='color:#b8b8b8'>{idx_name}</td>"
                 latest_v = row.get("Latest")
                 cells += f"<td style='color:#8890a1'>{latest_v:.2f}</td>" if not pd.isna(latest_v) else "<td style='color:#8890a1'>-</td>"
                 for rc in ret_cols:
@@ -1168,12 +1168,12 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         _bar = ""
         if bar_pct is not None:
             _bar = (
-                f'<div style="margin-top:6px;height:3px;background:#2a2d3a;border-radius:2px">'
+                f'<div style="margin-top:6px;height:3px;background:#2a2a2a;border-radius:2px">'
                 f'<div style="height:3px;width:{min(100,max(0,bar_pct))}%;'
                 f'background:{bar_color};border-radius:2px"></div></div>'
             )
         col.markdown(
-            f'<div style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:6px;'
+            f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;'
             f'padding:10px 14px;margin-bottom:8px">'
             f'<div style="{_F}font-size:0.54rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.12em;color:#8E6F3E;margin-bottom:2px">{label}</div>'
@@ -1243,11 +1243,11 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                                    annotation_font=dict(size=8, color="#CFB991"),
                                    annotation_position="top right")
             _fig_hy.update_layout(
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 template="purdue", height=300,
                 title=dict(text="HY OAS - ICE BofA US High Yield (FRED)", font=dict(size=10, color="#e8e9ed")),
-                yaxis=dict(title="Spread (bps)", tickfont=dict(color="#8890a1"), gridcolor="#1e2130"),
-                xaxis=dict(tickfont=dict(color="#8890a1"), gridcolor="#1e2130",
+                yaxis=dict(title="Spread (bps)", tickfont=dict(color="#8890a1"), gridcolor="#1e1e1e"),
+                xaxis=dict(tickfont=dict(color="#8890a1"), gridcolor="#1e1e1e",
                            rangeslider=dict(visible=False)),
                 font=dict(color="#e8e9ed"),
                 margin=dict(l=45, r=10, t=38, b=30),
@@ -1256,7 +1256,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             _chart(_fig_hy)
         else:
             st.markdown(
-                f'<div style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:6px;'
+                f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;'
                 f'padding:2rem;text-align:center;color:#8890a1;font-size:0.72rem">'
                 f'HY OAS chart requires FRED API key (already configured in secrets.toml)</div>',
                 unsafe_allow_html=True,
@@ -1284,13 +1284,13 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                             name=_nm,
                             line=dict(color=_col, width=_wid, dash=_dash),
                         ))
-            _fig_pc.add_hline(y=100, line=dict(color="#2a2d3a", width=1))
+            _fig_pc.add_hline(y=100, line=dict(color="#2a2a2a", width=1))
             _fig_pc.update_layout(
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 template="purdue", height=300,
                 title=dict(text="BKLN & BDC Basket vs S&P 500 (normalised, 1Y)", font=dict(size=10, color="#e8e9ed")),
-                yaxis=dict(title="Indexed (base=100)", tickfont=dict(color="#8890a1"), gridcolor="#1e2130"),
-                xaxis=dict(tickfont=dict(color="#8890a1"), gridcolor="#1e2130",
+                yaxis=dict(title="Indexed (base=100)", tickfont=dict(color="#8890a1"), gridcolor="#1e1e1e"),
+                xaxis=dict(tickfont=dict(color="#8890a1"), gridcolor="#1e1e1e",
                            rangeslider=dict(visible=False)),
                 font=dict(color="#e8e9ed"),
                 margin=dict(l=45, r=10, t=38, b=30),
@@ -1299,7 +1299,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             _chart(_fig_pc)
         else:
             st.markdown(
-                f'<div style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:6px;'
+                f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;'
                 f'padding:2rem;text-align:center;color:#8890a1;font-size:0.72rem">'
                 f'Loading BKLN/BDC chart data…</div>',
                 unsafe_allow_html=True,
@@ -1309,7 +1309,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     def _sig_row(label, value_str, threshold_str, status_color, status_label):
         return (
             f'<tr>'
-            f'<td style="font-weight:600;color:#c8cdd8">{label}</td>'
+            f'<td style="font-weight:600;color:#c8c8c8">{label}</td>'
             f'<td style="font-family:\'JetBrains Mono\',monospace;color:#e8e9ed">{value_str}</td>'
             f'<td style="color:#8890a1;font-size:0.72rem">{threshold_str}</td>'
             f'<td><span style="background:{status_color}22;color:{status_color};'
@@ -1358,11 +1358,11 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<style>'
             f'.pc-tbl{{width:100%;border-collapse:collapse;font-family:\'DM Sans\',sans-serif;font-size:0.78rem}}'
-            f'.pc-tbl th{{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;'
+            f'.pc-tbl th{{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;'
             f'    border-bottom:1px solid rgba(207,185,145,0.25);font-weight:600;'
             f'    letter-spacing:0.06em;text-transform:uppercase;font-size:0.65rem}}'
-            f'.pc-tbl td{{padding:6px 10px;border-bottom:1px solid #1e2130}}'
-            f'.pc-tbl tr:hover td{{background:#1e2230}}'
+            f'.pc-tbl td{{padding:6px 10px;border-bottom:1px solid #1e1e1e}}'
+            f'.pc-tbl tr:hover td{{background:#202020}}'
             f'</style>'
             f'<table class="pc-tbl">'
             f'<thead><tr>'
@@ -1383,13 +1383,13 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     _NODE_CSS = (
         "display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
-        "background:#1a1d27;border:1px solid #2a2d3a;border-radius:6px;"
+        "background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;"
         "padding:0.55rem 0.7rem;min-width:95px;text-align:center;"
         "font-family:'DM Sans',sans-serif;"
     )
     _ARROW = '<span style="color:#CFB991;font-size:1.1rem;padding:0 4px;align-self:center">→</span>'
 
-    def _node(icon, title, sub, border_color="#2a2d3a"):
+    def _node(icon, title, sub, border_color="#2a2a2a"):
         return (
             f'<div style="{_NODE_CSS}border-color:{border_color}">'
             f'<span style="font-size:1.0rem;margin-bottom:3px">{icon}</span>'
@@ -1400,7 +1400,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;'
-        f'background:#0f1117;border:1px solid #1e2130;border-radius:8px;padding:1rem 1.1rem;">'
+        f'background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:1rem 1.1rem;">'
         + _node("📈", "Rates Stay High", "SOFR 4.3%+<br>all-in ~9–12%", "#b7770d")
         + _ARROW
         + _node("💸", "Coverage Squeeze", "EBITDA ÷ interest<br>&lt;1.5×", "#b7770d")

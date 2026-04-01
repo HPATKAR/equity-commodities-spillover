@@ -96,7 +96,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     sel_cmd = [c for c in sel_cmd if c in cmd_r.columns] or def_cmd
     sel_all = [c for c in sel_all if c in all_r.columns]  or def_all
 
-    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -128,7 +128,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     z=pivot.values,
                     x=pivot.columns.tolist(),
                     y=pivot.index.tolist(),
-                    colorscale=[[0,"#c0392b"],[0.05,"#e74c3c"],[0.1,"#1e2130"],[1,"#0f1117"]],
+                    colorscale=[[0,"#c0392b"],[0.05,"#e74c3c"],[0.1,"#1e1e1e"],[1,"#111111"]],
                     zmin=0, zmax=0.1,
                     text=pivot.round(3).values,
                     texttemplate="%{text}",
@@ -137,7 +137,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 ))
                 fig_gc.update_layout(
                     template="purdue", height=320,
-                    paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                    paper_bgcolor="#111111", plot_bgcolor="#111111",
                     font=dict(color="#e8e9ed"),
                     xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                     yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
@@ -160,13 +160,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _TBL_CSS = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
                     tbl_df = (
                         sig_df[["cause","effect","direction","min_p","best_lag"]]
@@ -178,8 +178,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         p_color = "#4ade80" if p_val < 0.01 else "#e8e9ed"
                         rows_html += (
                             f"<tr>"
-                            f"<td style='color:#b8bec8'>{row['cause']}</td>"
-                            f"<td style='color:#b8bec8'>{row['effect']}</td>"
+                            f"<td style='color:#b8b8b8'>{row['cause']}</td>"
+                            f"<td style='color:#b8b8b8'>{row['effect']}</td>"
                             f"<td style='color:#8890a1'>{row['direction']}</td>"
                             f"<td style='color:{p_color}'>{p_val:.4f}</td>"
                             f"<td style='color:#8890a1'>{row['best_lag']}</td>"
@@ -215,7 +215,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 z=net_te.values.astype(float),
                 x=net_te.columns.tolist(),
                 y=net_te.index.tolist(),
-                colorscale=[[0,"#c0392b"],[0.5,"#1e2130"],[1,"#2e7d32"]],
+                colorscale=[[0,"#c0392b"],[0.5,"#1e1e1e"],[1,"#2e7d32"]],
                 zmid=0,
                 text=net_te.round(4).values.astype(float),
                 texttemplate="%{text:.3f}",
@@ -224,7 +224,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             ))
             fig_te.update_layout(
                 template="purdue", height=320,
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 font=dict(color="#e8e9ed"),
                 xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                 yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
@@ -239,7 +239,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 "This goes beyond correlation by capturing the directionality of influence."
             )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Transfer entropy identifies direction; Diebold-Yilmaz measures magnitude. The FEVD "
@@ -285,7 +285,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             ))
             fig_dy.update_layout(
                 template="purdue", height=340,
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 font=dict(color="#e8e9ed"),
                 xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                 yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
@@ -344,7 +344,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Cross-Asset Spillover: Rates & FX
     # ══════════════════════════════════════════════════════════════════════
-    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     st.markdown(
         '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
@@ -415,20 +415,20 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _TBL_CSS_CA = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
                     _header_cells = "<th>Effect \\ Cause</th>" + "".join(
                         f"<th>{c}</th>" for c in _pivot_df.columns
                     )
                     _body_rows = ""
                     for _eff, _row in _pivot_df.iterrows():
-                        _cells = f"<td style='color:#b8bec8;font-weight:600'>{_eff}</td>"
+                        _cells = f"<td style='color:#b8b8b8;font-weight:600'>{_eff}</td>"
                         for _caus in _pivot_df.columns:
                             _p = _row.get(_caus)
                             if _p is None:
@@ -476,8 +476,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _primary_score = _transmitter_scores[_primary_tx]
                     _tx_color = "#4ade80" if _primary_score > 0 else "#f87171" if _primary_score < 0 else "#8890a1"
                     st.markdown(
-                        f'<div style="border:1px solid #2a2d3a;border-left:4px solid {_tx_color};'
-                        f'border-radius:0 6px 6px 0;padding:0.65rem 1rem;background:#1a1d27;margin-top:0.6rem">'
+                        f'<div style="border:1px solid #2a2a2a;border-left:4px solid {_tx_color};'
+                        f'border-radius:0 6px 6px 0;padding:0.65rem 1rem;background:#1c1c1c;margin-top:0.6rem">'
                         f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
                         f'text-transform:uppercase;letter-spacing:0.12em;color:{_tx_color};margin-bottom:3px">'
                         f'Primary Cross-Asset Transmitter</div>'
@@ -502,4 +502,47 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         "high-transmitter commodity is not isolated; it will propagate. Use this map to identify "
         "which equity markets to hedge when a key commodity breaks out."
     )
+
+    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    try:
+        from src.agents.quality_officer import run as _cqo_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("quality_officer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _n_obs = len(all_r.dropna(how="all"))
+            _cqo_ctx = {
+                "n_obs":           _n_obs,
+                "date_range":      f"{start} to {end}",
+                "n_assets":        len(sel_all),
+                "sample_warning":  _n_obs < 252,
+                "model":           "VAR + Granger causality + Diebold-Yilmaz FEVD",
+                "assumption_count": 4,  # stationarity, linearity, lag selection, normality
+                "lookahead_risk":  False,
+                "notes": [
+                    f"Granger max lag: {max_lag} days (user-selected, not AIC-optimised)",
+                    f"DY edge threshold: {dy_thresh}% (arbitrary cutoff affects network topology)",
+                    f"VAR assets selected: {len(sel_all)} — degrees of freedom constraint at N<{len(sel_all)*5}",
+                    "Transfer entropy estimated non-parametrically — sensitive to bin width choice",
+                    "DY FEVD uses 10-step-ahead horizon — results vary materially at 4 vs 10 steps",
+                ],
+            }
+            with st.spinner("CQO auditing spillover methodology…"):
+                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Spillover Analysis")
+            if _cqo_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("quality_officer", _cqo_result)
+    except Exception:
+        pass
+
     _page_footer()

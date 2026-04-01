@@ -56,7 +56,7 @@ COMMODITY_TICKERS = {
     # Metals - industrial
     "Copper":           "HG=F",
     "Aluminum":         "ALI=F",
-    "Nickel":           "NI=F",
+    "Nickel":           "NILSY",
     # Agriculture
     "Wheat":            "ZW=F",
     "Corn":             "ZC=F",
@@ -303,7 +303,7 @@ WATCHLIST = [
     ("NG=F",  "Natural Gas",      "Energy",           "Europe energy crisis proxy"),
     ("GC=F",  "Gold",             "Precious Metals",  "Safe haven & inflation hedge"),
     ("HG=F",  "Copper",           "Industrial Metals","Global growth bellwether"),
-    ("NI=F",  "Nickel",           "Industrial Metals","EV battery supply risk"),
+    ("NILSY", "Nickel",           "Industrial Metals","EV battery supply risk"),
     ("ZW=F",  "Wheat",            "Agriculture",      "Ukraine/Russia supply shock"),
     ("ZC=F",  "Corn",             "Agriculture",      "Ethanol & food inflation"),
     ("ZS=F",  "Soybeans",         "Agriculture",      "China-US trade war proxy"),
@@ -323,7 +323,7 @@ PALETTE = [
     "#555960",  # Steel      - additional series
     "#CFB991",  # Boilermaker Gold - lighter accent
     "#8E6F3E",  # Aged Brown - tertiary
-    "#6F727B",  # Cool Gray  - fallback
+    "#737373",  # Cool Gray  - fallback
 ]
 
 # High-contrast palette explicitly for multi-line charts (equity + commodity mixed).

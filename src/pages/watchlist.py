@@ -125,20 +125,20 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         _TBL_CSS_SNAP = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
         snap_pct_cols = ["1D %", "5D %", "YTD %"]
         snap_cols = list(snapshot.columns)
         snap_header = "<th>Asset</th>" + "".join(f"<th>{c}</th>" for c in snap_cols)
         snap_rows = ""
         for asset_name, row in snapshot.iterrows():
-            cells = f"<td style='color:#b8bec8'>{asset_name}</td>"
+            cells = f"<td style='color:#b8b8b8'>{asset_name}</td>"
             for col in snap_cols:
                 v = row[col]
                 is_nan = pd.isna(v) if not isinstance(v, str) else False
@@ -208,7 +208,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 fig_h.add_hline(y=100, line=dict(color="#ABABAB", width=1, dash="dot"))
                 fig_h.update_layout(
                     template="purdue", height=340,
-                    xaxis=dict(rangeslider=dict(visible=True, thickness=0.04), type="date"),
+                    xaxis=dict(rangeslider=dict(visible=False), type="date"),
                     margin=dict(l=44, r=20, t=20, b=60),
                 )
                 _chart(fig_h)
@@ -511,13 +511,13 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 _TBL_CSS_COT = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
                 cot_cols = list(ext_tbl.columns)
                 cot_header = "".join(f"<th>{c}</th>" for c in cot_cols)
@@ -538,7 +538,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                             if is_nan:
                                 cells += "<td style='color:#8890a1'>-</td>"
                             else:
-                                cells += f"<td style='color:#b8bec8'>{v}</td>"
+                                cells += f"<td style='color:#b8b8b8'>{v}</td>"
                     cot_rows += f"<tr>{cells}</tr>"
                 html_cot = (
                     _TBL_CSS_COT

@@ -232,8 +232,8 @@ def page_ai_chat(start: str, end: str) -> None:
     <style>
     /* Chat message bubbles */
     div[data-testid="stChatMessage"] {
-        background: #1a1d27 !important;
-        border: 1px solid #2a2d3a !important;
+        background: #1c1c1c !important;
+        border: 1px solid #2a2a2a !important;
         border-radius: 6px !important;
         margin-bottom: 0.5rem !important;
     }
@@ -252,7 +252,7 @@ def page_ai_chat(start: str, end: str) -> None:
         color: #CFB991 !important;
     }
     div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] code {
-        background: #0f1117 !important;
+        background: #111111 !important;
         color: #CFB991 !important;
         padding: 1px 4px !important;
         border-radius: 3px !important;
@@ -262,8 +262,8 @@ def page_ai_chat(start: str, end: str) -> None:
     [data-testid="stChatInput"] textarea {
         font-family: 'DM Sans', sans-serif !important;
         font-size: 0.74rem !important;
-        background: #1a1d27 !important;
-        border: 1px solid #2a2d3a !important;
+        background: #1c1c1c !important;
+        border: 1px solid #2a2a2a !important;
         border-radius: 3px !important;
         color: #e8e9ed !important;
     }
@@ -274,7 +274,7 @@ def page_ai_chat(start: str, end: str) -> None:
     }
     /* Submit button */
     [data-testid="stChatInputSubmitButton"] button {
-        background: #1a1d27 !important;
+        background: #1c1c1c !important;
         border: 1px solid #CFB991 !important;
         font-size: 0 !important;
         border-radius: 3px !important;
@@ -295,8 +295,8 @@ def page_ai_chat(start: str, end: str) -> None:
     /* Avatar */
     [data-testid="stChatMessageAvatarUser"],
     [data-testid="stChatMessageAvatarAssistant"] {
-        background: #0f1117 !important;
-        border: 1px solid #2a2d3a !important;
+        background: #111111 !important;
+        border: 1px solid #2a2a2a !important;
         font-size: 0.58rem !important;
         color: #CFB991 !important;
         font-weight: 700 !important;
@@ -391,7 +391,7 @@ def page_ai_chat(start: str, end: str) -> None:
                 st.session_state["_sq_input"] = q
 
     st.markdown(
-        '<div style="border-top:1px solid #2a2d3a;margin:0.8rem 0 0"></div>',
+        '<div style="border-top:1px solid #2a2a2a;margin:0.8rem 0 0"></div>',
         unsafe_allow_html=True,
     )
 

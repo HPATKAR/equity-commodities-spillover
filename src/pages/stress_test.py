@@ -370,13 +370,13 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     if total_w > 0:
         # Color-coded total weight indicator
         if total_w > 100.5:
-            tw_color, tw_bg = "#e67e22", "#1c1e2a"
+            tw_color, tw_bg = "#e67e22", "#1e1e1e"
             tw_status = "Exceeds 100% - will normalize on run"
         elif abs(total_w - 100.0) < 0.5:
-            tw_color, tw_bg = "#2e7d32", "#1a1d27"
+            tw_color, tw_bg = "#2e7d32", "#1c1c1c"
             tw_status = "✓ Fully allocated"
         else:
-            tw_color, tw_bg = "#555960", "#1a1d27"
+            tw_color, tw_bg = "#555960", "#1c1c1c"
             tw_status = f"{100 - total_w:.1f}% unallocated - will normalize on run"
 
         tw_col, norm_col, _ = st.columns([3, 1, 2])
@@ -407,7 +407,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 summary_txt += f" &nbsp;+&nbsp; {remaining} more"
             st.markdown(
                 f'<div style="border-left:3px solid #CFB991;padding:0.4rem 0.8rem;'
-                f'background:#1a1d27;margin:0.4rem 0 0.6rem;font-size:0.70rem;color:#d1d5db">'
+                f'background:#1c1c1c;margin:0.4rem 0 0.6rem;font-size:0.70rem;color:#d1d5db">'
                 f'<b>Normalised portfolio</b> ({len(norm_weights)} assets): {summary_txt}</div>',
                 unsafe_allow_html=True,
             )
@@ -528,19 +528,19 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     _TBL_CSS_ST = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
     st_pct_cols = ["Pre (%)", "During (%)", "Post (%)"]
     st_rows_html = ""
     for _, row in summary.iterrows():
         cells = (
-            f"<td style='color:#b8bec8'>{row.get('Event','')}</td>"
+            f"<td style='color:#b8b8b8'>{row.get('Event','')}</td>"
             f"<td style='color:#8890a1'>{row.get('Name','')}</td>"
         )
         for col in st_pct_cols:
@@ -607,7 +607,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     fig_hm = go.Figure(go.Heatmap(
         z=hm_z, x=hm_metrics, y=hm_y,
-        colorscale=[[0, "#c0392b"], [0.5, "#1e2130"], [1, "#2e7d32"]],
+        colorscale=[[0, "#c0392b"], [0.5, "#1e1e1e"], [1, "#2e7d32"]],
         zmid=0, zmin=-abs_max, zmax=abs_max,
         text=hm_text,
         texttemplate="%{text}",
@@ -618,7 +618,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     fig_hm.update_layout(
         template="purdue",
         height=max(300, len(results) * 30 + 80),
-        paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+        paper_bgcolor="#111111", plot_bgcolor="#111111",
         font=dict(color="#e8e9ed"),
         xaxis=dict(side="top", tickfont=dict(size=10, color="#8890a1"), rangeslider=dict(visible=False)),
         yaxis=dict(
@@ -720,13 +720,13 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         _TBL_CSS_STK = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1a1d27;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e2130;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#141720}
-.ec-table tr:nth-child(odd) td{background:#0f1117}
-.ec-table tr:hover td{background:#1e2230}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
 </style>"""
         stk_rows_html = ""
         for _, row in stock_sum_df.iterrows():
@@ -734,7 +734,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             stk_rows_html += (
                 f"<tr>"
                 f"<td style='color:#CFB991;font-weight:600'>{row.get('Ticker','')}</td>"
-                f"<td style='color:#b8bec8'>{row.get('Company','')}</td>"
+                f"<td style='color:#b8b8b8'>{row.get('Company','')}</td>"
                 f"<td style='color:#8890a1'>{row.get('Sector','')}</td>"
                 f"<td style='color:#e8e9ed'>{wt:.2f}%</td>"
                 f"</tr>"
@@ -811,6 +811,49 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             if _se_result.get("narrative"):
                 st.markdown("---")
                 render_agent_output_block("stress_engineer", _se_result)
+    except Exception:
+        pass
+
+    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    try:
+        from src.agents.quality_officer import run as _cqo_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("quality_officer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _n_scenarios = len(results) if "results" in dir() else 0
+            _scenario_names = [r["event"] for r in results] if "results" in dir() and results else []
+            _cqo_ctx = {
+                "n_obs":            len(eq_r.dropna(how="all")),
+                "date_range":       f"{start} to {end}",
+                "n_events":         _n_scenarios,
+                "model":            "Historical scenario simulation using realised returns",
+                "assumption_count": 5,
+                "notes": [
+                    "Stress test uses historical return realisations — assumes future crises resemble past ones",
+                    "Portfolio weights are user-defined and not dynamically rebalanced during stress period",
+                    "Correlation structure during stress events differs from pre-crisis: diversification overstated",
+                    "Each event treated independently — no correlation between concurrent shocks modelled",
+                    f"Events tested: {', '.join(_scenario_names[:4]) if _scenario_names else 'none'} — user-selected, not systematic",
+                    "No Monte Carlo or parametric tail extension — fat tail losses underrepresented",
+                    "Liquidity risk and bid-ask spread expansion during crises not captured",
+                ],
+            }
+            with st.spinner("CQO auditing stress test assumptions…"):
+                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Stress Test")
+            if _cqo_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("quality_officer", _cqo_result)
     except Exception:
         pass
 

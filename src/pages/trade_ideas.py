@@ -530,4 +530,49 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
+    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    try:
+        from src.agents.quality_officer import run as _cqo_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("quality_officer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _n_triggered = len([
+                t for t in _TRADE_IDEAS
+                if current in t.get("regime", [])
+            ]) if "_TRADE_IDEAS" in dir() else 0
+            _cqo_ctx = {
+                "n_obs":           len(eq_r.dropna(how="all")),
+                "date_range":      f"{start} to {end}",
+                "model":           "Regime-filtered rule-based trade ideas",
+                "regime":          r_name,
+                "assumption_count": 5,
+                "trade_has_stop":  True,  # all ideas have documented risk sections
+                "notes": [
+                    f"Current regime index: {current}/3 — ideas fire based on hardcoded regime thresholds",
+                    f"{_n_triggered} ideas active in current regime — no dynamic conviction scoring",
+                    "Trade entry/exit levels are illustrative ranges, not live-calibrated prices",
+                    "Correlation-based regime uses 60d rolling window — whipsaws in trending vol regimes",
+                    "No walk-forward backtest — ideas are not validated against historical win rates",
+                    "All ideas assume liquid markets — slippage and execution risk not modelled",
+                ],
+            }
+            with st.spinner("CQO auditing trade ideas…"):
+                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Trade Ideas")
+            if _cqo_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("quality_officer", _cqo_result)
+    except Exception:
+        pass
+
     _page_footer()

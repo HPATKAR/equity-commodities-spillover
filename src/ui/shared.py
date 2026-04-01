@@ -32,6 +32,7 @@ _PURDUE_TEMPLATE = go.layout.Template(
             zeroline=False, showspikes=True, spikecolor="#CFB991",
             spikethickness=1, spikedash="dot",
             tickfont=dict(family="JetBrains Mono, monospace", size=10),
+            rangeslider=dict(visible=False),
         ),
         yaxis=dict(
             showgrid=True, gridcolor="#EEEBE6", gridwidth=1,
@@ -107,7 +108,7 @@ def _style_fig(fig: go.Figure, height: int = 400) -> go.Figure:
                 bgcolor="#f0ede8",
                 activecolor=_GOLD,
             ),
-            rangeslider=dict(visible=True, thickness=0.04),
+            rangeslider=dict(visible=False),
             type="date",
         ),
     )
@@ -157,8 +158,8 @@ def _add_event_bands(
 def _page_intro(text: str) -> None:
     st.markdown(
         f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.76rem;
-        color:#b8bec8;line-height:1.75;max-width:860px;margin:0 0 1.0rem;
-        padding-left:0.85rem;border-left:3px solid #2a2d3a">{text}</p>""",
+        color:#b8b8b8;line-height:1.75;max-width:860px;margin:0 0 1.0rem;
+        padding-left:0.85rem;border-left:3px solid #2a2a2a">{text}</p>""",
         unsafe_allow_html=True,
     )
 
@@ -184,8 +185,8 @@ def _definition_block(title: str, body: str) -> None:
           <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.65rem 1rem;font-size:0.70rem;color:#c8cdd8;
-        background:#1a1d27;line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
+        <div style="padding:0.65rem 1rem;font-size:0.70rem;color:#c8c8c8;
+        background:#1c1c1c;line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -348,12 +349,12 @@ def _about_page_styles():
     st.markdown("""<style>
     /* ── Hero banner ───────────────────────────────────── */
     .about-hero {
-        background: #1a1d27;
+        background: #1c1c1c;
         border-radius: 12px;
         padding: 0;
         margin-bottom: 1.2rem;
         overflow: hidden;
-        border: 1px solid #2a2d3a;
+        border: 1px solid #2a2a2a;
         box-shadow: 0 1px 8px rgba(0,0,0,0.25);
     }
     .about-hero-inner {
@@ -435,8 +436,8 @@ def _about_page_styles():
 
     /* ── Cards ─────────────────────────────────────────── */
     .about-card {
-        background: #1a1d27;
-        border: 1px solid #2a2d3a;
+        background: #1c1c1c;
+        border: 1px solid #2a2a2a;
         border-radius: 12px;
         padding: 1.1rem 1.3rem;
         margin-bottom: 0.75rem;
@@ -456,12 +457,12 @@ def _about_page_styles():
         color: #CFB991;
         margin: 0 0 0.65rem 0;
         padding-bottom: 0.4rem;
-        border-bottom: 1px solid #2a2d3a;
+        border-bottom: 1px solid #2a2a2a;
     }
 
     /* ── Experience timeline ───────────────────────────── */
     .exp-item {
-        border-left: 2px solid #2a2d3a;
+        border-left: 2px solid #2a2a2a;
         padding-left: 1rem;
         margin-bottom: 0.75rem;
         padding-bottom: 0.35rem;
@@ -499,7 +500,7 @@ def _about_page_styles():
     /* ── Education ─────────────────────────────────────── */
     .edu-item {
         padding: 0.55rem 0;
-        border-bottom: 1px solid #2a2d3a;
+        border-bottom: 1px solid #2a2a2a;
     }
     .edu-item:last-child { border-bottom: none; }
     .edu-school {
@@ -574,7 +575,7 @@ def _about_page_styles():
     /* ── Certifications ────────────────────────────────── */
     .cert-item {
         padding: 0.38rem 0;
-        border-bottom: 1px solid #2a2d3a;
+        border-bottom: 1px solid #2a2a2a;
     }
     .cert-item:last-child { border-bottom: none; }
     .cert-name {

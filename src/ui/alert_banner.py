@@ -133,13 +133,13 @@ def render_alert_banner(
 
         if briefing and not briefing.startswith("Briefing unavailable"):
             st.markdown(
-                f'<div style="{_F}background:#1a1d27;border:1px solid #2a2d3a;'
+                f'<div style="{_F}background:#1c1c1c;border:1px solid #2a2a2a;'
                 f'border-left:3px solid {header_color};border-radius:0 6px 6px 0;'
                 f'padding:0.75rem 1rem;margin-bottom:0.7rem">'
                 f'<div style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
                 f'text-transform:uppercase;color:#CFB991;margin-bottom:0.4rem">'
                 f'AI Risk Officer · Morning Briefing</div>'
-                f'<div style="font-size:0.78rem;color:#c8cdd8;line-height:1.65">'
+                f'<div style="font-size:0.78rem;color:#c8c8c8;line-height:1.65">'
                 f'{briefing}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -155,7 +155,7 @@ def render_alert_banner(
 
         with cols[i % len(cols)]:
             st.markdown(
-                f'<div style="{_F}background:#1a1d27;border:1px solid #2a2d3a;'
+                f'<div style="{_F}background:#1c1c1c;border:1px solid #2a2a2a;'
                 f'border-top:2px solid {meta["border"]};border-radius:4px;'
                 f'padding:0.6rem 0.8rem;height:100%">'
 

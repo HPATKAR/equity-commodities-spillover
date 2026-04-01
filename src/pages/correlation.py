@@ -239,7 +239,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     "Use this view to identify which commodity pairs are most tightly linked to the selected equity market."
                 )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2d3a"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     _thread(
         "Knowing the exact correlation number is useful. Knowing which regime you are in - and "
@@ -307,13 +307,13 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     f'font-size:0.66rem;{is_cur}color:#e8e9ed">{regime_counts[i]}</td>'
                     f'<td style="padding:3px 8px;font-size:0.66rem;{is_cur}color:#e8e9ed">{pct:.1f}%</td>'
                     f'<td style="padding:3px 8px;width:80px">'
-                    f'<div style="background:#2a2d3a;height:4px;border-radius:2px">'
+                    f'<div style="background:#2a2a2a;height:4px;border-radius:2px">'
                     f'<div style="width:{pct:.0f}%;height:4px;background:{c};border-radius:2px"></div>'
                     f'</div></td></tr>'
                 )
             st.markdown(
                 f'<table style="width:100%;border-collapse:collapse;{_F};margin-top:4px">'
-                f'<thead><tr style="background:#1a1d27">'
+                f'<thead><tr style="background:#1c1c1c">'
                 f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Regime</th>'
                 f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">Days</th>'
                 f'<th style="padding:3px 8px;font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#CFB991;text-align:left">% Time</th>'
@@ -348,7 +348,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
 
             fig_tm = go.Figure(go.Heatmap(
                 z=z_vals, x=r_labels, y=r_labels,
-                colorscale=[[0,"#1a1d27"],[0.2,"#fde0c8"],[0.5,"#e05c3a"],[1,"#7a0e0e"]],
+                colorscale=[[0,"#1c1c1c"],[0.2,"#fde0c8"],[0.5,"#e05c3a"],[1,"#7a0e0e"]],
                 zmin=0, zmax=100,
                 text=[[f"{v:.0f}%" for v in row] for row in z_vals],
                 texttemplate="%{text}",
@@ -363,7 +363,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             )
             fig_tm.update_layout(
                 template="purdue", height=260,
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+                paper_bgcolor="#111111", plot_bgcolor="#111111",
                 font=dict(color="#e8e9ed"),
                 margin=dict(l=90, r=60, t=20, b=80),
                 xaxis=dict(title="To Regime", tickfont=dict(size=10, color="#8890a1"), rangeslider=dict(visible=False)),
@@ -389,7 +389,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                         f'<span style="{_F}font-size:0.64rem;color:{c};font-weight:600">{_REGIME_NAMES[i]}</span>'
                         f'<span style="font-family:JetBrains Mono,monospace;font-size:0.64rem;font-weight:700">{pct:.1f}%</span>'
                         f'</div>'
-                        f'<div style="background:#2a2d3a;height:3px;border-radius:2px;margin-bottom:5px">'
+                        f'<div style="background:#2a2a2a;height:3px;border-radius:2px;margin-bottom:5px">'
                         f'<div style="width:{pct:.0f}%;height:3px;background:{c};border-radius:2px"></div>'
                         f'</div>',
                         unsafe_allow_html=True,
@@ -453,15 +453,15 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     "NEUTRAL: equity-bond correlation near zero. No clear flight-to-quality signal."
                 )
                 st.markdown(
-                    f'<div style="border:1px solid #2a2d3a;border-left:4px solid {_corr_color};'
-                    f'border-radius:0 6px 6px 0;padding:0.75rem 1rem;background:#1a1d27;margin:0.8rem 0">'
+                    f'<div style="border:1px solid #2a2a2a;border-left:4px solid {_corr_color};'
+                    f'border-radius:0 6px 6px 0;padding:0.75rem 1rem;background:#1c1c1c;margin:0.8rem 0">'
                     f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
                     f'text-transform:uppercase;letter-spacing:0.12em;color:{_corr_color};margin-bottom:4px">'
                     f'Equity-Bond Correlation Regime</div>'
                     f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.80rem;font-weight:700;'
                     f'color:#e8e9ed;margin-bottom:4px">S&P 500 / TLT 63d Correlation: '
                     f'<span style="color:{_corr_color}">{_latest_tlt_spx:+.3f}</span> ({_corr_signal})</div>'
-                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#b8bec8;line-height:1.55">'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#b8b8b8;line-height:1.55">'
                     f'{_corr_interp}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -478,4 +478,62 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         "Monitor the equity-bond correlation regime above: when TLT and S&P 500 become positively "
         "correlated, the traditional 60/40 hedge breaks down and requires alternative protection."
     )
+
+    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    try:
+        from src.agents.quality_officer import run as _cqo_run
+        from src.ui.agent_panel import render_agent_output_block
+        from src.analysis.agent_state import is_enabled
+
+        if is_enabled("quality_officer"):
+            _anthropic_key = _openai_key = ""
+            try:
+                _keys = st.secrets.get("keys", {})
+                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+                _openai_key    = _keys.get("openai_api_key",    "") or ""
+            except Exception:
+                pass
+            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+            _api_key  = _anthropic_key or _openai_key
+
+            _n_obs = len(eq_r.dropna(how="all"))
+            _current_regime = regimes.iloc[-1] if not regimes.empty else "Unknown"
+            _regime_changed = (
+                len(regimes) > 5 and regimes.iloc[-1] != regimes.iloc[-6]
+            ) if not regimes.empty else False
+
+            # Top correlated pairs from cross-asset matrix
+            try:
+                import numpy as np
+                _cm = eq_r.join(cmd_r).corr().abs()
+                _max_corr = float(_cm.where(
+                    ~(_cm == 1.0)
+                ).stack().max())
+            except Exception:
+                _max_corr = None
+
+            _cqo_ctx = {
+                "n_obs":           _n_obs,
+                "date_range":      f"{start} to {end}",
+                "model":           "Rolling Pearson correlation + DCC-GARCH + Markov regime",
+                "regime":          str(_current_regime),
+                "regime_change":   _regime_changed,
+                "max_correlation": _max_corr,
+                "assumption_count": 3,
+                "notes": [
+                    "Rolling window correlation is non-stationary — window length (60d default) is arbitrary",
+                    "Pearson correlation assumes linearity; equity-commodity relationships are often non-linear during crises",
+                    "DCC-GARCH assumes elliptical distributions — tail dependence is underestimated",
+                    "Markov regime model uses 2 states only — real market has continuous regime transitions",
+                    "Correlation ≠ causation — no causal inference drawn from this page",
+                ],
+            }
+            with st.spinner("CQO auditing correlation methodology…"):
+                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Correlation Analysis")
+            if _cqo_result.get("narrative"):
+                st.markdown("---")
+                render_agent_output_block("quality_officer", _cqo_result)
+    except Exception:
+        pass
+
     _page_footer()
