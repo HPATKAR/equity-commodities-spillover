@@ -56,7 +56,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _logo = _logo_b64()
         _logo_tag = (
             f'<img src="{_logo}" alt="logo" '
-            'style="width:36px;height:36px;object-fit:contain;'
+            'style="height:32px;width:auto;object-fit:contain;'
             'flex-shrink:0;margin-right:10px;vertical-align:middle;" />'
             if _logo else ""
         )

@@ -726,7 +726,7 @@ html,body{{height:72px;overflow:visible;background:#000;
 .brand:hover{{opacity:.82}}
 /* Logo image tile */
 .brand-logo{{
-  width:38px;height:38px;flex-shrink:0;
+  height:34px;width:auto;flex-shrink:0;
   object-fit:contain;
   display:block;
 }}
