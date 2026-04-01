@@ -687,6 +687,15 @@ if "current_page" not in st.session_state:
 
 current = st.session_state["current_page"]
 
+# ── Logo (base64-encoded once per session) ────────────────────────────────────
+import base64 as _b64
+from pathlib import Path as _Path
+_LOGO_PATH = _Path(__file__).parent / "assets" / "logo.png"
+_LOGO_B64  = (
+    "data:image/png;base64," + _b64.b64encode(_LOGO_PATH.read_bytes()).decode()
+    if _LOGO_PATH.exists() else ""
+)
+
 # ── Navbar (rendered via components.html - no sanitisation; JS fixes it to top) ─
 _fred_dot = "●" if _FRED_KEY else "○"
 _fred_col = "#CFB991" if _FRED_KEY else "rgba(255,255,255,0.22)"
@@ -715,17 +724,13 @@ html,body{{height:72px;overflow:visible;background:#000;
   transition:opacity .15s;
 }}
 .brand:hover{{opacity:.82}}
-/* Gold monogram tile */
-.brand-mark{{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  width:36px;height:36px;flex-shrink:0;
-  background:#CFB991;border-radius:5px;
-  font-size:.60rem;font-weight:800;
-  color:#000;letter-spacing:.06em;line-height:1.15;
-  user-select:none;
+/* Logo image tile */
+.brand-logo{{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:6px;object-fit:contain;
+  background:#fff;padding:2px;
+  display:block;
 }}
-.brand-mark .mk-top{{font-size:.58rem;font-weight:800;letter-spacing:.10em}}
-.brand-mark .mk-bot{{font-size:.44rem;font-weight:600;letter-spacing:.14em;opacity:.70}}
 /* Divider */
 .brand-div{{width:1px;height:30px;background:rgba(207,185,145,.18);flex-shrink:0}}
 /* Text stack */
@@ -1303,10 +1308,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 <div id="nav">
   <!-- Logotype - also a dropdown for Overview -->
   <a class="brand" href="#" style="cursor:default;text-decoration:none;">
-    <div class="brand-mark">
-      <span class="mk-top">X</span>
-      <span class="mk-bot">ASSET</span>
-    </div>
+    {'<img class="brand-logo" src="' + _LOGO_B64 + '" alt="Cross-Asset Spillover Monitor" />' if _LOGO_B64 else '<div class="brand-logo" style="background:#CFB991;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:#000">X</div>'}
     <div class="brand-div"></div>
     <div class="brand-text">
       <span class="bm">Cross-Asset Spillover Monitor</span>

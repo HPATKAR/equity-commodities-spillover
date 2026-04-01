@@ -5,10 +5,22 @@ KPIs, equity-commodities correlation heatmap snapshot, regime status, recent eve
 
 from __future__ import annotations
 
+import base64
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from pathlib import Path
+
+_ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def _logo_b64() -> str:
+    p = _ASSETS / "logo.png"
+    if p.exists():
+        return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+    return ""
 
 from src.data.loader import load_returns, load_all_prices, load_fixed_income_returns, load_fx_returns
 from src.data.config import GEOPOLITICAL_EVENTS, EQUITY_REGIONS, COMMODITY_GROUPS, PALETTE
@@ -41,12 +53,23 @@ def _label(txt: str) -> None:
 def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _hdr_col, _btn_col = st.columns([5, 1])
     with _hdr_col:
+        _logo = _logo_b64()
+        _logo_tag = (
+            f'<img src="{_logo}" alt="logo" '
+            'style="width:40px;height:40px;object-fit:contain;border-radius:5px;'
+            'background:#fff;padding:2px;flex-shrink:0;margin-right:12px;vertical-align:middle;" />'
+            if _logo else ""
+        )
         st.markdown(
-            '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-            'font-weight:700;margin-top:0;margin-bottom:0.1rem">Equity-Commodities Spillover Monitor</h1>'
-            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-            'margin:0 0 0.6rem 0">15 equity indices · 17 commodity futures · '
-            'Correlation regimes · Geopolitical risk · Spillover signals</p>',
+            f'<div style="display:flex;align-items:center;margin-bottom:0.25rem">'
+            f'{_logo_tag}'
+            f'<div>'
+            f'<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
+            f'font-weight:700;margin:0 0 0.1rem">Equity-Commodities Spillover Monitor</h1>'
+            f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
+            f'margin:0 0 0.6rem 0">15 equity indices · 17 commodity futures · '
+            f'Correlation regimes · Geopolitical risk · Spillover signals</p>'
+            f'</div></div>',
             unsafe_allow_html=True,
         )
     with _btn_col:

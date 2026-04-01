@@ -653,9 +653,12 @@ def _about_page_styles():
 
 @st.cache_data(ttl=86400)
 def _footer_logo_b64() -> str:
-    p = _ASSETS / "purdue_daniels_logo_reverse.png"
-    if p.exists():
-        return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+    # Prefer the project logo; fall back to Purdue reverse logo
+    for name in ("logo.png", "purdue_daniels_logo_reverse.png"):
+        p = _ASSETS / name
+        if p.exists():
+            ext = p.suffix.lstrip(".")
+            return f"data:image/{ext};base64," + base64.b64encode(p.read_bytes()).decode()
     return ""
 
 
@@ -664,13 +667,21 @@ def _page_footer() -> None:
     from datetime import datetime
     yr  = datetime.now().year
     ts  = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
-    logo_html = (
-        "<div style='display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
-        "width:72px;height:72px;background:#CFB991;border-radius:9px;margin-bottom:18px;gap:2px;'>"
-        "<span style='font-size:1.15rem;font-weight:800;color:#000;line-height:1;letter-spacing:0.02em;'>X</span>"
-        "<span style='font-size:0.58rem;font-weight:600;color:#000;line-height:1;letter-spacing:0.14em;opacity:0.75;'>ASSET</span>"
-        "</div>"
-    )
+    _logo_src = _footer_logo_b64()
+    if _logo_src:
+        logo_html = (
+            f"<img src='{_logo_src}' alt='Cross-Asset Spillover Monitor' "
+            "style='width:88px;height:88px;object-fit:contain;border-radius:8px;"
+            "background:#fff;padding:4px;margin-bottom:14px;display:block;' />"
+        )
+    else:
+        logo_html = (
+            "<div style='display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
+            "width:72px;height:72px;background:#CFB991;border-radius:9px;margin-bottom:18px;gap:2px;'>"
+            "<span style='font-size:1.15rem;font-weight:800;color:#000;line-height:1;letter-spacing:0.02em;'>X</span>"
+            "<span style='font-size:0.58rem;font-weight:600;color:#000;line-height:1;letter-spacing:0.14em;opacity:0.75;'>ASSET</span>"
+            "</div>"
+        )
 
     _ft_click = _comp.html(f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
