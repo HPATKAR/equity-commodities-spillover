@@ -117,20 +117,36 @@ def run(
 
     ctx_str = "\n".join(parts)
 
-    # Compute calibration factors from hit rates
+    # Compute calibration factors from hit rates — vary by agent domain
     calibration = {}
     hit_rates = context.get("granger_hit_rates", {})
     if hit_rates:
         avg = sum(hit_rates.values()) / len(hit_rates)
-        # Scale factor: >60% avg → agents get slight boost; <50% → shrinkage
+
+        # Base factor from aggregate signal strength
         if avg > 60:
             base_factor = min(1.0 + (avg - 60) / 200, 1.15)
         elif avg < 50:
             base_factor = max(1.0 - (50 - avg) / 100, 0.70)
         else:
             base_factor = 1.0
+
+        # Commodity-facing agents get a larger boost/penalty — more model-dependent
+        # Geopolitical analyst is fundamentally qualitative — smaller adjustment
+        # Trade structurer requires highest bar — shrink more aggressively if signals weak
+        domain_modifiers = {
+            "risk_officer":          0.0,    # additive offset from base
+            "macro_strategist":      0.02,   # slight boost (macro signal is more persistent)
+            "commodities_specialist": 0.0,
+            "geopolitical_analyst":  -0.05,  # geo uncertainty always higher
+            "stress_engineer":       0.01,
+            "signal_auditor":        0.0,    # self — no adjustment
+            "trade_structurer":     -0.03 if avg < 55 else 0.0,  # penalise if weak signals
+            "quality_officer":       0.05,   # CQO is always checking known failure modes
+        }
         for aid in AGENTS:
-            calibration[aid] = base_factor
+            mod = domain_modifiers.get(aid, 0.0)
+            calibration[aid] = min(max(base_factor + mod, 0.50), 1.15)
 
     # Store calibration in auditor's extra
     init_agents()

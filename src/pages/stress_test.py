@@ -804,6 +804,20 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 "worst_impact":   worst_ev.get("during_ret", 0),
                 "avg_impact":     avg_ret,
             }
+            # Enrich with regime + risk score
+            try:
+                from src.analysis.correlations import (
+                    average_cross_corr_series as _acs_se,
+                    detect_correlation_regime as _dcr_se,
+                )
+                from src.analysis.risk_score import compute_risk_score as _crs_se
+                _avg_se = _acs_se(eq_r, cmd_r, window=60)
+                _rlab_se = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+                _se_ctx["regime_name"] = _rlab_se.get(int(_dcr_se(_avg_se).iloc[-1]), "Normal")
+                _rs_se = _crs_se(_avg_se, cmd_r, eq_r)
+                _se_ctx["risk_score"] = float(_rs_se.get("score", 0))
+            except Exception:
+                pass
 
             with st.spinner("AI Stress Engineer assessing…"):
                 _se_result = _se_run(_se_ctx, _provider, _api_key)

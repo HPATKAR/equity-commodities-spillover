@@ -239,46 +239,6 @@ def _divider(top: str = "0.7rem", bot: str = "0.5rem") -> None:
 def page_strait_watch(start: str, end: str) -> None:
     today = datetime.date.today()
 
-    # ── Button styles ─────────────────────────────────────────────────────────
-    st.markdown("""<style>
-/* Vessel traffic history toggle buttons */
-button[data-testid="baseButton-secondary"],
-button[data-testid="baseButton-primary"] {
-    background: transparent !important;
-    border: none !important;
-    border-top: 1px solid #222 !important;
-    color: #444 !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.46rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.12em !important;
-    text-transform: uppercase !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
-    padding: 0.22rem 0.4rem !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    width: 100% !important;
-    margin-top: 1px !important;
-    min-height: unset !important;
-    height: auto !important;
-}
-button[data-testid="baseButton-secondary"]:hover,
-button[data-testid="baseButton-primary"]:hover {
-    color: #8890a1 !important;
-    background: transparent !important;
-}
-button[data-testid="baseButton-primary"] {
-    color: rgba(207,185,145,0.55) !important;
-    border-top-color: rgba(207,185,145,0.25) !important;
-}
-button[data-testid="baseButton-secondary"] p,
-button[data-testid="baseButton-primary"] p {
-    font-size: 0.46rem !important;
-    color: inherit !important;
-}
-</style>""", unsafe_allow_html=True)
-
     # ── Header ────────────────────────────────────────────────────────────────
     st.markdown(
         '<h1 style="margin-top:0;margin-bottom:0.1rem">Strait Watch</h1>'
@@ -365,11 +325,8 @@ button[data-testid="baseButton-primary"] p {
         "how many ships are actually transiting each corridor, and how that has changed."
     )
 
-    # ── Vessel traffic cards (act as buttons → scroll to history chart) ─────────
-    if "active_strait" not in st.session_state:
-        st.session_state["active_strait"] = None
-
-    _section_label("Active Vessel Traffic — Ships / Day (AIS Estimates)  ·  Click card to view history")
+    # ── Vessel traffic cards ──────────────────────────────────────────────────
+    _section_label("Active Vessel Traffic — Ships / Day (AIS Estimates)")
     vt_cols = st.columns(5, gap="small")
     for col, s in zip(vt_cols, _STRAITS):
         sc       = _STATUS_COLOR[s["status"]]
@@ -381,12 +338,10 @@ button[data-testid="baseButton-primary"] p {
         chg_col  = "#27ae60" if chg_24h > 0 else "#c0392b" if chg_24h < 0 else "#8890a1"
         chg_sym  = "▲" if chg_24h > 0 else "▼" if chg_24h < 0 else "—"
         pct_col  = "#27ae60" if pct_chg >= 0 else "#e67e22" if pct_chg > -30 else "#c0392b"
-        is_sel   = st.session_state["active_strait"] == s["id"]
-        card_border = f"border:2px solid {sc};" if is_sel else "border:1px solid #1e1e1e;"
 
         with col:
             st.markdown(
-                f'<div style="background:#0f0f0f;{card_border}'
+                f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
                 f'border-left:3px solid {sc};border-radius:3px;padding:0.7rem 0.75rem">'
 
                 f'<div style="{_F}font-size:0.60rem;font-weight:700;color:#c8c8c8;'
@@ -425,26 +380,6 @@ button[data-testid="baseButton-primary"] p {
                 f'</div>',
                 unsafe_allow_html=True,
             )
-            # Button that selects this strait and scrolls to its history chart
-            btn_label = "↑ selected" if is_sel else "↓ history"
-            if st.button(btn_label, key=f"vt_btn_{s['id']}", use_container_width=True,
-                         type="primary" if is_sel else "secondary"):
-                st.session_state["active_strait"] = None if is_sel else s["id"]
-                st.rerun()
-
-    # Auto-scroll to the active chart after rerun
-    _active = st.session_state.get("active_strait")
-    if _active:
-        import streamlit.components.v1 as _cv1
-        _cv1.html(
-            f"""<script>
-            setTimeout(function(){{
-                var el = window.parent.document.getElementById('strait-hist-{_active}');
-                if (el) el.scrollIntoView({{behavior:'smooth', block:'start'}});
-            }}, 150);
-            </script>""",
-            height=0,
-        )
 
     _divider("1.0rem", "0.5rem")
     _thread(
@@ -757,9 +692,7 @@ button[data-testid="baseButton-primary"] p {
 
     # Layout: Hormuz full-width | Red Sea + Bab side-by-side | Malacca + Turkish
     def _hist_chart(s: dict, height: int = 260) -> None:
-        sid      = s["id"]
         sc       = _STATUS_COLOR[s["status"]]
-        is_sel   = st.session_state.get("active_strait") == sid
         hist     = _vessel_history(s)
         ma8      = hist.rolling(8).mean()
 
@@ -803,21 +736,21 @@ button[data-testid="baseButton-primary"] p {
                 font=dict(size=8, family="JetBrains Mono"),
                 bgcolor="rgba(0,0,0,0)",
             ),
-            paper_bgcolor="#0f0f0f" if is_sel else "#111111",
+            paper_bgcolor="#111111",
         )
         _chart(_style_fig(fig, height=height))
         _insight_note(s["ships_context"])
 
-    # Anchor + chart for each strait
+    # ── Vessel Traffic History Charts (always visible) ────────────────────────
+    _divider("1.2rem", "0.5rem")
+    _section_label("Vessel Traffic History — Ships / Day (AIS Estimates, 2021–Present)")
+
     # Row 1: Hormuz (full width — most strategically important)
     s_hormuz = next(s for s in _STRAITS if s["id"] == "hormuz")
-    is_sel_h = st.session_state.get("active_strait") == "hormuz"
-    gold_wrap = "border:2px solid #CFB991;border-radius:4px;padding:2px;" if is_sel_h else ""
     st.markdown(
-        f'<div id="strait-hist-hormuz" style="{gold_wrap}"></div>'
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
-        f'{"📍 " if is_sel_h else ""}Strait of Hormuz — Vessel Traffic History</p>',
+        f'Strait of Hormuz — Vessel Traffic History</p>',
         unsafe_allow_html=True,
     )
     _hist_chart(s_hormuz, height=240)
@@ -826,14 +759,11 @@ button[data-testid="baseButton-primary"] p {
     r2a, r2b = st.columns(2, gap="small")
     for col2, sid2 in zip([r2a, r2b], ["red_sea", "bab_el_mandeb"]):
         s2 = next(s for s in _STRAITS if s["id"] == sid2)
-        is_sel2 = st.session_state.get("active_strait") == sid2
-        gw2 = "border:2px solid #CFB991;border-radius:4px;padding:2px;" if is_sel2 else ""
         with col2:
             st.markdown(
-                f'<div id="strait-hist-{sid2}" style="{gw2}"></div>'
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
                 f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
-                f'{"📍 " if is_sel2 else ""}{s2["name"]} — Vessel Traffic History</p>',
+                f'{s2["name"]} — Vessel Traffic History</p>',
                 unsafe_allow_html=True,
             )
             _hist_chart(s2, height=240)
@@ -842,14 +772,11 @@ button[data-testid="baseButton-primary"] p {
     r3a, r3b = st.columns(2, gap="small")
     for col3, sid3 in zip([r3a, r3b], ["malacca", "turkish"]):
         s3 = next(s for s in _STRAITS if s["id"] == sid3)
-        is_sel3 = st.session_state.get("active_strait") == sid3
-        gw3 = "border:2px solid #CFB991;border-radius:4px;padding:2px;" if is_sel3 else ""
         with col3:
             st.markdown(
-                f'<div id="strait-hist-{sid3}" style="{gw3}"></div>'
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
                 f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
-                f'{"📍 " if is_sel3 else ""}{s3["name"]} — Vessel Traffic History</p>',
+                f'{s3["name"]} — Vessel Traffic History</p>',
                 unsafe_allow_html=True,
             )
             _hist_chart(s3, height=240)

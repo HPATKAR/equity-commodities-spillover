@@ -727,36 +727,47 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "the Analysis pages for the quantitative breakdown."
     )
 
-    # ── Agent Activity Feed ────────────────────────────────────────────────
+    # ── AI Risk Officer — Morning Briefing ────────────────────────────────────
     try:
-        from src.ui.agent_panel import render_activity_feed, render_pending_review
-        from src.analysis.agent_state import (
-            log_activity, set_output, pending_count, init_agents,
+        from src.agents.risk_officer import run as _ro_run
+        from src.ui.agent_panel import (
+            render_agent_output_block, render_activity_feed, render_pending_review,
         )
+        from src.analysis.agent_state import pending_count, init_agents
+
         init_agents()
 
-        # Register Risk Officer output in shared agent state
-        if _alerts:
-            log_activity(
-                "risk_officer", "morning briefing dispatched",
-                f"{len(_alerts)} signal(s) — regime: {regime_name}",
-                "critical" if any(a.severity == "critical" for a in _alerts) else "warning",
-            )
-            set_output(
-                "risk_officer",
-                _ctx_brief,
-                confidence=min(0.5 + float(risk_result["score"]) / 200, 0.95),
-            )
-            # Route to specialists based on alert categories
-            _route_cats = set(a.category for a in _alerts)
-            if "cot" in _route_cats:
-                log_activity("risk_officer", "COT extremes detected",
-                             "routing to Commodities Specialist",
-                             "warning", routed_to="commodities_specialist")
-            if "stress" in _route_cats and risk_result["score"] >= 50:
-                log_activity("risk_officer", "elevated stress confirmed",
-                             "routing to Stress Engineer",
-                             "warning", routed_to="stress_engineer")
+        _anthropic_key = _openai_key = ""
+        try:
+            _keys = st.secrets.get("keys", {})
+            _anthropic_key = _keys.get("anthropic_api_key", "") or ""
+            _openai_key    = _keys.get("openai_api_key",    "") or ""
+        except Exception:
+            pass
+        _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
+        _api_key  = _anthropic_key or _openai_key
+
+        _ro_ctx = {
+            "regime_name":        regime_name,
+            "regime_level":       int(current_regime),
+            "risk_score":         float(risk_result["score"]),
+            "avg_corr":           float(current_avg_corr),
+            "corr_delta":         float(corr_delta),
+            "best_equity":        best_eq,
+            "worst_equity":       worst_eq,
+            "best_commodity":     best_cmd,
+            "worst_commodity":    worst_cmd,
+            "n_alerts":           len(_alerts),
+            "alert_categories":   list({a.category for a in _alerts}),
+            "alert_summaries":    [a.title for a in _alerts[:4]],
+        }
+
+        with st.spinner("AI Risk Officer composing briefing…"):
+            _ro_result = _ro_run(_ro_ctx, _provider, _api_key)
+
+        if _ro_result.get("narrative"):
+            st.markdown("---")
+            render_agent_output_block("risk_officer", _ro_result)
 
         # Activity feed — full view on Overview
         st.markdown("---")

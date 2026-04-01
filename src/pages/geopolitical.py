@@ -329,6 +329,44 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                         if kw in desc and kw.title() not in _affected_cmds:
                             _affected_cmds.append(kw.title())
                 _geo_ctx["affected_commodities"] = _affected_cmds[:5]
+                # Affected regions (unique)
+                _geo_ctx["affected_regions"] = list({
+                    e.get("region", "") for e in _active if e.get("region")
+                })[:4]
+            except Exception:
+                pass
+
+            # Add live correlation regime + risk score
+            try:
+                from src.analysis.correlations import (
+                    average_cross_corr_series as _acs_g,
+                    detect_correlation_regime as _dcr_g,
+                )
+                from src.analysis.risk_score import compute_risk_score as _crs_g
+                from src.data.loader import load_returns as _lr_g
+                _eq_g, _cmd_g = _lr_g(start, end)
+                _avg_g = _acs_g(_eq_g, _cmd_g, window=60)
+                _rlab = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+                _geo_ctx["regime_name"] = _rlab.get(int(_dcr_g(_avg_g).iloc[-1]), "Normal")
+                _rs_g = _crs_g(_avg_g, _cmd_g, _eq_g)
+                _geo_ctx["risk_score"] = float(_rs_g.get("score", 0))
+            except Exception:
+                pass
+
+            # Add Strait Watch chokepoint context — critical for transmission analysis
+            try:
+                from src.pages.strait_watch import _STRAITS as _sw_straits
+                _sw_notes = []
+                for _sw in _sw_straits:
+                    if _sw["disruption_score"] >= 30:
+                        _sw_notes.append(
+                            f"{_sw['name']}: disruption {_sw['disruption_score']}/100, "
+                            f"vessel traffic {_sw['flow_change_pct']:+d}% vs baseline "
+                            f"({_sw['oil_mbd']:.0f} mb/d at risk)"
+                        )
+                if _sw_notes:
+                    _geo_ctx.setdefault("notes", [])
+                    _geo_ctx["notes"].extend(_sw_notes)
             except Exception:
                 pass
 

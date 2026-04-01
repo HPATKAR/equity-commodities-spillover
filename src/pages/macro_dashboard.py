@@ -1514,6 +1514,26 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     _ms_ctx["ism_pmi"] = float(_mc_data["ISM Manufacturing PMI"].iloc[-1])
                 if _mc_data.get("Real GDP Growth (QoQ %)") is not None and not _mc_data["Real GDP Growth (QoQ %)"].empty:
                     _ms_ctx["gdp_growth"] = float(_mc_data["Real GDP Growth (QoQ %)"].iloc[-1])
+                if _mc_data.get("Fed Funds Rate (%)") is not None and not _mc_data["Fed Funds Rate (%)"].empty:
+                    _ms_ctx["fed_rate"] = float(_mc_data["Fed Funds Rate (%)"].iloc[-1])
+                elif not _sp_data.empty and "Fed Funds (SOFR)" in _sp_data.columns:
+                    _ms_ctx["fed_rate"] = float(_sp_data["Fed Funds (SOFR)"].iloc[-1])
+            except Exception:
+                pass
+
+            # Add cross-asset regime context
+            try:
+                from src.analysis.correlations import (
+                    average_cross_corr_series as _acs_ms,
+                    detect_correlation_regime as _dcr_ms,
+                )
+                from src.data.loader import load_returns as _lr_ms
+                _eq_ms, _cmd_ms = _lr_ms(start, end)
+                _avg_ms = _acs_ms(_eq_ms, _cmd_ms, window=60)
+                _rlab_ms = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+                _ms_ctx["regime_name"] = _rlab_ms.get(
+                    int(_dcr_ms(_avg_ms).iloc[-1]), "Normal"
+                )
             except Exception:
                 pass
 
