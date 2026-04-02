@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_ilian() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.70rem;line-height:1.75;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.68rem;line-height:1.75;"
 
     photo = _photo_html("photo_ilian.jpeg", "Ilian Zalomai")
 
