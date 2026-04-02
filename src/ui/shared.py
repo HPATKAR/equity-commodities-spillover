@@ -221,6 +221,57 @@ def _page_conclusion(verdict: str, summary: str) -> None:
     )
 
 
+def _freshness_badge(
+    label: str,
+    value: str,
+    age_seconds: int | None = None,
+    stale_after: int = 900,
+) -> str:
+    """
+    Return an HTML freshness badge.
+    Green dot  = fresh (age < stale_after)
+    Amber dot  = aging (stale_after <= age < 2x)
+    Red dot    = stale (age >= 2x stale_after) or unknown
+    """
+    if age_seconds is None:
+        dot_color, status = "#555960", "—"
+    elif age_seconds < stale_after:
+        dot_color, status = "#27ae60", "Live"
+    elif age_seconds < stale_after * 2:
+        dot_color, status = "#e67e22", "Aging"
+    else:
+        dot_color, status = "#c0392b", "Stale"
+
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:4px;'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
+        f'color:#8890a1;margin-right:0.9rem">'
+        f'<span style="color:{dot_color};font-size:0.55rem">&#9679;</span>'
+        f'<span style="color:#c8c8c8">{label}</span>'
+        f'<span style="color:{_GOLD}">{value}</span>'
+        f'<span style="color:{dot_color};font-size:0.50rem">{status}</span>'
+        f'</span>'
+    )
+
+
+def _data_status_bar(items: list[tuple[str, str, int | None]]) -> None:
+    """
+    Render a compact horizontal data-freshness strip.
+    items: list of (label, value, age_seconds)
+    e.g. [("VIX", "18.4", 120), ("OVX", "31.2", 300), ("Regime", "Normal", None)]
+    """
+    badges = "".join(_freshness_badge(l, v, a) for l, v, a in items)
+    st.markdown(
+        f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
+        f'background:#0d0d0d;border:1px solid #1e1e1e;border-radius:3px;'
+        f'padding:0.35rem 0.8rem;margin:0.4rem 0 0.9rem;gap:0.1rem">'
+        f'<span style="font-size:0.50rem;font-weight:700;letter-spacing:0.16em;'
+        f'text-transform:uppercase;color:#3a3a3a;margin-right:0.7rem">DATA</span>'
+        f'{badges}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _thread(text: str) -> None:
     """Narrative connector paragraph between page sections."""
     st.markdown(

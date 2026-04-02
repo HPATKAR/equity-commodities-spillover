@@ -628,6 +628,52 @@ def load_fx_returns(
     return _log_returns(load_fx_prices(start, end))
 
 
+@st.cache_data(ttl=900, show_spinner=False)
+def load_implied_vol(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """
+    CBOE implied volatility indices via yfinance.
+      ^VIX   — S&P 500 implied vol (30-day)
+      ^OVX   — Crude Oil implied vol (CBOE Oil Volatility Index)
+      ^GVZ   — Gold implied vol (CBOE Gold Volatility Index)
+      ^VVIX  — VIX of VIX (implied vol of vol — tail-risk indicator)
+
+    Returns a DataFrame with columns [VIX, OVX, GVZ, VVIX].
+    Cached 15 minutes — refreshes meaningfully intraday.
+    """
+    _IV_TICKERS = {
+        "VIX":  "^VIX",
+        "OVX":  "^OVX",
+        "GVZ":  "^GVZ",
+        "VVIX": "^VVIX",
+    }
+    return _fill_gaps(
+        _fetch_yf(_IV_TICKERS, date.fromisoformat(start), date.fromisoformat(end))
+    )
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_iv_snapshot() -> dict[str, float]:
+    """
+    Live spot values for VIX, OVX, GVZ, VVIX.
+    Returns {name: latest_value}. Cached 5 minutes.
+    Used for the terminal freshness strip on Overview.
+    """
+    _IV_TICKERS = {"VIX": "^VIX", "OVX": "^OVX", "GVZ": "^GVZ", "VVIX": "^VVIX"}
+    result: dict[str, float] = {}
+    for name, ticker in _IV_TICKERS.items():
+        try:
+            t = yf.Ticker(ticker)
+            hist = t.history(period="2d")
+            if not hist.empty:
+                result[name] = float(hist["Close"].dropna().iloc[-1])
+        except Exception:
+            pass
+    return result
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_private_credit_proxies(
     start: str = str(DEFAULT_START),

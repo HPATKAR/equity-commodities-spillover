@@ -35,6 +35,7 @@ from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion,
     _page_footer, _add_event_bands, _insight_note,
+    _data_status_bar,
 )
 from src.analysis.proactive_alerts import compute_alerts
 from src.ui.alert_banner import render_alert_banner
@@ -51,6 +52,16 @@ def _label(txt: str) -> None:
 
 
 def page_overview(start: str, end: str, fred_key: str = "") -> None:
+    import datetime as _dt
+    _now_str = _dt.datetime.now().strftime("%H:%M:%S UTC")
+
+    # Auto-refresh: track last load time; offer manual refresh button
+    if "overview_last_loaded" not in st.session_state:
+        st.session_state["overview_last_loaded"] = _dt.datetime.now()
+    _age = int((_dt.datetime.now() - st.session_state["overview_last_loaded"]).total_seconds())
+    _age_label = f"{_age // 60}m {_age % 60}s ago" if _age >= 60 else f"{_age}s ago"
+    _stale = _age > 300    # >5 min = stale
+
     _hdr_col, _btn_col = st.columns([5, 1])
     with _hdr_col:
         _logo = _logo_b64()
@@ -73,19 +84,20 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
     with _btn_col:
-        st.markdown('<div style="height:0.25rem"></div>', unsafe_allow_html=True)
+        _stale_color = "#c0392b" if _stale else "#27ae60"
         st.markdown(
-            '<div style="background:#131313;border:1px solid #2a2a2a;border-left:3px solid #CFB991;'
-            'border-radius:0 3px 3px 0;padding:0.5rem 0.75rem;margin-bottom:0.4rem">'
-            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
-            'letter-spacing:0.12em;text-transform:uppercase;color:#CFB991;margin:0 0 3px 0">'
-            'Interactive AI Analyst</p>'
-            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;color:#8890a1;'
-            'margin:0;line-height:1.5">'
-            'Live access to all dashboard data — regimes, spillovers, geo risk, trade ideas.</p>'
-            '</div>',
+            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:3px;'
+            f'padding:0.4rem 0.6rem;margin-bottom:0.4rem;text-align:center">'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.50rem;font-weight:700;'
+            f'letter-spacing:0.14em;text-transform:uppercase;color:#3a3a3a;margin-bottom:2px">LAST UPDATED</div>'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:{_stale_color}">'
+            f'{_age_label}</div></div>',
             unsafe_allow_html=True,
         )
+        if st.button("Refresh", key="overview_refresh_btn", use_container_width=True):
+            st.session_state["overview_last_loaded"] = _dt.datetime.now()
+            st.cache_data.clear()
+            st.rerun()
         if st.button("Open Analyst", key="hdr_ai_analyst_btn", type="primary", use_container_width=True):
             st.session_state["current_page"] = "ai_chat"
             st.rerun()
@@ -99,6 +111,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     with st.spinner("Loading market data…"):
         eq_r, cmd_r = load_returns(start, end)
+        try:
+            from src.data.loader import load_iv_snapshot
+            _iv_snap = load_iv_snapshot()
+        except Exception:
+            _iv_snap = {}
 
     if eq_r.empty or cmd_r.empty:
         st.error("Could not load market data. Check your internet connection.")
@@ -155,6 +172,19 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
          f"{recent_eq[worst_eq]*100:+.1f}%", "#c0392b")
     _kpi(k5, "Best Commodity (1M)", best_cmd,
          f"{recent_cmd[best_cmd]*100:+.1f}%", "#2e7d32")
+
+    # ── Data freshness & implied vol strip ────────────────────────────────
+    import time as _time
+    _now_ts = _time.time()
+    _status_items: list[tuple[str, str, int | None]] = [
+        ("Regime", regime_name, None),
+        ("Corr", f"{current_avg_corr:.3f}", 60),     # refreshed with page data
+    ]
+    for _iv_name in ("VIX", "OVX", "GVZ", "VVIX"):
+        _v = _iv_snap.get(_iv_name)
+        if _v is not None:
+            _status_items.append((_iv_name, f"{_v:.1f}", 300))   # 5-min TTL
+    _data_status_bar(_status_items)
 
     # ── Load FI and FX data ────────────────────────────────────────────────
     try:
@@ -750,9 +780,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "the Analysis pages for the quantitative breakdown."
     )
 
-    # ── AI Risk Officer — Morning Briefing ────────────────────────────────────
+    # ── AI Workforce — Orchestrated Pipeline ─────────────────────────────────
     try:
-        from src.agents.risk_officer import run as _ro_run
+        from src.analysis.agent_orchestrator import get_orchestrator
         from src.ui.agent_panel import (
             render_agent_output_block, render_activity_feed, render_pending_review,
         )
@@ -770,27 +800,101 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
         _api_key  = _anthropic_key or _openai_key
 
-        _ro_ctx = {
-            "regime_name":        regime_name,
-            "regime_level":       int(current_regime),
-            "risk_score":         float(risk_result["score"]),
-            "avg_corr":           float(current_avg_corr),
-            "corr_delta":         float(corr_delta),
-            "best_equity":        best_eq,
-            "worst_equity":       worst_eq,
-            "best_commodity":     best_cmd,
-            "worst_commodity":    worst_cmd,
-            "n_alerts":           len(_alerts),
-            "alert_categories":   list({a.category for a in _alerts}),
-            "alert_summaries":    [a.title for a in _alerts[:4]],
+        # Full market context — richer than before
+        _market_ctx = {
+            "regime_name":     regime_name,
+            "regime_level":    int(current_regime),
+            "risk_score":      float(risk_result["score"]),
+            "avg_corr":        float(current_avg_corr),
+            "corr_delta":      float(corr_delta),
+            "best_equity":     best_eq,
+            "worst_equity":    worst_eq,
+            "best_commodity":  best_cmd,
+            "worst_commodity": worst_cmd,
+            "n_alerts":        len(_alerts),
+            "alert_categories": list({a.category for a in _alerts}),
+            "alert_summaries": [a.title for a in _alerts[:4]],
+            "eq_returns":      eq_r,
+            "cmd_returns":     cmd_r,
+            # Implied vol context
+            "vix":   _iv_snap.get("VIX"),
+            "ovx":   _iv_snap.get("OVX"),
+            "gvz":   _iv_snap.get("GVZ"),
+            "vvix":  _iv_snap.get("VVIX"),
         }
 
-        with st.spinner("AI Risk Officer composing briefing…"):
-            _ro_result = _ro_run(_ro_ctx, _provider, _api_key)
+        orch = get_orchestrator(_provider, _api_key)
+
+        # Run only Round 1 agents on Overview (fast path) — heavier rounds
+        # run on their respective pages when user navigates there.
+        # Round 1: signal_auditor, macro_strategist, geopolitical_analyst
+        # They inform the Risk Officer which is in Round 2.
+        # We run the full pipeline here on Overview since it's the hub.
+        if _provider and _api_key:
+            with st.spinner("AI Workforce analysing markets…"):
+                _pipeline_results = orch.run(_market_ctx)
+        else:
+            # No API key — still run orchestrator for calibration (no LLM calls)
+            _pipeline_results = {}
+
+        # ── Pipeline status strip ────────────────────────────────────────
+        _orch_status = orch.status()
+        _div_flags   = orch.divergence_flags()
+
+        if _orch_status.get("agents_fresh") or _div_flags:
+            _fresh_agents = _orch_status.get("agents_fresh", [])
+            _stale_agents = _orch_status.get("agents_stale", [])
+            _flag_html = ""
+            if _div_flags:
+                _flag_html = "".join([
+                    f'<span style="font-size:0.58rem;color:#e67e22;margin-left:0.6rem">'
+                    f'&#9651; {f["topic"].upper()}: {f["agent_a"]} ↔ {f["agent_b"]}</span>'
+                    for f in _div_flags[:3]
+                ])
+            _fresh_str = ", ".join(_fresh_agents[:5]) if _fresh_agents else "—"
+            st.markdown(
+                f'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.4rem;'
+                f'background:#0d0d0d;border:1px solid #1e1e1e;border-radius:3px;'
+                f'padding:0.35rem 0.8rem;margin:0.6rem 0">'
+                f'<span style="font-size:0.50rem;font-weight:700;letter-spacing:0.16em;'
+                f'text-transform:uppercase;color:#3a3a3a;margin-right:0.5rem">PIPELINE</span>'
+                f'<span style="font-size:0.58rem;color:#27ae60">&#9679; Active: {_fresh_str}</span>'
+                f'{_flag_html}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Risk Officer output (primary briefing) ────────────────────────
+        _ro_result = _pipeline_results.get("risk_officer", {})
+        if not _ro_result:
+            # Fallback: try direct call if orchestrator didn't run it
+            try:
+                from src.agents.risk_officer import run as _ro_run
+                _ro_result = _ro_run(_market_ctx, _provider, _api_key)
+            except Exception:
+                _ro_result = {}
 
         if _ro_result.get("narrative"):
             st.markdown("---")
             render_agent_output_block("risk_officer", _ro_result)
+
+        # ── Secondary agent outputs (round 1 inline snippets) ─────────────
+        _secondary = {
+            k: v for k, v in _pipeline_results.items()
+            if k != "risk_officer" and v.get("narrative")
+        }
+        if _secondary:
+            with st.expander(f"Full AI Workforce Output ({len(_secondary)} agents)", expanded=False):
+                for _aid, _res in _secondary.items():
+                    render_agent_output_block(_aid, _res)
+
+        # ── Divergence flags callout ──────────────────────────────────────
+        if _div_flags:
+            _flag_rows = "\n".join([
+                f"• **{f['agent_a']}** vs **{f['agent_b']}** — divergence on `{f['topic']}`"
+                for f in _div_flags
+            ])
+            st.warning(f"**Agent Divergence Detected**\n\n{_flag_rows}")
 
         # Activity feed — full view on Overview
         st.markdown("---")
@@ -801,7 +905,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if _n_pend > 0:
             st.markdown("---")
             render_pending_review()
-    except Exception:
-        pass
+    except Exception as _e:
+        st.error(f"AI Workforce error: {_e}")
 
     _page_footer()

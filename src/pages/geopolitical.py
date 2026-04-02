@@ -284,6 +284,28 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
+    # ── Live Geopolitical Headlines (RSS) ─────────────────────────────────
+    st.markdown(
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E6F3E;margin:1.4rem 0 0.4rem">Live Intelligence Feed</p>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.ingestion.geo_rss import render_rss_panel
+        render_rss_panel(max_items=8)
+    except ImportError:
+        st.markdown(
+            f'<p style="{_F}font-size:0.68rem;color:#8890a1">'
+            f'Install feedparser to enable live RSS ingestion: '
+            f'<code>pip install feedparser</code></p>',
+            unsafe_allow_html=True,
+        )
+    except Exception as _rss_e:
+        st.markdown(
+            f'<p style="{_F}font-size:0.68rem;color:#8890a1">RSS feed temporarily unavailable.</p>',
+            unsafe_allow_html=True,
+        )
+
     # ── AI Geopolitical Analyst ────────────────────────────────────────────
     try:
         from src.agents.geopolitical_analyst import run as _ga_run
