@@ -1,14 +1,16 @@
 # Equity-Commodities Spillover Monitor
 
-A multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets and commodity futures — with a focus on geopolitical risk, correlation regimes, and portfolio stress testing.
+A multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX — with geopolitical risk intelligence, forward-looking scenario analysis, and a collaborative AI agent workforce.
+
+Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School of Business
 
 ---
 
 ## Overview
 
-The Spillover Monitor brings together 15 global equity indices and 17 commodity futures into a single interactive workspace. It tracks how stress transmits across asset classes — not just what is happening, but *why*, *where it came from*, and *what comes next*.
+The Spillover Monitor brings together 15 global equity indices, 17 commodity futures, fixed income ETFs, and FX pairs into a single institutional-grade workspace. It tracks how stress transmits across asset classes — not just what is happening, but *why*, *where it came from*, and *what comes next*.
 
-Built for analysts, portfolio managers, and researchers who need more than price charts: directional spillover networks, Markov-regime forecasts, conflict impact scoring, and AI-assisted narrative — all in one terminal.
+An orchestrated pipeline of 7 AI agents runs in dependency order on every page load, synthesising live market data into morning briefings, trade ideas, and stress assessments — without requiring any manual input.
 
 ---
 
@@ -31,7 +33,21 @@ Built for analysts, portfolio managers, and researchers who need more than price
 | **Industrial Metals** | Copper, Aluminum, Nickel |
 | **Agriculture** | Wheat, Corn, Soybeans, Sugar #11, Coffee, Cotton |
 
-### Geopolitical Events — 12 Tracked Shocks (2008–2025)
+### Fixed Income & FX
+| Asset Class | Instruments |
+|-------------|-------------|
+| **Fixed Income** | US 20Y+ Treasury (TLT), IG Corporate (LQD), HY Corporate (HYG), EM USD Bonds (EMB), Short Treasury (SHY), TIPS (TIP) |
+| **FX** | DXY Dollar Index, EUR/USD, GBP/USD, USD/JPY, USD/CNY, USD/INR |
+
+### Implied Volatility
+| Index | Description |
+|-------|-------------|
+| **VIX** | CBOE Equity Volatility Index |
+| **OVX** | CBOE Oil Volatility Index |
+| **GVZ** | CBOE Gold Volatility Index |
+| **VVIX** | Volatility of VIX |
+
+### Geopolitical Events — 13 Tracked Shocks (2008–present)
 | ID | Event | Period |
 |----|-------|--------|
 | GFC | Global Financial Crisis | Sep 2008 – Mar 2009 |
@@ -45,230 +61,181 @@ Built for analysts, portfolio managers, and researchers who need more than price
 | Fed Hike | Fed Rate Hiking Cycle | Mar 2022 – Jul 2023 |
 | SVB | SVB / Banking Crisis | Mar – May 2023 |
 | Hamas | Israel-Hamas War & Iran Escalation | Oct 2023 – present |
+| India-Pakistan | India-Pakistan Military Escalation | May 2025 – present |
 | Hormuz | Iran Military Conflict & Strait of Hormuz Crisis | Jun 2025 – present |
 
 ---
 
-## Key Attributes
+## Key Features
 
-- **Real-time cross-asset correlation regimes** — four-state classification (Decorrelated → Normal → Elevated → Crisis) updated on each load
-- **Markov chain regime forecasting** — forward-looking transition probabilities, mean days to next Crisis, and steady-state distribution
+- **Real-time correlation regimes** — four-state classification (Decorrelated → Normal → Elevated → Crisis) with Markov transition forecasts and mean days to next Crisis
 - **Early Warning System** — five-component composite score (0–100) flagging conditions that historically precede regime transitions
-- **Three-conflict war risk scoring** — country-level equity exposure mapped for Ukraine, Israel-Hamas, and Iran/Hormuz simultaneously
-- **Directional spillover network** — Granger causality, transfer entropy, and Diebold-Yilmaz index identify who leads and who follows
-- **Portfolio stress tester** — combine any mix of indices, commodities, and S&P 500 stocks; test against every tracked geopolitical event
-- **Regime-triggered trade ideas** — curated cross-asset trade cards with entry logic, rationale, and risk anchored to current regime
-- **AI analyst** — GPT-4o chatbot with live dashboard context injected into the system prompt for institutional-quality narrative
-- **Adjustable date range** — all analytics recompute for any start/end window from the sidebar
-- **No investment advice** — research and educational tool only
+- **Forward-looking Scenario Engine** — parametric shock simulator for oil, gold, yields, DXY, credit spreads, and geopolitical disruption; propagates shocks via OLS betas with VaR 95/99 and ES 95/99
+- **Directional spillover network** — Granger causality, transfer entropy, and Diebold-Yilmaz FEVD identify who leads and who follows across all assets
+- **War Impact Map** — choropleth scoring 195+ countries by equity-market exposure across three simultaneous active conflict theaters
+- **Strait Watch** — live disruption monitoring for six critical maritime chokepoints (Hormuz, Suez, Panama, Bosporus, Malacca, Taiwan Strait)
+- **Portfolio stress tester** — custom multi-asset allocation (indices, commodities, fixed income, individual stocks) tested against all 13 tracked events
+- **Implied vol layer** — OVX, GVZ, VIX, VVIX integrated into agent context and displayed as live and historical panels
+- **Automated geo-intelligence** — RSS ingestion from 7 sources (Reuters, BBC, NYT, WSJ, FT, AP) with keyword-tagged severity scoring; high-confidence events auto-routed to AI review queue
+- **AI Workforce** — 7 agents in a dependency-ordered pipeline (see below); outputs feed forward across rounds
+- **AI Analyst chatbot** — Claude/GPT-4o with full live dashboard context injected into every query
 
 ---
 
-## Use Cases
+## AI Workforce
 
-### 1. Geopolitical Risk Assessment
-Track how an active conflict (Ukraine, Gaza, Hormuz) is transmitting into equity and commodity prices. The War Impact Map scores 195+ countries by market exposure, updated for all three active theaters simultaneously.
+Seven agents run in three sequential rounds on every Overview page load. Each agent receives the structured outputs of its upstream peers before generating its own analysis.
 
-### 2. Correlation Regime Monitoring
-Identify whether markets are in a stress or calm phase. The four-regime model signals when correlations are "elevated" or in full "crisis" — the point at which diversification breaks down and hedges matter most.
+| Round | Agent | Role |
+|-------|-------|------|
+| 1 | **Signal Auditor** | Calibrates confidence scores across all agents from Granger hit rates |
+| 1 | **Macro Strategist** | Yield curve, inflation, Fed posture, GDP context |
+| 1 | **Geopolitical Analyst** | Active conflict risk, sanctions, strait disruption |
+| 2 | **Risk Officer** | Synthesises all Round 1 outputs into a morning briefing |
+| 2 | **Commodities Specialist** | COT positioning, supply shocks, sector rotation |
+| 3 | **Stress Engineer** | Scenario stress, tail risk, portfolio shock |
+| 3 | **Trade Structurer** | Regime-triggered trade ideas with full peer context |
 
-### 3. Crisis Early Warning
-The Early Warning System synthesizes five leading indicators into a composite score before a regime transition occurs. Use it as a pre-emptive signal, not a reactive label.
+A Chief Quality Officer (CQO) runs separately on each page to audit data integrity and flag assumption violations.
 
-### 4. Portfolio Stress Testing
-Build a custom multi-asset portfolio (indices + commodities + any S&P 500 stock), and see exactly how it would have performed during every major shock since 2008 — with pre/during/post return breakdowns, max drawdown, and Sharpe ratio.
-
-### 5. Spillover & Contagion Analysis
-Understand transmission direction: does oil drive equities, or do equity selloffs lead commodity liquidation? Granger causality grids and transfer entropy matrices answer this quantitatively.
-
-### 6. Trade Ideation
-Use the Regime-triggered Trade Ideas page to find cross-asset setups anchored to the current correlation regime — each card includes rationale, directional bias, and risk considerations.
-
-### 7. Historical Event Forensics
-The Geopolitical Triggers page isolates every tracked event and shows normalized price performance, volatility shifts, and correlation regime changes in a single clean view — useful for pattern-matching to current conditions.
+Divergence detection flags disagreements between peer agents (e.g., Macro Strategist bullish on rates while Geopolitical Analyst flags energy supply disruption). All outputs are cached for 1 hour; stale agents are automatically invalidated on regime change.
 
 ---
 
 ## Page-by-Page Manual
 
 ### Overview
-**Starting point for every session.** Load this page first.
+**Starting point for every session.**
 
-- **KPI strip** — five headline metrics: current regime, average cross-asset correlation (with 22-day delta), best and worst equity region, best and worst commodity
-- **Risk Score** — composite 0–100 gauge combining regime state, correlation level, recent volatility, and geopolitical event proximity
-- **Early Warning System** — five signal cards (Correlation Velocity, Vol Acceleration, Regime Duration Pressure, Equity Vol Trend, Markov Crisis Probability) plus a composite banner. Below this: a Historical Analogues table showing the five most similar past market environments and how they resolved
-- **AI Narrative** — one-paragraph contextual summary generated from live market data
+- **KPI strip** — regime, 60d avg correlation (with 1M delta), best/worst equity, best/worst commodity
+- **FI/FX context strip** — TLT 30d return, HYG vs LQD credit spread, DXY trend, equity-bond divergence, EM credit signal
+- **Implied vol panel** — live OVX, GVZ, VIX, VVIX badges with freshness indicators; expandable historical chart
+- **Risk Score** — composite 0–100 gauge with dynamic component weights
+- **Early Warning System** — five signal cards plus composite score and historical analogues table
+- **AI Workforce output** — Risk Officer morning briefing displayed inline; all other agents in collapsible expander; divergence flags highlighted
+- **Activity feed** — real-time log of all agent actions, routing decisions, and escalations
 
-**How to use:** Check the regime and EWS score at the start of each session. If EWS composite exceeds 60/100, investigate further using Correlation Analysis and Spillover Analytics.
+---
+
+### Scenario Engine
+**Forward-looking parametric shock simulator.**
+
+Six shock inputs: oil price change (%), gold price change (%), yield shift (bps), DXY change (%), credit spread change (bps), geopolitical disruption score (0–10).
+
+- **Preset scenarios** — Oil Supply Shock, Safe Haven Flight, Fed Policy Error, Geopolitical Escalation, Stagflation, Risk-On Rally; one-click load
+- **Propagation** — OLS betas map commodity shocks to individual equity indices; fixed sensitivity tables for yield, DXY, credit, and geo channels
+- **Waterfall chart** — per-asset impact breakdown with channel attribution
+- **VaR/ES table** — historical simulation at 95% and 99% confidence levels
+- **AI Stress Engineer** — narrative assessment of the scenario's tail risk implications
 
 ---
 
 ### War Impact Map
-**Global choropleth showing equity-market exposure to active geopolitical conflicts.**
+**Global choropleth showing equity-market exposure to active conflicts.**
 
-- **Filter bar** — switch between Combined (worst of all conflicts), Ukraine War only, Israel-Hamas only, or Iran/Hormuz only
-- **Map view** — flat world map with countries colored green (low risk) to red (high risk). Home-turf countries (Russia, Ukraine, Israel, Iran) marked with a distinct outline
-- **Top 25 exposed markets** — ranked table of highest-risk countries with per-conflict breakdown scores
-- **Tracked equity performance** — returns for each high-risk market since conflict onset, with per-conflict score columns
-- **Conflict summaries** — background on each active conflict's commodity channels and market transmission mechanisms
-
-**How to use:** Select a specific conflict to isolate its exposure. Cross-reference the Top 25 table with your equity positions to identify geographic concentration.
+- Filter between Combined, Ukraine, Israel-Hamas, and Iran/Hormuz views
+- Top 25 exposed markets ranked table with per-conflict score columns
+- Tracked equity performance since conflict onset
 
 ---
 
 ### Geopolitical Triggers
 **Event-window forensics for every tracked shock since 2008.**
 
-- **Event selector** — choose one or multiple events from the full 12-event library
-- **Normalized price performance** — all assets rebased to 100 at event start; pre/during/post windows overlaid
-- **Pre vs. post volatility shift** — annualized realized volatility before and after each event, with a % change column
-- **Correlation regime change** — regime state at event onset vs. peak stress vs. 90-day recovery
-
-**How to use:** Select the event most analogous to current conditions (use the Historical Analogues section on Overview for guidance). Compare its commodity/equity performance patterns against current positioning.
+- Normalized price performance with pre/during/post windows
+- Volatility shift (annualized realized vol before vs. after)
+- Correlation regime change at event onset, peak stress, and 90-day recovery
+- Live Intelligence Feed — automated RSS headlines tagged by region, commodity, and severity; high-confidence events routed to pending review
 
 ---
 
 ### Correlation Analysis
-**Four-tab deep-dive into the cross-asset correlation structure.**
+Four tabs: Rolling Correlation, DCC-GARCH, Regime Detection, Regime Forecast. Full fixed income and FX pair coverage included.
 
-#### Tab 1: Rolling Correlation
-Pearson rolling correlations between selected equity indices and commodities. Adjust the window (30d–252d) to see short-term spikes vs. structural trends. Use the pair-picker to focus on specific cross-asset relationships.
-
-#### Tab 2: DCC-GARCH
-Dynamic Conditional Correlations with GARCH(1,1) volatility filtering. Removes the mechanical effect of changing volatility on correlation estimates — what remains is the "true" co-movement signal. Particularly useful for identifying whether a recent correlation spike is volatility-driven or structural.
-
-#### Tab 3: Regime Detection
-Historical timeline of the four correlation regimes with color bands. Summary statistics: average correlation per regime, typical duration, frequency. Use the date slider to zoom into specific crisis episodes and compare regime transitions.
-
-#### Tab 4: Regime Forecast
-Markov chain output anchored to the current regime:
-- **Transition matrix heatmap** — 4×4 probability matrix; each cell shows the probability of moving from regime (row) to regime (column)
-- **Steady-state distribution** — where the system spends its time in the long run
-- **Mean days to Crisis** — expected number of trading days to reach the Crisis regime from each starting state
-- **Run statistics** — historical average, median, and maximum duration in each regime
-
-**How to use:** Check the current-regime row of the transition matrix. If P(Crisis | current) > 25%, pair with the EWS composite on Overview to assess whether pre-emptive hedging is warranted.
+**Regime Forecast** outputs Markov transition matrix, steady-state distribution, mean days to Crisis from each state, and run-length statistics.
 
 ---
 
 ### Spillover Analytics
-**Directional spillover network: who leads, who follows.**
+- Granger causality grid (pairwise, 5% significance)
+- Transfer entropy matrix (nonlinear information flow)
+- Diebold-Yilmaz FEVD connectedness index (0–100%)
+- Network graph (node size = net spillover power)
+- Cross-asset section covering rates, FX, and fixed income channels
 
-- **Granger causality grid** — pairwise test results at 5% significance; a checkmark means past values of asset A improve forecasts of asset B
-- **Transfer entropy matrix** — nonlinear information flow between all asset pairs; heat-mapped by bit score
-- **Net flow matrix** — difference between outbound and inbound transfer entropy; net transmitters vs. net receivers
-- **Diebold-Yilmaz spillover index** — aggregate system-level connectedness score (0–100%); rising DY index = rising contagion risk
-- **Network graph** — visual node-link diagram; node size = net spillover power; edge thickness = flow magnitude
-- **Net transmitter bar chart** — ranked view of which assets export the most risk to the rest of the system
+---
 
-**How to use:** Identify the dominant transmitters (typically energy futures or S&P 500 during stress). If your portfolio is heavily loaded on net receivers, it is more vulnerable to spillover from those transmitter assets.
+### Macro Intelligence Dashboard
+**FRED-powered macro context with AI Macro Strategist.**
+
+- Yield curve (10Y–2Y spread), CPI YoY, Fed Funds Rate, GDP growth, ISM PMI
+- Historical series charts with recession shading
+- Yield curve shape analysis and inversion tracker
+- AI Macro Strategist briefing with peer context from Geopolitical Analyst and Risk Officer
 
 ---
 
 ### Commodities to Watch
-**Live commodity watchlist with volatility regime classification.**
+**Live watchlist with COT positioning.**
 
-- **Live snapshot** — current price, 1-day and 5-day return, annualized realized volatility, and regime label (Low Vol / Normal / Elevated / High Vol) for all 17 futures
-- **Intraday view** — hourly price and volume data for a selected commodity; useful for same-day signal monitoring
-- **Daily chart** — configurable rolling window; overlaid with volatility regime color bands
-- **COT overlay** — Commitment of Traders positioning data where available (net speculative positioning vs. commercial hedgers)
-- **Rolling correlation** — selected commodity vs. all equity regions; rolling 60-day Pearson
+- Live snapshot: price, 1d/5d return, annualized vol, regime label
+- Intraday hourly view and daily chart with volatility regime bands
+- COT overlay: net speculative positioning vs. commercial hedgers
+- Rolling 60-day correlation vs. all equity regions
 
-**How to use:** Sort by volatility regime to surface the most stressed commodities. Use the COT overlay to assess whether speculative positioning is extended — crowded longs in a High Vol regime typically mean higher reversal risk.
+---
+
+### Strait Watch
+**Maritime chokepoint disruption monitor.**
+
+Six straits tracked: Hormuz, Suez, Taiwan Strait, Bosporus, Malacca, Panama Canal. Each shows disruption score (0–100), vessel traffic change vs. baseline, commodity channels at risk, and estimated daily trade value at risk.
 
 ---
 
 ### Trade Ideas
-**Regime-triggered cross-asset trade cards.**
+**Regime-triggered cross-asset trade cards with AI structuring.**
 
-Each card contains:
-- **Trade title and direction** (long/short, asset pair)
-- **Regime trigger** — which correlation regime activates this trade
-- **Rationale** — macro logic behind the setup
-- **Entry signal** — indicator or price-action condition to watch
-- **Risk consideration** — what would invalidate the trade
-
-Cards are filtered by the current live regime automatically. You can also manually select a regime to review trades for other scenarios.
-
-**Examples of available trades:**
-- Long Gold / Short Eurostoxx 50 (Crisis regime hedge)
-- Long Natural Gas / Short Nikkei 225 (Energy supply shock)
-- Long Copper / Long EM equities (Reflation regime)
-- Long USD / Short commodity basket (DXY regime divergence)
-
-**How to use:** When the current regime is Elevated or Crisis, filter to those cards. Cross-reference with the Spillover Analytics page to confirm that the transmitter/receiver direction aligns with the trade thesis.
+Cards filtered by current live regime. Each includes directional thesis, entry signal, risk consideration, and regime trigger. AI Trade Structurer generates new ideas incorporating full peer agent context from macro, geo, stress, and commodities agents.
 
 ---
 
 ### Portfolio Stress Test
 **Build any portfolio, test it against every tracked shock.**
 
-#### Step 1: Build your portfolio (Section A — Indices & Commodities)
-- Choose a preset (60/40, Energy Macro, EM + Commodities, Global Diversified) or start custom
-- Select indices and commodity futures from the multiselect
-- Enter any ticker directly (e.g., AAPL, NVDA, JPM) for individual stocks
-- Adjust weights using the number inputs (0–100%, increments of 1%)
-- The allocation bar chart updates in real-time showing your portfolio breakdown
+- Preset allocations or custom: any mix of indices, commodity futures, fixed income ETFs, and individual S&P 500 stocks
+- Per-event results: Pre/During/Post return, Max Drawdown, Sharpe Ratio
+- Event Returns Heatmap, Max Drawdown bar chart, and normalized portfolio path chart
 
-#### Step 2: Add individual stocks (Section B — S&P 500)
-- Filter by sector to narrow the list
-- Search any of the ~500 constituents by ticker or company name
-- Edit weights in the interactive table (supports CSV upload: columns `ticker`, `weight`)
-- Use the Equal Weight button for a quick equal-allocation starting point
+---
 
-#### Step 3: Review the weight summary
-- The status bar shows total allocated weight and color-codes it (green = 100%, neutral = under, orange = over)
-- Normalize to 100% with a single click (or let the engine normalize automatically at run time)
-- The portfolio allocation chart shows proportional bar visualization
+### Performance Review
+**Signal backtesting and model validation.**
 
-#### Step 4: Select events and run
-- Choose which of the 12 geopolitical events to include
-- Set the pre-event and post-event windows (10–90 days)
-- Click **Run Stress Test**
+- Granger causality hit rates (directional accuracy per pair)
+- Regime detection F1 score and confusion matrix
+- VIX-correlation R² and model accuracy
+- COT contrarian signal performance
+- AI Signal Auditor calibration output
 
-#### Results
-- **Summary table** — Pre / During / Post return (%), Max Drawdown (%), Sharpe Ratio for each event; green/red color coding
-- **Key metrics strip** — worst event return, best event return, worst drawdown, average during-event return
-- **Event Returns Heatmap** — pre/during/post returns for all events in a single diverging color grid (green = gain, red = loss)
-- **Max Drawdown bar chart** — drawdown depth per event; red threshold line at -10%
-- **Portfolio path chart** — normalized to 100 at event start, x-axis in days from event start (making all events directly comparable); vertical marker at day 0
+---
 
-**How to use:** Run the default preset first to establish a baseline. Then adjust weights toward commodities or cash equivalents and re-run to see how much drawdown protection you gain. Pay attention to which events consistently generate the worst results for your specific allocation — those are your tail-risk scenarios.
+### Insights
+**Macro research synthesis and private credit risk monitor.**
+
+- Private credit bubble risk score with HY OAS, BKLN, BDC basket, CDX HY signals
+- India macro framework: crude oil dependency, rupee transmission, Nifty 50 drivers
+- Cross-asset spillover research notes
 
 ---
 
 ### AI Analyst
-**GPT-4o chatbot with live dashboard context.**
+**Claude / GPT-4o chatbot with live dashboard context.**
 
-The AI Analyst automatically loads the current market state into its system prompt before you type anything:
-- Current correlation regime and risk score
-- Recent equity and commodity returns (22-day window)
-- Active geopolitical events
-- EWS composite and component scores
+Full market state injected into every query: regime, risk score, equity/commodity/FI/FX returns, implied vol levels, active geopolitical events, and AI agent outputs.
 
-Ask anything market-related in plain language:
-- "What is driving the elevated regime right now?"
-- "Which commodities look most vulnerable to the current geopolitical environment?"
-- "Explain the Diebold-Yilmaz spillover score in simple terms."
-- "What does a Markov transition probability of 38% to Crisis regime mean for my portfolio?"
+**Agent Activity Log** available at the bottom of this page — structured feed of every agent action, routing decision, and escalation from the current session.
 
-The model responds in institutional prose — no emojis, no hedging clichés. Treat it as a senior analyst who has just read the full dashboard.
-
-**Note:** An OpenAI API key is required. Responses are generated by GPT-4o and reflect the model's training data plus whatever live context is injected — not a licensed financial advisory service.
-
----
-
-## Sidebar Controls
-
-Every page respects two global controls in the sidebar:
-
-| Control | Effect |
-|---------|--------|
-| **Start Date** | Sets the historical lookback for all data and analytics |
-| **End Date** | Caps the analysis window (defaults to today) |
-| **FRED API Key** (optional) | Enables additional macro overlays where available |
-
-Short windows (< 2 years) may produce sparse correlation matrices and fewer historical analogues. For regime analysis, a minimum 5-year window is recommended. For the full 12-event coverage, use a start date of 2008 or earlier.
+Supports both Anthropic (Claude Sonnet) and OpenAI (GPT-4o). Configure via `.streamlit/secrets.toml` or Render Secret Files; Anthropic is preferred when both keys are present.
 
 ---
 
@@ -276,26 +243,82 @@ Short windows (< 2 years) may produce sparse correlation matrices and fewer hist
 
 ```
 Overview
+├── Macro
+│   └── Macro Intelligence Dashboard
 ├── Analysis
 │   ├── War Impact Map
 │   ├── Geopolitical Triggers
 │   ├── Correlation Analysis
-│   ├── Spillover Analytics
-│   └── Commodities to Watch
+│   └── Spillover Analytics
 ├── Strategy
 │   ├── Trade Ideas
-│   └── Portfolio Stress Test
-└── Research
-    ├── Performance Review
-    └── AI Analyst
+│   ├── Portfolio Stress Test
+│   └── Scenario Engine
+├── Monitor
+│   ├── Commodities to Watch
+│   └── Strait Watch
+├── Research
+│   ├── Performance Review
+│   └── AI Analyst
+├── Insights
+└── About
+    ├── Heramb S. Patkar
+    ├── Jiahe Miao
+    └── Ilian Zalomai
 ```
+
+---
+
+## Configuration
+
+### API Keys
+
+Add to `.streamlit/secrets.toml` (local) or as a **Secret File** on Render (deployed):
+
+```toml
+[keys]
+fred_api_key      = "..."   # FRED macroeconomic data (optional but recommended)
+anthropic_api_key = "..."   # Claude Sonnet — AI agents + analyst (preferred)
+openai_api_key    = "..."   # GPT-4o fallback
+
+[auth]
+password = "..."            # Optional — set enable_auth = true in [config] to activate
+
+[config]
+enable_auth      = false    # Set true to add a password gate on app load
+enable_rss       = true     # Automated geopolitical RSS ingestion
+refresh_interval = 300      # Overview auto-refresh interval in seconds
+```
+
+Anthropic is used when both keys are present. FRED unlocks yield curve, CPI, Fed Funds Rate, GDP, and ISM data on the Macro Dashboard.
+
+### Local Setup
+
+```bash
+git clone https://github.com/HPATKAR/equity-commodities-spillover.git
+cd equity-commodities-spillover
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+---
+
+## Stack
+
+| Layer | Libraries |
+|-------|-----------|
+| **UI** | Streamlit, Plotly, custom HTML/CSS |
+| **Data** | yfinance, fredapi, feedparser |
+| **Analytics** | pandas, numpy, statsmodels, arch, scipy, scikit-learn, networkx |
+| **AI** | anthropic, openai |
+| **Reports** | reportlab, Pillow |
 
 ---
 
 ## Disclaimers
 
-This dashboard is built for **educational and research purposes only**. Nothing on this platform constitutes investment advice. All analytics are based on historical data and statistical models — past relationships do not guarantee future behavior. Commodity and equity prices are sourced from public data providers (Yahoo Finance, FRED) and may have delays or gaps. The AI Analyst responses are generated by a third-party language model and should not be treated as financial guidance.
+This dashboard is built for **educational and research purposes only**. Nothing on this platform constitutes investment advice. All analytics are based on historical data and statistical models — past relationships do not guarantee future behavior. Market data is sourced from Yahoo Finance and FRED and may have delays or gaps. AI agent outputs are generated by third-party language models and should not be treated as financial guidance.
 
 ---
 
-*Equity-Commodities Spillover Monitor — Purdue University | AI for Finance*
+*Equity-Commodities Spillover Monitor — Purdue University | MGMT 69000-120: AI for Finance*
