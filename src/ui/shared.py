@@ -451,14 +451,14 @@ def _about_page_styles():
     }
     .about-hero .subtitle {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.74rem;
+        font-size: 0.70rem;
         color: #8890a1;
         margin: 0 0 0.45rem 0;
         font-weight: 500;
     }
     .about-hero .tagline {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.68rem;
         color: #8890a1;
         margin: 0 0 0.65rem 0;
         line-height: 1.6;
@@ -522,27 +522,27 @@ def _about_page_styles():
     .exp-item:hover { border-color: #CFB991; }
     .exp-role {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         font-weight: 700;
         color: #e8e9ed;
         margin: 0 0 0.1rem 0;
     }
     .exp-org {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.74rem;
+        font-size: 0.70rem;
         font-weight: 600;
         color: #CFB991;
         margin: 0 0 0.12rem 0;
     }
     .exp-meta {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.65rem;
+        font-size: 0.63rem;
         color: #8890a1;
         margin: 0 0 0.28rem 0;
     }
     .exp-desc {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.68rem;
         color: #8890a1;
         line-height: 1.6;
         margin: 0;
@@ -556,27 +556,27 @@ def _about_page_styles():
     .edu-item:last-child { border-bottom: none; }
     .edu-school {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         font-weight: 700;
         color: #e8e9ed;
         margin: 0 0 0.1rem 0;
     }
     .edu-dept {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.68rem;
         color: #CFB991;
         margin: 0 0 0.1rem 0;
         font-weight: 500;
     }
     .edu-degree {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.68rem;
         color: #8890a1;
         margin: 0 0 0.1rem 0;
     }
     .edu-year {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.65rem;
+        font-size: 0.63rem;
         color: #8890a1;
         margin: 0;
     }
@@ -587,7 +587,7 @@ def _about_page_styles():
     }
     .pub-title {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.74rem;
+        font-size: 0.70rem;
         font-weight: 600;
         color: #e8e9ed;
         margin: 0 0 0.22rem 0;
@@ -595,13 +595,13 @@ def _about_page_styles():
     }
     .pub-authors {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.66rem;
         color: #8890a1;
         margin: 0 0 0.12rem 0;
     }
     .pub-journal {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.65rem;
+        font-size: 0.63rem;
         color: #c4ae88;
         font-style: italic;
         margin: 0 0 0.1rem 0;
@@ -631,14 +631,14 @@ def _about_page_styles():
     .cert-item:last-child { border-bottom: none; }
     .cert-name {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.74rem;
+        font-size: 0.70rem;
         font-weight: 600;
         color: #e8e9ed;
         margin: 0 0 0.08rem 0;
     }
     .cert-issuer {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.65rem;
+        font-size: 0.63rem;
         color: #8890a1;
         margin: 0;
     }
