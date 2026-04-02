@@ -312,7 +312,7 @@ class Orchestrator:
                     for e in active[:8]
                 ],
                 "affected_commodities": affected_cmds[:5],
-                "affected_regions":     list({e.get("region","") for e in active if e.get("region")})[:4],
+                "affected_regions":     list({str(e.get("region","")) for e in active if e.get("region")})[:4],
                 "regime_name":          mc.get("regime_name"),
                 "risk_score":           mc.get("risk_score"),
                 "notes":                strait_notes,

@@ -186,6 +186,49 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             _status_items.append((_iv_name, f"{_v:.1f}", 300))   # 5-min TTL
     _data_status_bar(_status_items)
 
+    # ── Implied Vol History (OVX / GVZ / VIX / VVIX) ─────────────────────
+    try:
+        from src.data.loader import load_implied_vol as _load_iv_hist
+        with st.expander("Implied Volatility History — OVX · GVZ · VIX · VVIX", expanded=False):
+            _iv_hist = _load_iv_hist(start, end)
+            if not _iv_hist.empty:
+                _iv_cols = st.columns(2)
+                _iv_pairs = [
+                    (["OVX", "GVZ"], "Oil & Gold Implied Vol (OVX / GVZ)", "#e67e22", "#CFB991"),
+                    (["VIX", "VVIX"], "Equity Implied Vol (VIX / VVIX)", "#c0392b", "#2980b9"),
+                ]
+                for _ic, (_keys, _title, _c1, _c2) in zip(_iv_cols, _iv_pairs):
+                    with _ic:
+                        _fig_iv = go.Figure()
+                        _colors_iv = [_c1, _c2]
+                        for _ki, _k in enumerate(_keys):
+                            if _k in _iv_hist.columns:
+                                _fig_iv.add_trace(go.Scatter(
+                                    x=_iv_hist.index, y=_iv_hist[_k],
+                                    name=_k, line=dict(color=_colors_iv[_ki], width=1.4),
+                                ))
+                        _fig_iv.update_layout(
+                            template="purdue", height=180,
+                            margin=dict(l=0, r=10, t=18, b=10),
+                            title=dict(text=_title, font=dict(size=9, color="#8890a1"), x=0),
+                            legend=dict(orientation="h", y=1.15, x=1, xanchor="right",
+                                        font=dict(size=8)),
+                            yaxis=dict(tickfont=dict(size=8)),
+                            xaxis=dict(tickfont=dict(size=8)),
+                            paper_bgcolor="#111111", plot_bgcolor="#111111",
+                        )
+                        _chart(_fig_iv)
+                st.markdown(
+                    '<p style="font-size:0.60rem;color:#6b7280;margin:0">'
+                    'OVX = CBOE Oil Volatility Index · GVZ = CBOE Gold Volatility Index · '
+                    'VVIX = Volatility of VIX · All sourced from CBOE via Yahoo Finance.</p>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("Implied vol data unavailable. Requires ^OVX, ^GVZ, ^VIX, ^VVIX from Yahoo Finance.")
+    except Exception:
+        pass
+
     # ── Load FI and FX data ────────────────────────────────────────────────
     try:
         fi_r = load_fixed_income_returns(start, end)
@@ -800,7 +843,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
         _api_key  = _anthropic_key or _openai_key
 
-        # Full market context — richer than before
+        # Full market context — scalars only (no DataFrames; agents don't need raw returns)
         _market_ctx = {
             "regime_name":     regime_name,
             "regime_level":    int(current_regime),
@@ -812,10 +855,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             "best_commodity":  best_cmd,
             "worst_commodity": worst_cmd,
             "n_alerts":        len(_alerts),
-            "alert_categories": list({a.category for a in _alerts}),
+            "alert_categories": [str(a.category) for a in _alerts],
             "alert_summaries": [a.title for a in _alerts[:4]],
-            "eq_returns":      eq_r,
-            "cmd_returns":     cmd_r,
             # Implied vol context
             "vix":   _iv_snap.get("VIX"),
             "ovx":   _iv_snap.get("OVX"),
@@ -906,6 +947,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown("---")
             render_pending_review()
     except Exception as _e:
+        import traceback as _tb
         st.error(f"AI Workforce error: {_e}")
+        with st.expander("Error details", expanded=False):
+            st.code(_tb.format_exc(), language="text")
 
     _page_footer()

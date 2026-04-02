@@ -507,16 +507,20 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             except Exception:
                 pass
 
-            # Include peer agent outputs (truncated to key content, not a brief snippet)
+            # Peer context from orchestrator (structured, freshness-aware)
             _peer_signals = {}
-            for _pid in ("macro_strategist", "geopolitical_analyst",
-                         "stress_engineer", "commodities_specialist"):
-                _pa = get_agent(_pid)
-                if _pa.get("last_output"):
-                    # Strip confidence line — keep substantive content
-                    _raw = _pa["last_output"]
-                    _lines = [l for l in _raw.split("\n") if "confidence:" not in l.lower()]
-                    _peer_signals[_pid] = " ".join(_lines).strip()[:250]
+            try:
+                from src.analysis.agent_orchestrator import get_orchestrator as _get_orch_ts
+                _peer_signals = _get_orch_ts(_provider, _api_key).get_peer_context("trade_structurer")
+            except Exception:
+                # Fallback: read directly from agent state
+                for _pid in ("macro_strategist", "geopolitical_analyst",
+                             "stress_engineer", "commodities_specialist"):
+                    _pa = get_agent(_pid)
+                    if _pa.get("last_output"):
+                        _raw = _pa["last_output"]
+                        _lines = [l for l in _raw.split("\n") if "confidence:" not in l.lower()]
+                        _peer_signals[_pid] = " ".join(_lines).strip()[:250]
             if _peer_signals:
                 _ts_ctx["peer_signals"] = _peer_signals
 

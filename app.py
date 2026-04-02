@@ -687,6 +687,43 @@ if "current_page" not in st.session_state:
 
 current = st.session_state["current_page"]
 
+# ── Auth gate ─────────────────────────────────────────────────────────────────
+_need_auth = False
+try:
+    from src.utils.env_config import cfg as _cfg
+    _need_auth = _cfg.enable_auth
+except Exception:
+    pass
+
+if _need_auth and not st.session_state.get("_auth_ok", False):
+    st.markdown(
+        '<div style="max-width:340px;margin:6rem auto 0;padding:2rem;'
+        'background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;text-align:center">'
+        '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
+        'letter-spacing:0.18em;text-transform:uppercase;color:#8E6F3E;margin-bottom:0.8rem">'
+        'Cross-Asset Spillover Monitor</div>'
+        '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#e8e9ed;'
+        'margin-bottom:1.2rem">Enter access password</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    _pw_col = st.columns([1, 2, 1])[1]
+    _pw_in = _pw_col.text_input("Password", type="password", key="_auth_pw",
+                                label_visibility="collapsed",
+                                placeholder="Password")
+    if _pw_col.button("Enter", key="_auth_btn", type="primary", use_container_width=True):
+        _correct = ""
+        try:
+            _correct = st.secrets.get("auth", {}).get("password", "")
+        except Exception:
+            pass
+        if _pw_in and _pw_in == _correct:
+            st.session_state["_auth_ok"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    st.stop()
+
 # ── Logo (base64-encoded once per session) ────────────────────────────────────
 import base64 as _b64
 from pathlib import Path as _Path

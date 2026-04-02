@@ -505,3 +505,74 @@ def page_ai_chat(start: str, end: str) -> None:
         'For educational and research purposes only. Not investment advice.</p>',
         unsafe_allow_html=True,
     )
+
+    # ── Agent Activity Log viewer ─────────────────────────────────────────────
+    try:
+        from src.analysis.agent_state import init_agents as _ia_log
+        _ia_log()
+        _activity_log = st.session_state.get("agent_activity", [])
+        if _activity_log:
+            with st.expander(
+                f"Agent Activity Log  ({len(_activity_log)} entries)", expanded=False
+            ):
+                _F_log = "font-family:'DM Sans',sans-serif;"
+                _sev_colors = {
+                    "critical": "#c0392b", "warning": "#e67e22",
+                    "info": "#27ae60", "debug": "#555960",
+                }
+                _rows_log = ""
+                for _entry in _activity_log[:50]:
+                    _ts_s   = _entry.get("ts")
+                    _ts_str = _ts_s.strftime("%H:%M:%S") if hasattr(_ts_s, "strftime") else str(_ts_s)[:8]
+                    _sev    = _entry.get("severity", "info")
+                    _col    = _sev_colors.get(_sev, "#555960")
+                    _agent  = _entry.get("agent_name", _entry.get("agent_id", "—"))
+                    _action = _entry.get("action", "")
+                    _detail = _entry.get("detail", "")
+                    _routed = _entry.get("routed_to")
+                    _route_badge = (
+                        f'<span style="font-size:0.52rem;color:#2980b9;margin-left:4px">→ {_routed}</span>'
+                        if _routed else ""
+                    )
+                    _rows_log += (
+                        f'<tr style="border-bottom:1px solid #1e1e1e;">'
+                        f'<td style="padding:3px 8px 3px 0;font-family:\'JetBrains Mono\',monospace;'
+                        f'font-size:0.55rem;color:#555960;white-space:nowrap">{_ts_str}</td>'
+                        f'<td style="padding:3px 8px 3px 0;font-size:0.58rem;font-weight:600;'
+                        f'color:{_col};white-space:nowrap">{_sev.upper()}</td>'
+                        f'<td style="padding:3px 8px 3px 0;font-size:0.60rem;color:#CFB991;white-space:nowrap">'
+                        f'{_agent}</td>'
+                        f'<td style="padding:3px 8px 3px 0;font-size:0.62rem;color:#e8e9ed">'
+                        f'{_action}{_route_badge}</td>'
+                        f'<td style="padding:3px 0 3px 0;font-size:0.60rem;color:#8890a1;'
+                        f'max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+                        f'{_detail[:80]}{"…" if len(_detail) > 80 else ""}</td>'
+                        f'</tr>'
+                    )
+                st.markdown(
+                    f'<div style="overflow-x:auto">'
+                    f'<table style="width:100%;border-collapse:collapse;{_F_log}font-size:0.62rem">'
+                    f'<thead><tr style="border-bottom:1px solid #2a2a2a">'
+                    f'<th style="padding:3px 8px 3px 0;text-align:left;font-size:0.52rem;'
+                    f'font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3a3a3a">Time</th>'
+                    f'<th style="padding:3px 8px 3px 0;text-align:left;font-size:0.52rem;'
+                    f'font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3a3a3a">Level</th>'
+                    f'<th style="padding:3px 8px 3px 0;text-align:left;font-size:0.52rem;'
+                    f'font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3a3a3a">Agent</th>'
+                    f'<th style="padding:3px 8px 3px 0;text-align:left;font-size:0.52rem;'
+                    f'font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3a3a3a">Action</th>'
+                    f'<th style="padding:3px 0;text-align:left;font-size:0.52rem;'
+                    f'font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3a3a3a">Detail</th>'
+                    f'</tr></thead>'
+                    f'<tbody>{_rows_log}</tbody>'
+                    f'</table></div>',
+                    unsafe_allow_html=True,
+                )
+                if len(_activity_log) > 50:
+                    st.markdown(
+                        f'<p style="font-size:0.56rem;color:#555960;margin-top:4px">'
+                        f'Showing 50 of {len(_activity_log)} entries (newest first).</p>',
+                        unsafe_allow_html=True,
+                    )
+    except Exception:
+        pass

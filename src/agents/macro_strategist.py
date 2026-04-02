@@ -118,6 +118,16 @@ def run(
         set_status(_AGENT, "idle")
         return {}
 
+    # Include peer signals from orchestrator if available
+    peer_ctx = context.get("peer_context", {})
+    if peer_ctx:
+        peer_str = "; ".join(
+            f"{k.replace('_', ' ')}: {str(v)[:120]}"
+            for k, v in peer_ctx.items() if v
+        )
+        if peer_str:
+            parts.append(f"Peer agent context: {peer_str}")
+
     ctx_str = "\n".join(parts)
 
     if not provider:

@@ -874,6 +874,7 @@ function nav(page) {{
       <ul>
         <li><a href="#" onclick="nav('trade_ideas');return false;">Trade Ideas</a></li>
         <li><a href="#" onclick="nav('stress_test');return false;">Portfolio Stress Test</a></li>
+        <li><a href="#" onclick="nav('scenario_engine');return false;">Scenario Engine</a></li>
         <li><a href="#" onclick="nav('model_accuracy');return false;">Performance Review</a></li>
         <li><a href="#" onclick="nav('ai_chat');return false;">AI Analyst</a></li>
       </ul>
@@ -906,7 +907,7 @@ function nav(page) {{
 </div>
 </body></html>""", height=380, scrolling=False)
     _VALID = {'overview','war_impact_map','geopolitical','correlation','spillover',
-              'watchlist','trade_ideas','stress_test','model_accuracy','ai_chat',
+              'watchlist','trade_ideas','stress_test','scenario_engine','model_accuracy','ai_chat',
               'about_heramb','about_jiahe','about_ilian'}
     _ft_last = st.session_state.get("_ft_nav_last", "")
     if _ft_click and _ft_click in _VALID and _ft_click != _ft_last:

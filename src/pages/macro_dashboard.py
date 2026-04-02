@@ -1537,6 +1537,15 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             except Exception:
                 pass
 
+            # Pull peer context from orchestrator (risk officer, geo analyst)
+            try:
+                from src.analysis.agent_orchestrator import get_orchestrator as _get_orch_ms
+                _peer_ms = _get_orch_ms(_provider, _api_key).get_peer_context("macro_strategist")
+                if _peer_ms:
+                    _ms_ctx["peer_context"] = _peer_ms
+            except Exception:
+                pass
+
             with st.spinner("AI Macro Strategist analysing…"):
                 _ms_result = _ms_run(_ms_ctx, _provider, _api_key)
 
