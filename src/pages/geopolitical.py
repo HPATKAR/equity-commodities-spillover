@@ -73,7 +73,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     # Event info bar
     st.markdown(
         f'<div style="display:flex;gap:16px;align-items:stretch;margin-bottom:8px">'
-        f'<div style="border-left:3px solid {ev["color"]};padding:4px 10px;background:#fafaf8;flex:1">'
+        f'<div style="padding:4px 10px;background:#fafaf8;flex:1">'
         f'<div style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.10em;color:{ev["color"]}">{ev["category"]}</div>'
         f'<div style="{_F}font-size:0.85rem;font-weight:700;color:#000">{ev["name"]}</div>'
@@ -375,7 +375,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             except Exception:
                 pass
 
-            # Add Strait Watch chokepoint context — critical for transmission analysis
+            # Add Strait Watch chokepoint context - critical for transmission analysis
             try:
                 from src.pages.strait_watch import _STRAITS as _sw_straits
                 _sw_notes = []
@@ -401,12 +401,10 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block as _rab
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -417,29 +415,21 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
-            _n_obs = len(all_returns.dropna(how="all"))
             _cqo_ctx = {
-                "n_obs":            _n_obs,
-                "date_range":       f"{start} to {end}",
-                "n_events":         1,  # single event selected at a time
-                "event_window_days": pre_days + post_days,
-                "model":            "Indexed price normalisation + pre/during/post return comparison",
+                "n_obs": len(all_returns.dropna(how="all")), "date_range": f"{start} to {end}",
+                "n_events": 1, "event_window_days": pre_days + post_days,
+                "model": "Indexed price normalisation + pre/during/post return comparison",
                 "assumption_count": 3,
                 "notes": [
-                    f"Single event selected: '{ev['label']}' — n=1 events, no statistical inference possible",
+                    f"Single event selected: '{ev['label']}' - n=1 events, no statistical inference possible",
                     f"Pre-event window ({pre_days}d) and post-event window ({post_days}d) are user-selected, not data-driven",
-                    "Correlation shift uses Pearson — non-robust to outliers present in crisis windows",
-                    "Event dates in config are manually assigned — start/end choice materially affects all metrics",
+                    "Correlation shift uses Pearson - non-robust to outliers present in crisis windows",
+                    "Event dates in config are manually assigned - start/end choice materially affects all metrics",
                     "No counterfactual: cannot isolate event impact from concurrent macro moves",
-                    "Volatility comparison uses annualised std — assumes constant vol within each sub-period",
+                    "Volatility comparison uses annualised std - assumes constant vol within each sub-period",
                 ],
             }
-            with st.spinner("CQO auditing event analysis…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Geopolitical Event Analysis")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                _rab("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Geopolitical Event Analysis")
     except Exception:
         pass
 

@@ -265,7 +265,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _F_ti = "font-family:'DM Sans',sans-serif;"
     def _ti_kpi(col, label, value, value_color="#000"):
         col.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.6rem 0.85rem;background:#fafaf8">'
+            f'<div style="border:1px solid #E8E5E0;border-radius:0;padding:0.6rem 0.85rem;background:#fafaf8">'
             f'<div style="{_F_ti}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.14em;color:#8E6F3E;margin-bottom:3px">{label}</div>'
             f'<div style="{_F_ti}font-size:1.0rem;font-weight:700;color:{value_color}">{value}</div>'
@@ -275,7 +275,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     _sk1, _sk2, _sk3, _sk4, _sk5 = st.columns(5)
     _sk1.markdown(
-        f'<div style="border:1px solid {r_color};border-left:4px solid {r_color};border-radius:4px;'
+        f'<div style="border:1px solid {r_color};border-radius:0;'
         f'padding:0.6rem 0.85rem;background:#fafaf8">'
         f'<div style="{_F_ti}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E6F3E;margin-bottom:3px">Regime</div>'
@@ -339,7 +339,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     for r in trade["regime"]
                 )
                 st.markdown(
-                    f'<div style="border:1px solid #E8E5E0;border-radius:5px;overflow:hidden;margin-bottom:0.5rem">'
+                    f'<div style="border:1px solid #E8E5E0;border-radius:0;overflow:hidden;margin-bottom:0.5rem">'
                     f'<div style="background:{cat_col};padding:0.4rem 0.85rem;'
                     f'display:flex;justify-content:space-between;align-items:center">'
                     f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.57rem;font-weight:700;'
@@ -354,13 +354,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;color:#2A2A2A;'
                     f'line-height:1.65;margin-bottom:8px">{trade["rationale"]}</p>'
                     f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;font-size:0.70rem">'
-                    f'<div style="background:#f9f8f6;padding:0.35rem 0.5rem;border-radius:3px">'
+                    f'<div style="background:#f9f8f6;padding:0.35rem 0.5rem;border-radius:0">'
                     f'<div style="font-weight:700;color:#8E6F3E;font-size:0.56rem;text-transform:uppercase;'
                     f'letter-spacing:0.10em;margin-bottom:2px">Entry</div>{trade["entry"]}</div>'
-                    f'<div style="background:#f9f8f6;padding:0.35rem 0.5rem;border-radius:3px">'
+                    f'<div style="background:#f9f8f6;padding:0.35rem 0.5rem;border-radius:0">'
                     f'<div style="font-weight:700;color:#333;font-size:0.56rem;text-transform:uppercase;'
                     f'letter-spacing:0.10em;margin-bottom:2px">Exit</div>{trade["exit"]}</div>'
-                    f'<div style="background:#fff0f0;padding:0.35rem 0.5rem;border-radius:3px">'
+                    f'<div style="background:#fff0f0;padding:0.35rem 0.5rem;border-radius:0">'
                     f'<div style="font-weight:700;color:#c0392b;font-size:0.56rem;text-transform:uppercase;'
                     f'letter-spacing:0.10em;margin-bottom:2px">Risks</div>{trade["risk"]}</div>'
                     f'</div></div></div>',
@@ -538,12 +538,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -554,32 +552,21 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
-            _n_triggered = len([
-                t for t in _TRADE_IDEAS
-                if current in t.get("regime", [])
-            ]) if "_TRADE_IDEAS" in dir() else 0
+            _n_triggered = len([t for t in _TRADE_IDEAS if current in t.get("regime", [])]) if "_TRADE_IDEAS" in dir() else 0
             _cqo_ctx = {
-                "n_obs":           len(eq_r.dropna(how="all")),
-                "date_range":      f"{start} to {end}",
-                "model":           "Regime-filtered rule-based trade ideas",
-                "regime":          r_name,
-                "assumption_count": 5,
-                "trade_has_stop":  True,  # all ideas have documented risk sections
+                "n_obs": len(eq_r.dropna(how="all")), "date_range": f"{start} to {end}",
+                "model": "Regime-filtered rule-based trade ideas", "regime": r_name,
+                "assumption_count": 5, "trade_has_stop": True,
                 "notes": [
-                    f"Current regime index: {current}/3 — ideas fire based on hardcoded regime thresholds",
-                    f"{_n_triggered} ideas active in current regime — no dynamic conviction scoring",
+                    f"Current regime index: {current}/3 - ideas fire based on hardcoded regime thresholds",
+                    f"{_n_triggered} ideas active in current regime - no dynamic conviction scoring",
                     "Trade entry/exit levels are illustrative ranges, not live-calibrated prices",
-                    "Correlation-based regime uses 60d rolling window — whipsaws in trending vol regimes",
-                    "No walk-forward backtest — ideas are not validated against historical win rates",
-                    "All ideas assume liquid markets — slippage and execution risk not modelled",
+                    "Correlation-based regime uses 60d rolling window - whipsaws in trending vol regimes",
+                    "No walk-forward backtest - ideas are not validated against historical win rates",
+                    "All ideas assume liquid markets - slippage and execution risk not modelled",
                 ],
             }
-            with st.spinner("CQO auditing trade ideas…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Trade Ideas")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Trade Ideas")
     except Exception:
         pass
 

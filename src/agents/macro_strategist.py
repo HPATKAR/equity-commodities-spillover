@@ -1,5 +1,5 @@
 """
-AI Macro Strategist — owns the Macro Intelligence Dashboard page.
+AI Macro Strategist - owns the Macro Intelligence Dashboard page.
 Analyses yield curve, inflation, Fed policy, and GDP context.
 Cached 1 hour. Routes hawkish/dovish pivots to Risk Officer.
 """
@@ -80,7 +80,7 @@ def run(
     api_key: str,
 ) -> dict:
     """
-    Main entry point — called from the Macro Dashboard page.
+    Main entry point - called from the Macro Dashboard page.
 
     context keys (all optional, agent degrades gracefully):
       yield_curve_spread: float (10Y-2Y in %)
@@ -131,9 +131,9 @@ def run(
     ctx_str = "\n".join(parts)
 
     if not provider:
-        # No API key — mark monitoring, no AI call
+        # No API key - mark monitoring, no AI call
         set_status(_AGENT, "monitoring")
-        log_activity(_AGENT, "monitoring", "no API key — skipping AI call", "info")
+        log_activity(_AGENT, "monitoring", "no API key - skipping AI call", "info")
         return {"status": "monitoring", "context": ctx_str}
 
     narrative, raw_conf = _call_ai(ctx_str, provider, api_key)

@@ -234,7 +234,7 @@ def page_ai_chat(start: str, end: str) -> None:
     div[data-testid="stChatMessage"] {
         background: #1c1c1c !important;
         border: 1px solid #2a2a2a !important;
-        border-radius: 6px !important;
+        border-radius: 0 !important;
         margin-bottom: 0.5rem !important;
     }
     /* Assistant/user bubble text */
@@ -255,7 +255,7 @@ def page_ai_chat(start: str, end: str) -> None:
         background: #111111 !important;
         color: #CFB991 !important;
         padding: 1px 4px !important;
-        border-radius: 3px !important;
+        border-radius: 0 !important;
     }
     /* Chat input textarea */
     textarea[data-testid="stTextArea"],
@@ -264,7 +264,7 @@ def page_ai_chat(start: str, end: str) -> None:
         font-size: 0.74rem !important;
         background: #1c1c1c !important;
         border: 1px solid #2a2a2a !important;
-        border-radius: 3px !important;
+        border-radius: 0 !important;
         color: #e8e9ed !important;
     }
     textarea[data-testid="stTextArea"]:focus,
@@ -277,7 +277,7 @@ def page_ai_chat(start: str, end: str) -> None:
         background: #1c1c1c !important;
         border: 1px solid #CFB991 !important;
         font-size: 0 !important;
-        border-radius: 3px !important;
+        border-radius: 0 !important;
         width: 36px !important;
         height: 36px !important;
         display: flex !important;
@@ -418,7 +418,7 @@ def page_ai_chat(start: str, end: str) -> None:
         with st.chat_message(msg["role"]):
             if msg["role"] == "assistant":
                 st.markdown(
-                    f'<div style="border-left:3px solid #CFB991;padding-left:0.8rem">'
+                    f'<div style="padding-left:0.8rem">'
                     f'<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
                     f'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.35rem">'
                     f'AI Analyst</span>'
@@ -444,7 +444,7 @@ def page_ai_chat(start: str, end: str) -> None:
 
             with st.chat_message("assistant"):
                 st.markdown(
-                    '<div style="border-left:3px solid #CFB991;padding-left:0.8rem">'
+                    '<div style="padding-left:0.8rem">'
                     '<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
                     'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.35rem">'
                     'AI Analyst</span>'
@@ -526,7 +526,7 @@ def page_ai_chat(start: str, end: str) -> None:
                     _ts_str = _ts_s.strftime("%H:%M:%S") if hasattr(_ts_s, "strftime") else str(_ts_s)[:8]
                     _sev    = _entry.get("severity", "info")
                     _col    = _sev_colors.get(_sev, "#555960")
-                    _agent  = _entry.get("agent_name", _entry.get("agent_id", "—"))
+                    _agent  = _entry.get("agent_name", _entry.get("agent_id", "-"))
                     _action = _entry.get("action", "")
                     _detail = _entry.get("detail", "")
                     _routed = _entry.get("routed_to")

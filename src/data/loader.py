@@ -635,13 +635,13 @@ def load_implied_vol(
 ) -> pd.DataFrame:
     """
     CBOE implied volatility indices via yfinance.
-      ^VIX   — S&P 500 implied vol (30-day)
-      ^OVX   — Crude Oil implied vol (CBOE Oil Volatility Index)
-      ^GVZ   — Gold implied vol (CBOE Gold Volatility Index)
-      ^VVIX  — VIX of VIX (implied vol of vol — tail-risk indicator)
+      ^VIX   - S&P 500 implied vol (30-day)
+      ^OVX   - Crude Oil implied vol (CBOE Oil Volatility Index)
+      ^GVZ   - Gold implied vol (CBOE Gold Volatility Index)
+      ^VVIX  - VIX of VIX (implied vol of vol - tail-risk indicator)
 
     Returns a DataFrame with columns [VIX, OVX, GVZ, VVIX].
-    Cached 15 minutes — refreshes meaningfully intraday.
+    Cached 15 minutes - refreshes meaningfully intraday.
     """
     _IV_TICKERS = {
         "VIX":  "^VIX",

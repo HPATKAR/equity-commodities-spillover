@@ -369,8 +369,8 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 ) if vol_24h > 0 else ""
 
                 st.markdown(
-                    f'<div style="border:1px solid #E8E5E0;border-left:3px solid {regime_col};'
-                    f'border-radius:3px;padding:0.75rem 1rem;margin-bottom:0.6rem;background:#fff">'
+                    f'<div style="border:1px solid #E8E5E0;'
+                    f'border-radius:0;padding:0.75rem 1rem;margin-bottom:0.6rem;background:#fff">'
                     f'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
                     f'<div><span style="font-size:0.52rem;text-transform:uppercase;'
                     f'letter-spacing:0.12em;color:#666666;font-weight:600">{group}</span>'

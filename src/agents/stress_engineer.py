@@ -1,5 +1,5 @@
 """
-AI Portfolio Stress Engineer — owns the Stress Tester page.
+AI Portfolio Stress Engineer - owns the Stress Tester page.
 Interprets scenario stress results, tail risk, and shock transmission paths.
 Cached 1 hour. Extreme scenarios escalate to Risk Officer.
 """

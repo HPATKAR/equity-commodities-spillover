@@ -86,7 +86,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     with _btn_col:
         _stale_color = "#c0392b" if _stale else "#27ae60"
         st.markdown(
-            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:3px;'
+            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:0;'
             f'padding:0.4rem 0.6rem;margin-bottom:0.4rem;text-align:center">'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.50rem;font-weight:700;'
             f'letter-spacing:0.14em;text-transform:uppercase;color:#3a3a3a;margin-bottom:2px">LAST UPDATED</div>'
@@ -134,8 +134,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     prev_avg_corr    = avg_corr.iloc[-21] if len(avg_corr) > 21 else 0.0
     corr_delta       = current_avg_corr - prev_avg_corr
 
-    recent_eq  = eq_r.iloc[-22:].sum()
-    recent_cmd = cmd_r.iloc[-22:].sum()
+    recent_eq  = (1 + eq_r.iloc[-22:]).prod() - 1
+    recent_cmd = (1 + cmd_r.iloc[-22:]).prod() - 1
     best_eq    = recent_eq.idxmax();  worst_eq  = recent_eq.idxmin()
     best_cmd   = recent_cmd.idxmax(); worst_cmd = recent_cmd.idxmin()
 
@@ -144,7 +144,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     def _kpi(col, label, value, delta="", dcolor=""):
         col.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
+            f'<div style="border:1px solid #E8E5E0;border-radius:0;'
             f'padding:0.55rem 0.75rem;background:#1c1c1c">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
@@ -156,8 +156,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         )
 
     k1.markdown(
-        f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
-        f'padding:0.55rem 0.75rem;background:#1c1c1c;border-left:3px solid {regime_color}">'
+        f'<div style="border-top:2px solid {regime_color};border-bottom:1px solid #E8E5E0;border-radius:0;'
+        f'padding:0.55rem 0.75rem;background:#1c1c1c">'
         f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
         f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">Correlation Regime</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
@@ -189,7 +189,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     # ── Implied Vol History (OVX / GVZ / VIX / VVIX) ─────────────────────
     try:
         from src.data.loader import load_implied_vol as _load_iv_hist
-        with st.expander("Implied Volatility History — OVX · GVZ · VIX · VVIX", expanded=False):
+        with st.expander("Implied Volatility History - OVX · GVZ · VIX · VVIX", expanded=False):
             _iv_hist = _load_iv_hist(start, end)
             if not _iv_hist.empty:
                 _iv_cols = st.columns(2)
@@ -255,7 +255,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         else:
             d_color = "#8890a1"
         col.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:4px;'
+            f'<div style="border:1px solid #E8E5E0;border-radius:0;'
             f'padding:0.55rem 0.75rem;background:#1c1c1c">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
@@ -274,7 +274,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if not fi_r.empty and "US 20Y+ Treasury (TLT)" in fi_r.columns:
             _tlt = fi_r["US 20Y+ Treasury (TLT)"].dropna()
             if len(_tlt) >= 21:
-                _tlt_30d = float(_tlt.iloc[-21:].sum() * 100)
+                _tlt_30d = float(((1 + _tlt.iloc[-21:]).prod() - 1) * 100)
     except Exception:
         pass
     _dark_kpi(_fi_k1, "TLT 30d Return", f"{_tlt_30d:+.1f}%" if _tlt_30d is not None else "-",
@@ -288,11 +288,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             if "HY Corporate (HYG)" in fi_r.columns:
                 _s = fi_r["HY Corporate (HYG)"].dropna()
                 if len(_s) >= 21:
-                    _hyg_30d = float(_s.iloc[-21:].sum() * 100)
+                    _hyg_30d = float(((1 + _s.iloc[-21:]).prod() - 1) * 100)
             if "IG Corporate (LQD)" in fi_r.columns:
                 _s = fi_r["IG Corporate (LQD)"].dropna()
                 if len(_s) >= 21:
-                    _lqd_30d = float(_s.iloc[-21:].sum() * 100)
+                    _lqd_30d = float(((1 + _s.iloc[-21:]).prod() - 1) * 100)
     except Exception:
         pass
     _credit_spread_signal = None
@@ -309,7 +309,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if not fx_r.empty and "DXY (Dollar Index)" in fx_r.columns:
             _dxy = fx_r["DXY (Dollar Index)"].dropna()
             if len(_dxy) >= 21:
-                _dxy_30d = float(_dxy.iloc[-21:].sum() * 100)
+                _dxy_30d = float(((1 + _dxy.iloc[-21:]).prod() - 1) * 100)
     except Exception:
         pass
     _dark_kpi(_fi_k3, "DXY 30d Return", f"{_dxy_30d:+.1f}%" if _dxy_30d is not None else "-",
@@ -323,7 +323,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if _spx_col:
             _spx_s = eq_r[_spx_col].dropna()
             if len(_spx_s) >= 21:
-                _spx_30d = float(_spx_s.iloc[-21:].sum() * 100)
+                _spx_30d = float(((1 + _spx_s.iloc[-21:]).prod() - 1) * 100)
     except Exception:
         pass
     _tlt_spx_div = None
@@ -340,7 +340,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if not fi_r.empty and "EM USD Bonds (EMB)" in fi_r.columns:
             _emb = fi_r["EM USD Bonds (EMB)"].dropna()
             if len(_emb) >= 21:
-                _emb_30d = float(_emb.iloc[-21:].sum() * 100)
+                _emb_30d = float(((1 + _emb.iloc[-21:]).prod() - 1) * 100)
     except Exception:
         pass
     _dark_kpi(_fi_k5, "EMB 30d Return",
@@ -504,15 +504,15 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     with ews_l:
         _label("Early Warning System")
         st.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.75rem;'
+            f'<div style="border:1px solid #E8E5E0;border-radius:0;padding:0.75rem;'
             f'background:#1c1c1c;border-top:3px solid {comp_color}">'
             f'<div style="{_F}font-size:0.56rem;font-weight:700;letter-spacing:0.12em;'
             f'text-transform:uppercase;color:#6b7280;margin-bottom:4px">Composite Score</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:2.2rem;'
             f'font-weight:700;color:{comp_color};line-height:1">{comp_ews:.0f}'
             f'<span style="font-size:0.75rem;color:#6b7280">/100</span></div>'
-            f'<div style="background:#2a2a2a;border-radius:3px;height:6px;margin:6px 0">'
-            f'<div style="width:{comp_ews:.0f}%;background:{comp_color};height:6px;border-radius:3px"></div>'
+            f'<div style="background:#2a2a2a;border-radius:0;height:6px;margin:6px 0">'
+            f'<div style="width:{comp_ews:.0f}%;background:{comp_color};height:6px;border-radius:0"></div>'
             f'</div>'
             f'<div style="{_F}font-size:0.65rem;font-weight:600;color:{comp_color}">'
             f'{comp_label}</div></div>',
@@ -525,7 +525,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         for col, (name, data) in zip(sig_cols, sig_items):
             s = data["score"]; c = _ews_score_color(s)
             col.markdown(
-                f'<div style="border:1px solid #E8E5E0;border-radius:4px;padding:0.6rem 0.55rem;'
+                f'<div style="border:1px solid #E8E5E0;border-radius:0;padding:0.6rem 0.55rem;'
                 f'background:#1c1c1c;border-top:2px solid {c}">'
                 f'<div style="{_F}font-size:0.54rem;font-weight:700;letter-spacing:0.10em;'
                 f'text-transform:uppercase;color:#6b7280;margin-bottom:3px">{name}</div>'
@@ -808,8 +808,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         st.error(f"Narrative generation failed: {_narrative_val[9:]}")
     else:
         st.markdown(
-            f'<div style="border-left:4px solid {regime_color};padding:0.8rem 1rem;'
-            f'background:#1c1c1c;border-radius:0 4px 4px 0;margin-bottom:0.8rem">'
+            f'<div style="padding:0.8rem 1rem;'
+            f'background:#1c1c1c;border-radius:0;margin-bottom:0.8rem">'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#e8e9ed;line-height:1.75">'
             f'{_narrative_val.replace(chr(10), "<br>")}</div></div>',
             unsafe_allow_html=True,
@@ -823,7 +823,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "the Analysis pages for the quantitative breakdown."
     )
 
-    # ── AI Workforce — Orchestrated Pipeline ─────────────────────────────────
+    # ── AI Workforce - Orchestrated Pipeline ─────────────────────────────────
     try:
         from src.analysis.agent_orchestrator import get_orchestrator
         from src.ui.agent_panel import (
@@ -843,7 +843,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
         _api_key  = _anthropic_key or _openai_key
 
-        # Full market context — scalars only (no DataFrames; agents don't need raw returns)
+        # Full market context - scalars only (no DataFrames; agents don't need raw returns)
         _market_ctx = {
             "regime_name":     regime_name,
             "regime_level":    int(current_regime),
@@ -866,7 +866,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
         orch = get_orchestrator(_provider, _api_key)
 
-        # Run only Round 1 agents on Overview (fast path) — heavier rounds
+        # Run only Round 1 agents on Overview (fast path) - heavier rounds
         # run on their respective pages when user navigates there.
         # Round 1: signal_auditor, macro_strategist, geopolitical_analyst
         # They inform the Risk Officer which is in Round 2.
@@ -875,7 +875,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             with st.spinner("AI Workforce analysing markets…"):
                 _pipeline_results = orch.run(_market_ctx)
         else:
-            # No API key — still run orchestrator for calibration (no LLM calls)
+            # No API key - still run orchestrator for calibration (no LLM calls)
             _pipeline_results = {}
 
         # ── Pipeline status strip ────────────────────────────────────────
@@ -892,10 +892,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                     f'&#9651; {f["topic"].upper()}: {f["agent_a"]} ↔ {f["agent_b"]}</span>'
                     for f in _div_flags[:3]
                 ])
-            _fresh_str = ", ".join(_fresh_agents[:5]) if _fresh_agents else "—"
+            _fresh_str = ", ".join(_fresh_agents[:5]) if _fresh_agents else "-"
             st.markdown(
                 f'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.4rem;'
-                f'background:#0d0d0d;border:1px solid #1e1e1e;border-radius:3px;'
+                f'background:#0d0d0d;border:1px solid #1e1e1e;border-radius:0;'
                 f'padding:0.35rem 0.8rem;margin:0.6rem 0">'
                 f'<span style="font-size:0.50rem;font-weight:700;letter-spacing:0.16em;'
                 f'text-transform:uppercase;color:#3a3a3a;margin-right:0.5rem">PIPELINE</span>'
@@ -932,12 +932,12 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         # ── Divergence flags callout ──────────────────────────────────────
         if _div_flags:
             _flag_rows = "\n".join([
-                f"• **{f['agent_a']}** vs **{f['agent_b']}** — divergence on `{f['topic']}`"
+                f"• **{f['agent_a']}** vs **{f['agent_b']}** - divergence on `{f['topic']}`"
                 for f in _div_flags
             ])
             st.warning(f"**Agent Divergence Detected**\n\n{_flag_rows}")
 
-        # Activity feed — full view on Overview
+        # Activity feed - full view on Overview
         st.markdown("---")
         render_activity_feed(max_entries=20, collapsible=False)
 

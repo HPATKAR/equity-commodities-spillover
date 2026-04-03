@@ -288,7 +288,7 @@ def render_rss_panel(max_items: int = 8) -> None:
     headlines = ingest_headlines()
     if not headlines:
         st.markdown(
-            '<p style="font-size:0.70rem;color:#8890a1">RSS feed unavailable — '
+            '<p style="font-size:0.70rem;color:#8890a1">RSS feed unavailable - '
             'install feedparser: <code>pip install feedparser</code></p>',
             unsafe_allow_html=True,
         )
@@ -338,7 +338,7 @@ def render_rss_panel(max_items: int = 8) -> None:
         )
 
     st.markdown(
-        f'<div style="background:#111;border:1px solid #2a2a2a;border-radius:4px;'
+        f'<div style="background:#111;border:1px solid #2a2a2a;border-radius:0;'
         f'padding:0.2rem 0.8rem 0.4rem">{rows_html}</div>',
         unsafe_allow_html=True,
     )

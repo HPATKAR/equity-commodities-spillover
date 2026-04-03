@@ -1,12 +1,12 @@
 """
-AI Chief Quality Officer — cross-page data integrity and assumption auditor.
+AI Chief Quality Officer - cross-page data integrity and assumption auditor.
 Deployed on every analysis page. Flags spurious correlations, insufficient
 sample sizes, overstated confidence, selection bias, regime mismatch,
 cherry-picked windows, and methodological errors in whatever analysis
 is shown on the current page.
 
 No diplomatic hedging. Call it as it is.
-Cached 30 minutes — shorter than other agents because bad data rotates.
+Cached 30 minutes - shorter than other agents because bad data rotates.
 """
 
 from __future__ import annotations
@@ -19,14 +19,14 @@ from src.analysis.agent_state import (
 _SYSTEM = (
     "You are the Chief Quality Officer (CQO) embedded in the Cross-Asset "
     "Spillover Monitor at Purdue University Daniels School of Business. "
-    "Your sole job is to spot bullshit — bad data, spurious correlations, "
+    "Your sole job is to spot bullshit - bad data, spurious correlations, "
     "overstated confidence, selection bias, look-ahead bias, insufficient "
     "sample sizes, regime mismatch, assumption stacking, and methodological "
     "shortcuts in the analysis you are shown. "
     "You are not here to validate. You are here to break things. "
     "Be direct, blunt, and specific. No diplomatic hedging. No disclaimers. "
     "Format your response as numbered flags: "
-    "start each flag on a new line as '⚠ FLAG N: [title] — [precise explanation]'. "
+    "start each flag on a new line as '⚠ FLAG N: [title] - [precise explanation]'. "
     "If something is actually solid, you may note it as '✓ PASS: [item]'. "
     "End with a single line: SEVERITY: Critical | High | Medium | Low. "
     "Then: CONFIDENCE: X%."
@@ -43,7 +43,7 @@ def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> tuple[
         f"ANALYSIS CONTEXT:\n{context_str}\n\n"
         "Audit this analysis. Identify every data quality issue, methodological flaw, "
         "and unwarranted assumption present. Be specific about what is wrong and why it matters. "
-        "Do not flag things just to look thorough — only flag real problems. "
+        "Do not flag things just to look thorough - only flag real problems. "
         "If the sample is too small, state the actual N and what N you would need. "
         "If a correlation is spurious, name the confound. "
         "If a score is hardcoded and divorced from live data, say so explicitly. "
@@ -73,7 +73,7 @@ def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> tuple[
             )
             text = resp.choices[0].message.content.strip()
 
-        conf = 0.80  # CQO defaults high — it's checking known failure modes
+        conf = 0.80  # CQO defaults high - it's checking known failure modes
         import re
         for line in text.split("\n")[-4:]:
             if "confidence" in line.lower() and "%" in line:
@@ -97,30 +97,30 @@ def run(
     Universal entry point. Each page passes a context dict with whatever
     data quality signals are observable from that page's computation.
 
-    Common context keys (all optional — CQO works with whatever it gets):
-      page:               str   — which page is calling
-      n_obs:              int   — number of observations in primary dataset
-      date_range:         str   — e.g. "2005-01-01 to 2024-12-31"
-      n_assets:           int   — assets in analysis
-      sample_warning:     bool  — True if N < 252 (1yr)
-      model:              str   — model used (VAR, DCC-GARCH, etc.)
-      p_values:           dict  — {pair: p_value} for any significance tests
-      max_correlation:    float — highest pairwise correlation in dataset
-      corr_pairs:         list  — [(asset_a, asset_b, corr)] top correlations
-      regime:             str   — current market regime
-      regime_change:      bool  — regime changed recently
-      confidence_scores:  dict  — {agent/model: confidence}
-      hardcoded_scores:   bool  — True if scores are static/hardcoded
-      event_window_days:  int   — event window length
-      n_events:           int   — number of events analysed
-      stress_scenario:    str   — stress test scenario name
-      trade_confidence:   float — trade idea confidence
-      trade_has_stop:     bool  — whether trade idea has a stop loss defined
-      data_gaps:          int   — number of NaN/missing data points
-      backtest_period:    str   — backtest window used
-      lookahead_risk:     bool  — any known look-ahead bias risk
-      assumption_count:   int   — number of model assumptions stacked
-      notes:              list[str] — any free-form context from the page
+    Common context keys (all optional - CQO works with whatever it gets):
+      page:               str   - which page is calling
+      n_obs:              int   - number of observations in primary dataset
+      date_range:         str   - e.g. "2005-01-01 to 2024-12-31"
+      n_assets:           int   - assets in analysis
+      sample_warning:     bool  - True if N < 252 (1yr)
+      model:              str   - model used (VAR, DCC-GARCH, etc.)
+      p_values:           dict  - {pair: p_value} for any significance tests
+      max_correlation:    float - highest pairwise correlation in dataset
+      corr_pairs:         list  - [(asset_a, asset_b, corr)] top correlations
+      regime:             str   - current market regime
+      regime_change:      bool  - regime changed recently
+      confidence_scores:  dict  - {agent/model: confidence}
+      hardcoded_scores:   bool  - True if scores are static/hardcoded
+      event_window_days:  int   - event window length
+      n_events:           int   - number of events analysed
+      stress_scenario:    str   - stress test scenario name
+      trade_confidence:   float - trade idea confidence
+      trade_has_stop:     bool  - whether trade idea has a stop loss defined
+      data_gaps:          int   - number of NaN/missing data points
+      backtest_period:    str   - backtest window used
+      lookahead_risk:     bool  - any known look-ahead bias risk
+      assumption_count:   int   - number of model assumptions stacked
+      notes:              list[str] - any free-form context from the page
     """
     if not is_enabled(_AGENT):
         return {}
@@ -161,7 +161,7 @@ def run(
             parts.append(f"  p-value {pair}: {pv:.4f} ({sig})")
     if context.get("max_correlation") is not None:
         mc = context["max_correlation"]
-        flag = " ⚠ NEAR-PERFECT — multicollinearity?" if mc > 0.92 else \
+        flag = " ⚠ NEAR-PERFECT - multicollinearity?" if mc > 0.92 else \
                (" ⚠ HIGH" if mc > 0.80 else "")
         parts.append(f"Max pairwise correlation: {mc:.3f}{flag}")
     if context.get("corr_pairs"):
@@ -172,7 +172,7 @@ def run(
     if context.get("regime"):
         parts.append(f"Market regime: {context['regime']}")
     if context.get("regime_change"):
-        parts.append("Regime change detected recently — model may be mis-calibrated ⚠")
+        parts.append("Regime change detected recently - model may be mis-calibrated ⚠")
 
     # Event analysis
     if context.get("n_events") is not None:
@@ -183,7 +183,7 @@ def run(
 
     # Hardcoded / static scores
     if context.get("hardcoded_scores"):
-        parts.append("Score source: HARDCODED static values — not live market data ⚠")
+        parts.append("Score source: HARDCODED static values - not live market data ⚠")
 
     # Confidence scores
     if context.get("confidence_scores"):
@@ -200,7 +200,7 @@ def run(
         flag = " ⚠ OVERCONFIDENT for discretionary trade" if tc > 0.80 else ""
         parts.append(f"Trade confidence: {tc:.0%}{flag}")
     if context.get("trade_has_stop") is False:
-        parts.append("Stop loss defined: NO ⚠ — open-ended downside")
+        parts.append("Stop loss defined: NO ⚠ - open-ended downside")
 
     # Free-form notes from the page
     if context.get("notes"):
@@ -228,15 +228,26 @@ def run(
     severity = "warning" if any(k in narrative.lower() for k in critical_keywords) else "info"
 
     set_output(_AGENT, narrative, confidence=raw_conf)
+    sev_label = _extract_severity(narrative)
     log_activity(_AGENT, f"quality audit complete: {page}",
-                 f"severity: {_extract_severity(narrative)}", severity)
+                 f"severity: {sev_label}", severity)
 
-    return {
+    result = {
         "narrative": narrative,
         "confidence": raw_conf,
         "context": ctx_str,
         "page": page,
     }
+
+    # Trigger active remediation for any non-Low severity flags
+    if sev_label not in ("Low", "Unknown"):
+        try:
+            from src.agents.remediation_router import run_remediation
+            run_remediation(result, page, provider, api_key)
+        except Exception as _rem_err:
+            log_activity(_AGENT, "remediation routing failed", str(_rem_err)[:80], "warning")
+
+    return result
 
 
 def _extract_severity(text: str) -> str:

@@ -1,6 +1,6 @@
 """
 Proactive alert engine.
-Scans live market data and returns structured alert objects — no LLM required.
+Scans live market data and returns structured alert objects - no LLM required.
 The UI layer optionally enriches these with AI narration.
 """
 
@@ -40,7 +40,7 @@ def _check_stress(risk_score: float, risk_history: pd.Series) -> list[Alert]:
     if risk_score >= 65:
         alerts.append(Alert(
             severity="critical", category="stress",
-            title=f"Market stress critical — {risk_score:.0f}/100",
+            title=f"Market stress critical - {risk_score:.0f}/100",
             body=(
                 f"Composite stress score is {risk_score:.0f}/100, well into the elevated zone (≥65). "
                 "Equity-commodity correlations, volatility, and futures positioning are all elevated simultaneously. "
@@ -52,9 +52,9 @@ def _check_stress(risk_score: float, risk_history: pd.Series) -> list[Alert]:
     elif risk_score >= 50:
         alerts.append(Alert(
             severity="warning", category="stress",
-            title=f"Market stress elevated — {risk_score:.0f}/100",
+            title=f"Market stress elevated - {risk_score:.0f}/100",
             body=(
-                f"Composite stress score is {risk_score:.0f}/100 — above the 50-point caution threshold. "
+                f"Composite stress score is {risk_score:.0f}/100 - above the 50-point caution threshold. "
                 "At least one or two stress components (correlation, vol, or COT) are flashing. "
                 "Not yet a crisis, but worth monitoring daily."
             ),
@@ -74,7 +74,7 @@ def _check_stress(risk_score: float, risk_history: pd.Series) -> list[Alert]:
                 body=(
                     f"The composite stress index moved {delta_5d:+.0f} pts over the past 5 trading days "
                     f"(now {risk_score:.0f}/100). "
-                    f"{'Rapid acceleration in cross-asset stress is a strong early-warning signal.' if delta_5d > 0 else 'Rapid deceleration — risk-off pressures easing.'}"
+                    f"{'Rapid acceleration in cross-asset stress is a strong early-warning signal.' if delta_5d > 0 else 'Rapid deceleration - risk-off pressures easing.'}"
                 ),
                 page_hint="overview",
                 data={"risk_score": risk_score, "delta_5d": delta_5d},
@@ -101,7 +101,7 @@ def _check_regime(regimes: pd.Series, avg_corr: pd.Series) -> list[Alert]:
             body=(
                 f"The equity-commodity correlation regime transitioned from "
                 f"{labels[previous]} to {labels[current]} within the last 5 trading days. "
-                f"{'Diversification benefits are diminishing — assets increasingly moving together.' if direction_up else 'Cross-asset diversification is improving — equity and commodity markets decoupling.'} "
+                f"{'Diversification benefits are diminishing - assets increasingly moving together.' if direction_up else 'Cross-asset diversification is improving - equity and commodity markets decoupling.'} "
                 f"Current 60d avg |correlation|: {_safe_last(avg_corr):.3f}."
             ),
             page_hint="correlation",
@@ -120,7 +120,7 @@ def _check_regime(regimes: pd.Series, avg_corr: pd.Series) -> list[Alert]:
                 body=(
                     f"Average equity-commodity |correlation| moved {delta_corr:+.3f} in 5 days "
                     f"(now {_safe_last(avg_corr):.3f}). "
-                    f"{'A correlation surge approaching the Elevated threshold reduces portfolio diversification.' if delta_corr > 0 else 'Falling correlation improves diversification — commodities offering more independent return.'}"
+                    f"{'A correlation surge approaching the Elevated threshold reduces portfolio diversification.' if delta_corr > 0 else 'Falling correlation improves diversification - commodities offering more independent return.'}"
                 ),
                 page_hint="correlation",
                 data={"avg_corr": _safe_last(avg_corr), "delta_5d": delta_corr},
@@ -148,10 +148,10 @@ def _check_cot(cot_df: pd.DataFrame) -> list[Alert]:
             alerts.append(Alert(
                 severity="warning" if latest_pct < 40 else "critical",
                 category="cot",
-                title=f"{market} — crowded long ({latest_pct:.0f}% of OI)",
+                title=f"{market} - crowded long ({latest_pct:.0f}% of OI)",
                 body=(
                     f"Net speculative positioning in {market} is {latest_pct:.0f}% of open interest "
-                    f"— at the {pct_rank:.0f}th historical percentile. "
+                    f"- at the {pct_rank:.0f}th historical percentile. "
                     "Readings above +25% signal a crowded long; historically precede price reversals "
                     "of 10–20% within 4–8 weeks."
                 ),
@@ -163,10 +163,10 @@ def _check_cot(cot_df: pd.DataFrame) -> list[Alert]:
             alerts.append(Alert(
                 severity="warning" if latest_pct > -40 else "critical",
                 category="cot",
-                title=f"{market} — crowded short ({latest_pct:.0f}% of OI)",
+                title=f"{market} - crowded short ({latest_pct:.0f}% of OI)",
                 body=(
                     f"Net speculative positioning in {market} is {latest_pct:.0f}% of open interest "
-                    f"— at the {pct_rank:.0f}th historical percentile (extreme bearish). "
+                    f"- at the {pct_rank:.0f}th historical percentile (extreme bearish). "
                     "Crowded shorts historically precede mean-reversion rallies of 10–15%."
                 ),
                 page_hint="watchlist",
@@ -194,12 +194,12 @@ def _check_volatility(cmd_r: pd.DataFrame) -> list[Alert]:
             alerts.append(Alert(
                 severity="critical" if z >= 3 else "warning",
                 category="volatility",
-                title=f"{col} volatility spike — {z:.1f}σ above norm",
+                title=f"{col} volatility spike - {z:.1f}σ above norm",
                 body=(
                     f"{col} 60-day annualised volatility is {vol_60[col]:.0f}% "
                     f"({z:.1f} standard deviations above the historical average of {vol_mean:.0f}%). "
                     "Elevated commodity volatility is a leading indicator of equity stress via the "
-                    "spillover channel — watch Granger causality pairs."
+                    "spillover channel - watch Granger causality pairs."
                 ),
                 page_hint="spillover",
                 data={"commodity": col, "vol_60d": float(vol_60[col]), "z_score": z},
@@ -228,7 +228,7 @@ def _check_early_warnings(eq_r: pd.DataFrame, cmd_r: pd.DataFrame,
                 f"{worst_eq} is the worst-performing equity index over the past 5 trading days "
                 f"({worst_val:.1f}%). "
                 "Large single-index drawdowns can transmit stress to commodity markets via the "
-                "Granger spillover channel — particularly energy and metals."
+                "Granger spillover channel - particularly energy and metals."
             ),
             page_hint="spillover",
             data={"index": worst_eq, "return_5d": worst_val},
@@ -246,7 +246,7 @@ def _check_early_warnings(eq_r: pd.DataFrame, cmd_r: pd.DataFrame,
             body=(
                 f"{best_cmd} is the best-performing commodity over the past 5 trading days "
                 f"(+{best_val:.1f}%). "
-                "A sharp commodity move this size may signal supply disruption or macro rotation — "
+                "A sharp commodity move this size may signal supply disruption or macro rotation - "
                 "check the Granger grid for downstream equity impact."
             ),
             page_hint="spillover",

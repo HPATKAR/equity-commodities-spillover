@@ -476,8 +476,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _primary_score = _transmitter_scores[_primary_tx]
                     _tx_color = "#4ade80" if _primary_score > 0 else "#f87171" if _primary_score < 0 else "#8890a1"
                     st.markdown(
-                        f'<div style="border:1px solid #2a2a2a;border-left:4px solid {_tx_color};'
-                        f'border-radius:0 6px 6px 0;padding:0.65rem 1rem;background:#1c1c1c;margin-top:0.6rem">'
+                        f'<div style="border:1px solid #2a2a2a;'
+                        f'border-radius:0;padding:0.65rem 1rem;background:#1c1c1c;margin-top:0.6rem">'
                         f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
                         f'text-transform:uppercase;letter-spacing:0.12em;color:{_tx_color};margin-bottom:3px">'
                         f'Primary Cross-Asset Transmitter</div>'
@@ -503,12 +503,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         "which equity markets to hedge when a key commodity breaks out."
     )
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -519,29 +517,21 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
             _n_obs = len(all_r.dropna(how="all"))
             _cqo_ctx = {
-                "n_obs":           _n_obs,
-                "date_range":      f"{start} to {end}",
-                "n_assets":        len(sel_all),
-                "sample_warning":  _n_obs < 252,
-                "model":           "VAR + Granger causality + Diebold-Yilmaz FEVD",
-                "assumption_count": 4,  # stationarity, linearity, lag selection, normality
-                "lookahead_risk":  False,
+                "n_obs": _n_obs, "date_range": f"{start} to {end}",
+                "n_assets": len(sel_all), "sample_warning": _n_obs < 252,
+                "model": "VAR + Granger causality + Diebold-Yilmaz FEVD",
+                "assumption_count": 4, "lookahead_risk": False,
                 "notes": [
                     f"Granger max lag: {max_lag} days (user-selected, not AIC-optimised)",
                     f"DY edge threshold: {dy_thresh}% (arbitrary cutoff affects network topology)",
-                    f"VAR assets selected: {len(sel_all)} — degrees of freedom constraint at N<{len(sel_all)*5}",
-                    "Transfer entropy estimated non-parametrically — sensitive to bin width choice",
-                    "DY FEVD uses 10-step-ahead horizon — results vary materially at 4 vs 10 steps",
+                    f"VAR assets selected: {len(sel_all)} - degrees of freedom constraint at N<{len(sel_all)*5}",
+                    "Transfer entropy estimated non-parametrically - sensitive to bin width choice",
+                    "DY FEVD uses 10-step-ahead horizon - results vary materially at 4 vs 10 steps",
                 ],
             }
-            with st.spinner("CQO auditing spillover methodology…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Spillover Analysis")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Spillover Analysis")
     except Exception:
         pass
 

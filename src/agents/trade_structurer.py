@@ -1,5 +1,5 @@
 """
-AI Trade Structurer — owns the Trade Ideas page.
+AI Trade Structurer - owns the Trade Ideas page.
 Generates structured trade ideas (entry/exit/rationale/risk) and routes them
 to the Pending Review Panel for human approval before display.
 Cached 1 hour per idea set.
@@ -161,9 +161,9 @@ def run(
     risk_score   = context.get("risk_score", 0) or 0
 
     if regime_level < 2 and risk_score < 45:
-        # Normal market — no trade idea needed, just monitor
+        # Normal market - no trade idea needed, just monitor
         set_status(_AGENT, "monitoring")
-        log_activity(_AGENT, "normal regime — no active trade idea", "", "info")
+        log_activity(_AGENT, "normal regime - no active trade idea", "", "info")
         return {"status": "monitoring"}
 
     narrative, raw_conf = _call_ai(ctx_str, provider, api_key)
@@ -178,7 +178,7 @@ def run(
     direction  = trade.get("direction", "")
     rationale  = trade.get("rationale", narrative)
 
-    summary = f"{direction} — Trigger: {trade.get('trigger','')}"
+    summary = f"{direction} - Trigger: {trade.get('trigger','')}"
 
     # Route to Pending Review
     item_id = add_pending(

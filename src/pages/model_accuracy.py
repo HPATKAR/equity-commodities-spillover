@@ -437,7 +437,7 @@ def _score_badge(value: float, good_threshold: float = 60.0, label: str = "") ->
         color, bg, grade = "#c0392b", "rgba(192,57,43,0.10)", "FAIL"
     return (
         f'<span style="background:{bg};color:{color};border:1px solid {color};'
-        f'border-radius:3px;padding:2px 8px;font-size:0.58rem;font-weight:700;'
+        f'border-radius:0;padding:2px 8px;font-size:0.58rem;font-weight:700;'
         f'letter-spacing:0.10em;font-family:JetBrains Mono,monospace">{grade}</span>'
         f'<span style="font-size:0.62rem;color:#8890a1;margin-left:7px">{label}</span>'
     )
@@ -503,13 +503,13 @@ def _signal_card(col, title, primary_metric, primary_label,
         b_color, b_bg, b_grade = "#c0392b", "rgba(192,57,43,0.10)", "FAIL"
     badge_html = (
         f'<span style="background:{b_bg};color:{b_color};border:1px solid {b_color};'
-        f'border-radius:3px;padding:2px 8px;font-size:0.58rem;font-weight:700;'
+        f'border-radius:0;padding:2px 8px;font-size:0.58rem;font-weight:700;'
         f'letter-spacing:0.10em;font-family:JetBrains Mono,monospace;">{b_grade}</span>'
         f'<span style="font-size:0.62rem;color:#8890a1;margin-left:7px;">{badge_label}</span>'
     )
 
     html = (
-        f'<div style="border:1px solid #E8E5E0;border-radius:5px;'
+        f'<div style="border:1px solid #E8E5E0;border-radius:0;'
         f'padding:1rem 1.1rem 0.9rem;background:#1c1c1c;'
         f'border-top:3px solid {accent};">'
         f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.16em;'

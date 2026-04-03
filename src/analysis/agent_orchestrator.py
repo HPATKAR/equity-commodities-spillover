@@ -1,5 +1,5 @@
 """
-Agent Orchestrator — runs the AI workforce as a collaborative pipeline.
+Agent Orchestrator - runs the AI workforce as a collaborative pipeline.
 
 Previous architecture: each agent ran independently when you landed on its page,
 with no awareness of what other agents had concluded. Peer signals were
@@ -11,20 +11,20 @@ Divergence between agents is detected and flagged. Stale outputs are
 invalidated. The Risk Officer now synthesises ALL Round 1 findings.
 
 Pipeline rounds (sequential dependency order):
-  Round 1 — Data gatherers (no peer dependencies):
+  Round 1 - Data gatherers (no peer dependencies):
     geo_analyst      ← GEOPOLITICAL_EVENTS + Strait Watch + regime
     macro_strategist ← FRED + yield curve + regime
     signal_auditor   ← Granger hit rates + model accuracy
 
-  Round 2 — Synthesisers (depend on Round 1):
+  Round 2 - Synthesisers (depend on Round 1):
     risk_officer     ← alerts + all Round 1 outputs
     cmdty_specialist ← COT + prices + geo context
 
-  Round 3 — Action layer (depend on Round 1+2):
+  Round 3 - Action layer (depend on Round 1+2):
     stress_engineer  ← scenarios + risk_officer risk level
     trade_structurer ← regime + ALL Round 1+2 agent outputs
 
-  Round 4 — Audit (called per-page, always last):
+  Round 4 - Audit (called per-page, always last):
     quality_officer  ← page-specific context (called separately)
 
 Usage:
@@ -51,16 +51,16 @@ from src.analysis.agent_state import (
 # ── Pipeline definition ───────────────────────────────────────────────────────
 
 PIPELINE: list[dict] = [
-    # Round 1 — independent data gatherers
+    # Round 1 - independent data gatherers
     {"id": "signal_auditor",       "round": 1, "depends_on": []},
     {"id": "macro_strategist",     "round": 1, "depends_on": []},
     {"id": "geopolitical_analyst", "round": 1, "depends_on": []},
-    # Round 2 — synthesisers
+    # Round 2 - synthesisers
     {"id": "risk_officer",          "round": 2,
      "depends_on": ["macro_strategist", "geopolitical_analyst", "signal_auditor"]},
     {"id": "commodities_specialist","round": 2,
      "depends_on": ["geopolitical_analyst"]},
-    # Round 3 — action
+    # Round 3 - action
     {"id": "stress_engineer",  "round": 3,
      "depends_on": ["risk_officer"]},
     {"id": "trade_structurer", "round": 3,
@@ -114,7 +114,7 @@ def _is_fresh(agent_id: str) -> bool:
 
 def _peer_context(agent_id: str) -> dict[str, str]:
     """
-    Build structured peer context for an agent — full narratives, not truncated.
+    Build structured peer context for an agent - full narratives, not truncated.
     Strips only the CONFIDENCE line so the substantive content passes through.
     """
     spec = next((p for p in PIPELINE if p["id"] == agent_id), None)
@@ -213,7 +213,7 @@ class Orchestrator:
                 if not is_enabled(aid):
                     continue
                 if _is_fresh(aid):
-                    # Reuse cached output — still build peer context updates
+                    # Reuse cached output - still build peer context updates
                     continue
                 ctx = self._build_context(aid, market_context)
                 result = self._run_agent(aid, ctx)
@@ -332,7 +332,7 @@ class Orchestrator:
                 "n_alerts":          mc.get("n_alerts", 0),
                 "alert_categories":  mc.get("alert_categories", []),
                 "alert_summaries":   mc.get("alert_summaries", []),
-                # Full peer narratives — this is what makes the RO actually synthesise
+                # Full peer narratives - this is what makes the RO actually synthesise
                 "peer_signals": {
                     k: v for k, v in peer_ctx.items()
                 },
@@ -372,7 +372,7 @@ class Orchestrator:
                 "worst_equity":     mc.get("worst_equity"),
                 "worst_equity_ret": mc.get("worst_equity_ret"),
                 "active_alerts":    mc.get("n_alerts", 0),
-                # Full peer context — all upstream agents
+                # Full peer context - all upstream agents
                 "peer_signals": {
                     k: v for k, v in peer_ctx.items()
                 },
@@ -449,5 +449,5 @@ class Orchestrator:
 
 
 def get_orchestrator(provider: str | None, api_key: str) -> Orchestrator:
-    """Factory — returns (and caches) the session's Orchestrator instance."""
+    """Factory - returns (and caches) the session's Orchestrator instance."""
     return Orchestrator(provider, api_key)

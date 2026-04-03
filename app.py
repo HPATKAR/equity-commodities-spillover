@@ -84,7 +84,7 @@ button[aria-label="Open sidebar"] {
     padding-right:  2.2rem !important;
     max-width: 1360px;
 }
-/* The control bar is now a fixed floating popover — no top-of-page real estate used */
+/* The control bar is now a fixed floating popover - no top-of-page real estate used */
 /* Kill any Streamlit-injected bottom chrome that creates white space */
 [data-testid="stBottom"], .reportview-container .main footer { display: none !important; }
 
@@ -294,7 +294,7 @@ button[data-testid="baseButton-primary"] {
     margin-bottom: 0.8rem !important;
 }
 
-/* ── Footer gold rule — spans full viewport width ── */
+/* ── Footer gold rule - spans full viewport width ── */
 body::after {
     content: '';
     position: fixed;
@@ -375,7 +375,7 @@ h1, h2, h3, label, p { color: #e8e9ed !important; }
     background: #CFB991 !important;
     color: #131313 !important;
 }
-/* Primary buttons — gold bg, always dark text */
+/* Primary buttons - gold bg, always dark text */
 .stButton > button[kind="primary"],
 button[data-testid="baseButton-primary"],
 .stButton > button[kind="primary"] * {
@@ -674,9 +674,9 @@ _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "insights", "strait_watch",
-    "about_heramb", "about_jiahe", "about_ilian",
+    "about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce",
 }
-_ABOUT_PAGES = {"about_heramb", "about_jiahe", "about_ilian"}
+_ABOUT_PAGES = {"about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce"}
 
 _qp = st.query_params.get("page", "")
 if _qp in _VALID_PAGES:
@@ -1413,9 +1413,10 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     <li class="ni" id="gab">
       <span class="lnk">About <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="about_heramb" class="{'active' if current=='about_heramb' else ''}">Heramb S. Patkar</a></li>
-        <li><a data-pg="about_jiahe"  class="{'active' if current=='about_jiahe' else ''}">Jiahe Miao</a></li>
-        <li><a data-pg="about_ilian"  class="{'active' if current=='about_ilian' else ''}">Ilian Zalomai</a></li>
+        <li><a data-pg="about_heramb"       class="{'active' if current=='about_heramb' else ''}">Heramb S. Patkar</a></li>
+        <li><a data-pg="about_jiahe"        class="{'active' if current=='about_jiahe' else ''}">Jiahe Miao</a></li>
+        <li><a data-pg="about_ilian"        class="{'active' if current=='about_ilian' else ''}">Ilian Zalomai</a></li>
+        <li><a data-pg="about_ai_workforce" class="{'active' if current=='about_ai_workforce' else ''}">AI Workforce</a></li>
       </ul>
     </li>
   </ul>
@@ -1442,7 +1443,7 @@ if _nav_click and _nav_click != _nav_last:
 # ── Control bar (hidden on About pages) ──────────────────────────────────────
 _is_about = current in _ABOUT_PAGES
 
-# ── Controls button — fixed bottom-right corner, every page ─────────────────
+# ── Controls button - fixed bottom-right corner, every page ─────────────────
 # Dates + AI Workforce inside a st.popover anchored to the viewport footer.
 
 # Always initialise dates from session_state first (persists across interactions)
@@ -1462,7 +1463,7 @@ if not _is_about:
     _dot_color = "#27ae60" if _n_active == 8 else ("#e67e22" if _n_active >= 5 else "#c0392b")
 
     st.markdown(f"""<style>
-/* ── Controls button — fixed bottom-right corner ── */
+/* ── Controls button - fixed bottom-right corner ── */
 div.element-container:has(div[data-testid="stPopover"]) {{
     position: fixed !important;
     bottom: 24px !important;
@@ -1472,7 +1473,7 @@ div.element-container:has(div[data-testid="stPopover"]) {{
     margin: 0 !important;
     padding: 0 !important;
 }}
-/* Trigger button — institutional terminal style */
+/* Trigger button - institutional terminal style */
 div[data-testid="stPopover"] > button {{
     background: #0d0d0d !important;
     border: 1px solid rgba(207,185,145,0.28) !important;
@@ -1494,7 +1495,7 @@ div[data-testid="stPopover"] > button:hover {{
     background: rgba(207,185,145,0.07) !important;
     box-shadow: 0 2px 18px rgba(0,0,0,0.65), 0 0 12px rgba(207,185,145,0.12) !important;
 }}
-/* Popover panel — opens upward from footer */
+/* Popover panel - opens upward from footer */
 div[data-testid="stPopoverBody"] {{
     background: #070707 !important;
     border: 1px solid #282828 !important;
@@ -1625,9 +1626,10 @@ from src.pages.model_accuracy   import page_model_accuracy
 from src.pages.ai_chat         import page_ai_chat
 from src.pages.insights        import page_insights
 from src.pages.strait_watch    import page_strait_watch
-from src.pages.about_heramb    import page_about_heramb
-from src.pages.about_jiahe     import page_about_jiahe
-from src.pages.about_ilian     import page_about_ilian
+from src.pages.about_heramb       import page_about_heramb
+from src.pages.about_jiahe        import page_about_jiahe
+from src.pages.about_ilian        import page_about_ilian
+from src.pages.about_ai_workforce import page_about_ai_workforce
 
 _start = str(start_date)
 _end   = str(end_date)
@@ -1647,9 +1649,10 @@ _PAGE_MAP = {
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
     "strait_watch":   lambda: page_strait_watch(_start, _end),
-    "about_heramb":   page_about_heramb,
-    "about_jiahe":    page_about_jiahe,
-    "about_ilian":    page_about_ilian,
+    "about_heramb":        page_about_heramb,
+    "about_jiahe":         page_about_jiahe,
+    "about_ilian":         page_about_ilian,
+    "about_ai_workforce":  page_about_ai_workforce,
 }
 
 _PAGE_MAP.get(current, _PAGE_MAP["overview"])()

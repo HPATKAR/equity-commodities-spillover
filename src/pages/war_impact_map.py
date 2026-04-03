@@ -188,20 +188,20 @@ _WAR_DATA: list[dict] = [
 
 
 # ── Country-specific conflict relevance weights ───────────────────────────────
-# (ukraine_weight, hamas_weight, iran_weight) — must sum to 1.0
+# (ukraine_weight, hamas_weight, iran_weight) - must sum to 1.0
 # Logic: weight reflects how much each conflict structurally drives risk
 # for that country (proximity, energy dependency, alliance, hometurf).
 _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
     # ── Active conflict parties ──────────────────────────────────────────────
-    "UKR": (0.90, 0.06, 0.04),   # homeland invasion — Ukraine war dominates entirely
+    "UKR": (0.90, 0.06, 0.04),   # homeland invasion - Ukraine war dominates entirely
     "RUS": (0.82, 0.08, 0.10),   # primary belligerent
     "BLR": (0.84, 0.07, 0.09),   # de facto Russia proxy, deep Ukraine exposure
     "ISR": (0.05, 0.70, 0.25),   # multi-front war: Hamas + Iran direct strikes
-    "PSE": (0.05, 0.88, 0.07),   # Gaza — entirely Hamas war
+    "PSE": (0.05, 0.88, 0.07),   # Gaza - entirely Hamas war
     "IRN": (0.05, 0.15, 0.80),   # Iran/Hormuz is their war
     "YEM": (0.08, 0.47, 0.45),   # Houthis active on both Hamas/Iran fronts
 
-    # ── Gulf States (Hormuz chokepoint — existential energy + port risk) ─────
+    # ── Gulf States (Hormuz chokepoint - existential energy + port risk) ─────
     "ARE": (0.07, 0.24, 0.69),   # Dubai port + Fujairah oil terminal ON the strait
     "OMN": (0.06, 0.18, 0.76),   # shares Strait of Hormuz coastline with Iran
     "QAT": (0.07, 0.20, 0.73),   # LNG exports transit Hormuz; US base present
@@ -213,7 +213,7 @@ _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
     "LBN": (0.06, 0.68, 0.26),   # Hezbollah front, Israeli strikes
     "SYR": (0.15, 0.38, 0.47),   # Israeli strikes on Iran proxies; multi-war
     "JOR": (0.07, 0.62, 0.31),   # Palestinian refugee pressure, direct airspace
-    "EGY": (0.10, 0.58, 0.32),   # Suez Canal + Red Sea — Hamas/Houthi primary
+    "EGY": (0.10, 0.58, 0.32),   # Suez Canal + Red Sea - Hamas/Houthi primary
     "IRQ": (0.12, 0.38, 0.50),   # Iran proxy militias + Hormuz energy channel
 
     # ── Eastern Europe / NATO eastern flank ─────────────────────────────────
@@ -227,7 +227,7 @@ _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
     "ARM": (0.55, 0.12, 0.33),   # Armenian-Azerbaijani conflict + Iran proximity
     "AZE": (0.55, 0.10, 0.35),
 
-    # ── Central/Eastern EU — Russian gas dependency ──────────────────────────
+    # ── Central/Eastern EU - Russian gas dependency ──────────────────────────
     "DEU": (0.62, 0.16, 0.22),   # Nordstream, Zeitenwende military pivot
     "AUT": (0.60, 0.15, 0.25),
     "HUN": (0.58, 0.14, 0.28),   # Orbán pro-Russia stance, gas dependency
@@ -239,7 +239,7 @@ _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
     "SRB": (0.55, 0.16, 0.29),
     "SVN": (0.50, 0.18, 0.32),
 
-    # ── Western Europe — mixed Hormuz + Ukraine exposure ─────────────────────
+    # ── Western Europe - mixed Hormuz + Ukraine exposure ─────────────────────
     "ITA": (0.32, 0.28, 0.40),   # Mediterranean energy corridor, Hormuz LNG
     "GRC": (0.30, 0.28, 0.42),   # Aegean shipping, med energy
     "CYP": (0.22, 0.32, 0.46),   # Nearest EU to Levant + Hormuz shipping
@@ -261,7 +261,7 @@ _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
     "USA": (0.15, 0.33, 0.52),   # direct military in Iran/Hormuz; Israel patron; Ukraine aid
     "CAN": (0.28, 0.20, 0.52),
 
-    # ── Asia-Pacific — Hormuz energy import dependency ───────────────────────
+    # ── Asia-Pacific - Hormuz energy import dependency ───────────────────────
     "JPN": (0.22, 0.14, 0.64),   # ~85% of oil imports transit Hormuz
     "KOR": (0.24, 0.14, 0.62),   # ~75% of oil imports transit Hormuz
     "TWN": (0.22, 0.14, 0.64),
@@ -278,7 +278,7 @@ _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
     "PHL": (0.22, 0.20, 0.58),
     "AUS": (0.22, 0.18, 0.60),
 
-    # ── Latin America — indirect, oil price channel ───────────────────────────
+    # ── Latin America - indirect, oil price channel ───────────────────────────
     "BRA": (0.16, 0.18, 0.66),
     "MEX": (0.14, 0.20, 0.66),
     "ARG": (0.18, 0.16, 0.66),
@@ -298,7 +298,7 @@ _COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
 }
 
 # Default weights for countries not explicitly listed above
-_DEFAULT_WAR_WEIGHTS = (0.36, 0.26, 0.38)  # mild Hormuz tilt — most global trade is energy
+_DEFAULT_WAR_WEIGHTS = (0.36, 0.26, 0.38)  # mild Hormuz tilt - most global trade is energy
 
 
 # ── Indian administered disputed territories - centroid hover markers ────────
@@ -487,7 +487,7 @@ def _build_df(
 
         # Composite: country-specific structural weights × live-scaled per-war scores.
         # Each country has a (ukraine_w, hamas_w, iran_w) tuple reflecting how much
-        # each conflict structurally drives risk for that country — Gulf states are
+        # each conflict structurally drives risk for that country - Gulf states are
         # Hormuz-dominated, Eastern Europe is Ukraine-dominated, etc.
         wu, wh, wi = _COUNTRY_WAR_WEIGHTS.get(iso, _DEFAULT_WAR_WEIGHTS)
         base_composite = wu * u + wh * h + wi * ir
@@ -559,7 +559,7 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
   position:absolute;bottom:14px;left:14px;width:222px;
   background:rgba(5,11,26,0.95);
   border:1px solid rgba(207,185,145,0.25);
-  border-radius:8px;padding:13px 15px;
+  border-radius:0;padding:13px 15px;
   font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.62;
   color:#dedede;transition:border-color .2s;
   pointer-events:none;
@@ -573,7 +573,7 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
   position:absolute;bottom:14px;right:14px;
   background:rgba(5,11,26,0.90);
   border:1px solid rgba(100,140,220,0.14);
-  border-radius:7px;padding:9px 12px;
+  border-radius:0;padding:9px 12px;
   font-family:'DM Sans',sans-serif;font-size:9px;color:#aaa;
   pointer-events:none;
 }
@@ -893,8 +893,8 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         for ev in active:
             days = (today - ev["start"]).days
             st.markdown(
-                f'<div style="border-left:3px solid {ev["color"]};padding:0.55rem 0.8rem;'
-                f'background:#fafaf8;border-radius:0 4px 4px 0;margin-bottom:8px">'
+                f'<div style="padding:0.55rem 0.8rem;'
+                f'background:#fafaf8;border-radius:0;margin-bottom:8px">'
                 f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.11em;'
                 f'text-transform:uppercase;color:{ev["color"]}">{ev["category"]}</div>'
                 f'<div style="{_F}font-size:0.80rem;font-weight:700;color:#1a1a1a;'
@@ -1032,7 +1032,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             "How the Impact Score is Determined",
             "Each country receives an independent score (0–100) for each of the three tracked conflicts. "
             "The <b>composite score</b> shown on the globe is a <b>country-specific weighted average</b> "
-            "across all three conflicts — weights reflect structural relevance: Gulf states are dominated "
+            "across all three conflicts - weights reflect structural relevance: Gulf states are dominated "
             "by the Iran/Hormuz conflict (they sit on the Strait), Eastern Europe by the Ukraine war "
             "(hometurf), and the Levant by the Israel-Hamas war. A concurrent-war amplifier (+12% max) "
             "applies when multiple conflict markets are simultaneously stressed. "
@@ -1178,7 +1178,7 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         elif s >= 50: bg, fg = "#fc8d59", "#000"
         elif s >= 25: bg, fg = "#fee08b", "#000"
         else: bg, fg = "#91cf60", "#000"
-        return f'<span style="background:{bg};color:{fg};padding:2px 7px;border-radius:3px;font-weight:700">{s:.0f}</span>'
+        return f'<span style="background:{bg};color:{fg};padding:2px 7px;border-radius:0;font-weight:700">{s:.0f}</span>'
 
     def _ret_cell(v):
         if v is None or (isinstance(v, float) and np.isnan(v)):
@@ -1272,7 +1272,7 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         if is_enabled("geopolitical_analyst"):
             _a_state = get_agent("geopolitical_analyst")
             if _a_state.get("last_output"):
-                # Already ran from geopolitical.py this session — just show cached output
+                # Already ran from geopolitical.py this session - just show cached output
                 st.markdown("---")
                 render_agent_output_block("geopolitical_analyst",
                                          {"narrative": _a_state["last_output"]})
@@ -1308,12 +1308,10 @@ All intermediate scores triangulate from these anchors, cross-checked against:
     except Exception:
         pass
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -1324,25 +1322,20 @@ All intermediate scores triangulate from these anchors, cross-checked against:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
             _cqo_ctx = {
                 "hardcoded_scores": True,
-                "model":            "Country-specific weighted composite of 3 conflict scores",
+                "model": "Country-specific weighted composite of 3 conflict scores",
                 "assumption_count": 5,
                 "notes": [
                     "Per-war baseline scores (0-100) are expert-assigned, not derived from market data",
-                    "Country-specific conflict weights are manually calibrated — no empirical validation",
-                    "Live multipliers use 20d commodity z-scores as proxy for conflict intensity — indirect at best",
-                    "Composite only covers 3 active conflicts — ignores India-Pakistan, Taiwan Strait, Sudan, etc.",
-                    "Country scoring treats each nation as homogeneous — ignores regional sub-exposure",
+                    "Country-specific conflict weights are manually calibrated - no empirical validation",
+                    "Live multipliers use 20d commodity z-scores as proxy for conflict intensity - indirect at best",
+                    "Composite only covers 3 active conflicts - ignores India-Pakistan, Taiwan Strait, Sudan, etc.",
+                    "Country scoring treats each nation as homogeneous - ignores regional sub-exposure",
                     "Concurrent-war amplifier (+12%) is an arbitrary scalar with no empirical basis",
                 ],
             }
-            with st.spinner("CQO auditing war impact scores…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="War Impact Map")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="War Impact Map")
     except Exception:
         pass
 

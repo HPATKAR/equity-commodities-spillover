@@ -1,5 +1,5 @@
 """
-Strait Watch — Maritime Chokepoint & Supply Chain Risk Monitor
+Strait Watch - Maritime Chokepoint & Supply Chain Risk Monitor
 Tracks disruption severity across five critical oil/LNG shipping corridors.
 Sources: EIA, IEA WEO 2024, Lloyd's, BIMCO, ACLED. Scores updated quarterly.
 """
@@ -85,7 +85,7 @@ _STRAITS = [
         "ships_context":    (
             "Before Houthi campaign (Dec 2023): 54 ships/day through Suez. "
             "Now: ~19/day (65% collapse). Most container, tanker, and LNG carriers "
-            "rerouting via Cape of Good Hope — adding 14 days and $1–2M per voyage."
+            "rerouting via Cape of Good Hope - adding 14 days and $1–2M per voyage."
         ),
         "threat":           (
             "Houthi missile & drone campaign ongoing; ~50% of former traffic now rerouting "
@@ -113,7 +113,7 @@ _STRAITS = [
         "ships_24h_change": +1,
         "ships_context":    (
             "Historical: 48 ships/day. Now: ~21/day (56% collapse). "
-            "Largely mirrors Red Sea disruption — vessels avoiding the entire "
+            "Largely mirrors Red Sea disruption - vessels avoiding the entire "
             "southern Red Sea approach are rerouting before this choke point."
         ),
         "threat":           (
@@ -248,7 +248,7 @@ def page_strait_watch(start: str, end: str) -> None:
     )
     _page_intro(
         "Twenty-one percent of global oil supply transits a single 33-kilometre channel. "
-        "This tracker monitors disruption severity at five critical maritime chokepoints — "
+        "This tracker monitors disruption severity at five critical maritime chokepoints - "
         "Hormuz, Red Sea/Suez, Bab-el-Mandeb, Malacca, and the Turkish Straits. "
         "Elevated disruption scores at these nodes are among the earliest quantitative signals "
         "of supply-side commodity shocks, and feed directly into the equity-commodities "
@@ -285,9 +285,9 @@ def page_strait_watch(start: str, end: str) -> None:
     worst_strait    = max(_STRAITS, key=lambda s: s["disruption_score"])
 
     def _kpi(col, label: str, value: str, sub: str = "", sub_color: str = "#8890a1", accent: str | None = None) -> None:
-        bl = f"border-left:3px solid {accent};" if accent else ""
+        bl = f"" if accent else ""
         col.markdown(
-            f'<div style="border:1px solid #2a2a2a;border-radius:4px;'
+            f'<div style="border:1px solid #2a2a2a;border-radius:0;'
             f'padding:0.55rem 0.75rem;background:#1c1c1c;{bl}">'
             f'<div style="{_F}font-size:0.56rem;font-weight:700;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#6b7280;margin-bottom:4px">{label}</div>'
@@ -311,7 +311,7 @@ def page_strait_watch(start: str, end: str) -> None:
          f"Disruption score: {worst_strait['disruption_score']}/100",
          sub_color="#c0392b", accent="#c0392b")
     _kpi(k4, "Brent Crude",
-         f"${brent_now:.1f}/bbl"  if brent_now else "—",
+         f"${brent_now:.1f}/bbl"  if brent_now else "-",
          (f"{brent_chg:+.1f}% vs 30d  ·  Brent–WTI ${spread_now:+.1f}"
           if brent_chg is not None and spread_now is not None
           else "Price data loading…"),
@@ -321,12 +321,12 @@ def page_strait_watch(start: str, end: str) -> None:
     _divider("1.0rem", "0.5rem")
     _thread(
         "The KPIs above summarise aggregate exposure. "
-        "The vessel traffic cards below show the most direct measure of disruption — "
+        "The vessel traffic cards below show the most direct measure of disruption - "
         "how many ships are actually transiting each corridor, and how that has changed."
     )
 
     # ── Vessel traffic cards ──────────────────────────────────────────────────
-    _section_label("Active Vessel Traffic — Ships / Day (AIS Estimates)")
+    _section_label("Active Vessel Traffic - Ships / Day (AIS Estimates)")
     vt_cols = st.columns(5, gap="small")
     for col, s in zip(vt_cols, _STRAITS):
         sc       = _STATUS_COLOR[s["status"]]
@@ -336,13 +336,13 @@ def page_strait_watch(start: str, end: str) -> None:
         chg_24h  = s["ships_24h_change"]
         pct_chg  = round((cur - base) / base * 100)
         chg_col  = "#27ae60" if chg_24h > 0 else "#c0392b" if chg_24h < 0 else "#8890a1"
-        chg_sym  = "▲" if chg_24h > 0 else "▼" if chg_24h < 0 else "—"
+        chg_sym  = "▲" if chg_24h > 0 else "▼" if chg_24h < 0 else "-"
         pct_col  = "#27ae60" if pct_chg >= 0 else "#e67e22" if pct_chg > -30 else "#c0392b"
 
         with col:
             st.markdown(
                 f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
-                f'border-left:3px solid {sc};border-radius:3px;padding:0.7rem 0.75rem">'
+                f'border-radius:0;padding:0.7rem 0.75rem">'
 
                 f'<div style="{_F}font-size:0.60rem;font-weight:700;color:#c8c8c8;'
                 f'margin-bottom:2px">{s["name"]}</div>'
@@ -460,7 +460,7 @@ def page_strait_watch(start: str, end: str) -> None:
     _divider("1.0rem", "0.5rem")
     _thread(
         "Chokepoint disruption shows up fastest in oil prices. "
-        "Brent (the seaborne benchmark) moves first — "
+        "Brent (the seaborne benchmark) moves first - "
         "and a widening Brent–WTI spread signals the market explicitly pricing in "
         "Hormuz or Red Sea disruption risk."
     )
@@ -468,7 +468,7 @@ def page_strait_watch(start: str, end: str) -> None:
     pc1, pc2 = st.columns([2, 1])
 
     with pc1:
-        _section_label("Brent Crude — Price History")
+        _section_label("Brent Crude - Price History")
         if not brent.empty:
             ma30 = brent.rolling(30).mean()
             fig_b = go.Figure()
@@ -493,7 +493,7 @@ def page_strait_watch(start: str, end: str) -> None:
             )
             _chart(_style_fig(fig_b, height=260))
             _insight_note(
-                "Brent is the global seaborne benchmark — the price most directly "
+                "Brent is the global seaborne benchmark - the price most directly "
                 "affected by maritime chokepoint disruption. Supply-shock spikes "
                 "(vertical moves without demand change) typically arrive with a "
                 "widening Brent–WTI spread and rising war-risk insurance tiers."
@@ -540,7 +540,7 @@ def page_strait_watch(start: str, end: str) -> None:
     # ── Natural Gas (Hormuz LNG link) ──────────────────────────────────────────
     if not natgas.empty:
         _divider("1.0rem", "0.5rem")
-        _section_label("Natural Gas — LNG Transit Context")
+        _section_label("Natural Gas - LNG Transit Context")
         ng_now  = float(natgas.iloc[-1])
         ng_30d  = float(natgas.iloc[-22]) if len(natgas) > 22 else None
         ng_chg  = ((ng_now / ng_30d) - 1) * 100 if ng_30d else None
@@ -549,8 +549,8 @@ def page_strait_watch(start: str, end: str) -> None:
         with ng_col:
             sc = "#c0392b" if ng_chg and abs(ng_chg) > 10 else "#e67e22" if ng_chg and abs(ng_chg) > 5 else "#27ae60"
             st.markdown(
-                f'<div style="border:1px solid #2a2a2a;border-radius:4px;'
-                f'padding:0.6rem 0.75rem;background:#1c1c1c;border-left:3px solid {sc}">'
+                f'<div style="border-top:2px solid {sc};border-bottom:1px solid #2a2a2a;border-radius:0;'
+                f'padding:0.6rem 0.75rem;background:#1c1c1c">'
                 f'<div style="{_F}font-size:0.54rem;font-weight:700;letter-spacing:0.12em;'
                 f'text-transform:uppercase;color:#6b7280;margin-bottom:4px">Nat Gas (NG=F)</div>'
                 f'<div style="{_M}font-size:1.1rem;font-weight:700;color:#e8e9ed">${ng_now:.2f}/MMBtu</div>'
@@ -578,11 +578,11 @@ def page_strait_watch(start: str, end: str) -> None:
     _divider("1.0rem", "0.5rem")
     _thread(
         "Disruption scores tell you where we stand today. "
-        "The timeline below tells you what comes next — "
+        "The timeline below tells you what comes next - "
         "the scheduled events most likely to reprice risk in the coming months."
     )
 
-    _section_label("Crisis Timeline — Upcoming Catalysts")
+    _section_label("Crisis Timeline - Upcoming Catalysts")
     tl_cols = st.columns(len(_TIMELINE))
     for col, ev in zip(tl_cols, _TIMELINE):
         ev_date = datetime.date.fromisoformat(ev["date"])
@@ -623,10 +623,10 @@ def page_strait_watch(start: str, end: str) -> None:
     _divider("1.0rem", "0.5rem")
     _thread(
         "Current numbers tell you the state; history tells you the story. "
-        "The charts below show how vessel traffic at each strait has evolved — "
+        "The charts below show how vessel traffic at each strait has evolved - "
         "with key geopolitical events annotated to explain the inflection points."
     )
-    _section_label("Historical Vessel Traffic — Weekly Ships / Day per Strait")
+    _section_label("Historical Vessel Traffic - Weekly Ships / Day per Strait")
 
     # Generate reproducible synthetic weekly series for each strait
     # Anchored to known disruption events; seeds fixed for consistency across reruns
@@ -743,19 +743,19 @@ def page_strait_watch(start: str, end: str) -> None:
 
     # ── Vessel Traffic History Charts (always visible) ────────────────────────
     _divider("1.2rem", "0.5rem")
-    _section_label("Vessel Traffic History — Ships / Day (AIS Estimates, 2021–Present)")
+    _section_label("Vessel Traffic History - Ships / Day (AIS Estimates, 2021–Present)")
 
-    # Row 1: Hormuz (full width — most strategically important)
+    # Row 1: Hormuz (full width - most strategically important)
     s_hormuz = next(s for s in _STRAITS if s["id"] == "hormuz")
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
-        f'Strait of Hormuz — Vessel Traffic History</p>',
+        f'Strait of Hormuz - Vessel Traffic History</p>',
         unsafe_allow_html=True,
     )
     _hist_chart(s_hormuz, height=240)
 
-    # Row 2: Red Sea + Bab-el-Mandeb (same disruption driver — side by side)
+    # Row 2: Red Sea + Bab-el-Mandeb (same disruption driver - side by side)
     r2a, r2b = st.columns(2, gap="small")
     for col2, sid2 in zip([r2a, r2b], ["red_sea", "bab_el_mandeb"]):
         s2 = next(s for s in _STRAITS if s["id"] == sid2)
@@ -763,7 +763,7 @@ def page_strait_watch(start: str, end: str) -> None:
             st.markdown(
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
                 f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
-                f'{s2["name"]} — Vessel Traffic History</p>',
+                f'{s2["name"]} - Vessel Traffic History</p>',
                 unsafe_allow_html=True,
             )
             _hist_chart(s2, height=240)
@@ -776,7 +776,7 @@ def page_strait_watch(start: str, end: str) -> None:
             st.markdown(
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
                 f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
-                f'{s3["name"]} — Vessel Traffic History</p>',
+                f'{s3["name"]} - Vessel Traffic History</p>',
                 unsafe_allow_html=True,
             )
             _hist_chart(s3, height=240)
@@ -784,8 +784,8 @@ def page_strait_watch(start: str, end: str) -> None:
     # ── Methodology ────────────────────────────────────────────────────────────
     _divider("1.0rem", "0.5rem")
     st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;border-left:3px solid #2a2a2a;'
-        f'border-radius:0 4px 4px 0;padding:0.6rem 1.0rem">'
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+        f'border-radius:0;padding:0.6rem 1.0rem">'
         f'<div style="{_F}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.12em;color:#444;margin-bottom:5px">Data Sources & Methodology</div>'
         f'<div style="{_F}font-size:0.62rem;color:#555960;line-height:1.7">'
@@ -800,12 +800,10 @@ def page_strait_watch(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── CQO ────────────────────────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -816,27 +814,22 @@ def page_strait_watch(start: str, end: str) -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
             _cqo_ctx = {
-                "hardcoded_scores":   True,
-                "model":              "Expert-assigned disruption scores, quarterly cadence",
-                "assumption_count":   6,
-                "n_obs":              len(brent) if not brent.empty else 0,
-                "date_range":         f"{start} → {end}",
+                "hardcoded_scores": True,
+                "model": "Expert-assigned disruption scores, quarterly cadence",
+                "assumption_count": 6,
+                "n_obs": len(brent) if not brent.empty else 0,
+                "date_range": f"{start} to {end}",
                 "notes": [
-                    "Disruption scores are quarterly expert estimates — not derived from live AIS or market data",
-                    "EIA/IEA oil flow volumes lag 6–12 months behind actual flows",
-                    "Brent–WTI spread conflates Hormuz risk with US domestic supply dynamics (Cushing inventories)",
-                    "Crisis timeline events are scheduled dates — actual outcomes may differ materially",
-                    "Global oil % figures assume no rerouting — actual exposure understated when Cape route is active",
-                    "Five chokepoints cover ~51% of global oil — ignores pipeline and land-based supply chains entirely",
+                    "Disruption scores are quarterly expert estimates - not derived from live AIS or market data",
+                    "EIA/IEA oil flow volumes lag 6-12 months behind actual flows",
+                    "Brent-WTI spread conflates Hormuz risk with US domestic supply dynamics (Cushing inventories)",
+                    "Crisis timeline events are scheduled dates - actual outcomes may differ materially",
+                    "Global oil % figures assume no rerouting - actual exposure understated when Cape route is active",
+                    "Five chokepoints cover ~51% of global oil - ignores pipeline and land-based supply chains entirely",
                 ],
             }
-            with st.spinner("CQO auditing strait watch data…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Strait Watch")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Strait Watch")
     except Exception:
         pass
 

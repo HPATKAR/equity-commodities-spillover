@@ -106,5 +106,5 @@ def _build_config() -> _Config:
     )
 
 
-# Singleton — import and use directly
+# Singleton - import and use directly
 cfg = _build_config()

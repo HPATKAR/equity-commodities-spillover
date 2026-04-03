@@ -211,7 +211,7 @@ def _kpi(col, label: str, value: str, delta: str = "", delta_up: bool | None = N
         else:
             arrow = f'<span style="color:#888">{delta}</span>'
     col.markdown(
-        f'<div style="background:#fafaf8;border:1px solid #E8E5E0;border-radius:6px;'
+        f'<div style="background:#fafaf8;border:1px solid #E8E5E0;border-radius:0;'
         f'padding:10px 14px;margin-bottom:8px">'
         f'<div style="{_F}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.12em;color:#8E6F3E;margin-bottom:2px">{label}</div>'
@@ -1173,7 +1173,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 f'background:{bar_color};border-radius:2px"></div></div>'
             )
         col.markdown(
-            f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;'
+            f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;'
             f'padding:10px 14px;margin-bottom:8px">'
             f'<div style="{_F}font-size:0.54rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.12em;color:#8E6F3E;margin-bottom:2px">{label}</div>'
@@ -1256,7 +1256,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             _chart(_fig_hy)
         else:
             st.markdown(
-                f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;'
+                f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;'
                 f'padding:2rem;text-align:center;color:#8890a1;font-size:0.72rem">'
                 f'HY OAS chart requires FRED API key (already configured in secrets.toml)</div>',
                 unsafe_allow_html=True,
@@ -1299,7 +1299,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             _chart(_fig_pc)
         else:
             st.markdown(
-                f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;'
+                f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;'
                 f'padding:2rem;text-align:center;color:#8890a1;font-size:0.72rem">'
                 f'Loading BKLN/BDC chart data…</div>',
                 unsafe_allow_html=True,
@@ -1313,7 +1313,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             f'<td style="font-family:\'JetBrains Mono\',monospace;color:#e8e9ed">{value_str}</td>'
             f'<td style="color:#8890a1;font-size:0.72rem">{threshold_str}</td>'
             f'<td><span style="background:{status_color}22;color:{status_color};'
-            f'border:1px solid {status_color}44;border-radius:3px;padding:2px 8px;'
+            f'border:1px solid {status_color}44;border-radius:0;padding:2px 8px;'
             f'font-size:0.65rem;font-weight:700;letter-spacing:0.08em">{status_label}</span></td>'
             f'</tr>'
         )
@@ -1383,7 +1383,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     _NODE_CSS = (
         "display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
-        "background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;"
+        "background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;"
         "padding:0.55rem 0.7rem;min-width:95px;text-align:center;"
         "font-family:'DM Sans',sans-serif;"
     )
@@ -1400,7 +1400,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;'
-        f'background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:1rem 1.1rem;">'
+        f'background:#111111;border:1px solid #1e1e1e;border-radius:0;padding:1rem 1.1rem;">'
         + _node("📈", "Rates Stay High", "SOFR 4.3%+<br>all-in ~9–12%", "#b7770d")
         + _ARROW
         + _node("💸", "Coverage Squeeze", "EBITDA ÷ interest<br>&lt;1.5×", "#b7770d")

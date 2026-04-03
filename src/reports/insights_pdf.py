@@ -54,7 +54,7 @@ def _html_to_text(html: str) -> str:
             .replace("&gt;", ">")
             .replace("&nbsp;", " ")
             .replace("&ndash;", "–")
-            .replace("&mdash;", "—")
+            .replace("&mdash;", "-")
     )
     return text.strip()
 

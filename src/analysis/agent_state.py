@@ -6,7 +6,7 @@ Manages the session_state schema for all 8 AI agents:
   quality_officer
 
 All functions operate on st.session_state directly. Call init_agents() once
-per app load (idempotent — skips if already initialised).
+per app load (idempotent - skips if already initialised).
 """
 
 from __future__ import annotations

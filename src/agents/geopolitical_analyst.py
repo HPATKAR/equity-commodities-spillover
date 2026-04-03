@@ -1,5 +1,5 @@
 """
-AI Geopolitical Intelligence Analyst — owns Geopolitical Triggers + War Impact Map.
+AI Geopolitical Intelligence Analyst - owns Geopolitical Triggers + War Impact Map.
 Interprets conflict events, sanctions, and supply-chain disruption risks.
 Cached 1 hour. High-severity events escalate to Risk Officer.
 """
@@ -108,7 +108,7 @@ def run(
         if ev_reg:
             line += f" ({ev_reg})"
         if ev_cmd:
-            line += f" — commodity impact: {ev_cmd}"
+            line += f" - commodity impact: {ev_cmd}"
         parts.append(line)
 
     if context.get("affected_commodities"):

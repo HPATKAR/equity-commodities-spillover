@@ -1,5 +1,5 @@
 """
-AI Risk Officer — morning briefing synthesiser and cross-agent routing hub.
+AI Risk Officer - morning briefing synthesiser and cross-agent routing hub.
 Owns the Overview page. Synthesises regime, risk score, alert signals,
 and peer intelligence into a terse morning briefing.
 Cached 1 hour. Routes high-priority signals to specialist agents.
@@ -84,7 +84,7 @@ def run(
     api_key: str,
 ) -> dict:
     """
-    Main entry point — called from the Overview page.
+    Main entry point - called from the Overview page.
 
     context keys (all optional):
       regime_name: str
@@ -144,7 +144,7 @@ def run(
 
     if not provider:
         set_status(_AGENT, "monitoring")
-        log_activity(_AGENT, "monitoring — no API key", ctx_str.split("\n")[0], "info")
+        log_activity(_AGENT, "monitoring - no API key", ctx_str.split("\n")[0], "info")
         return {"status": "monitoring", "context": ctx_str}
 
     narrative, raw_conf = _call_ai(ctx_str, provider, api_key)

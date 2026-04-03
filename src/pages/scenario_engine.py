@@ -1,5 +1,5 @@
 """
-Scenario Engine — Forward-Looking Parametric Shock Propagation
+Scenario Engine - Forward-Looking Parametric Shock Propagation
 Purdue University · Daniels School of Business
 
 Allows the user to shock oil, gold, yields, DXY, credit spreads, or a
@@ -145,7 +145,7 @@ def _propagate_shock(
 ) -> dict[str, float]:
     """
     Sum beta contributions across all active shock factors.
-    Returns {asset_name: estimated_return_pct} — negative = loss.
+    Returns {asset_name: estimated_return_pct} - negative = loss.
     """
     targets = _EQUITY_TARGETS + _COMMODITY_TARGETS
     impact: dict[str, float] = {t: 0.0 for t in targets}
@@ -404,7 +404,7 @@ def _metric_card(label: str, value: str, delta: str = "", color: str = _GOLD) ->
         if delta else ""
     )
     st.markdown(
-        f"""<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:4px;
+        f"""<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;
         padding:0.7rem 0.9rem;margin-bottom:0.5rem">
         <div style="font-family:'DM Sans',sans-serif;font-size:0.55rem;font-weight:700;
         letter-spacing:0.14em;text-transform:uppercase;color:{_MUTED};margin-bottom:3px">{label}</div>
@@ -431,7 +431,7 @@ def _impact_table(impact: dict[str, float]) -> None:
             f'</tr>'
         )
     st.markdown(
-        f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:4px;margin-bottom:1rem">
+        f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
         <table style="width:100%;border-collapse:collapse;background:#1c1c1c">
         <thead><tr style="border-bottom:1px solid #2a2a2a">
           <th style="padding:0.35rem 0.7rem;font-size:0.55rem;letter-spacing:0.12em;
@@ -462,7 +462,7 @@ def _var_table(var_es: dict[str, dict[str, float]], assets: list[str]) -> None:
             f'</tr>'
         )
     st.markdown(
-        f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:4px;margin-bottom:1rem">
+        f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
         <table style="width:100%;border-collapse:collapse;background:#1c1c1c">
         <thead><tr style="border-bottom:1px solid #2a2a2a">
           <th style="padding:0.35rem 0.7rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:{_MUTED};text-align:left;font-weight:600">Asset</th>
@@ -483,7 +483,7 @@ def _shock_badge(label: str, value: str, active: bool) -> str:
     bg     = "#1e1a12" if active else "#1c1c1c"
     return (
         f'<span style="display:inline-block;background:{bg};border:{border};'
-        f'border-radius:3px;padding:2px 8px;font-family:\'JetBrains Mono\',monospace;'
+        f'border-radius:0;padding:2px 8px;font-family:\'JetBrains Mono\',monospace;'
         f'font-size:0.68rem;color:{color};margin:2px 3px 2px 0">'
         f'{label}: {value}</span>'
     )
@@ -585,7 +585,7 @@ def page_scenario_engine(
     if credit_bps != 0: badges += _shock_badge("Credit", f"{credit_bps:+d}bps", True)
     if geo        != 0: badges += _shock_badge("Geo",    f"{geo:.1f}/10",        True)
     if not badges:
-        badges = f'<span style="color:{_MUTED};font-size:0.70rem">No active shocks — adjust sliders above.</span>'
+        badges = f'<span style="color:{_MUTED};font-size:0.70rem">No active shocks - adjust sliders above.</span>'
 
     st.markdown(
         f'<div style="margin:0.6rem 0 1.2rem;line-height:2">{badges}</div>',
@@ -599,7 +599,7 @@ def page_scenario_engine(
     if all_zero:
         st.info("Set at least one shock parameter to run the propagation engine.")
         # Still show baseline VaR/ES
-        _section_label("Baseline Tail Risk — Historical Simulation")
+        _section_label("Baseline Tail Risk - Historical Simulation")
         _definition_block(
             "VaR & ES Methodology",
             "Historical simulation VaR: the loss not exceeded with probability p over one day, "
@@ -667,7 +667,7 @@ def page_scenario_engine(
         _metric_card("Best Positioned Asset", f"{best_asset}", f"{pct:+.2f}%", color=_GREEN)
 
     # ── Waterfall chart ───────────────────────────────────────────────────
-    _section_label("Cross-Asset Shock Propagation — Estimated Returns")
+    _section_label("Cross-Asset Shock Propagation - Estimated Returns")
     _chart(_waterfall_chart(impact, height=480))
 
     st.markdown(
@@ -689,12 +689,12 @@ def page_scenario_engine(
         _impact_table({a: impact[a] for a in _COMMODITY_TARGETS if a in impact})
 
     # ── Tail risk under shock ─────────────────────────────────────────────
-    _section_label("Tail Risk Under Scenario — VaR & Expected Shortfall")
+    _section_label("Tail Risk Under Scenario - VaR & Expected Shortfall")
     _definition_block(
         "Shocked VaR & ES",
         "Baseline VaR/ES is from historical simulation on the selected window. Under a scenario, "
         "tail risk is amplified proportionally to the total shock magnitude across all channels. "
-        "This is a parametric scaling approach — not a full Monte Carlo reprice. "
+        "This is a parametric scaling approach - not a full Monte Carlo reprice. "
         "For severe dislocations (total shock > 3 sigma), treat as an order-of-magnitude estimate."
     )
 
@@ -723,14 +723,14 @@ def page_scenario_engine(
     st.markdown(
         f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem">
         {"".join([
-            f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:4px;'
+            f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;'
             f'padding:0.6rem 0.85rem">'
             f'<div style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;'
             f'text-transform:uppercase;color:{_MUTED};margin-bottom:4px">{title}</div>'
             f'<div style="font-size:0.70rem;color:#b8b8b8;line-height:1.65">{body}</div>'
             f'</div>'
             for title, body in [
-                ("Linearity", "Beta propagation assumes linear relationships. Non-linearity and feedback loops are not modelled — impacts can be materially larger in tail events."),
+                ("Linearity", "Beta propagation assumes linear relationships. Non-linearity and feedback loops are not modelled - impacts can be materially larger in tail events."),
                 ("Stationarity", "Betas are estimated on the full historical window. Regime shifts (e.g., post-2022 inflation) may have altered sensitivities significantly."),
                 ("Single-period", "All estimates are single-day or single-period. Cumulative path effects and multi-day drift are not captured."),
                 ("Correlation stability", "Cross-asset correlations are assumed constant. In stress periods, correlations typically spike toward +1, amplifying portfolio losses."),

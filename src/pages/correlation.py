@@ -453,8 +453,8 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     "NEUTRAL: equity-bond correlation near zero. No clear flight-to-quality signal."
                 )
                 st.markdown(
-                    f'<div style="border:1px solid #2a2a2a;border-left:4px solid {_corr_color};'
-                    f'border-radius:0 6px 6px 0;padding:0.75rem 1rem;background:#1c1c1c;margin:0.8rem 0">'
+                    f'<div style="border:1px solid #2a2a2a;'
+                    f'border-radius:0;padding:0.75rem 1rem;background:#1c1c1c;margin:0.8rem 0">'
                     f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
                     f'text-transform:uppercase;letter-spacing:0.12em;color:{_corr_color};margin-bottom:4px">'
                     f'Equity-Bond Correlation Regime</div>'
@@ -479,12 +479,10 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         "correlated, the traditional 60/40 hedge breaks down and requires alternative protection."
     )
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -495,44 +493,29 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
             _n_obs = len(eq_r.dropna(how="all"))
             _current_regime = regimes.iloc[-1] if not regimes.empty else "Unknown"
-            _regime_changed = (
-                len(regimes) > 5 and regimes.iloc[-1] != regimes.iloc[-6]
-            ) if not regimes.empty else False
-
-            # Top correlated pairs from cross-asset matrix
+            _regime_changed = (len(regimes) > 5 and regimes.iloc[-1] != regimes.iloc[-6]) if not regimes.empty else False
             try:
                 import numpy as np
                 _cm = eq_r.join(cmd_r).corr().abs()
-                _max_corr = float(_cm.where(
-                    ~(_cm == 1.0)
-                ).stack().max())
+                _max_corr = float(_cm.where(~(_cm == 1.0)).stack().max())
             except Exception:
                 _max_corr = None
-
             _cqo_ctx = {
-                "n_obs":           _n_obs,
-                "date_range":      f"{start} to {end}",
-                "model":           "Rolling Pearson correlation + DCC-GARCH + Markov regime",
-                "regime":          str(_current_regime),
-                "regime_change":   _regime_changed,
-                "max_correlation": _max_corr,
-                "assumption_count": 3,
+                "n_obs": _n_obs, "date_range": f"{start} to {end}",
+                "model": "Rolling Pearson correlation + DCC-GARCH + Markov regime",
+                "regime": str(_current_regime), "regime_change": _regime_changed,
+                "max_correlation": _max_corr, "assumption_count": 3,
                 "notes": [
-                    "Rolling window correlation is non-stationary — window length (60d default) is arbitrary",
+                    "Rolling window correlation is non-stationary - window length (60d default) is arbitrary",
                     "Pearson correlation assumes linearity; equity-commodity relationships are often non-linear during crises",
-                    "DCC-GARCH assumes elliptical distributions — tail dependence is underestimated",
-                    "Markov regime model uses 2 states only — real market has continuous regime transitions",
-                    "Correlation ≠ causation — no causal inference drawn from this page",
+                    "DCC-GARCH assumes elliptical distributions - tail dependence is underestimated",
+                    "Markov regime model uses 2 states only - real market has continuous regime transitions",
+                    "Correlation ≠ causation - no causal inference drawn from this page",
                 ],
             }
-            with st.spinner("CQO auditing correlation methodology…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Correlation Analysis")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Correlation Analysis")
     except Exception:
         pass
 

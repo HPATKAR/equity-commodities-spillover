@@ -1,5 +1,5 @@
 """
-AI Signal Auditor — owns the Signal Performance Review page.
+AI Signal Auditor - owns the Signal Performance Review page.
 Calibrates confidence scores across all agents. Reviews model accuracy,
 Granger causality hit rates, and signal backtest performance.
 Cached 1 hour. Updates calibration factors in session_state.
@@ -107,7 +107,7 @@ def run(
         rate_str = f" ({rate:.1f}%)" if rate else ""
         parts.append(f"Weakest Granger pair: {context['worst_pair']}{rate_str}")
     if context.get("signal_decay"):
-        parts.append("Signal decay detected — recent hit rates below historical average.")
+        parts.append("Signal decay detected - recent hit rates below historical average.")
     if context.get("regime_name"):
         parts.append(f"Current regime: {context['regime_name']}")
 
@@ -117,7 +117,7 @@ def run(
 
     ctx_str = "\n".join(parts)
 
-    # Compute calibration factors from hit rates — vary by agent domain
+    # Compute calibration factors from hit rates - vary by agent domain
     calibration = {}
     hit_rates = context.get("granger_hit_rates", {})
     if hit_rates:
@@ -131,16 +131,16 @@ def run(
         else:
             base_factor = 1.0
 
-        # Commodity-facing agents get a larger boost/penalty — more model-dependent
-        # Geopolitical analyst is fundamentally qualitative — smaller adjustment
-        # Trade structurer requires highest bar — shrink more aggressively if signals weak
+        # Commodity-facing agents get a larger boost/penalty - more model-dependent
+        # Geopolitical analyst is fundamentally qualitative - smaller adjustment
+        # Trade structurer requires highest bar - shrink more aggressively if signals weak
         domain_modifiers = {
             "risk_officer":          0.0,    # additive offset from base
             "macro_strategist":      0.02,   # slight boost (macro signal is more persistent)
             "commodities_specialist": 0.0,
             "geopolitical_analyst":  -0.05,  # geo uncertainty always higher
             "stress_engineer":       0.01,
-            "signal_auditor":        0.0,    # self — no adjustment
+            "signal_auditor":        0.0,    # self - no adjustment
             "trade_structurer":     -0.03 if avg < 55 else 0.0,  # penalise if weak signals
             "quality_officer":       0.05,   # CQO is always checking known failure modes
         }
@@ -166,7 +166,7 @@ def run(
         return {"status": "monitoring", "calibration": calibration}
 
     narrative, raw_conf = _call_ai(ctx_str, provider, api_key)
-    # Auditor uses its own raw confidence — no recursive calibration
+    # Auditor uses its own raw confidence - no recursive calibration
     conf = min(max(raw_conf, 0.0), 1.0)
 
     set_output(_AGENT, narrative, confidence=conf)

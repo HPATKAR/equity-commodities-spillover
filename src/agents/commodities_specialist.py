@@ -1,5 +1,5 @@
 """
-AI Commodities Specialist — owns the Commodities Watchlist page.
+AI Commodities Specialist - owns the Commodities Watchlist page.
 Interprets COT positioning, sector rotation, and supply shocks.
 Cached 1 hour. Flags crowded positions to Risk Officer.
 """

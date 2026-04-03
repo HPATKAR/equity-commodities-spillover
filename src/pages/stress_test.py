@@ -381,8 +381,8 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
         tw_col, norm_col, _ = st.columns([3, 1, 2])
         tw_col.markdown(
-            f'<div style="border-left:4px solid {tw_color};padding:0.45rem 0.8rem;'
-            f'background:{tw_bg};margin:0.5rem 0;font-size:0.70rem;border-radius:0 4px 4px 0">'
+            f'<div style="padding:0.45rem 0.8rem;'
+            f'background:{tw_bg};margin:0.5rem 0;font-size:0.70rem;border-radius:0">'
             f'<b style="color:{tw_color};font-family:JetBrains Mono,monospace">'
             f'Total weight: {total_w:.1f}%</b>'
             f'<span style="color:#8890a1;margin-left:10px;font-size:0.64rem">'
@@ -406,7 +406,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             if remaining > 0:
                 summary_txt += f" &nbsp;+&nbsp; {remaining} more"
             st.markdown(
-                f'<div style="border-left:3px solid #CFB991;padding:0.4rem 0.8rem;'
+                f'<div style="padding:0.4rem 0.8rem;'
                 f'background:#1c1c1c;margin:0.4rem 0 0.6rem;font-size:0.70rem;color:#d1d5db">'
                 f'<b>Normalised portfolio</b> ({len(norm_weights)} assets): {summary_txt}</div>',
                 unsafe_allow_html=True,
@@ -828,12 +828,10 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -844,30 +842,23 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
             _n_scenarios = len(results) if "results" in dir() else 0
             _scenario_names = [r["event"] for r in results] if "results" in dir() and results else []
             _cqo_ctx = {
-                "n_obs":            len(eq_r.dropna(how="all")),
-                "date_range":       f"{start} to {end}",
-                "n_events":         _n_scenarios,
-                "model":            "Historical scenario simulation using realised returns",
+                "n_obs": len(eq_r.dropna(how="all")), "date_range": f"{start} to {end}",
+                "n_events": _n_scenarios, "model": "Historical scenario simulation using realised returns",
                 "assumption_count": 5,
                 "notes": [
-                    "Stress test uses historical return realisations — assumes future crises resemble past ones",
+                    "Stress test uses historical return realisations - assumes future crises resemble past ones",
                     "Portfolio weights are user-defined and not dynamically rebalanced during stress period",
                     "Correlation structure during stress events differs from pre-crisis: diversification overstated",
-                    "Each event treated independently — no correlation between concurrent shocks modelled",
-                    f"Events tested: {', '.join(_scenario_names[:4]) if _scenario_names else 'none'} — user-selected, not systematic",
-                    "No Monte Carlo or parametric tail extension — fat tail losses underrepresented",
+                    "Each event treated independently - no correlation between concurrent shocks modelled",
+                    f"Events tested: {', '.join(_scenario_names[:4]) if _scenario_names else 'none'} - user-selected, not systematic",
+                    "No Monte Carlo or parametric tail extension - fat tail losses underrepresented",
                     "Liquidity risk and bid-ask spread expansion during crises not captured",
                 ],
             }
-            with st.spinner("CQO auditing stress test assumptions…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Stress Test")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Stress Test")
     except Exception:
         pass
 

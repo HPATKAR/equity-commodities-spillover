@@ -158,19 +158,18 @@ def _add_event_bands(
 def _page_intro(text: str) -> None:
     st.markdown(
         f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.76rem;
-        color:#b8b8b8;line-height:1.75;max-width:860px;margin:0 0 1.0rem;
-        padding-left:0.85rem;border-left:3px solid #2a2a2a">{text}</p>""",
+        color:#b8b8b8;line-height:1.75;max-width:860px;margin:0 0 1.0rem;">{text}</p>""",
         unsafe_allow_html=True,
     )
 
 
 def _section_note(text: str) -> None:
     st.markdown(
-        f"""<div style="border-left:3px solid {_GOLD};padding:0.5rem 0.9rem;
-        background:#fafaf8;margin:0.6rem 0 0.9rem;font-size:0.70rem;color:#333333;
+        f"""<div style="border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;
+        padding:0.45rem 0;margin:0.6rem 0 0.9rem;font-size:0.70rem;color:#8890a1;
         line-height:1.7;font-family:'DM Sans',sans-serif">
         <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
-        text-transform:uppercase;color:#8E6F3E;display:block;margin-bottom:2px">
+        text-transform:uppercase;color:{_GOLD};display:block;margin-bottom:2px">
         Methodology</span>{text}</div>""",
         unsafe_allow_html=True,
     )
@@ -178,14 +177,12 @@ def _section_note(text: str) -> None:
 
 def _definition_block(title: str, body: str) -> None:
     st.markdown(
-        f"""<div style="border:1px solid #E8E5E0;border-radius:3px;
-        overflow:hidden;margin:0.6rem 0 0.9rem">
-        <div style="background:{_BLACK};padding:0.45rem 1rem;display:flex;align-items:center;gap:0.5rem">
-          <div style="width:3px;height:14px;background:{_GOLD};border-radius:2px;flex-shrink:0"></div>
-          <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
+        f"""<div style="border:1px solid #2a2a2a;margin:0.6rem 0 0.9rem">
+        <div style="background:{_BLACK};padding:0.4rem 0.9rem;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:0.56rem;font-weight:700;letter-spacing:0.16em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.65rem 1rem;font-size:0.70rem;color:#c8c8c8;
+        <div style="padding:0.65rem 0.9rem;font-size:0.70rem;color:#c8c8c8;
         background:#1c1c1c;line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
@@ -194,12 +191,11 @@ def _definition_block(title: str, body: str) -> None:
 
 def _takeaway_block(text: str) -> None:
     st.markdown(
-        f"""<div style="border:1px solid #E8E5E0;border-top:2px solid {_GOLD};
-        border-radius:0 0 3px 3px;padding:0.55rem 1rem;
-        background:#fffdf5;margin:0.6rem 0 0.9rem;font-size:0.70rem;color:#333333;
+        f"""<div style="border-top:2px solid {_GOLD};border-bottom:1px solid #2a2a2a;
+        padding:0.5rem 0;margin:0.6rem 0 0.9rem;font-size:0.70rem;color:#c8c8c8;
         line-height:1.75;font-family:'DM Sans',sans-serif">
         <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
-        text-transform:uppercase;color:#8E6F3E;display:block;margin-bottom:3px">
+        text-transform:uppercase;color:{_GOLD};display:block;margin-bottom:3px">
         Key Insight</span>{text}</div>""",
         unsafe_allow_html=True,
     )
@@ -207,16 +203,16 @@ def _takeaway_block(text: str) -> None:
 
 def _page_conclusion(verdict: str, summary: str) -> None:
     st.markdown(
-        f"""<div style="border:1px solid #E8E5E0;border-top:3px solid {_GOLD};
-        border-radius:0 0 3px 3px;overflow:hidden;margin:1.2rem 0">
-        <div style="background:{_BLACK};padding:0.6rem 1.2rem;display:flex;align-items:center;gap:0.6rem">
-          <div style="width:3px;height:16px;background:{_GOLD};border-radius:2px;flex-shrink:0"></div>
-          <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;
-          text-transform:uppercase;color:{_GOLD}">Assessment &middot; {verdict}</span>
+        f"""<div style="border-top:2px solid {_GOLD};border-bottom:1px solid #2a2a2a;
+        margin:1.2rem 0;padding:0.6rem 0 0.75rem 0">
+        <div style="margin-bottom:0.35rem">
+          <span style="font-size:0.56rem;font-weight:700;letter-spacing:0.16em;
+          text-transform:uppercase;color:{_GOLD}">Assessment</span>
+          <span style="font-size:0.56rem;font-weight:700;letter-spacing:0.16em;
+          text-transform:uppercase;color:#888">&nbsp;&middot;&nbsp;{verdict}</span>
         </div>
-        <div style="padding:0.75rem 1.2rem;background:#fafaf8;font-size:0.70rem;
-        color:#333333;line-height:1.75;font-family:'DM Sans',sans-serif">
-        {summary}</div></div>""",
+        <div style="font-size:0.70rem;color:#c8c8c8;line-height:1.75;
+        font-family:'DM Sans',sans-serif">{summary}</div></div>""",
         unsafe_allow_html=True,
     )
 
@@ -234,7 +230,7 @@ def _freshness_badge(
     Red dot    = stale (age >= 2x stale_after) or unknown
     """
     if age_seconds is None:
-        dot_color, status = "#555960", "—"
+        dot_color, status = "#555960", "-"
     elif age_seconds < stale_after:
         dot_color, status = "#27ae60", "Live"
     elif age_seconds < stale_after * 2:
@@ -263,10 +259,10 @@ def _data_status_bar(items: list[tuple[str, str, int | None]]) -> None:
     badges = "".join(_freshness_badge(l, v, a) for l, v, a in items)
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
-        f'background:#0d0d0d;border:1px solid #1e1e1e;border-radius:3px;'
+        f'background:#0d0d0d;border-top:1px solid #1e1e1e;border-bottom:1px solid #1e1e1e;'
         f'padding:0.35rem 0.8rem;margin:0.4rem 0 0.9rem;gap:0.1rem">'
         f'<span style="font-size:0.50rem;font-weight:700;letter-spacing:0.16em;'
-        f'text-transform:uppercase;color:#3a3a3a;margin-right:0.7rem">DATA</span>'
+        f'text-transform:uppercase;color:#555960;margin-right:0.7rem">DATA</span>'
         f'{badges}</div>',
         unsafe_allow_html=True,
     )
@@ -285,11 +281,11 @@ def _thread(text: str) -> None:
 def _insight_note(text: str) -> None:
     """Compact formal plain-English explanation rendered beneath each infographic."""
     st.markdown(
-        f"""<div style="border-left:2px solid {_GOLD};padding:0.38rem 0.85rem;
-        background:#fafaf8;margin:0.1rem 0 0.75rem;font-size:0.66rem;color:#444444;
+        f"""<div style="border-top:1px solid #2a2a2a;padding:0.38rem 0;
+        margin:0.1rem 0 0.75rem;font-size:0.66rem;color:#8890a1;
         line-height:1.65;font-family:'DM Sans',sans-serif">
         <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
-        text-transform:uppercase;color:#8E6F3E;display:block;margin-bottom:2px">
+        text-transform:uppercase;color:{_GOLD};display:block;margin-bottom:2px">
         Interpretation</span>{text}</div>""",
         unsafe_allow_html=True,
     )
@@ -301,13 +297,12 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
         col = delta_color or ("#2e7d32" if delta.startswith("+") else "#c0392b")
         delta_html = f'<div style="font-size:0.65rem;color:{col};margin-top:2px">{delta}</div>'
     st.markdown(
-        f"""<div style="border:1px solid #E8E5E0;border-radius:4px;
-        padding:0.7rem 0.9rem;background:#fff;
-        transition:box-shadow 0.2s">
-        <div style="font-size:0.60rem;font-weight:600;letter-spacing:0.14em;
-        text-transform:uppercase;color:#555960;margin-bottom:4px">{label}</div>
+        f"""<div style="border-bottom:1px solid #2a2a2a;
+        padding:0.55rem 0;background:transparent">
+        <div style="font-size:0.58rem;font-weight:600;letter-spacing:0.14em;
+        text-transform:uppercase;color:#888;margin-bottom:4px">{label}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
-        font-weight:700;color:{_BLACK}">{value}</div>
+        font-weight:700;color:#e8e9ed">{value}</div>
         {delta_html}</div>""",
         unsafe_allow_html=True,
     )
@@ -322,43 +317,40 @@ def _section_header(number: str, title: str, subtitle: str = "") -> None:
     )
     st.markdown(
         f'<div style="margin:1.1rem 0 0.45rem;padding-bottom:0.35rem;'
-        f'border-bottom:1.5px solid #E8E5E0;display:flex;align-items:baseline;gap:0">'
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.18em;color:#CFB991;'
-        f'background:#000;padding:2px 6px;border-radius:2px;margin-right:0.55rem">{number}</span>'
+        f'border-bottom:1px solid #2a2a2a;display:flex;align-items:baseline;gap:0">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.10em;color:{_GOLD};'
+        f'margin-right:0.65rem">{number}</span>'
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.76rem;font-weight:700;'
-        f'color:#000">{title}</span>'
+        f'color:#e8e9ed">{title}</span>'
         f'{sub_html}</div>',
         unsafe_allow_html=True,
     )
 
 
 def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
-    """Full-width coloured regime banner - place at the very top of a page to surface the verdict."""
+    """Flat inline regime label - no pill, no rounded corners, no background fill."""
     sub_html = (
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
-        f'color:rgba(255,255,255,0.72);margin-left:0.75rem">{sub}</span>'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;'
+        f'color:#888;margin-left:0.75rem;font-weight:400">{sub}</span>'
         if sub else ""
     )
     st.markdown(
-        f'<div style="background:{color};padding:0.55rem 1.2rem;border-radius:4px;'
-        f'display:flex;align-items:center;gap:0.75rem;margin-bottom:0.9rem">'
-        f'<div style="width:7px;height:7px;border-radius:50%;'
-        f'background:rgba(255,255,255,0.55);flex-shrink:0"></div>'
-        f'<div>'
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
-        f'letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.60)">'
-        f'MACRO REGIME &nbsp;·&nbsp; </span>'
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;'
-        f'font-weight:700;color:#fff">{label}</span>'
+        f'<div style="border-top:2px solid {color};border-bottom:1px solid #2a2a2a;'
+        f'padding:0.4rem 0;display:flex;align-items:baseline;gap:0;margin-bottom:0.9rem">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.54rem;font-weight:700;'
+        f'letter-spacing:0.14em;text-transform:uppercase;color:#888;margin-right:0.6rem">'
+        f'REGIME</span>'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;'
+        f'font-weight:700;color:{color}">{label}</span>'
         f'{sub_html}'
-        f'</div></div>',
+        f'</div>',
         unsafe_allow_html=True,
     )
 
 
 def _narrative_box(text: str) -> None:
-    """Pre-loaded data-driven narrative with gold left border. Paragraphs separated by blank lines."""
+    """Pre-loaded data-driven narrative. Paragraphs separated by blank lines."""
     paragraphs = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
     html_parts = []
     for p in paragraphs:
@@ -369,26 +361,21 @@ def _narrative_box(text: str) -> None:
             html_parts.append(p)
     html = "<br><br>".join(html_parts)
     st.markdown(
-        f'<div style="border-left:4px solid #CFB991;padding:0.8rem 1.1rem;'
-        f'background:#fafaf8;border-radius:0 4px 4px 0;margin:0.35rem 0 0.75rem">'
+        f'<div style="border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;'
+        f'padding:0.75rem 0;margin:0.35rem 0 0.75rem">'
         f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.73rem;'
-        f'color:#2A2A2A;line-height:1.80">{html}</div></div>',
+        f'color:#c8c8c8;line-height:1.80">{html}</div></div>',
         unsafe_allow_html=True,
     )
 
 
 def _primary_chart(fig, caption: str = "") -> None:
-    """Render the headline chart for a page/section with a gold left-border emphasis strip."""
-    st.markdown(
-        '<div style="border-left:3px solid #CFB991;padding-left:0.4rem;margin-bottom:0.1rem">',
-        unsafe_allow_html=True,
-    )
+    """Render the headline chart for a page/section."""
     _chart(fig)
-    st.markdown('</div>', unsafe_allow_html=True)
     if caption:
         st.markdown(
             f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;'
-            f'color:#888;font-style:italic;margin:0 0 0.55rem 0.5rem">{caption}</p>',
+            f'color:#888;font-style:italic;margin:0 0 0.55rem 0">{caption}</p>',
             unsafe_allow_html=True,
         )
 
@@ -401,12 +388,12 @@ def _about_page_styles():
     /* ── Hero banner ───────────────────────────────────── */
     .about-hero {
         background: #1c1c1c;
-        border-radius: 12px;
+        border-radius: 0;
         padding: 0;
         margin-bottom: 1.2rem;
         overflow: hidden;
-        border: 1px solid #2a2a2a;
-        box-shadow: 0 1px 8px rgba(0,0,0,0.25);
+        border-top: 2px solid #CFB991;
+        border-bottom: 1px solid #2a2a2a;
     }
     .about-hero-inner {
         display: flex;
@@ -429,7 +416,7 @@ def _about_page_styles():
         display: flex;
         flex-direction: column;
         justify-content: center;
-        border-left: 3px solid #CFB991;
+        border-left: 1px solid #2a2a2a;
     }
     .about-hero h1 {
         font-family: 'DM Sans', sans-serif;
@@ -474,52 +461,42 @@ def _about_page_styles():
         font-weight: 600;
         color: #CFB991;
         text-decoration: none;
-        padding: 0.22rem 0.7rem;
-        border: 1px solid rgba(207,185,145,0.3);
-        border-radius: 4px;
-        transition: all 0.2s ease;
+        padding: 0.18rem 0;
+        border-bottom: 1px solid rgba(207,185,145,0.4);
         letter-spacing: 0.02em;
     }
     .about-hero .links a:hover {
-        background: rgba(207,185,145,0.15);
-        border-color: #CFB991;
+        border-bottom-color: #CFB991;
     }
 
     /* ── Cards ─────────────────────────────────────────── */
     .about-card {
         background: #1c1c1c;
-        border: 1px solid #2a2a2a;
-        border-radius: 12px;
-        padding: 1.1rem 1.3rem;
-        margin-bottom: 0.75rem;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.18);
-        transition: all 0.2s ease;
-    }
-    .about-card:hover {
-        border-color: #CFB991;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.30);
+        border: none;
+        border-radius: 0;
+        border-top: 1px solid #2a2a2a;
+        padding: 1.0rem 0;
+        margin-bottom: 0.5rem;
     }
     .about-card-title {
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.60rem;
+        font-size: 0.58rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.16em;
         color: #CFB991;
-        margin: 0 0 0.65rem 0;
-        padding-bottom: 0.4rem;
+        margin: 0 0 0.6rem 0;
+        padding-bottom: 0.35rem;
         border-bottom: 1px solid #2a2a2a;
     }
 
     /* ── Experience timeline ───────────────────────────── */
     .exp-item {
-        border-left: 2px solid #2a2a2a;
-        padding-left: 1rem;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.35rem;
-        transition: border-color 0.2s ease;
+        border-top: 1px solid #2a2a2a;
+        padding-top: 0.55rem;
+        margin-bottom: 0.6rem;
+        padding-bottom: 0.25rem;
     }
-    .exp-item:hover { border-color: #CFB991; }
     .exp-role {
         font-family: 'DM Sans', sans-serif;
         font-size: 0.72rem;
@@ -646,7 +623,7 @@ def _about_page_styles():
     /* ── Interest tags ─────────────────────────────────── */
     .interest-tag {
         display: inline-block;
-        border-radius: 20px;
+        border-radius: 0;
         padding: 0.22rem 0.65rem;
         font-family: 'DM Sans', sans-serif;
         font-size: 0.60rem;
@@ -728,7 +705,7 @@ def _page_footer() -> None:
     else:
         logo_html = (
             "<div style='display:inline-flex;flex-direction:column;align-items:center;justify-content:center;"
-            "width:72px;height:72px;background:#CFB991;border-radius:9px;margin-bottom:18px;gap:2px;'>"
+            "width:72px;height:72px;background:#CFB991;border-radius:0;margin-bottom:18px;gap:2px;'>"
             "<span style='font-size:1.15rem;font-weight:800;color:#000;line-height:1;letter-spacing:0.02em;'>X</span>"
             "<span style='font-size:0.58rem;font-weight:600;color:#000;line-height:1;letter-spacing:0.14em;opacity:0.75;'>ASSET</span>"
             "</div>"

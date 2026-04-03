@@ -47,8 +47,8 @@ def _insight_card(
     conf_color = _GREEN if confidence >= 70 else (_AMBER if confidence >= 45 else _GREY)
 
     st.markdown(
-        f'<div style="{_F}border:1px solid #2a2a2a;border-left:4px solid {color};'
-        f'border-radius:0 6px 6px 0;padding:0.85rem 1.1rem 0.85rem;'
+        f'<div style="{_F}border:1px solid #2a2a2a;'
+        f'border-radius:0;padding:0.85rem 1.1rem 0.85rem;'
         f'background:#1c1c1c;margin-bottom:0">'
 
         # Row 1: emoji + headline
@@ -910,12 +910,10 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
             except Exception as e:
                 st.error(f"PDF generation failed: {e}")
 
-    # ── Chief Quality Officer ─────────────────────────────────────────────────
+    # CQO runs silently - output visible in About > AI Workforce
     try:
         from src.agents.quality_officer import run as _cqo_run
-        from src.ui.agent_panel import render_agent_output_block
         from src.analysis.agent_state import is_enabled
-
         if is_enabled("quality_officer"):
             _anthropic_key = _openai_key = ""
             try:
@@ -926,28 +924,21 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-
-            _n_obs = len(eq_r.dropna(how="all"))
             _n_cards = len(cards) if "cards" in dir() and cards else 0
             _cqo_ctx = {
-                "n_obs":            _n_obs,
-                "date_range":       f"{start} to {end}",
-                "model":            "Multi-factor composite risk score + rule-based insight cards",
+                "n_obs": len(eq_r.dropna(how="all")), "date_range": f"{start} to {end}",
+                "model": "Multi-factor composite risk score + rule-based insight cards",
                 "assumption_count": 6,
                 "notes": [
-                    f"{_n_cards} insight cards generated — thresholds for card activation are hardcoded, not data-driven",
-                    "Composite risk score stacks correlation, volatility, and commodity z-scores — weights are arbitrary",
-                    "Private credit bubble score uses BDC equity proxies (ARCC, OBDC) — equity prices ≠ credit spreads",
-                    "Leading/lagging commodity detection uses cross-correlation lag — spurious at short samples",
-                    "Regime-conditional insights assume regime is stable — mean reversion risk in volatile periods",
+                    f"{_n_cards} insight cards generated - thresholds for card activation are hardcoded, not data-driven",
+                    "Composite risk score stacks correlation, volatility, and commodity z-scores - weights are arbitrary",
+                    "Private credit bubble score uses BDC equity proxies (ARCC, OBDC) - equity prices ≠ credit spreads",
+                    "Leading/lagging commodity detection uses cross-correlation lag - spurious at short samples",
+                    "Regime-conditional insights assume regime is stable - mean reversion risk in volatile periods",
                     "All insight thresholds (e.g. corr > 0.45 = elevated) lack empirical validation",
                 ],
             }
-            with st.spinner("CQO auditing insights methodology…"):
-                _cqo_result = _cqo_run(_cqo_ctx, _provider, _api_key, page="Actionable Insights")
-            if _cqo_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("quality_officer", _cqo_result)
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Actionable Insights")
     except Exception:
         pass
 
