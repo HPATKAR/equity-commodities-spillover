@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import streamlit as st
 
-from src.analysis.agent_state import AGENTS, STATUSES, init_agents, get_agent
+from src.analysis.agent_state import AGENTS, STATUSES, init_agents, get_agent, is_enabled
 from src.ui.shared import _about_page_styles, _page_footer
 
 _GOLD = "#CFB991"
@@ -365,6 +365,112 @@ def _render_activity_feed() -> None:
         )
 
 
+def _get_api_creds() -> tuple[str | None, str]:
+    """Read API credentials from st.secrets. Returns (provider, api_key)."""
+    try:
+        sec = st.secrets.get("keys", st.secrets)
+        ant = sec.get("anthropic_api_key", "")
+        oai = sec.get("openai_api_key", "")
+        if ant:
+            return "anthropic", ant
+        if oai:
+            return "openai", oai
+    except Exception:
+        pass
+    return None, ""
+
+
+def _build_minimal_context() -> dict:
+    """
+    Build the best market context we can from session state.
+    Falls back to empty dict - all agents degrade gracefully.
+    """
+    ctx: dict = {}
+
+    # Pull cached overview context if the overview page has already run
+    ov = st.session_state.get("overview_market_context")
+    if ov:
+        ctx.update(ov)
+        return ctx
+
+    # Lightweight fallback: pull regime + risk score from session state if saved
+    for key in ("regime_name", "regime_level", "risk_score", "avg_corr",
+                "corr_delta", "n_alerts"):
+        if key in st.session_state:
+            ctx[key] = st.session_state[key]
+
+    # Pull FRED data if cached
+    fred = st.session_state.get("fred_data")
+    if fred:
+        ctx["fed_rate"]          = fred.get("FEDFUNDS")
+        ctx["cpi_yoy"]           = fred.get("CPIAUCSL")
+        ctx["gdp_growth"]        = fred.get("GDP")
+        ctx["yield_curve_spread"]= fred.get("T10Y2Y")
+
+    return ctx
+
+
+def _run_pipeline(force: bool = False) -> None:
+    """Run the full 3-round agent pipeline and rerun the page on completion."""
+    from src.analysis.agent_orchestrator import get_orchestrator
+
+    provider, api_key = _get_api_creds()
+    if not provider:
+        st.error("No API key found. Add `anthropic_api_key` or `openai_api_key` to `.streamlit/secrets.toml`.")
+        return
+
+    orch = get_orchestrator(provider, api_key)
+    if force:
+        orch.invalidate()
+
+    mkt_ctx = _build_minimal_context()
+
+    rounds_done = 0
+    progress = st.progress(0, text="Starting pipeline...")
+    try:
+        # Round 1
+        progress.progress(10, text="Round 1 - Signal Auditor, Macro Strategist, Geo Intel...")
+        from src.analysis.agent_orchestrator import PIPELINE
+        r1_agents = [p for p in PIPELINE if p["round"] == 1]
+        for spec in r1_agents:
+            aid = spec["id"]
+            if not is_enabled(aid):
+                continue
+            ctx = orch._build_context(aid, mkt_ctx)
+            orch._run_agent(aid, ctx)
+        rounds_done = 1
+        progress.progress(38, text="Round 1 complete. Starting Round 2...")
+
+        # Round 2
+        progress.progress(42, text="Round 2 - Risk Officer, Commodities Specialist...")
+        r2_agents = [p for p in PIPELINE if p["round"] == 2]
+        for spec in r2_agents:
+            aid = spec["id"]
+            if not is_enabled(aid):
+                continue
+            ctx = orch._build_context(aid, mkt_ctx)
+            orch._run_agent(aid, ctx)
+        rounds_done = 2
+        progress.progress(68, text="Round 2 complete. Starting Round 3...")
+
+        # Round 3
+        progress.progress(72, text="Round 3 - Stress Engineer, Trade Structurer...")
+        r3_agents = [p for p in PIPELINE if p["round"] == 3]
+        for spec in r3_agents:
+            aid = spec["id"]
+            if not is_enabled(aid):
+                continue
+            ctx = orch._build_context(aid, mkt_ctx)
+            orch._run_agent(aid, ctx)
+        rounds_done = 3
+        progress.progress(100, text="Pipeline complete.")
+
+        st.success(f"All {rounds_done} rounds complete - 7 agents updated. Switch to the Agent Outputs tab to review.")
+    except Exception as e:
+        progress.empty()
+        st.error(f"Pipeline failed after Round {rounds_done}: {e}")
+
+
 def page_about_ai_workforce() -> None:
     _about_page_styles()
     init_agents()
@@ -384,6 +490,61 @@ def page_about_ai_workforce() -> None:
         f'</div>',
         unsafe_allow_html=True,
     )
+
+    # ── Run controls ──────────────────────────────────────────────────────────
+    from src.analysis.agent_orchestrator import _is_fresh, PIPELINE as _PIPELINE
+
+    n_fresh  = sum(1 for p in _PIPELINE if _is_fresh(p["id"]))
+    n_total  = len(_PIPELINE)  # 7 pipeline agents (not CQO)
+    n_stale  = n_total - n_fresh
+    last_run = st.session_state.get("orchestrator", {}).get("pipeline_run")
+    last_run_str = (
+        last_run.strftime("%H:%M") if last_run else "never"
+    )
+
+    # Status bar
+    status_color = "#27ae60" if n_stale == 0 else ("#e67e22" if n_stale <= 3 else "#c0392b")
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:1rem;'
+        f'background:#0d0d0d;border:1px solid #1e1e1e;'
+        f'padding:0.55rem 0.9rem;margin-bottom:0.8rem">'
+        f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.12em;'
+        f'text-transform:uppercase;color:{status_color}">'
+        f'{"ALL AGENTS FRESH" if n_stale == 0 else f"{n_stale} AGENT{"S" if n_stale != 1 else ""} NEED REFRESH"}'
+        f'</div>'
+        f'<div style="{_M}font-size:0.48rem;color:#555960">'
+        f'{n_fresh}/{n_total} fresh &nbsp;·&nbsp; last run {last_run_str}</div>'
+        f'<div style="{_F}font-size:0.52rem;color:#555960;flex:1;text-align:right">'
+        f'Round 4 (CQO) runs per analysis page visit.</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    col_run, col_force, col_spacer = st.columns([1.3, 1.5, 5])
+    with col_run:
+        run_clicked = st.button(
+            "Run All Agents Now",
+            key="workforce_run_btn",
+            use_container_width=True,
+            type="primary",
+            disabled=(n_stale == 0),
+            help="Run the full 3-round pipeline (Rounds 1-3). CQO runs per page.",
+        )
+    with col_force:
+        force_clicked = st.button(
+            "Force Refresh All",
+            key="workforce_force_btn",
+            use_container_width=True,
+            type="secondary",
+            help="Invalidate all cached outputs and re-run the full pipeline.",
+        )
+
+    if run_clicked:
+        _run_pipeline(force=False)
+    elif force_clicked:
+        _run_pipeline(force=True)
+
+    st.markdown('<div style="margin-bottom:0.5rem"></div>', unsafe_allow_html=True)
 
     tab_diagram, tab_outputs, tab_cqo, tab_feed = st.tabs([
         "Pipeline Diagram", "Agent Outputs", "CQO Flags & Corrections", "Activity Feed"

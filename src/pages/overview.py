@@ -864,6 +864,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             "vvix":  _iv_snap.get("VVIX"),
         }
 
+        # Cache market context for AI Workforce "Run All Agents" button
+        st.session_state["overview_market_context"] = _market_ctx
+
         orch = get_orchestrator(_provider, _api_key)
 
         # Run only Round 1 agents on Overview (fast path) - heavier rounds
