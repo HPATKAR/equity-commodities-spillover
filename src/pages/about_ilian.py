@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_ilian() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.60rem;line-height:1.70;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.62rem;line-height:1.70;"
 
     photo = _photo_html("photo_ilian.jpeg", "Ilian Zalomai")
 
@@ -37,7 +37,7 @@ def page_about_ilian() -> None:
         f"{photo}"
         "<div class='hero-body'>"
         "<p class='overline'>About the Author</p>"
-        "<h1>Ilian Zalomai</h1>"
+        "<div class='about-hero-name'>Ilian Zalomai</div>"
         "<p class='subtitle'>MSF Candidate &middot; Purdue Daniels School of Business"
         " &middot; Payment Systems &amp; Fraud | Former Deloitte</p>"
         "<p class='tagline'>Fintech and banking professional with 4+ years leading payment "

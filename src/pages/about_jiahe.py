@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_jiahe() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.60rem;line-height:1.70;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.62rem;line-height:1.70;"
 
     photo = _photo_html("photo_jiahe.jpeg", "Jiahe Miao")
 
@@ -37,7 +37,7 @@ def page_about_jiahe() -> None:
         f"{photo}"
         "<div class='hero-body'>"
         "<p class='overline'>About the Author</p>"
-        "<h1>Jiahe Miao</h1>"
+        "<div class='about-hero-name'>Jiahe Miao</div>"
         "<p class='subtitle'>MSF Candidate &middot; Purdue Daniels School of Business"
         " &middot; B.S. Information Systems, Kelley School of Business</p>"
         "<p class='tagline'>Capital markets and corporate finance professional with "

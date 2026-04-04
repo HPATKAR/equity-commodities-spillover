@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_heramb() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.60rem;line-height:1.70;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.62rem;line-height:1.70;"
 
     photo = _photo_html("photo_heramb.jpeg", "Heramb S. Patkar")
 
@@ -37,7 +37,7 @@ def page_about_heramb() -> None:
         f"{photo}"
         "<div class='hero-body'>"
         "<p class='overline'>About the Author</p>"
-        "<h1>Heramb S. Patkar</h1>"
+        "<div class='about-hero-name'>Heramb S. Patkar</div>"
         "<p class='subtitle'>MSF Candidate &middot; Purdue Daniels School of Business</p>"
         "<p class='tagline'>BITS Pilani engineering graduate and NISM XV certified research analyst "
         "with experience across equity research, venture capital, and U.S. capital markets. "

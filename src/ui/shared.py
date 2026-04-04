@@ -426,67 +426,72 @@ def _about_page_styles():
         border-left: 1px solid #222;
     }
     .about-hero .overline {
-        font-size: 0.46rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.50rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.20em;
+        letter-spacing: 0.18em;
         color: #555960;
-        margin: 0 0 0.4rem 0;
+        margin: 0 0 0.35rem 0;
     }
-    .about-hero h1 {
-        font-size: 1.05rem;
+    .about-hero-name {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.82rem;
         font-weight: 700;
         color: #e8e9ed;
-        margin: 0 0 0.2rem 0;
-        letter-spacing: -0.02em;
-        line-height: 1.1;
+        margin: 0 0 0.18rem 0;
+        letter-spacing: -0.01em;
+        line-height: 1.15;
     }
     .about-hero .subtitle {
-        font-size: 0.58rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.60rem;
         color: #CFB991;
-        margin: 0 0 0.4rem 0;
+        margin: 0 0 0.35rem 0;
         font-weight: 500;
         line-height: 1.5;
     }
     .about-hero .tagline {
-        font-size: 0.60rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.62rem;
         color: #8890a1;
-        margin: 0 0 0.65rem 0;
-        line-height: 1.65;
+        margin: 0 0 0.60rem 0;
+        line-height: 1.70;
         max-width: 560px;
     }
     .about-hero .links {
         display: flex;
-        gap: 1rem;
+        gap: 1.2rem;
         flex-wrap: wrap;
         align-items: center;
     }
     .about-hero .links a {
-        font-size: 0.54rem;
-        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.50rem;
+        font-weight: 700;
         color: #CFB991;
         text-decoration: none;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.10em;
         text-transform: uppercase;
-        border-bottom: 1px solid rgba(207,185,145,0.35);
-        padding-bottom: 1px;
+        opacity: 0.85;
     }
-    .about-hero .links a:hover { border-bottom-color: #CFB991; }
+    .about-hero .links a:hover { opacity: 1; }
 
     /* ── Section separator / card ──────────────────────── */
     .about-card {
         background: transparent;
         border-top: 1px solid #1e1e1e;
-        padding: 0.85rem 0 0.2rem 0;
+        padding: 0.80rem 0 0.2rem 0;
         margin-bottom: 0.1rem;
     }
     .about-card-title {
-        font-size: 0.46rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.50rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.20em;
+        letter-spacing: 0.18em;
         color: #555960;
-        margin: 0 0 0.65rem 0;
+        margin: 0 0 0.60rem 0;
     }
 
     /* ── Experience timeline ───────────────────────────── */
@@ -527,9 +532,10 @@ def _about_page_styles():
         letter-spacing: 0.02em;
     }
     .exp-desc {
-        font-size: 0.59rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.62rem;
         color: #8890a1;
-        line-height: 1.65;
+        line-height: 1.68;
         margin: 0;
     }
 
@@ -641,9 +647,10 @@ def _about_page_styles():
 
     /* ── Acknowledgments ───────────────────────────────── */
     .ack-text {
-        font-size: 0.59rem;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.62rem;
         color: #8890a1;
-        line-height: 1.65;
+        line-height: 1.68;
         margin: 0 0 0.35rem 0;
     }
     .ack-text strong { color: #c8c8c8; font-weight: 600; }
