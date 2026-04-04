@@ -47,12 +47,17 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
     ag_color    = ag_meta.get("color", "#CFB991")
 
     routed_html = ""
-    if result.get("routed_to"):
-        rt = AGENTS.get(result["routed_to"], {})
-        routed_html = (
-            f'<span style="{_F}font-size:0.50rem;color:#555960;margin-left:0.5rem">'
-            f'&#x2192; {rt.get("short","")}</span>'
-        )
+    _routed = result.get("routed_to")
+    if _routed:
+        # routed_to can be a string or a list of strings
+        if isinstance(_routed, list):
+            _routed = _routed[0] if _routed else None
+        if _routed and isinstance(_routed, str):
+            rt = AGENTS.get(_routed, {})
+            routed_html = (
+                f'<span style="{_F}font-size:0.50rem;color:#555960;margin-left:0.5rem">'
+                f'&#x2192; {rt.get("short","")}</span>'
+            )
 
     # Format narrative: highlight flag lines, severity, confidence
     lines = narrative.split("\n")
