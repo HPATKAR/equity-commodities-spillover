@@ -385,15 +385,20 @@ def _primary_chart(fig, caption: str = "") -> None:
 def _about_page_styles():
     """Inject CSS for About pages (hero banner, cards, timelines, etc.)."""
     st.markdown("""<style>
+    /* ── Base font for about pages ─────────────────────── */
+    .about-hero, .about-hero *, .about-card, .about-card *,
+    .exp-item, .edu-item, .pub-item, .cert-item {
+        font-family: 'DM Sans', sans-serif;
+    }
+
     /* ── Hero banner ───────────────────────────────────── */
     .about-hero {
-        background: #1c1c1c;
-        border-radius: 0;
+        background: #141414;
         padding: 0;
-        margin-bottom: 1.2rem;
+        margin-bottom: 1.4rem;
         overflow: hidden;
         border-top: 2px solid #CFB991;
-        border-bottom: 1px solid #2a2a2a;
+        border-bottom: 1px solid #222;
     }
     .about-hero-inner {
         display: flex;
@@ -401,279 +406,277 @@ def _about_page_styles():
     }
     .about-hero .hero-photo {
         flex-shrink: 0;
-        width: 190px;
+        width: 160px;
         overflow: hidden;
     }
     .about-hero .hero-photo img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: top center;
         display: block;
+        filter: grayscale(15%);
     }
     .about-hero .hero-body {
         flex: 1;
-        padding: 1.4rem 1.6rem;
+        padding: 1.2rem 1.5rem;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        border-left: 1px solid #2a2a2a;
-    }
-    .about-hero h1 {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #CFB991;
-        margin: 0 0 0.15rem 0;
-        letter-spacing: -0.02em;
-        line-height: 1.15;
+        border-left: 1px solid #222;
     }
     .about-hero .overline {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.56rem;
+        font-size: 0.46rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.18em;
-        color: #c4ae88;
-        margin: 0 0 0.35rem 0;
+        letter-spacing: 0.20em;
+        color: #555960;
+        margin: 0 0 0.4rem 0;
+    }
+    .about-hero h1 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #e8e9ed;
+        margin: 0 0 0.2rem 0;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
     }
     .about-hero .subtitle {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
-        color: #8890a1;
-        margin: 0 0 0.45rem 0;
+        font-size: 0.58rem;
+        color: #CFB991;
+        margin: 0 0 0.4rem 0;
         font-weight: 500;
+        line-height: 1.5;
     }
     .about-hero .tagline {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.68rem;
+        font-size: 0.60rem;
         color: #8890a1;
         margin: 0 0 0.65rem 0;
-        line-height: 1.6;
+        line-height: 1.65;
+        max-width: 560px;
     }
     .about-hero .links {
         display: flex;
-        gap: 0.5rem;
+        gap: 1rem;
         flex-wrap: wrap;
+        align-items: center;
     }
     .about-hero .links a {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.60rem;
+        font-size: 0.54rem;
         font-weight: 600;
         color: #CFB991;
         text-decoration: none;
-        padding: 0.18rem 0;
-        border-bottom: 1px solid rgba(207,185,145,0.4);
-        letter-spacing: 0.02em;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(207,185,145,0.35);
+        padding-bottom: 1px;
     }
-    .about-hero .links a:hover {
-        border-bottom-color: #CFB991;
-    }
+    .about-hero .links a:hover { border-bottom-color: #CFB991; }
 
-    /* ── Cards ─────────────────────────────────────────── */
+    /* ── Section separator / card ──────────────────────── */
     .about-card {
-        background: #1c1c1c;
-        border: none;
-        border-radius: 0;
-        border-top: 1px solid #2a2a2a;
-        padding: 1.0rem 0;
-        margin-bottom: 0.5rem;
+        background: transparent;
+        border-top: 1px solid #1e1e1e;
+        padding: 0.85rem 0 0.2rem 0;
+        margin-bottom: 0.1rem;
     }
     .about-card-title {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.58rem;
+        font-size: 0.46rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.16em;
-        color: #CFB991;
-        margin: 0 0 0.6rem 0;
-        padding-bottom: 0.35rem;
-        border-bottom: 1px solid #2a2a2a;
+        letter-spacing: 0.20em;
+        color: #555960;
+        margin: 0 0 0.65rem 0;
     }
 
     /* ── Experience timeline ───────────────────────────── */
     .exp-item {
-        border-top: 1px solid #2a2a2a;
-        padding-top: 0.55rem;
-        margin-bottom: 0.6rem;
-        padding-bottom: 0.25rem;
+        padding: 0.5rem 0 0.5rem 0.75rem;
+        border-left: 1px solid #1e1e1e;
+        margin-bottom: 0.5rem;
+        position: relative;
+    }
+    .exp-item::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 0.65rem;
+        width: 5px;
+        height: 5px;
+        background: #2a2a2a;
+        border-radius: 50%;
     }
     .exp-role {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.62rem;
         font-weight: 700;
         color: #e8e9ed;
-        margin: 0 0 0.1rem 0;
+        margin: 0 0 0.06rem 0;
+        line-height: 1.3;
     }
     .exp-org {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.59rem;
         font-weight: 600;
         color: #CFB991;
-        margin: 0 0 0.12rem 0;
+        margin: 0 0 0.08rem 0;
     }
     .exp-meta {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.63rem;
-        color: #8890a1;
-        margin: 0 0 0.28rem 0;
+        font-size: 0.54rem;
+        color: #555960;
+        margin: 0 0 0.22rem 0;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.02em;
     }
     .exp-desc {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.68rem;
+        font-size: 0.59rem;
         color: #8890a1;
-        line-height: 1.6;
+        line-height: 1.65;
         margin: 0;
     }
 
     /* ── Education ─────────────────────────────────────── */
     .edu-item {
-        padding: 0.55rem 0;
-        border-bottom: 1px solid #2a2a2a;
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #1a1a1a;
     }
     .edu-item:last-child { border-bottom: none; }
     .edu-school {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.72rem;
+        font-size: 0.62rem;
         font-weight: 700;
         color: #e8e9ed;
-        margin: 0 0 0.1rem 0;
+        margin: 0 0 0.06rem 0;
     }
     .edu-dept {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.68rem;
-        color: #CFB991;
-        margin: 0 0 0.1rem 0;
-        font-weight: 500;
+        font-size: 0.57rem;
+        color: #8890a1;
+        margin: 0 0 0.06rem 0;
     }
     .edu-degree {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.68rem;
-        color: #8890a1;
-        margin: 0 0 0.1rem 0;
+        font-size: 0.59rem;
+        color: #CFB991;
+        margin: 0 0 0.06rem 0;
+        font-weight: 500;
     }
     .edu-year {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.63rem;
-        color: #8890a1;
+        font-size: 0.52rem;
+        color: #555960;
         margin: 0;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* ── Publication ───────────────────────────────────── */
-    .pub-item {
-        padding: 0.4rem 0;
-    }
+    .pub-item { padding: 0.3rem 0; }
     .pub-title {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.61rem;
         font-weight: 600;
         color: #e8e9ed;
-        margin: 0 0 0.22rem 0;
+        margin: 0 0 0.18rem 0;
         line-height: 1.55;
     }
     .pub-authors {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.66rem;
+        font-size: 0.57rem;
         color: #8890a1;
-        margin: 0 0 0.12rem 0;
-    }
-    .pub-journal {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.63rem;
-        color: #c4ae88;
-        font-style: italic;
         margin: 0 0 0.1rem 0;
     }
+    .pub-journal {
+        font-size: 0.55rem;
+        color: #CFB991;
+        font-style: italic;
+        margin: 0 0 0.08rem 0;
+    }
     .pub-detail {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.65rem;
-        color: #8890a1;
-        margin: 0 0 0.35rem 0;
+        font-size: 0.54rem;
+        color: #555960;
+        margin: 0 0 0.3rem 0;
+        font-family: 'JetBrains Mono', monospace;
     }
     .pub-link {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.65rem;
+        font-size: 0.54rem;
         font-weight: 600;
         color: #CFB991;
         text-decoration: none;
         border-bottom: 1px solid rgba(207,185,145,0.3);
-        transition: border-color 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
     .pub-link:hover { border-color: #CFB991; }
 
     /* ── Certifications ────────────────────────────────── */
     .cert-item {
-        padding: 0.38rem 0;
-        border-bottom: 1px solid #2a2a2a;
+        padding: 0.32rem 0;
+        border-bottom: 1px solid #1a1a1a;
     }
     .cert-item:last-child { border-bottom: none; }
     .cert-name {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.60rem;
         font-weight: 600;
         color: #e8e9ed;
-        margin: 0 0 0.08rem 0;
+        margin: 0 0 0.05rem 0;
     }
     .cert-issuer {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.63rem;
-        color: #8890a1;
+        font-size: 0.54rem;
+        color: #555960;
         margin: 0;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* ── Interest tags ─────────────────────────────────── */
     .interest-tag {
         display: inline-block;
-        border-radius: 0;
-        padding: 0.22rem 0.65rem;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.60rem;
+        padding: 0.16rem 0.55rem;
+        font-size: 0.52rem;
         font-weight: 600;
-        margin: 0.12rem;
+        margin: 0.1rem 0.08rem;
+        letter-spacing: 0.03em;
     }
     .interest-gold {
-        background: rgba(207,185,145,0.15);
+        background: rgba(207,185,145,0.08);
         color: #CFB991;
-        border: 1px solid rgba(207,185,145,0.3);
+        border: 1px solid rgba(207,185,145,0.22);
     }
     .interest-neutral {
-        background: rgba(207,185,145,0.08);
-        color: #c4ae88;
-        border: 1px solid rgba(207,185,145,0.18);
+        background: transparent;
+        color: #8890a1;
+        border: 1px solid #1e1e1e;
     }
 
     /* ── Acknowledgments ───────────────────────────────── */
     .ack-text {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.70rem;
+        font-size: 0.59rem;
         color: #8890a1;
-        line-height: 1.6;
-        margin: 0;
+        line-height: 1.65;
+        margin: 0 0 0.35rem 0;
     }
-    .ack-text strong { color: #e8e9ed; }
+    .ack-text strong { color: #c8c8c8; font-weight: 600; }
 
     /* ── Stats row ─────────────────────────────────────── */
     .stat-row {
         display: flex;
-        justify-content: space-around;
-        padding: 0.55rem 0;
-        border-top: 1px solid rgba(207,185,145,0.15);
-        margin-top: 0.5rem;
+        gap: 0;
+        margin-top: 0.7rem;
+        border-top: 1px solid #1e1e1e;
+        border-bottom: 1px solid #1e1e1e;
     }
-    .stat-item { text-align: center; }
+    .stat-item {
+        flex: 1;
+        text-align: center;
+        padding: 0.5rem 0.25rem;
+        border-right: 1px solid #1e1e1e;
+    }
+    .stat-item:last-child { border-right: none; }
     .stat-num {
-        font-size: 1.05rem;
+        font-size: 0.88rem;
         font-weight: 700;
         color: #CFB991;
         font-family: 'JetBrains Mono', monospace;
         margin: 0;
+        line-height: 1;
     }
     .stat-label {
-        font-size: 0.56rem;
+        font-size: 0.46rem;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #8890a1;
-        margin: 2px 0 0 0;
-        font-family: 'DM Sans', sans-serif;
+        letter-spacing: 0.14em;
+        color: #555960;
+        margin: 3px 0 0 0;
     }
     </style>""", unsafe_allow_html=True)
 

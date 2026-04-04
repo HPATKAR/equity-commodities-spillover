@@ -27,7 +27,7 @@ def _photo_html(filename: str, alt: str) -> str:
 
 def page_about_heramb() -> None:
     _about_page_styles()
-    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.68rem;line-height:1.7;"
+    _f = "font-family:'DM Sans',sans-serif;color:#8890a1;font-size:0.60rem;line-height:1.70;"
 
     photo = _photo_html("photo_heramb.jpeg", "Heramb S. Patkar")
 
