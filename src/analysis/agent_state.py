@@ -191,9 +191,25 @@ def add_pending(
     severity: str = "info",
     extra: Optional[dict] = None,
 ) -> str:
-    """Add a trade idea / finding to the Pending Review queue. Returns item ID."""
+    """Add a trade idea / finding to the Pending Review queue. Returns item ID.
+
+    Deduplicates: if a non-rejected item with the same agent_id + title already
+    exists in the queue (any status), skip insertion and return its existing ID.
+    This prevents re-runs of an agent from re-queuing already-reviewed items.
+    """
     import streamlit as st
     init_agents()
+
+    # Deduplicate: skip if same agent+title already exists in any non-rejected state
+    existing = st.session_state.get("pending_review", [])
+    for _existing in existing:
+        if (
+            _existing["agent_id"] == agent_id
+            and _existing["title"] == title
+            and _existing["status"] != "rejected"
+        ):
+            return _existing["id"]
+
     item_id = str(uuid.uuid4())[:8]
     item = {
         "id":             item_id,
