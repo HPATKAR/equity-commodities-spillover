@@ -671,9 +671,12 @@ _FD_KEY   = _get_secret("financial_datasets_key")
 
 # ── Navigation state ──────────────────────────────────────────────────────────
 _VALID_PAGES = {
+    "home",
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "insights", "strait_watch",
+    # Intelligence pages
+    "conflict_intelligence", "threat_act_monitor", "transmission_matrix", "exposure_scoring",
     "about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce",
 }
 _ABOUT_PAGES = {"about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce"}
@@ -683,7 +686,11 @@ if _qp in _VALID_PAGES:
     st.session_state["current_page"] = _qp
     st.query_params.clear()
 if "current_page" not in st.session_state:
-    st.session_state["current_page"] = "overview"
+    st.session_state["current_page"] = "home"
+
+# ── Scenario state (global, persistent) ───────────────────────────────────────
+from src.analysis.scenario_state import init_scenario
+init_scenario()
 
 current = st.session_state["current_page"]
 
@@ -1319,9 +1326,11 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
     /* Mark active page + group */
     var cur={json.dumps(current)};
+    var HOME     =['home'];
     var OVERVIEW =['overview'];
     var MACRO    =['macro_dashboard'];
     var ANALYSIS =['war_impact_map','geopolitical','correlation','spillover','strait_watch'];
+    var INTEL    =['conflict_intelligence','threat_act_monitor','transmission_matrix','exposure_scoring'];
     var STRATEGY =['trade_ideas','stress_test','scenario_engine'];
     var MONITOR  =['watchlist'];
     var RESEARCH =['model_accuracy','ai_chat'];
@@ -1330,7 +1339,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     document.querySelectorAll('[data-pg]').forEach(function(a){{
       if(a.dataset.pg===cur) a.classList.add('active');
     }});
-    var MAP={{'gov':OVERVIEW,'gm':MACRO,'ga':ANALYSIS,'gs':STRATEGY,'gmon':MONITOR,'gr':RESEARCH,'gin':INSIGHTS,'gab':ABOUT}};
+    var MAP={{'ghome':HOME,'gov':OVERVIEW,'gm':MACRO,'ga':ANALYSIS,'gintel':INTEL,'gs':STRATEGY,'gmon':MONITOR,'gr':RESEARCH,'gin':INSIGHTS,'gab':ABOUT}};
     Object.keys(MAP).forEach(function(id){{
       if(MAP[id].indexOf(cur)>-1){{
         var el=document.getElementById(id);
@@ -1354,6 +1363,13 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
 
   <ul class="links">
     <!-- Every item is a dropdown so buildDropdown() handles ALL navigation -->
+    <li class="ni" id="ghome">
+      <span class="lnk">Home <span class="ct">&#9660;</span></span>
+      <ul class="drop">
+        <li><a data-pg="home" class="{'active' if current=='home' else ''}">Command Center</a></li>
+      </ul>
+    </li>
+
     <li class="ni" id="gov">
       <span class="lnk">Overview <span class="ct">&#9660;</span></span>
       <ul class="drop">
@@ -1376,6 +1392,16 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         <li><a data-pg="geopolitical"   class="{'active' if current=='geopolitical' else ''}">Geopolitical Triggers</a></li>
         <li><a data-pg="war_impact_map" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
         <li><a data-pg="strait_watch"   class="{'active' if current=='strait_watch' else ''}">Strait Watch</a></li>
+      </ul>
+    </li>
+
+    <li class="ni" id="gintel">
+      <span class="lnk">Intelligence <span class="ct">&#9660;</span></span>
+      <ul class="drop">
+        <li><a data-pg="conflict_intelligence" class="{'active' if current=='conflict_intelligence' else ''}">Conflict Intelligence</a></li>
+        <li><a data-pg="threat_act_monitor"    class="{'active' if current=='threat_act_monitor' else ''}">Threat &amp; Act Monitor</a></li>
+        <li><a data-pg="transmission_matrix"   class="{'active' if current=='transmission_matrix' else ''}">Transmission Matrix</a></li>
+        <li><a data-pg="exposure_scoring"      class="{'active' if current=='exposure_scoring' else ''}">Exposure Scoring</a></li>
       </ul>
     </li>
 
@@ -1612,6 +1638,7 @@ div[data-testid="stPopoverBody"] .stButton > button {{
         )
 
 # ── Router ────────────────────────────────────────────────────────────────────
+from src.pages.home            import page_home
 from src.pages.overview        import page_overview
 from src.pages.war_impact_map  import page_war_impact_map
 from src.pages.geopolitical    import page_geopolitical
@@ -1631,10 +1658,36 @@ from src.pages.about_jiahe        import page_about_jiahe
 from src.pages.about_ilian        import page_about_ilian
 from src.pages.about_ai_workforce import page_about_ai_workforce
 
+# Intelligence pages (lazy import — stubs until full implementation)
+try:
+    from src.pages.conflict_intelligence import page_conflict_intelligence
+except ImportError:
+    page_conflict_intelligence = None
+try:
+    from src.pages.threat_act_monitor import page_threat_act_monitor
+except ImportError:
+    page_threat_act_monitor = None
+try:
+    from src.pages.transmission_matrix import page_transmission_matrix
+except ImportError:
+    page_transmission_matrix = None
+try:
+    from src.pages.exposure_scoring import page_exposure_scoring
+except ImportError:
+    page_exposure_scoring = None
+
 _start = str(start_date)
 _end   = str(end_date)
 
+def _stub_page(name: str):
+    st.markdown(
+        f'<h1 style="color:#CFB991">{name}</h1>'
+        f'<p style="color:#8E9AAA;font-size:0.8rem">Page under construction — coming next.</p>',
+        unsafe_allow_html=True,
+    )
+
 _PAGE_MAP = {
+    "home":           lambda: page_home(_start, _end, _FRED_KEY),
     "overview":       lambda: page_overview(_start, _end, _FRED_KEY),
     "war_impact_map": lambda: page_war_impact_map(_start, _end, _FRED_KEY),
     "geopolitical":   lambda: page_geopolitical(_start, _end, _FRED_KEY),
@@ -1649,10 +1702,20 @@ _PAGE_MAP = {
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
     "strait_watch":   lambda: page_strait_watch(_start, _end),
+    # Intelligence
+    "conflict_intelligence": (lambda: page_conflict_intelligence(_start, _end))
+                              if page_conflict_intelligence else lambda: _stub_page("Conflict Intelligence"),
+    "threat_act_monitor":    (lambda: page_threat_act_monitor(_start, _end))
+                              if page_threat_act_monitor else lambda: _stub_page("Threat & Act Monitor"),
+    "transmission_matrix":   (lambda: page_transmission_matrix(_start, _end))
+                              if page_transmission_matrix else lambda: _stub_page("Transmission Matrix"),
+    "exposure_scoring":      (lambda: page_exposure_scoring(_start, _end))
+                              if page_exposure_scoring else lambda: _stub_page("Exposure Scoring"),
+    # About
     "about_heramb":        page_about_heramb,
     "about_jiahe":         page_about_jiahe,
     "about_ilian":         page_about_ilian,
     "about_ai_workforce":  page_about_ai_workforce,
 }
 
-_PAGE_MAP.get(current, _PAGE_MAP["overview"])()
+_PAGE_MAP.get(current, _PAGE_MAP["home"])()

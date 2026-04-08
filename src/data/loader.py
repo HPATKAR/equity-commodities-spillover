@@ -247,7 +247,15 @@ def load_returns(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return (equity_returns, commodity_returns) as log-return DataFrames."""
     eq, cmd = load_all_prices(start, end)
-    return _log_returns(eq), _log_returns(cmd)
+    eq_r  = _log_returns(eq)
+    cmd_r = _log_returns(cmd)
+    if not eq_r.empty:
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("yfinance_prices")
+        except Exception:
+            pass
+    return eq_r, cmd_r
 
 
 @st.cache_data(ttl=3600, show_spinner=False)

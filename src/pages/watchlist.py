@@ -73,12 +73,61 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "generates its own downstream spillover into correlated equity sectors."
     )
 
+    # ── Conflict commodity pressure banner ────────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _wl_cr  = score_all_conflicts()
+        _wl_agg = aggregate_portfolio_scores(_wl_cr)
+        _wl_cis = _wl_agg.get("portfolio_cis", 50.0)
+        _wl_tps = _wl_agg.get("portfolio_tps", 50.0)
+
+        # Find conflicts with commodity transmission channels
+        _wl_commodity_conflicts = []
+        for _wl_r in _wl_cr.values():
+            if _wl_r.get("state") != "active":
+                continue
+            _tx = _wl_r.get("transmission", {})
+            _commodity_ch = {k: v for k, v in _tx.items()
+                             if any(x in k for x in ["oil", "commodity", "food", "metal", "energy"])}
+            if _commodity_ch:
+                _top_ch = max(_commodity_ch, key=_commodity_ch.get)
+                _wl_commodity_conflicts.append(
+                    f'{_wl_r["label"]} [{_top_ch.replace("_"," ").upper()}]'
+                )
+
+        _wl_col = "#c0392b" if _wl_tps >= 65 else "#e67e22" if _wl_tps >= 45 else "#CFB991"
+        if _wl_commodity_conflicts:
+            _wl_conf_str = " · ".join(_wl_commodity_conflicts[:3])
+            st.markdown(
+                f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                f'border-left:3px solid {_wl_col};padding:.4rem .9rem;'
+                f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'font-weight:700;color:{_wl_col};white-space:nowrap">COMMODITY WAR PRESSURE</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#8E9AAA">'
+                f'{_wl_conf_str}</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'color:#8E9AAA;margin-left:auto">'
+                f'CIS&nbsp;<b style="color:{_wl_col}">{_wl_cis:.0f}</b>&nbsp;·&nbsp;'
+                f'TPS&nbsp;<b style="color:#CFB991">{_wl_tps:.0f}</b>&nbsp;·&nbsp;'
+                f'Conflict-driven moves may diverge from fundamentals</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
+
     # ── Load all data upfront ──────────────────────────────────────────────
     with st.spinner("Loading commodity data…"):
         cmd_p  = load_commodity_prices(start, end)
         _, cmd_r = load_returns(start, end)
         h_prices = load_hourly_commodity_prices(start, end)
         h_eq_r, h_cmd_r = load_hourly_returns(start, end)
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("yfinance_prices")
+        except Exception:
+            pass
 
     watch_tickers  = {name: tk for (tk, name, _, _) in WATCHLIST}
     watch_names    = [n for (_, n, _, _) in WATCHLIST if n in cmd_p.columns]

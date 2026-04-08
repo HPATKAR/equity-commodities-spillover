@@ -10,36 +10,35 @@ import streamlit as st
 from src.ui.shared import _page_footer
 
 _ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
-
-_SANS = "font-family:'DM Sans',sans-serif;"
-_MONO = "font-family:'JetBrains Mono',monospace;"
 _GOLD = "#CFB991"
 
-_S_LABEL = f"{_MONO}font-size:0.44rem;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#555960;"
-_S_NAME  = f"{_SANS}font-size:0.72rem;font-weight:700;color:#e8e9ed;letter-spacing:-0.01em;line-height:1.15;margin:0 0 0.14rem 0;"
-_S_SUB   = f"{_SANS}font-size:0.56rem;color:{_GOLD};font-weight:500;margin:0 0 0.26rem 0;line-height:1.5;"
-_S_TGLN  = f"{_SANS}font-size:0.56rem;color:#8890a1;line-height:1.70;margin:0 0 0.50rem 0;"
-_S_BODY  = f"{_SANS}font-size:0.56rem;color:#8890a1;line-height:1.72;"
-_S_ROLE  = f"{_SANS}font-size:0.56rem;font-weight:700;color:#e8e9ed;margin:0 0 0.04rem 0;line-height:1.3;"
-_S_ORG   = f"{_SANS}font-size:0.54rem;font-weight:600;color:{_GOLD};margin:0 0 0.04rem 0;"
-_S_META  = f"{_MONO}font-size:0.44rem;color:#555960;margin:0 0 0.14rem 0;"
-_S_DESC  = f"{_SANS}font-size:0.56rem;color:#8890a1;line-height:1.68;margin:0;"
-_S_SCH   = f"{_SANS}font-size:0.58rem;font-weight:700;color:#e8e9ed;margin:0 0 0.04rem 0;"
-_S_DEPT  = f"{_SANS}font-size:0.52rem;color:#8890a1;margin:0 0 0.03rem 0;"
-_S_DEG   = f"{_SANS}font-size:0.54rem;color:{_GOLD};font-weight:500;margin:0 0 0.03rem 0;"
-_S_YEAR  = f"{_MONO}font-size:0.44rem;color:#555960;margin:0;"
-_S_ACK   = f"{_SANS}font-size:0.56rem;color:#8890a1;line-height:1.68;margin:0 0 0.26rem 0;"
-_TAG_G   = f"display:inline-block;padding:0.12rem 0.50rem;{_SANS}font-size:0.48rem;font-weight:600;margin:0.07rem;background:rgba(207,185,145,0.08);color:{_GOLD};border:1px solid rgba(207,185,145,0.22);"
-_TAG_N   = f"display:inline-block;padding:0.12rem 0.50rem;{_SANS}font-size:0.48rem;font-weight:600;margin:0.07rem;background:transparent;color:#8890a1;border:1px solid #1e1e1e;"
-_S_NUM   = f"{_MONO}font-size:0.80rem;font-weight:700;color:{_GOLD};margin:0;line-height:1;"
-_S_SLBL  = f"{_SANS}font-size:0.42rem;text-transform:uppercase;letter-spacing:0.14em;color:#555960;margin:2px 0 0 0;"
+_STYLE = """<style>
+.abt-label{font-family:'JetBrains Mono',monospace!important;font-size:9px!important;font-weight:700!important;text-transform:uppercase;letter-spacing:.18em;color:#8E9AAA!important;display:block;}
+.abt-name{font-family:'DM Sans',sans-serif!important;font-size:14px!important;font-weight:700!important;color:#e8e9ed!important;letter-spacing:-.01em;line-height:1.15;display:block;}
+.abt-sub{font-family:'DM Sans',sans-serif!important;font-size:10px!important;color:#CFB991!important;font-weight:500;line-height:1.5;display:block;}
+.abt-tgln{font-family:'DM Sans',sans-serif!important;font-size:11px!important;color:#a8b0c0!important;line-height:1.68;display:block;}
+.abt-body{font-family:'DM Sans',sans-serif!important;font-size:11px!important;color:#a8b0c0!important;line-height:1.72;}
+.abt-role{font-family:'DM Sans',sans-serif!important;font-size:11px!important;font-weight:700!important;color:#e8e9ed!important;line-height:1.3;display:block;}
+.abt-org{font-family:'DM Sans',sans-serif!important;font-size:10px!important;font-weight:600!important;color:#CFB991!important;display:block;}
+.abt-meta{font-family:'JetBrains Mono',monospace!important;font-size:9px!important;color:#8E9AAA!important;display:block;}
+.abt-sch{font-family:'DM Sans',sans-serif!important;font-size:11px!important;font-weight:700!important;color:#e8e9ed!important;display:block;}
+.abt-dept{font-family:'DM Sans',sans-serif!important;font-size:10px!important;color:#a8b0c0!important;display:block;}
+.abt-deg{font-family:'DM Sans',sans-serif!important;font-size:10px!important;color:#CFB991!important;font-weight:500;display:block;}
+.abt-year{font-family:'JetBrains Mono',monospace!important;font-size:9px!important;color:#8E9AAA!important;display:block;}
+.abt-link{font-family:'JetBrains Mono',monospace!important;font-size:9px!important;font-weight:700!important;color:#CFB991!important;text-decoration:none!important;letter-spacing:.10em;text-transform:uppercase;opacity:.9;margin-right:1.2rem;display:inline-block;}
+.abt-link:hover{opacity:1!important;}
+.abt-num{font-family:'JetBrains Mono',monospace!important;font-size:16px!important;font-weight:700!important;color:#CFB991!important;line-height:1;display:block;}
+.abt-slbl{font-family:'DM Sans',sans-serif!important;font-size:8px!important;text-transform:uppercase;letter-spacing:.14em;color:#8E9AAA!important;display:block;}
+.abt-tag-g{display:inline-block;padding:2px 8px;font-family:'DM Sans',sans-serif!important;font-size:9px!important;font-weight:600!important;margin:2px;background:rgba(207,185,145,.08);color:#CFB991!important;border:1px solid rgba(207,185,145,.22);}
+.abt-tag-n{display:inline-block;padding:2px 8px;font-family:'DM Sans',sans-serif!important;font-size:9px!important;font-weight:600!important;margin:2px;background:transparent;color:#a8b0c0!important;border:1px solid #2a2a2a;}
+.abt-ack{font-family:'DM Sans',sans-serif!important;font-size:11px!important;color:#a8b0c0!important;line-height:1.68;}
+</style>"""
 
-_SEC      = "border-top:1px solid #1e1e1e;padding:0.75rem 0 0.25rem 0;margin-bottom:0.1rem;"
-_EXPI     = "padding:0.40rem 0 0.40rem 0.65rem;border-left:1px solid #1e1e1e;margin-bottom:0.40rem;"
-_EDUI     = "padding:0.38rem 0;border-bottom:1px solid #1a1a1a;"
-_LINK     = f"{_MONO}font-size:0.44rem;font-weight:700;color:{_GOLD};text-decoration:none;letter-spacing:0.10em;text-transform:uppercase;opacity:0.85;margin-right:1.2rem;"
-_STAT_ROW = "display:flex;gap:0;margin-top:0.60rem;border-top:1px solid #1e1e1e;border-bottom:1px solid #1e1e1e;"
-_STAT_ITM = "flex:1;text-align:center;padding:0.40rem 0.15rem;border-right:1px solid #1e1e1e;"
+_SEC  = "border-top:1px solid #1e1e1e;padding:0.75rem 0 0.25rem 0;margin-bottom:0.1rem;"
+_EXPI = "padding:0.36rem 0 0.36rem 0.65rem;border-left:1px solid #1e1e1e;margin-bottom:0.36rem;"
+_EDUI = "padding:0.36rem 0;border-bottom:1px solid #1a1a1a;"
+_SROW = "display:flex;gap:0;margin-top:0.55rem;border-top:1px solid #1e1e1e;border-bottom:1px solid #1e1e1e;"
+_SITM = "flex:1;text-align:center;padding:0.36rem 0.15rem;border-right:1px solid #1e1e1e;"
 
 
 def _photo_html(filename: str, alt: str) -> str:
@@ -49,7 +48,7 @@ def _photo_html(filename: str, alt: str) -> str:
     b64 = base64.b64encode(p.read_bytes()).decode()
     ext = p.suffix.lstrip(".")
     return (
-        f"<div style='flex-shrink:0;width:140px;overflow:hidden;'>"
+        f"<div style='flex-shrink:0;width:130px;overflow:hidden;'>"
         f"<img src='data:image/{ext};base64,{b64}' alt='{alt}' "
         f"style='width:100%;height:100%;object-fit:cover;object-position:top center;"
         f"display:block;filter:grayscale(10%);' />"
@@ -60,38 +59,46 @@ def _photo_html(filename: str, alt: str) -> str:
 def _exp(role, org, meta, bullets=None):
     bullets_html = ""
     if bullets:
-        items = "".join(f"<li style='margin-bottom:0.22rem;'>{b}</li>" for b in bullets)
-        bullets_html = f"<ul style='{_S_DESC}margin:0.14rem 0 0 0;padding-left:0.9rem;'>{items}</ul>"
+        items = "".join(
+            f"<li style='margin-bottom:3px;'><span class='abt-body'>{b}</span></li>"
+            for b in bullets
+        )
+        bullets_html = (
+            f"<ul style='margin:4px 0 0 0;padding-left:14px;list-style:disc;'>{items}</ul>"
+        )
     return (
         f"<div style='{_EXPI}'>"
-        f"<div style='{_S_ROLE}'>{role}</div>"
-        f"<div style='{_S_ORG}'>{org}</div>"
-        f"<div style='{_S_META}'>{meta}</div>"
+        f"<span class='abt-role' style='margin:0 0 2px 0;'>{role}</span>"
+        f"<span class='abt-org' style='margin:0 0 2px 0;'>{org}</span>"
+        f"<span class='abt-meta' style='margin:0 0 4px 0;'>{meta}</span>"
         f"{bullets_html}"
         f"</div>"
     )
 
 
 def page_about_jiahe() -> None:
+    st.markdown(_STYLE, unsafe_allow_html=True)
+
     photo = _photo_html("photo_jiahe.jpeg", "Jiahe Miao")
 
+    # ── Hero ──────────────────────────────────────────────────────────────────
     st.markdown(
         f"<div style='background:#141414;border-top:2px solid {_GOLD};"
         f"border-bottom:1px solid #1e1e1e;overflow:hidden;margin-bottom:1.2rem;'>"
         f"<div style='display:flex;align-items:stretch;'>"
         f"{photo}"
-        f"<div style='flex:1;padding:1.0rem 1.3rem;display:flex;flex-direction:column;"
+        f"<div style='flex:1;padding:0.9rem 1.2rem;display:flex;flex-direction:column;"
         f"justify-content:center;border-left:1px solid #1e1e1e;'>"
-        f"<div style='{_S_LABEL}margin:0 0 0.28rem 0;'>About the Author</div>"
-        f"<div style='{_S_NAME}'>Jiahe Miao</div>"
-        f"<div style='{_S_SUB}'>MSF Candidate &middot; Purdue Daniels School of Business "
-        f"&middot; B.S. Information Systems, Kelley School of Business</div>"
-        f"<div style='{_S_TGLN}'>Capital markets and corporate finance professional with internship experience "
+        f"<span class='abt-label' style='margin:0 0 6px 0;'>About the Author</span>"
+        f"<span class='abt-name' style='margin:0 0 4px 0;'>Jiahe Miao</span>"
+        f"<span class='abt-sub' style='margin:0 0 6px 0;'>MSF Candidate &middot; Purdue Daniels School of Business "
+        f"&middot; B.S. Information Systems, Kelley School of Business</span>"
+        f"<span class='abt-tgln' style='margin:0 0 8px 0;'>Capital markets and corporate finance professional with internship experience "
         f"across Chinese securities, banking, and U.S. fintech. Brings a quantitative and data-driven lens "
         f"to financial analysis and investor research, with a background in information systems that enables "
-        f"structured and automated analytical workflows.</div>"
+        f"structured and automated analytical workflows.</span>"
         f"<div style='display:flex;flex-wrap:wrap;gap:0;'>"
-        f"<a href='https://www.linkedin.com/in/jiahe-miao071/' target='_blank' style='{_LINK}'>LinkedIn</a>"
+        f"<a href='https://www.linkedin.com/in/jiahe-miao071/' target='_blank' class='abt-link'>LinkedIn</a>"
         f"</div>"
         f"</div></div></div>",
         unsafe_allow_html=True,
@@ -101,52 +108,55 @@ def page_about_jiahe() -> None:
 
     with col_main:
 
+        # ── Profile ───────────────────────────────────────────────────────────
         st.markdown(
             f"<div style='{_SEC}'>"
-            f"<div style='{_S_LABEL}margin-bottom:0.50rem;'>Profile</div>"
-            f"<div style='{_S_BODY}margin-bottom:0.38rem;'>Passionate about the intersection of quantitative finance "
+            f"<span class='abt-label' style='margin-bottom:8px;'>Profile</span>"
+            f"<span class='abt-body' style='display:block;margin-bottom:6px;'>Passionate about the intersection of quantitative finance "
             f"and global capital markets. With hands-on experience in securities research, banking operations, and "
             f"venture-backed pitch development, I enjoy building financial models that translate data into clear, "
-            f"actionable investment decisions.</div>"
-            f"<div style='{_S_BODY}'>A background in information systems gives me an edge in structuring and automating "
-            f"analytical workflows - from bond issuance analysis to equity incentive modeling. Always eager to connect "
-            f"and exchange ideas on markets, modeling, and finance.</div>"
+            f"actionable investment decisions.</span>"
+            f"<span class='abt-body' style='display:block;'>A background in information systems gives me an edge in structuring and automating "
+            f"analytical workflows &mdash; from bond issuance analysis to equity incentive modeling. Always eager to connect "
+            f"and exchange ideas on markets, modeling, and finance.</span>"
             f"</div>",
             unsafe_allow_html=True,
         )
 
+        # ── This Project ──────────────────────────────────────────────────────
         st.markdown(
             f"<div style='{_SEC}'>"
-            f"<div style='{_S_LABEL}margin-bottom:0.50rem;'>This Project</div>"
-            f"<div style='{_S_BODY}margin-bottom:0.35rem;'>Quantitative Research contributor on the "
-            f"Equity-Commodities Spillover Monitor - Course Project 3 for Prof. Cinder Zhang's MGMT 69000-120.</div>"
-            f"<ul style='{_S_BODY}margin:0 0 0.45rem 0;padding-left:0.9rem;'>"
-            f"<li style='margin-bottom:0.22rem;'>Designed the 4-state correlation regime taxonomy "
+            f"<span class='abt-label' style='margin-bottom:8px;'>This Project</span>"
+            f"<span class='abt-body' style='display:block;margin-bottom:6px;'>Quantitative Research contributor on the "
+            f"Equity-Commodities Spillover Monitor &mdash; Course Project 3 for Prof. Cinder Zhang's MGMT 69000-120.</span>"
+            f"<ul style='margin:0 0 0 0;padding-left:14px;list-style:disc;'>"
+            f"<li style='margin-bottom:3px;'><span class='abt-body'>Designed the 4-state correlation regime taxonomy "
             f"(Low / Moderate / Elevated / Crisis) and calibrated rolling window thresholds for regime classification, "
-            f"defining the threshold rationale and lookback methodology</li>"
-            f"<li style='margin-bottom:0.22rem;'>Specified 6 regime-conditioned trade idea structures: "
-            f"entry/exit ranges, correlation breakpoint triggers, and risk management rationale for each state</li>"
-            f"<li style='margin-bottom:0.22rem;'>Researched the Diebold-Yilmaz FEVD methodology and contributed "
-            f"to network edge threshold calibration and directional spillover interpretation framework</li>"
-            f"<li style='margin-bottom:0.22rem;'>Defined the Fixed Income cross-asset stress signal framework "
+            f"defining the threshold rationale and lookback methodology</span></li>"
+            f"<li style='margin-bottom:3px;'><span class='abt-body'>Specified 6 regime-conditioned trade idea structures: "
+            f"entry/exit ranges, correlation breakpoint triggers, and risk management rationale for each state</span></li>"
+            f"<li style='margin-bottom:3px;'><span class='abt-body'>Researched the Diebold-Yilmaz FEVD methodology and contributed "
+            f"to network edge threshold calibration and directional spillover interpretation framework</span></li>"
+            f"<li style='margin-bottom:3px;'><span class='abt-body'>Defined the Fixed Income cross-asset stress signal framework "
             f"(TLT/HYG/LQD/EMB metrics) and validated the private credit bubble proxy selection "
-            f"(BKLN/ARCC/OBDC/FSK/JBBB) and composite score weighting logic</li>"
-            f"<li style='margin-bottom:0;'>Reviewed equity and commodity return series for data quality; "
-            f"flagged and resolved TOPIX ETF proxy selection (1306.T) and Nickel ticker alignment (NILSY)</li>"
+            f"(BKLN/ARCC/OBDC/FSK/JBBB) and composite score weighting logic</span></li>"
+            f"<li style='margin-bottom:0;'><span class='abt-body'>Reviewed equity and commodity return series for data quality; "
+            f"flagged and resolved TOPIX ETF proxy selection (1306.T) and Nickel ticker alignment (NILSY)</span></li>"
             f"</ul>"
-            f"<div style='{_STAT_ROW}'>"
-            f"<div style='{_STAT_ITM}'><div style='{_S_NUM}'>4</div><div style='{_S_SLBL}'>Regime States</div></div>"
-            f"<div style='{_STAT_ITM}'><div style='{_S_NUM}'>6</div><div style='{_S_SLBL}'>Trade Structures</div></div>"
-            f"<div style='{_STAT_ITM}'><div style='{_S_NUM}'>32</div><div style='{_S_SLBL}'>Assets Covered</div></div>"
-            f"<div style='{_STAT_ITM}border-right:none;'><div style='{_S_NUM}'>5</div><div style='{_S_SLBL}'>Analytical Layers</div></div>"
+            f"<div style='{_SROW}'>"
+            f"<div style='{_SITM}'><span class='abt-num'>4</span><span class='abt-slbl'>Regime States</span></div>"
+            f"<div style='{_SITM}'><span class='abt-num'>6</span><span class='abt-slbl'>Trade Structures</span></div>"
+            f"<div style='{_SITM}'><span class='abt-num'>32</span><span class='abt-slbl'>Assets Covered</span></div>"
+            f"<div style='{_SITM}border-right:none;'><span class='abt-num'>5</span><span class='abt-slbl'>Analytical Layers</span></div>"
             f"</div>"
             f"</div>",
             unsafe_allow_html=True,
         )
 
+        # ── Experience ────────────────────────────────────────────────────────
         st.markdown(
             f"<div style='{_SEC}'>"
-            f"<div style='{_S_LABEL}margin-bottom:0.50rem;'>Professional Experience</div>"
+            f"<span class='abt-label' style='margin-bottom:8px;'>Professional Experience</span>"
             + _exp(
                 "Investment Consultant (Practicum)",
                 "Fino Advisors LLC",
@@ -188,41 +198,44 @@ def page_about_jiahe() -> None:
 
     with col_side:
 
+        # ── Education ─────────────────────────────────────────────────────────
         st.markdown(
             f"<div style='{_SEC}'>"
-            f"<div style='{_S_LABEL}margin-bottom:0.50rem;'>Education</div>"
+            f"<span class='abt-label' style='margin-bottom:8px;'>Education</span>"
             f"<div style='{_EDUI}'>"
-            f"<div style='{_S_SCH}'>Purdue University</div>"
-            f"<div style='{_S_DEPT}'>Mitchell E. Daniels, Jr. School of Business</div>"
-            f"<div style='{_S_DEG}'>Master of Science in Finance</div>"
-            f"<div style='{_S_YEAR}'>July 2025 &ndash; May 2026 &middot; West Lafayette, IN</div></div>"
+            f"<span class='abt-sch' style='margin:0 0 2px 0;'>Purdue University</span>"
+            f"<span class='abt-dept' style='margin:0 0 2px 0;'>Mitchell E. Daniels, Jr. School of Business</span>"
+            f"<span class='abt-deg' style='margin:0 0 2px 0;'>Master of Science in Finance</span>"
+            f"<span class='abt-year'>July 2025 &ndash; May 2026 &middot; West Lafayette, IN</span></div>"
             f"<div style='{_EDUI}border-bottom:none;'>"
-            f"<div style='{_S_SCH}'>Indiana University</div>"
-            f"<div style='{_S_DEPT}'>Kelley School of Business</div>"
-            f"<div style='{_S_DEG}'>B.S. Information Systems</div>"
-            f"<div style='{_S_YEAR}'>August 2021 &ndash; May 2025 &middot; Bloomington, IN</div></div>"
+            f"<span class='abt-sch' style='margin:0 0 2px 0;'>Indiana University</span>"
+            f"<span class='abt-dept' style='margin:0 0 2px 0;'>Kelley School of Business</span>"
+            f"<span class='abt-deg' style='margin:0 0 2px 0;'>B.S. Information Systems</span>"
+            f"<span class='abt-year'>August 2021 &ndash; May 2025 &middot; Bloomington, IN</span></div>"
             f"</div>",
             unsafe_allow_html=True,
         )
 
+        # ── Interests ─────────────────────────────────────────────────────────
         st.markdown(
             f"<div style='{_SEC}'>"
-            f"<div style='{_S_LABEL}margin-bottom:0.42rem;'>Interests</div>"
+            f"<span class='abt-label' style='margin-bottom:6px;'>Interests</span>"
             f"<div>"
-            f"<span style='{_TAG_G}'>Capital Markets</span>"
-            f"<span style='{_TAG_N}'>Corporate Finance</span>"
-            f"<span style='{_TAG_G}'>Fixed Income</span>"
-            f"<span style='{_TAG_N}'>Financial Modeling</span>"
-            f"<span style='{_TAG_G}'>Venture Research</span>"
-            f"<span style='{_TAG_N}'>Quantitative Finance</span>"
+            f"<span class='abt-tag-g'>Capital Markets</span>"
+            f"<span class='abt-tag-n'>Corporate Finance</span>"
+            f"<span class='abt-tag-g'>Fixed Income</span>"
+            f"<span class='abt-tag-n'>Financial Modeling</span>"
+            f"<span class='abt-tag-g'>Venture Research</span>"
+            f"<span class='abt-tag-n'>Quantitative Finance</span>"
             f"</div></div>",
             unsafe_allow_html=True,
         )
 
+        # ── Acknowledgments ───────────────────────────────────────────────────
         st.markdown(
             f"<div style='{_SEC}'>"
-            f"<div style='{_S_LABEL}margin-bottom:0.46rem;'>Acknowledgments</div>"
-            f"<div style='{_S_ACK}margin-bottom:0;'>"
+            f"<span class='abt-label' style='margin-bottom:8px;'>Acknowledgments</span>"
+            f"<div class='abt-ack' style='margin-bottom:0;'>"
             f"<strong style='color:#c8c8c8;font-weight:600;'>Prof. Cinder Zhang</strong> "
             f"&middot; MGMT 69000: Regime-based thinking and equity-commodities spillover framework design</div>"
             f"</div>",

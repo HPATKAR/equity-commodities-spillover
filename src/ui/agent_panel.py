@@ -556,3 +556,145 @@ def render_remediation_panel(page: str) -> None:
             f'</div>',
             unsafe_allow_html=True,
         )
+
+
+# ── Threaded Deliberation Panel (agent_dialogue.py integration) ───────────────
+
+def render_deliberation_panel(
+    thread_id: str | None = None,
+    subject_id: str | None = None,
+    title: str = "Agent Deliberation",
+    max_msgs: int = 12,
+    show_consensus: bool = True,
+) -> None:
+    """
+    Render a threaded agent deliberation log from agent_dialogue.py.
+    thread_id: specific thread to show
+    subject_id: show latest thread for this subject (trade_id / conflict_id)
+    """
+    try:
+        from src.analysis.agent_dialogue import (
+            get_thread, get_subject_threads, compute_consensus,
+            get_provenance, MSG_TYPES,
+        )
+    except ImportError:
+        return
+
+    st.markdown(
+        f'<p style="{_M}font-size:8px;color:#8E9AAA;letter-spacing:2px;'
+        f'text-transform:uppercase;margin:0 0 6px">{title}</p>',
+        unsafe_allow_html=True,
+    )
+
+    msgs: list = []
+    if thread_id:
+        msgs = get_thread(thread_id)
+    elif subject_id:
+        all_msgs = get_subject_threads(subject_id)
+        if all_msgs:
+            latest_tid = all_msgs[0].get("thread_id")
+            msgs = get_thread(latest_tid) if latest_tid else []
+
+    if not msgs:
+        st.markdown(
+            f'<p style="{_F}font-size:9px;color:#555960;font-style:italic">'
+            f'No deliberation log yet.</p>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    shown = msgs[-max_msgs:]
+    _MSG_COLORS = {k: v["color"] for k, v in MSG_TYPES.items()}
+    _MSG_LABELS = {k: v["label"] for k, v in MSG_TYPES.items()}
+
+    rows_html = ""
+    for msg in shown:
+        ag_meta   = AGENTS.get(msg["sender"], {})
+        ag_color  = ag_meta.get("color", "#8E9AAA")
+        ag_short  = ag_meta.get("short", msg["sender"])
+        msg_color = _MSG_COLORS.get(msg["msg_type"], "#555960")
+        msg_label = _MSG_LABELS.get(msg["msg_type"], msg["msg_type"].upper())
+        ts_str    = msg["ts"].strftime("%H:%M:%S") if hasattr(msg["ts"], "strftime") else str(msg["ts"])
+        recip     = AGENTS.get(msg["recipient"], {}).get("short", msg["recipient"])
+
+        rows_html += (
+            f'<div style="border-left:2px solid {ag_color};padding:4px 8px;'
+            f'margin:3px 0;background:rgba(0,0,0,0.15)">'
+            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
+            f'<span style="{_M}font-size:8px;color:{ag_color};font-weight:700">{ag_short}</span>'
+            f'<span style="{_M}font-size:7px;color:{msg_color};font-weight:700">[{msg_label}]</span>'
+            f'<span style="{_M}font-size:7px;color:#555960">→ {recip}</span>'
+            f'<span style="{_M}font-size:7px;color:#555960;margin-left:auto">{ts_str}</span>'
+            f'</div>'
+            f'<div style="{_F}font-size:10px;color:#a8b0c0;line-height:1.5">'
+            f'{msg["content"]}</div>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+        f'padding:4px 8px">{rows_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+    if show_consensus and thread_id:
+        consensus, disagreement = compute_consensus(thread_id)
+        provenance = get_provenance(thread_id)
+        n_agents = len(provenance)
+        c_color = "#27ae60" if consensus >= 0.65 else "#e67e22" if consensus >= 0.45 else "#c0392b"
+        d_color = "#c0392b" if disagreement >= 0.40 else "#e67e22" if disagreement >= 0.20 else "#8E9AAA"
+        st.markdown(
+            f'<div style="display:flex;gap:16px;margin-top:4px;padding-top:4px;'
+            f'border-top:1px solid #1e1e1e">'
+            f'<span style="{_M}font-size:8px;color:{c_color}">Consensus {consensus:.0%}</span>'
+            f'<span style="{_M}font-size:8px;color:{d_color}">Disagreement {disagreement:.0%}</span>'
+            f'<span style="{_M}font-size:8px;color:#555960">'
+            f'{len(shown)} messages · {n_agents} agents</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def render_morning_briefing_panel(
+    risk_score: float,
+    top_alerts: list[str],
+    top_conflict: str | None = None,
+    auto_run: bool = True,
+) -> str | None:
+    """
+    Trigger the morning briefing agent protocol and render the deliberation.
+    auto_run: triggers the protocol if no morning_briefing thread exists today.
+    Returns thread_id or None.
+    """
+    try:
+        from src.analysis.agent_dialogue import (
+            run_morning_briefing_protocol,
+            get_subject_threads,
+        )
+    except ImportError:
+        return None
+
+    existing = get_subject_threads("morning_briefing")
+    import datetime as _dt
+    today_str = _dt.date.today().isoformat()
+    today_threads = [m for m in existing if str(m["ts"]).startswith(today_str)]
+
+    thread_id: str | None = None
+    if auto_run and not today_threads:
+        thread_id = run_morning_briefing_protocol(
+            risk_score=risk_score,
+            top_alerts=top_alerts,
+            top_conflict=top_conflict,
+        )
+    elif today_threads:
+        thread_id = today_threads[0].get("thread_id")
+
+    if thread_id:
+        render_deliberation_panel(
+            thread_id=thread_id,
+            title="Morning Briefing Chain",
+            max_msgs=8,
+            show_consensus=False,
+        )
+
+    return thread_id

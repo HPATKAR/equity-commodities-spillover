@@ -509,6 +509,46 @@ def page_scenario_engine(
         "and 99% are computed via historical simulation on the selected date window."
     )
 
+    # ── Geo risk context banner ────────────────────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        from src.analysis.scenario_state import get_scenario
+        _se_cr  = score_all_conflicts()
+        _se_agg = aggregate_portfolio_scores(_se_cr)
+        _se_cis = _se_agg.get("portfolio_cis", 50.0)
+        _se_tps = _se_agg.get("portfolio_tps", 50.0)
+        _se_ss  = get_scenario()
+        _se_scenario = _se_ss.get("label", "Base Case")
+        _se_geo_mult = _se_ss.get("geo_mult", 1.0)
+        _se_active = [r for r in _se_cr.values() if r.get("state") == "active"]
+        _se_col = "#c0392b" if _se_cis >= 65 else "#e67e22" if _se_cis >= 45 else "#CFB991"
+        _se_conflict_tags = "".join(
+            f'<span style="background:#0a0a1a;color:#8E9AAA;'
+            f'font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'padding:2px 6px;margin-right:4px;border:1px solid #2a2a2a">'
+            f'{r["label"].upper()}</span>'
+            for r in sorted(_se_active, key=lambda x: x["cis"], reverse=True)[:3]
+        )
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid {_se_col};padding:.4rem .9rem;'
+            f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'font-weight:700;color:{_se_col};white-space:nowrap">LIVE GEO INPUT</span>'
+            f'{_se_conflict_tags}'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'color:#8E9AAA;margin-left:auto">'
+            f'Scenario&nbsp;<b style="color:#CFB991">{_se_scenario}</b>&nbsp;·&nbsp;'
+            f'Geo×<b style="color:{_se_col}">{_se_geo_mult:.2f}</b>&nbsp;·&nbsp;'
+            f'CIS&nbsp;<b style="color:{_se_col}">{_se_cis:.0f}</b>&nbsp;·&nbsp;'
+            f'TPS&nbsp;<b style="color:#CFB991">{_se_tps:.0f}</b>&nbsp;·&nbsp;'
+            f'Use Geo Disruption slider to simulate current conflict intensity</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
     # ── Load data ─────────────────────────────────────────────────────────
     with st.spinner("Computing betas and historical tail risk…"):
         betas   = _compute_betas(start, end)

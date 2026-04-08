@@ -67,6 +67,51 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         "into commodity markets before prices reflect it."
     )
 
+    # ── Conflict transmission context banner ──────────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _sp_cr  = score_all_conflicts()
+        _sp_agg = aggregate_portfolio_scores(_sp_cr)
+        _sp_tps = _sp_agg.get("portfolio_tps", 50.0)
+        _sp_cis = _sp_agg.get("portfolio_cis", 50.0)
+
+        # Top transmission channels across active conflicts
+        _channel_scores: dict = {}
+        for _cr_r in _sp_cr.values():
+            if _cr_r.get("state") != "active":
+                continue
+            _w = _cr_r["cis"] / 100
+            for _ch, _v in _cr_r.get("transmission", {}).items():
+                _channel_scores[_ch] = _channel_scores.get(_ch, 0.0) + _v * _w
+        _top_channels = sorted(_channel_scores.items(), key=lambda x: x[1], reverse=True)[:4]
+
+        if _top_channels:
+            _sp_color = "#c0392b" if _sp_tps >= 65 else "#e67e22" if _sp_tps >= 45 else "#CFB991"
+            _ch_tags  = "".join(
+                f'<span style="background:#0a1a0a;color:#27ae60;'
+                f'font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'padding:2px 6px;margin-right:5px;border:1px solid #27ae60;opacity:.8">'
+                f'{ch.replace("_"," ").upper()}</span>'
+                for ch, _ in _top_channels
+            )
+            st.markdown(
+                f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                f'border-left:3px solid {_sp_color};padding:.4rem .9rem;'
+                f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'font-weight:700;color:{_sp_color};white-space:nowrap">ACTIVE TRANSMISSION CHANNELS</span>'
+                f'{_ch_tags}'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'color:#8E9AAA;margin-left:auto">'
+                f'TPS&nbsp;<b style="color:{_sp_color}">{_sp_tps:.0f}</b>&nbsp;·&nbsp;'
+                f'CIS&nbsp;<b style="color:#e67e22">{_sp_cis:.0f}</b>&nbsp;·&nbsp;'
+                f'High TPS = geopolitical risk is actively flowing into asset prices</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
+
     with st.spinner("Loading returns…"):
         eq_r, cmd_r = load_returns(start, end)
 
@@ -143,6 +188,11 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
                     margin=dict(l=100, r=40, t=20, b=90),
                 )
+                try:
+                    from src.analysis.freshness import add_freshness_label
+                    fig_gc = add_freshness_label(fig_gc, "yfinance_prices")
+                except Exception:
+                    pass
                 _chart(fig_gc)
                 _panel_note("Red = strong lead (low p-value). Energy commodities typically lead equities by 1–3 days.")
                 _insight_note(
@@ -502,6 +552,46 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         "high-transmitter commodity is not isolated; it will propagate. Use this map to identify "
         "which equity markets to hedge when a key commodity breaks out."
     )
+
+    # ── Conflict Layer: which active conflicts are driving the current spillover ──
+    st.markdown(
+        f'<div style="margin:1rem 0 0.4rem;border-top:1px solid #1e1e1e;padding-top:0.8rem">'
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 4px">Conflict Transmission Layer</p>'
+        f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0 0 8px;line-height:1.5">'
+        f'Active conflicts driving current spillover pressure. '
+        f'CIS × TPS per-conflict contribution to cross-asset transmission.</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.analysis.conflict_model import aggregate_portfolio_scores, score_all_conflicts
+        _sc = score_all_conflicts()
+        _sa = aggregate_portfolio_scores(_sc)
+        _conf_detail = _sa.get("conflict_detail", {})
+        if _conf_detail:
+            _cl_sorted = sorted(_conf_detail.items(), key=lambda x: x[1]["tps"], reverse=True)
+            _cl_cols = st.columns(min(len(_cl_sorted), 6))
+            for _ci2, (_cid2, _cr2) in enumerate(_cl_sorted[:6]):
+                with _cl_cols[_ci2]:
+                    _cc2 = _cr2.get("color", "#8E9AAA")
+                    _cis2 = _cr2["cis"]; _tps2 = _cr2["tps"]
+                    _trans_score = round(_cis2 * _tps2 / 100, 1)
+                    st.markdown(
+                        f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                        f'border-left:2px solid {_cc2};padding:6px 8px;margin-bottom:4px">'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                        f'font-weight:700;color:{_cc2}">{_cr2.get("label","?")}</span>'
+                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+                        f'font-weight:700;color:#CFB991;margin-top:2px">'
+                        f'CIS×TPS {_trans_score:.0f}</div>'
+                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                        f'color:#555960">CIS {_cis2:.0f} · TPS {_tps2:.0f}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+    except Exception:
+        pass
 
     # CQO runs silently - output visible in About > AI Workforce
     try:

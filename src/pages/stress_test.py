@@ -113,6 +113,45 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "assumption holds. If it does not, the spillover risk is not being priced correctly."
     )
 
+    # ── Geo risk context banner ────────────────────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _st_cr  = score_all_conflicts()
+        _st_agg = aggregate_portfolio_scores(_st_cr)
+        _st_cis = _st_agg.get("portfolio_cis", 50.0)
+        _st_tps = _st_agg.get("portfolio_tps", 50.0)
+        _st_active = [r for r in _st_cr.values() if r.get("state") == "active"]
+        _st_col = "#c0392b" if _st_cis >= 65 else "#e67e22" if _st_cis >= 45 else "#CFB991"
+        _st_note = (
+            "Elevated active-war CIS — stress test against current conflicts is high-priority."
+            if _st_cis >= 60 else
+            "Moderate conflict intensity — watch oil/gold channels in event stress windows."
+        )
+        _st_tags = "".join(
+            f'<span style="background:#0a0a1a;color:#8E9AAA;'
+            f'font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'padding:2px 6px;margin-right:4px;border:1px solid #2a2a2a">'
+            f'{r["label"].upper()}&nbsp;CIS&nbsp;{r["cis"]:.0f}</span>'
+            for r in sorted(_st_active, key=lambda x: x["cis"], reverse=True)[:3]
+        )
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid {_st_col};padding:.4rem .9rem;'
+            f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'font-weight:700;color:{_st_col};white-space:nowrap">GEO STRESS CONTEXT</span>'
+            f'{_st_tags}'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'color:#8E9AAA;margin-left:auto">'
+            f'CIS&nbsp;<b style="color:{_st_col}">{_st_cis:.0f}</b>&nbsp;·&nbsp;'
+            f'TPS&nbsp;<b style="color:#CFB991">{_st_tps:.0f}</b>&nbsp;·&nbsp;'
+            f'{_st_note}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
     with st.spinner("Loading index and commodity price data…"):
         eq_p, cmd_p = load_all_prices(start, end)
 

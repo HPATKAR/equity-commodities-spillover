@@ -844,6 +844,54 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
+    # ── Live conflict scoring overlay ─────────────────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _wm_cr  = score_all_conflicts()
+        _wm_agg = aggregate_portfolio_scores(_wm_cr)
+        _wm_cis = _wm_agg.get("portfolio_cis", 50.0)
+        _wm_tps = _wm_agg.get("portfolio_tps", 50.0)
+        _wm_active = sorted(
+            [r for r in _wm_cr.values() if r.get("state") == "active"],
+            key=lambda x: x["cis"], reverse=True
+        )
+        _wm_col = "#c0392b" if _wm_cis >= 65 else "#e67e22" if _wm_cis >= 45 else "#CFB991"
+
+        _wm_conflict_cells = "".join(
+            f'<div style="display:inline-flex;align-items:center;gap:5px;'
+            f'background:#080808;border:1px solid #1e1e1e;'
+            f'padding:3px 8px;margin-right:5px;margin-bottom:3px">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
+            f'font-weight:700;color:#CFB991">{r["label"].upper()}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'color:{("#c0392b" if r["cis"]>=65 else "#e67e22" if r["cis"]>=45 else "#8E9AAA")}">'
+            f'CIS {r["cis"]:.0f}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">'
+            f'TPS {r.get("tps",50):.0f}</span>'
+            f'</div>'
+            for r in _wm_active[:5]
+        )
+
+        st.markdown(
+            f'<div style="background:#040404;border:1px solid #1e1e1e;'
+            f'border-left:3px solid {_wm_col};padding:.5rem .9rem;margin-bottom:.7rem">'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'font-weight:700;color:{_wm_col};letter-spacing:.15em;margin-bottom:5px">'
+            f'LIVE CONFLICT RISK SCORES — SCORING MAP BELOW</div>'
+            f'<div style="display:flex;flex-wrap:wrap;align-items:center">'
+            f'{_wm_conflict_cells}'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'color:#8E9AAA;margin-left:auto">'
+            f'Portfolio CIS&nbsp;<b style="color:{_wm_col}">{_wm_cis:.0f}</b>&nbsp;·&nbsp;'
+            f'TPS&nbsp;<b style="color:#CFB991">{_wm_tps:.0f}</b>&nbsp;·&nbsp;'
+            f'Darker map regions = higher structural exposure to active conflicts</span>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
     with st.spinner("Loading market data…"):
         eq_r, cmd_r = load_returns(start, end)
 
@@ -1336,6 +1384,73 @@ All intermediate scores triangulate from these anchors, cross-checked against:
                 ],
             }
             _cqo_run(_cqo_ctx, _provider, _api_key, page="War Impact Map")
+    except Exception:
+        pass
+
+    # ── Conflict Exposure Overlay ─────────────────────────────────────────────
+    st.markdown(
+        f'<div style="margin:1.2rem 0 0.4rem;border-top:1px solid #1e1e1e;padding-top:1rem">'
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px">Asset Exposure Overlay</p>'
+        f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0 0 10px;line-height:1.5">'
+        f'Scenario-adjusted exposure scores for tracked assets — derived from the '
+        f'structural conflict exposure registry, scaled by active TPS and current scenario multiplier.</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.analysis.exposure import ranked_by_exposure, exposure_summary_stats, score_all_assets
+        _all_exp = score_all_assets()
+        _exp_stats = exposure_summary_stats(_all_exp)
+        _exp_top = ranked_by_exposure(n=16)
+
+        # Summary strip
+        _es1, _es2, _es3, _es4 = st.columns(4)
+        for _ec, (_el, _ev, _ecol) in zip(
+            [_es1, _es2, _es3, _es4],
+            [
+                ("Top Exposed",  _exp_stats.get("top_asset","—"),      "#e67e22"),
+                ("Peak SAS",     f'{_exp_stats.get("top_asset_sas",0):.0f}', "#c0392b"),
+                ("Top Hedge",    _exp_stats.get("top_hedge","—"),       "#27ae60"),
+                ("Mean Exposure",f'{_exp_stats.get("mean_sas",0):.1f}', "#CFB991"),
+            ]
+        ):
+            _ec.markdown(
+                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                f'padding:6px 10px;margin-bottom:6px">'
+                f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:.12em;'
+                f'text-transform:uppercase;color:#555960">{_el}</div>'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.85rem;'
+                f'font-weight:700;color:{_ecol}">{_ev}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Ranked bars
+        _exp_rows = ""
+        for _ea in _exp_top:
+            _sas = _ea["sas"]; _bar = int(_sas)
+            _ec2 = "#c0392b" if _sas>=60 else "#e67e22" if _sas>=35 else "#CFB991" if _sas>=15 else "#8E9AAA"
+            _dir_col = {"long_geo_risk":"#e67e22","safe_haven":"#27ae60","neutral":"#8E9AAA"}.get(_ea["direction"],"#8E9AAA")
+            _exp_rows += (
+                f'<div style="display:flex;align-items:center;gap:8px;padding:3px 0;'
+                f'border-bottom:1px solid #141414">'
+                f'<span style="{_F}font-size:0.68rem;color:#c8cdd8;width:140px;flex-shrink:0;'
+                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_ea["asset"]}</span>'
+                f'<div style="flex:1;height:4px;background:#1a1a1a">'
+                f'<div style="width:{_bar}%;height:4px;background:{_ec2}"></div></div>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;'
+                f'color:{_ec2};width:25px;text-align:right">{_sas:.0f}</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;'
+                f'color:{_dir_col};width:60px;text-align:right">'
+                f'{_ea["direction"].replace("_"," ").upper()[:8]}</span>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:6px 12px">'
+            f'{_exp_rows}</div>',
+            unsafe_allow_html=True,
+        )
     except Exception:
         pass
 

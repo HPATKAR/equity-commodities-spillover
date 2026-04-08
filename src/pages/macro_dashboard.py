@@ -459,6 +459,51 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         "are currently setting the structural backdrop for cross-asset behaviour."
     )
 
+    # ── Geopolitical macro overlay ───────────────────────────────────────────
+    # Conflict-driven macro transmission: which conflicts are most likely
+    # amplifying yield, inflation, or credit stress right now.
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _mc_cr  = score_all_conflicts()
+        _mc_agg = aggregate_portfolio_scores(_mc_cr)
+        _mc_cis = _mc_agg.get("portfolio_cis", 50.0)
+        _mc_tps = _mc_agg.get("portfolio_tps", 50.0)
+
+        # Conflicts with energy or inflation transmission channels
+        _inflation_drivers = [
+            r["label"] for cid, r in _mc_cr.items()
+            if r.get("state") == "active"
+            and any(ch in r.get("transmission", {}) for ch in
+                    ["energy_oil", "energy_gas", "commodity_wheat", "commodity_food"])
+            and r["cis"] >= 40
+        ][:3]
+
+        if _inflation_drivers or _mc_tps >= 50:
+            _mc_color = "#c0392b" if _mc_tps >= 65 else "#e67e22" if _mc_tps >= 45 else "#CFB991"
+            _driver_text = (
+                "Inflation transmission: " +
+                " · ".join(f'<b style="color:{_mc_color}">{d}</b>' for d in _inflation_drivers)
+                if _inflation_drivers
+                else "No dominant energy/food shock at present"
+            )
+            st.markdown(
+                f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                f'border-left:3px solid {_mc_color};padding:.4rem .9rem;'
+                f'margin-bottom:.6rem">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'font-weight:700;color:{_mc_color}">GEO→MACRO TRANSMISSION</span>'
+                f'&nbsp;&nbsp;'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+                f'color:#8E9AAA">{_driver_text}</span>'
+                f'&nbsp;&nbsp;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'color:#CFB991">TPS&nbsp;{_mc_tps:.0f}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
+
     no_fred = not fred_key
     if no_fred:
         st.info("Add a FRED API key in Settings to unlock bond, macro, and money-flow data. "
@@ -1098,7 +1143,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════════
     # PRIVATE CREDIT BUBBLE MONITOR
     # ══════════════════════════════════════════════════════════════════════════
-    _section_header("⚠", "Private Credit Bubble Monitor",
+    _section_header("!", "Private Credit Bubble Monitor",
                     "HY spreads · leveraged loans · BDC signals · anatomy of a bust")
 
     st.markdown(
@@ -1392,7 +1437,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     def _node(icon, title, sub, border_color="#2a2a2a"):
         return (
             f'<div style="{_NODE_CSS}border-color:{border_color}">'
-            f'<span style="font-size:1.0rem;margin-bottom:3px">{icon}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.8rem;font-weight:700;color:#CFB991;margin-bottom:3px;display:block">{icon}</span>'
             f'<span style="font-size:0.68rem;font-weight:700;color:#e8e9ed;line-height:1.3">{title}</span>'
             f'<span style="font-size:0.58rem;color:#8890a1;margin-top:2px;line-height:1.3">{sub}</span>'
             f'</div>'
@@ -1401,21 +1446,21 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;'
         f'background:#111111;border:1px solid #1e1e1e;border-radius:0;padding:1rem 1.1rem;">'
-        + _node("📈", "Rates Stay High", "SOFR 4.3%+<br>all-in ~9–12%", "#b7770d")
+        + _node("▲", "Rates Stay High", "SOFR 4.3%+<br>all-in ~9–12%", "#b7770d")
         + _ARROW
-        + _node("💸", "Coverage Squeeze", "EBITDA ÷ interest<br>&lt;1.5×", "#b7770d")
+        + _node("!", "Coverage Squeeze", "EBITDA ÷ interest<br>&lt;1.5×", "#b7770d")
         + _ARROW
-        + _node("📋", "PIK &amp; Amends", "Pay-in-kind<br>elections rise", "#b7770d")
+        + _node("~", "PIK &amp; Amends", "Pay-in-kind<br>elections rise", "#b7770d")
         + _ARROW
-        + _node("📉", "NAV Writedowns", "Quarterly marks<br>lag 1–2 quarters", "#c0392b")
+        + _node("▼", "NAV Writedowns", "Quarterly marks<br>lag 1–2 quarters", "#c0392b")
         + _ARROW
-        + _node("🚪", "Redemption Gates", "Semi-liquid fund<br>lockups trigger", "#c0392b")
+        + _node("■", "Redemption Gates", "Semi-liquid fund<br>lockups trigger", "#c0392b")
         + _ARROW
-        + _node("🔥", "HY OAS Widens", "Forced sales hit<br>public markets", "#c0392b")
+        + _node("▲", "HY OAS Widens", "Forced sales hit<br>public markets", "#c0392b")
         + _ARROW
-        + _node("🏦", "Fin. Sector Hit", "PE sponsors &amp;<br>BDC equity falls", "#c0392b")
+        + _node("■", "Fin. Sector Hit", "PE sponsors &amp;<br>BDC equity falls", "#c0392b")
         + _ARROW
-        + _node("🛢️", "Commodity Drop", "Copper/Oil demand<br>destruction", "#8e44ad")
+        + _node("▼", "Commodity Drop", "Copper/Oil demand<br>destruction", "#8e44ad")
         + f'</div>',
         unsafe_allow_html=True,
     )
@@ -1552,6 +1597,69 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             if _ms_result.get("narrative"):
                 st.markdown("---")
                 render_agent_output_block("macro_strategist", _ms_result)
+    except Exception:
+        pass
+
+    # ── Conflict-to-Macro Transmission Narrative ────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        from src.analysis.scenario_state import get_scenario
+        _cr_md  = score_all_conflicts()
+        _agg_md = aggregate_portfolio_scores(_cr_md)
+        _sc_md  = get_scenario()
+        _pcis   = _agg_md.get("portfolio_cis", 0)
+        _ptps   = _agg_md.get("portfolio_tps", 0)
+
+        if _pcis >= 25:
+            st.markdown(
+                '<div style="border-top:1px solid #1e1e1e;margin:1.2rem 0 0.6rem"></div>'
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                'font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#CFB991">'
+                'Conflict → Macro Transmission</span>',
+                unsafe_allow_html=True,
+            )
+
+            _top_c = max(_cr_md.items(), key=lambda kv: kv[1].get("cis", 0), default=(None, {}))
+            _top_cid, _top_cr = _top_c
+
+            _inflation_channel  = max(_cr_md.values(), key=lambda v: v.get("tps", 0) * 0.25, default={})
+            _supply_cis         = max((_cr_md.get(c, {}).get("cis", 0) for c in _cr_md), default=0)
+
+            _channels = []
+            for cid, cr in sorted(_cr_md.items(), key=lambda kv: kv[1].get("tps", 0), reverse=True)[:3]:
+                _tps = cr.get("tps", 0)
+                _cis = cr.get("cis", 0)
+                if _tps >= 20:
+                    _channels.append(
+                        f'<div style="background:#111;border-left:2px solid #e67e22;'
+                        f'padding:6px 10px;margin-bottom:4px;font-size:0.70rem">'
+                        f'<b style="color:#e67e22">{cid.replace("_"," ").upper()}</b> · '
+                        f'CIS {_cis:.0f} · TPS {_tps:.0f} — '
+                        f'{"Energy/agriculture supply disruption → imported inflation" if _tps >= 50 else "Moderate transmission via trade/shipping routes"}'
+                        f'</div>'
+                    )
+
+            _narrative = (
+                f"Portfolio conflict intensity at <b>{_pcis:.0f}/100</b> with "
+                f"transmission pressure <b>{_ptps:.0f}/100</b>. "
+                f"Active scenario: <b>{_sc_md['label']}</b> (geo_mult={_sc_md['geo_mult']:.2f}x, "
+                f"vol_mult={_sc_md['vol_mult']:.2f}x). "
+                f"The primary macro channels are: "
+                f"(1) <b>Commodity inflation</b> — supply disruption premia feed into PPI/CPI; "
+                f"(2) <b>FX</b> — USD safe-haven bid compresses EM currencies and widens CADs; "
+                f"(3) <b>Rate expectations</b> — persistent geo-inflation complicates Fed/ECB cuts; "
+                f"(4) <b>Risk premium</b> — equity multiples compress under elevated uncertainty."
+            )
+
+            st.markdown(
+                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;padding:.8rem 1rem;'
+                f'margin-bottom:.8rem">'
+                f'<p style="font-size:0.72rem;color:#aaa;line-height:1.7;margin:0 0 8px">'
+                f'{_narrative}</p>'
+                + "".join(_channels) +
+                f'</div>',
+                unsafe_allow_html=True,
+            )
     except Exception:
         pass
 

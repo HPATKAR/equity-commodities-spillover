@@ -21,7 +21,7 @@ AGENTS = {
     "risk_officer": {
         "name":  "AI Risk Officer",
         "short": "Risk Officer",
-        "icon":  "⚡",
+        "icon":  "RO",
         "pages": ["overview"],
         "color": "#c0392b",
         "desc":  "Morning briefing · Cross-asset stress · Routing hub",
@@ -29,7 +29,7 @@ AGENTS = {
     "macro_strategist": {
         "name":  "AI Macro Strategist",
         "short": "Macro Strat",
-        "icon":  "📊",
+        "icon":  "MS",
         "pages": ["macro_dashboard"],
         "color": "#2980b9",
         "desc":  "Yield curve · Inflation · Fed policy · GDP",
@@ -37,7 +37,7 @@ AGENTS = {
     "commodities_specialist": {
         "name":  "AI Commodities Specialist",
         "short": "Cmdties",
-        "icon":  "🛢",
+        "icon":  "CS",
         "pages": ["watchlist"],
         "color": "#8E6F3E",
         "desc":  "COT positioning · Supply shocks · Sector rotation",
@@ -45,7 +45,7 @@ AGENTS = {
     "geopolitical_analyst": {
         "name":  "AI Geopolitical Analyst",
         "short": "Geo Intel",
-        "icon":  "🌐",
+        "icon":  "GA",
         "pages": ["geopolitical", "war_impact_map"],
         "color": "#6c3483",
         "desc":  "Conflict risk · Sanctions · Supply disruption",
@@ -53,7 +53,7 @@ AGENTS = {
     "stress_engineer": {
         "name":  "AI Stress Engineer",
         "short": "Stress Eng",
-        "icon":  "🔬",
+        "icon":  "SE",
         "pages": ["stress_test"],
         "color": "#e67e22",
         "desc":  "Scenario stress · Tail risk · Portfolio shock",
@@ -61,7 +61,7 @@ AGENTS = {
     "signal_auditor": {
         "name":  "AI Signal Auditor",
         "short": "Auditor",
-        "icon":  "🔍",
+        "icon":  "SA",
         "pages": ["model_accuracy"],
         "color": "#27ae60",
         "desc":  "Calibration · Confidence scoring · Model validation",
@@ -69,7 +69,7 @@ AGENTS = {
     "trade_structurer": {
         "name":  "AI Trade Structurer",
         "short": "Trade Str",
-        "icon":  "💡",
+        "icon":  "TS",
         "pages": ["trade_ideas"],
         "color": "#CFB991",
         "desc":  "Trade ideas · Entry/exit · Awaiting human approval",
@@ -77,7 +77,7 @@ AGENTS = {
     "quality_officer": {
         "name":  "AI Chief Quality Officer",
         "short": "CQO",
-        "icon":  "🚨",
+        "icon":  "CQO",
         "pages": ["spillover", "correlation", "geopolitical", "war_impact_map",
                   "trade_ideas", "stress_test", "insights", "overview", "strait_watch"],
         "color": "#e74c3c",

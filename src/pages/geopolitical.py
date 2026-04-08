@@ -284,27 +284,101 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
-    # ── Live Geopolitical Headlines (RSS) ─────────────────────────────────
+    # ── Conflict Scorecard Strip ──────────────────────────────────────────
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:1.4rem 0 0.4rem">Live Intelligence Feed</p>',
+        f'letter-spacing:0.14em;color:#8E6F3E;margin:1.4rem 0 0.4rem">'
+        f'Active Conflict Scores (CIS / TPS)</p>',
         unsafe_allow_html=True,
     )
     try:
-        from src.ingestion.geo_rss import render_rss_panel
-        render_rss_panel(max_items=8)
-    except ImportError:
-        st.markdown(
-            f'<p style="{_F}font-size:0.68rem;color:#8890a1">'
-            f'Install feedparser to enable live RSS ingestion: '
-            f'<code>pip install feedparser</code></p>',
-            unsafe_allow_html=True,
-        )
-    except Exception as _rss_e:
-        st.markdown(
-            f'<p style="{_F}font-size:0.68rem;color:#8890a1">RSS feed temporarily unavailable.</p>',
-            unsafe_allow_html=True,
-        )
+        from src.analysis.conflict_model import score_all_conflicts
+        _conf_scores = score_all_conflicts()
+        _conf_ranked = sorted(_conf_scores.values(), key=lambda x: x["cis"], reverse=True)
+        _csc_cols = st.columns(min(len(_conf_ranked), 6))
+        _cis_col = lambda v: "#c0392b" if v>=70 else "#e67e22" if v>=45 else "#CFB991" if v>=25 else "#8E9AAA"
+        _fresh_col = lambda f: {"live":"#27ae60","recent":"#CFB991","aging":"#e67e22","stale":"#c0392b"}.get(f,"#555960")
+        for _ci, _cr in enumerate(_conf_ranked[:6]):
+            with _csc_cols[_ci]:
+                _cc = _cr.get("color", "#8E9AAA")
+                _tr = {"rising":"▲","stable":"■","falling":"▼"}.get(_cr.get("trend","stable"),"■")
+                st.markdown(
+                    f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                    f'border-top:2px solid {_cc};padding:6px 8px">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                    f'font-weight:700;color:{_cc}">{_cr["label"]}</span>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:{_fresh_col(_cr.get("freshness","aging"))};float:right">'
+                    f'{_cr.get("freshness","?").upper()}</span>'
+                    f'<div style="display:flex;gap:10px;margin-top:4px">'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:#555960">CIS</span>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;'
+                    f'font-weight:700;color:{_cis_col(_cr["cis"])}">{_cr["cis"]:.0f}</div></div>'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:#555960">TPS</span>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;'
+                    f'font-weight:700;color:#8E9AAA">{_cr["tps"]:.0f}</div></div>'
+                    f'</div>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                    f'color:{_cis_col(_cr["cis"])};margin-top:2px">{_tr} {_cr["trend"].upper()}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+    except Exception:
+        pass
+
+    # ── Live Intelligence Feed (Threat/Act classified) ────────────────────
+    st.markdown(
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E6F3E;margin:1.2rem 0 0.4rem">Live Intelligence Feed</p>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.analysis.gpr_news import render_threat_act_feed, get_news_gpr_layer
+        _ngpr = get_news_gpr_layer()
+        if _ngpr.get("data_status") == "live":
+            _nc1, _nc2 = st.columns([1.4, 1])
+            with _nc1:
+                render_threat_act_feed(news_type=None, max_items=8)
+            with _nc2:
+                st.markdown(
+                    f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                    f'padding:8px 12px">'
+                    f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:#555960;letter-spacing:2px;margin:0 0 6px">NEWS GPR</p>'
+                    f'<div style="display:flex;gap:16px">'
+                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:#555960">COMPOSITE</div>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
+                    f'font-weight:700;color:#CFB991">{_ngpr["news_gpr"]:.0f}</div></div>'
+                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:#e67e22">THREAT</div>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
+                    f'font-weight:700;color:#e67e22">{_ngpr["threat_score"]:.0f}</div></div>'
+                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:#c0392b">ACT</div>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
+                    f'font-weight:700;color:#c0392b">{_ngpr["act_score"]:.0f}</div></div>'
+                    f'</div>'
+                    f'<div style="margin-top:8px;font-family:\'JetBrains Mono\',monospace;'
+                    f'font-size:7px;color:#555960">'
+                    f'α={_ngpr["alpha"]:.2f} · {_ngpr["n_act"]} acts · {_ngpr["n_threat"]} threats'
+                    f'</div></div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            from src.ingestion.geo_rss import render_rss_panel
+            render_rss_panel(max_items=8)
+    except Exception:
+        try:
+            from src.ingestion.geo_rss import render_rss_panel
+            render_rss_panel(max_items=8)
+        except Exception:
+            st.markdown(
+                f'<p style="{_F}font-size:0.68rem;color:#8890a1">RSS feed temporarily unavailable.</p>',
+                unsafe_allow_html=True,
+            )
 
     # ── AI Geopolitical Analyst ────────────────────────────────────────────
     try:

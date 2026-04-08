@@ -382,104 +382,31 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     )
     render_alert_banner(_alerts, market_context=_ctx_brief)
 
+    # ── Morning Briefing Agent Chain ───────────────────────────────────────
+    # Auto-expands when risk score is Elevated or above — visible deliberation.
+    _briefing_risk = float(risk_result["score"])
+    _briefing_expanded = _briefing_risk >= 50
+    try:
+        from src.ui.agent_panel import render_morning_briefing_panel
+        _top_alert_texts = [a.get("title", "") for a in _alerts[:3] if a.get("title")]
+        _top_conflict    = risk_result.get("top_conflict")
+        _briefing_label = (
+            f"⚡ AI Analyst Team — Morning Briefing (Risk {_briefing_risk:.0f}/100)"
+            if _briefing_expanded
+            else f"AI Analyst Team — Morning Briefing (Risk {_briefing_risk:.0f}/100)"
+        )
+        with st.expander(_briefing_label, expanded=_briefing_expanded):
+            render_morning_briefing_panel(
+                risk_score=_briefing_risk,
+                top_alerts=_top_alert_texts,
+                top_conflict=_top_conflict,
+                auto_run=True,
+            )
+    except Exception:
+        pass
+
     _r_colors = {0: "#2e7d32", 1: "#555960", 2: "#e67e22", 3: "#c0392b"}
 
-    gc1, gc2 = st.columns([1, 2.2])
-    with gc1:
-        _label("Geopolitical Risk Score")
-        _chart(plot_risk_gauge(risk_result, height=220))
-        _insight_note(
-            "Displays the current market stress level on a gauge from 0 (calm) to 100 (crisis). "
-            "Readings above 60 indicate equity-commodities turbulence is building. "
-            "This is the single most important number on the dashboard."
-        )
-        comp = risk_result["components"]
-        for name, val in comp.items():
-            col_c = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
-            pct = min(val, 100)
-            st.markdown(
-                f'<div style="margin-bottom:5px">'
-                f'<div style="display:flex;justify-content:space-between;{_F}font-size:0.66rem;margin-bottom:2px">'
-                f'<span style="color:#b8b8b8">{name}</span>'
-                f'<span style="font-family:JetBrains Mono,monospace;font-weight:700;color:{col_c}">{val:.0f}</span>'
-                f'</div>'
-                f'<div style="height:3px;background:#2a2a2a;border-radius:2px">'
-                f'<div style="width:{pct:.0f}%;height:3px;background:{col_c};border-radius:2px"></div>'
-                f'</div></div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── Dynamic weights today ─────────────────────────────────────────
-        dw = risk_result.get("weights", {})
-        if dw:
-            _key_map = {"corr": "Correlation", "vol": "Cmd Vol",
-                        "vix": "VIX", "og": "Oil-Gold", "events": "Events"}
-            wt_rows = "".join(
-                f'<td style="text-align:center;padding:2px 4px">'
-                f'<div style="font-size:0.60rem;color:#6b7280">{_key_map.get(k,k)}</div>'
-                f'<div style="font-family:JetBrains Mono,monospace;font-weight:700;'
-                f'font-size:0.68rem;color:#8E6F3E">{v*100:.0f}%</div>'
-                f'</td>'
-                for k, v in dw.items()
-            )
-            st.markdown(
-                f'<div style="margin-top:8px;{_F}font-size:0.57rem;color:#8E6F3E;'
-                f'text-transform:uppercase;letter-spacing:.12em;font-weight:700;'
-                f'margin-bottom:3px">Today\'s dynamic weights</div>'
-                f'<table style="width:100%;border-collapse:collapse"><tr>{wt_rows}</tr></table>',
-                unsafe_allow_html=True,
-            )
-
-        # ── Oil-Gold geo signal detail ─────────────────────────────────────
-        og = risk_result.get("oil_gold", {})
-        if og:
-            g_z, o_z = og.get("gold_z", 0), og.get("oil_z", 0)
-            g_r, o_r = og.get("gold_ret", 0), og.get("oil_ret", 0)
-            st.markdown(
-                f'<div style="margin-top:8px;padding:6px 8px;background:#1c1c1c;'
-                f'border-left:2px solid #CFB991;{_F}font-size:0.63rem;color:#b8b8b8;line-height:1.6">'
-                f'<b style="color:#8E6F3E;text-transform:uppercase;font-size:0.57rem;'
-                f'letter-spacing:.12em">Oil-Gold Signal</b><br>'
-                f'Gold 20d: <b>{g_r:+.1f}%</b> (z={g_z:+.2f}) &nbsp;·&nbsp; '
-                f'Oil 20d: <b>{o_r:+.1f}%</b> (z={o_z:+.2f})'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── Top active/tail events ─────────────────────────────────────────
-        evs = risk_result.get("events", [])[:3]
-        if evs:
-            rows = "".join(
-                f'<tr><td style="padding:1px 6px 1px 0;color:#8890a1">{e["label"]}</td>'
-                f'<td style="color:#6b7280;font-size:0.60rem">{e["status"]}</td>'
-                f'<td style="font-family:JetBrains Mono,monospace;font-weight:700;'
-                f'color:#c0392b;text-align:right">{e["score"]:.0f}</td></tr>'
-                for e in evs
-            )
-            st.markdown(
-                f'<div style="margin-top:6px;{_F}font-size:0.63rem">'
-                f'<b style="color:#8E6F3E;text-transform:uppercase;font-size:0.57rem;'
-                f'letter-spacing:.12em">Event Severity Drivers</b>'
-                f'<table style="width:100%;margin-top:3px;border-collapse:collapse">{rows}</table>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-    with gc2:
-        _label("Risk Score History")
-        if not score_hist.empty:
-            _chart(plot_risk_history(score_hist, height=310))
-            _insight_note(
-                "Historical trace of the composite stress index over the full analysis period. "
-                "Peaks align with known crises - COVID (March 2020), Ukraine invasion (Feb 2022), and banking stress (Mar 2023). "
-                "Sustained readings above 60 have historically preceded equity drawdowns of 10% or more."
-            )
-
-    st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
-                unsafe_allow_html=True)
-    _thread(
-        "Knowing the score is useful; knowing whether it is triggering actionable signals is more "
-        "useful. The early warning system below converts the raw score into discrete alerts."
-    )
 
     # ── ROW: EWS composite (left) | 5 signal cards (right) ────────────────
     with st.spinner("Computing early warning signals…"):
