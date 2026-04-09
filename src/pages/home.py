@@ -71,7 +71,7 @@ _STYLE = """<style>
   border-color:#CFB991!important}
 /* ── Use-case tags ── */
 .hm-tag{display:inline-block;font-family:'JetBrains Mono',monospace!important;
-  font-size:6.5px!important;font-weight:700!important;letter-spacing:.12em;
+  font-size:7.5px!important;font-weight:700!important;letter-spacing:.12em;
   text-transform:uppercase;padding:1px 4px;border-radius:1px;margin-left:3px;
   vertical-align:middle}
 .hm-tag-daily{background:#0a1a2e;color:#2980b9!important}
@@ -168,7 +168,7 @@ def _render_masthead(conflict_agg: dict) -> None:
         # Eyebrow: logo mark + programme label
         f'<div style="display:flex;align-items:center;margin-bottom:5px">'
         f'{_logo_img}'
-        f'<span style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.20em;'
         f'text-transform:uppercase;color:#555960">'
         f'Cross-Asset Spillover Monitor &nbsp;·&nbsp; Purdue Daniels &nbsp;·&nbsp; MGMT 69000-120'
         f'</span>'
@@ -572,7 +572,7 @@ def _render_geo_risk_block(
         f'background:#0a0a0a;padding:.45rem .8rem;margin-bottom:.1rem">'
         f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.22em;'
         f'text-transform:uppercase;color:#8E9AAA">Geopolitical Risk Score</span>'
-        f'<span style="background:{color};color:#000;{_M}font-size:6.5px;font-weight:700;'
+        f'<span style="background:{color};color:#000;{_M}font-size:8px;font-weight:700;'
         f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.0f}</span>'
         f'<span style="{_M}font-size:7px;color:#555960;margin-left:4px">'
         f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
@@ -587,7 +587,7 @@ def _render_geo_risk_block(
 
     with col_gauge:
         st.markdown(
-            f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+            f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.20em;'
             f'text-transform:uppercase;color:#555960;margin:0 0 4px">Risk Gauge</p>',
             unsafe_allow_html=True,
         )
@@ -601,7 +601,7 @@ def _render_geo_risk_block(
 
     with col_hist:
         st.markdown(
-            f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+            f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.20em;'
             f'text-transform:uppercase;color:#555960;margin:0 0 0">'
             f'Historical Risk Score'
             f'<span style="font-weight:400;letter-spacing:.06em;color:#3a3a3a;'
@@ -712,7 +712,7 @@ def _render_geo_risk_block(
         wt_html = (
             f'<div style="display:flex;gap:10px;flex-wrap:wrap;'
             f'padding-top:5px;border-top:1px solid #111;margin-top:2px">'
-            f'<span style="{_M}font-size:6px;letter-spacing:.16em;text-transform:uppercase;'
+            f'<span style="{_M}font-size:8px;letter-spacing:.16em;text-transform:uppercase;'
             f'color:#333;align-self:center">Dynamic&nbsp;Weights</span>'
             f'{wt_items}</div>'
         )
@@ -720,7 +720,7 @@ def _render_geo_risk_block(
     st.markdown(
         f'<div style="border-top:1px solid #1e1e1e;margin-top:.3rem;'
         f'padding:.55rem .4rem .3rem">'
-        f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.20em;'
         f'text-transform:uppercase;color:#555960;margin:0 0 .45rem">Score Decomposition</p>'
         f'{decomp_inner}'
         f'{wt_html}'
@@ -733,10 +733,10 @@ def _render_geo_risk_block(
         return (
             f'<div style="padding:.4rem .65rem;background:#080808;'
             f'border:1px solid #1a1a1a;border-top:2px solid {vc}">'
-            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.16em;'
+            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:#333;margin-bottom:3px">{lbl}</div>'
             f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{vc};line-height:1.1">{val}</div>'
-            + (f'<div style="{_M}font-size:6px;color:#555960;margin-top:2px">{sub}</div>' if sub else "")
+            + (f'<div style="{_M}font-size:8px;color:#555960;margin-top:2px">{sub}</div>' if sub else "")
             + f'</div>'
         )
 
@@ -845,7 +845,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid #555960;padding:.6rem .9rem;margin-bottom:.7rem">'
-        f'<span style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.20em;'
         f'text-transform:uppercase;color:#8E9AAA;display:block;margin-bottom:6px">'
         f'Current Situation</span>'
         f'<p style="{_F}font-size:10px;color:#a8b0c0;line-height:1.65;margin:0 0 4px">'
@@ -884,12 +884,12 @@ def _render_intel_panel(conflict_results: dict) -> None:
         col_header = (
             f'<div style="display:flex;gap:8px;padding:0 0 4px;'
             f'border-bottom:1px solid #1e1e1e;margin-bottom:3px">'
-            f'<span style="{_M}font-size:6px;color:#555960;min-width:70px">CONFLICT</span>'
-            f'<span style="{_M}font-size:6px;color:#555960;flex:1">CIS INTENSITY</span>'
-            f'<span style="{_M}font-size:6px;color:#555960;min-width:26px;text-align:right">VAL</span>'
-            f'<span style="{_M}font-size:6px;color:#555960;min-width:16px"> </span>'
-            f'<span style="{_M}font-size:6px;color:#555960;min-width:34px">TPS</span>'
-            f'<span style="{_M}font-size:6px;color:#555960">TOP CHANNEL</span>'
+            f'<span style="{_M}font-size:8px;color:#555960;min-width:70px">CONFLICT</span>'
+            f'<span style="{_M}font-size:8px;color:#555960;flex:1">CIS INTENSITY</span>'
+            f'<span style="{_M}font-size:8px;color:#555960;min-width:26px;text-align:right">VAL</span>'
+            f'<span style="{_M}font-size:8px;color:#555960;min-width:16px"> </span>'
+            f'<span style="{_M}font-size:8px;color:#555960;min-width:34px">TPS</span>'
+            f'<span style="{_M}font-size:8px;color:#555960">TOP CHANNEL</span>'
             f'</div>'
         )
         rows = ""
@@ -919,7 +919,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
             )
         st.markdown(
             f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
-            f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.18em;'
+            f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#555960;margin:0 0 .35rem">'
             f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
             + col_header + rows
@@ -957,7 +957,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
                 )
             st.markdown(
                 f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
-                f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.18em;'
+                f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
                 f'text-transform:uppercase;color:#555960;margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
                 f'{rows_ch}</div>',
@@ -966,7 +966,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
         else:
             st.markdown(
                 f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
-                f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.18em;'
+                f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
                 f'text-transform:uppercase;color:#555960;margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
                 f'<span style="{_F}font-size:9px;color:#3a3a3a">'
@@ -1317,7 +1317,7 @@ def _render_market_pulse() -> None:
         return (
             f'<div style="flex:1;min-width:80px;padding:.35rem .6rem;background:#080808;'
             f'border:1px solid #1a1a1a;border-top:2px solid {c}">'
-            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.16em;'
+            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:#333;margin-bottom:2px">{d["label"]}</div>'
             f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;line-height:1.1">'
             f'{val_fmt}<span style="font-size:7px;color:#555960">{d["suffix"]}</span></div>'
@@ -1329,7 +1329,7 @@ def _render_market_pulse() -> None:
     st.markdown(
         f'<div style="display:flex;gap:4px;flex-wrap:wrap;margin:.4rem 0 .5rem;'
         f'align-items:stretch">'
-        f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.18em;'
+        f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:#333;writing-mode:vertical-rl;'
         f'transform:rotate(180deg);align-self:center;padding:4px 0">MARKET PULSE</div>'
         f'{tiles_html}</div>',
@@ -1431,14 +1431,14 @@ def _render_portfolio_pulse() -> None:
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1a1a1a;'
             f'border-top:2px solid {_GOLD};padding:.45rem .65rem;height:100%">'
-            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#333;margin-bottom:4px">Portfolio NAV</div>'
             f'<div style="{_M}font-size:1.2rem;font-weight:700;color:{_GOLD};line-height:1.1">'
             f'${total_usd:,.0f}</div>'
             f'<div style="{_M}font-size:7.5px;color:#555960;margin-top:2px">'
             f'{n} positions &nbsp;·&nbsp; as of {loaded_at}</div>'
             f'<div style="margin-top:.5rem;padding-top:.4rem;border-top:1px solid #1a1a1a">'
-            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.16em;'
+            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:#333;margin-bottom:3px">Est. 1-Day P&amp;L</div>'
             f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{pl_color}">'
             f'{pl_arrow} {pl_sign}${dollar_pl:,.0f}'
@@ -1451,7 +1451,7 @@ def _render_portfolio_pulse() -> None:
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1a1a1a;'
             f'border-top:2px solid #2a2a2a;padding:.45rem .65rem;height:100%">'
-            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#333;margin-bottom:6px">Top Movers</div>'
             f'{movers_html}</div>',
             unsafe_allow_html=True,
@@ -1498,7 +1498,7 @@ def _render_live_signals() -> None:
                 f'<div style="width:{risk}%;height:4px;background:{tc};border-radius:1px"></div></div>'
                 f'<span style="{_M}font-size:9px;color:{tc};font-weight:700;min-width:22px;'
                 f'text-align:right">{risk}</span>'
-                f'<span style="background:{tc};color:#000;{_M}font-size:6px;'
+                f'<span style="background:{tc};color:#000;{_M}font-size:8px;'
                 f'font-weight:700;padding:1px 4px;letter-spacing:.08em;min-width:46px;'
                 f'text-align:center">{tier}</span>'
                 f'<span style="{_F}font-size:7.5px;color:#555960">{s["flow"]}</span>'
@@ -1578,7 +1578,7 @@ def _render_live_signals() -> None:
                 )
 
             conf_section = (
-                f'<div style="{_M}font-size:6.5px;text-transform:uppercase;letter-spacing:.14em;'
+                f'<div style="{_M}font-size:8px;text-transform:uppercase;letter-spacing:.14em;'
                 f'color:#333;margin:5px 0 3px">Per-Conflict CIS</div>'
                 + conf_rows
                 if any_c else ""
