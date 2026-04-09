@@ -1249,6 +1249,215 @@ def _delta_html(delta, unit: str = "") -> str:
     return f'<span class="hm-dn">▼ {delta:.1f}{unit}</span>'
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# § 1.5  MARKET PULSE — macro KPI strip
+# ─────────────────────────────────────────────────────────────────────────────
+
+_PULSE_TICKERS = [
+    ("^VIX",      "VIX",     "",   False),   # label, suffix, invert_color
+    ("DX-Y.NYB",  "DXY",     "",   False),
+    ("^GSPC",     "S&P 500", "",   False),
+    ("CL=F",      "WTI",     "/b", False),
+    ("GC=F",      "Gold",    "/oz",False),
+    ("^TNX",      "10Y Yld", "%",  False),
+]
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _load_market_pulse() -> list[dict]:
+    """Fetch last 2 closes for macro pulse tickers. Returns list of dicts."""
+    try:
+        import yfinance as yf
+        syms = [t[0] for t in _PULSE_TICKERS]
+        raw  = yf.download(syms, period="5d", auto_adjust=True, progress=False, threads=True)
+        if raw.empty:
+            return []
+        close = raw["Close"] if "Close" in raw.columns else raw
+        results = []
+        for sym, label, suffix, _ in _PULSE_TICKERS:
+            if sym not in close.columns:
+                continue
+            s = close[sym].dropna()
+            if len(s) < 2:
+                continue
+            val  = float(s.iloc[-1])
+            prev = float(s.iloc[-2])
+            chg  = val - prev
+            pct  = chg / prev * 100 if prev else 0.0
+            results.append({
+                "sym": sym, "label": label, "suffix": suffix,
+                "val": val, "chg": chg, "pct": pct,
+            })
+        return results
+    except Exception:
+        return []
+
+
+def _render_market_pulse() -> None:
+    data = _load_market_pulse()
+    if not data:
+        return
+
+    def _tile(d: dict) -> str:
+        pct   = d["pct"]
+        chg   = d["chg"]
+        # VIX: rising = bad (red); everything else: up = green for equities/commodities
+        # We keep standard: red = negative, green = positive for price
+        # For VIX specifically, invert: rising VIX = red
+        is_vix = d["sym"] == "^VIX"
+        if abs(pct) < 0.05:
+            c, arrow = "#555960", "—"
+        elif pct > 0:
+            c, arrow = ("#c0392b" if is_vix else "#27ae60"), "▲"
+        else:
+            c, arrow = ("#27ae60" if is_vix else "#c0392b"), "▼"
+
+        val_fmt = f'{d["val"]:.2f}' if d["val"] < 10000 else f'{d["val"]:,.0f}'
+        chg_fmt = f'{arrow} {abs(pct):.2f}%'
+        return (
+            f'<div style="flex:1;min-width:80px;padding:.35rem .6rem;background:#080808;'
+            f'border:1px solid #1a1a1a;border-top:2px solid {c}">'
+            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.16em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:2px">{d["label"]}</div>'
+            f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;line-height:1.1">'
+            f'{val_fmt}<span style="font-size:7px;color:#555960">{d["suffix"]}</span></div>'
+            f'<div style="{_M}font-size:7.5px;color:{c};margin-top:1px">{chg_fmt}</div>'
+            f'</div>'
+        )
+
+    tiles_html = "".join(_tile(d) for d in data)
+    st.markdown(
+        f'<div style="display:flex;gap:4px;flex-wrap:wrap;margin:.4rem 0 .5rem;'
+        f'align-items:stretch">'
+        f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#333;writing-mode:vertical-rl;'
+        f'transform:rotate(180deg);align-self:center;padding:4px 0">MARKET PULSE</div>'
+        f'{tiles_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § 1.6  PORTFOLIO PULSE — NAV + 1-day P&L + top movers (conditional)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _load_portfolio_returns(tickers_key: str, tickers: tuple) -> dict[str, float]:
+    """
+    Fetch 2-day closes for portfolio tickers, return {ticker: pct_change_1d}.
+    tickers_key is a hashable cache key (joined string).
+    """
+    if not tickers:
+        return {}
+    try:
+        import yfinance as yf
+        raw   = yf.download(list(tickers), period="5d", auto_adjust=True, progress=False, threads=True)
+        if raw.empty:
+            return {}
+        close = raw["Close"] if "Close" in raw.columns else raw
+        result: dict[str, float] = {}
+        if isinstance(close, pd.Series):
+            s = close.dropna()
+            if len(s) >= 2:
+                result[tickers[0]] = (s.iloc[-1] - s.iloc[-2]) / s.iloc[-2] * 100
+            return result
+        for tk in tickers:
+            if tk in close.columns:
+                s = close[tk].dropna()
+                if len(s) >= 2:
+                    result[tk] = (float(s.iloc[-1]) - float(s.iloc[-2])) / float(s.iloc[-2]) * 100
+        return result
+    except Exception:
+        return {}
+
+
+def _render_portfolio_pulse() -> None:
+    from src.data.portfolio_loader import get_portfolio
+    port = get_portfolio()
+    if not port:
+        return
+
+    positions  = port.get("positions", [])
+    total_usd  = port.get("total_usd", 0.0)
+    n          = port.get("n", 0)
+    loaded_at  = port.get("loaded_at", "—")[:10]
+
+    if not positions or total_usd <= 0:
+        return
+
+    # Fetch 1-day returns for all tickers
+    tickers   = tuple(p["ticker"] for p in positions)
+    tk_key    = "|".join(tickers)
+    day_ret   = _load_portfolio_returns(tk_key, tickers)
+
+    # Portfolio-level estimated 1d P&L
+    port_ret  = sum(p["weight"] * day_ret.get(p["ticker"], 0.0) for p in positions)
+    dollar_pl = port_ret / 100 * total_usd
+
+    pl_color  = "#27ae60" if dollar_pl >= 0 else "#c0392b"
+    pl_arrow  = "▲" if dollar_pl >= 0 else "▼"
+    pl_sign   = "+" if dollar_pl >= 0 else ""
+
+    # Top 3 movers
+    movers = sorted(
+        [(p, day_ret.get(p["ticker"])) for p in positions if p["ticker"] in day_ret],
+        key=lambda x: abs(x[1]),
+        reverse=True,
+    )[:3]
+
+    def _mover_html(p: dict, ret: float) -> str:
+        col   = "#27ae60" if ret >= 0 else "#c0392b"
+        arrow = "▲" if ret >= 0 else "▼"
+        w_pct = p["weight"] * 100
+        return (
+            f'<div style="display:flex;align-items:center;gap:6px;'
+            f'padding:3px 0;border-bottom:1px solid #0f0f0f">'
+            f'<span style="{_M}font-size:8px;font-weight:700;color:{col};min-width:52px">'
+            f'{p["ticker"]}</span>'
+            f'<span style="{_M}font-size:7px;color:#555960;flex:1">'
+            f'wt {w_pct:.1f}%</span>'
+            f'<span style="{_M}font-size:8px;color:{col};font-weight:700">'
+            f'{arrow} {abs(ret):.2f}%</span>'
+            f'</div>'
+        )
+
+    movers_html = "".join(_mover_html(p, r) for p, r in movers) if movers else (
+        f'<span style="{_M}font-size:8px;color:#333">Returns pending…</span>'
+    )
+
+    col_nav, col_movers = st.columns([1, 1], gap="small")
+
+    with col_nav:
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1a1a1a;'
+            f'border-top:2px solid {_GOLD};padding:.45rem .65rem;height:100%">'
+            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:4px">Portfolio NAV</div>'
+            f'<div style="{_M}font-size:1.2rem;font-weight:700;color:{_GOLD};line-height:1.1">'
+            f'${total_usd:,.0f}</div>'
+            f'<div style="{_M}font-size:7.5px;color:#555960;margin-top:2px">'
+            f'{n} positions &nbsp;·&nbsp; as of {loaded_at}</div>'
+            f'<div style="margin-top:.5rem;padding-top:.4rem;border-top:1px solid #1a1a1a">'
+            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.16em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:3px">Est. 1-Day P&amp;L</div>'
+            f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{pl_color}">'
+            f'{pl_arrow} {pl_sign}${dollar_pl:,.0f}'
+            f'<span style="font-size:8px;margin-left:5px">{pl_sign}{port_ret:.2f}%</span>'
+            f'</div></div></div>',
+            unsafe_allow_html=True,
+        )
+
+    with col_movers:
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1a1a1a;'
+            f'border-top:2px solid #2a2a2a;padding:.45rem .65rem;height:100%">'
+            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:6px">Top Movers</div>'
+            f'{movers_html}</div>',
+            unsafe_allow_html=True,
+        )
+
+
 def _render_live_signals() -> None:
     col_straits, col_delta = st.columns([1.3, 1], gap="medium")
 
@@ -1521,6 +1730,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     # § 1  Masthead
     _render_masthead(conflict_agg)
+
+    # § 1.5  Market Pulse — macro KPI strip
+    _render_market_pulse()
+
+    # § 1.6  Portfolio Pulse — NAV + 1-day P&L (conditional on upload)
+    _render_portfolio_pulse()
 
     # § 2  Geopolitical Risk Score — DOMINANT ELEMENT
     _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
