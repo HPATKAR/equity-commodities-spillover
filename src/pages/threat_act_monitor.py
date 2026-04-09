@@ -17,6 +17,7 @@ from __future__ import annotations
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from src.ui.shared import _page_header, _page_footer
 
 
 # ── Gauge helper ──────────────────────────────────────────────────────────────
@@ -164,14 +165,9 @@ def _render_methodology() -> None:
 # ── Main page ─────────────────────────────────────────────────────────────────
 
 def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-        'color:#8E9AAA;letter-spacing:3px;text-transform:uppercase;margin:0">'
-        'INTELLIGENCE / NEWS GPR</p>'
-        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.35rem;'
-        'font-weight:700;color:#e8e9ed;margin:4px 0 16px">Threat vs Act Monitor</h2>',
-        unsafe_allow_html=True,
-    )
+    _page_header("News GPR · Threat/Act Monitor",
+                 "RSS geo-risk scoring · Threat/act classification · Conflict routing · Review queue",
+                 "INTELLIGENCE / NEWS GPR")
 
     # ── Fetch data ─────────────────────────────────────────────────────────
     try:
@@ -320,3 +316,4 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
 
     # ── Methodology ────────────────────────────────────────────────────────
     _render_methodology()
+    _page_footer()

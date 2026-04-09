@@ -23,7 +23,7 @@ from src.data.config import (
 from src.analysis.correlations import rolling_correlation
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
-    _definition_block, _takeaway_block, _page_conclusion, _page_footer, _insight_note,
+    _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer, _insight_note,
     _line_style, _EQUITY_REGIONS,
 )
 
@@ -56,13 +56,8 @@ def _vol_regime(vol_pct: float) -> tuple[str, str]:
 
 
 def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Commodities to Watch</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.7rem">Live Snapshot · Intraday Prices · Daily Historical · CFTC COT Positioning</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Commodity Watchlist",
+                 "Live Snapshot · Intraday Prices · Daily Historical · CFTC COT Positioning")
     _page_intro(
         "The commodities on this page are the primary spillover conduits into equity markets. "
         "Crude oil, gold, copper, and agricultural futures have historically led equity market "

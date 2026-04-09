@@ -15,7 +15,7 @@ from datetime import date, timedelta
 
 from src.ui.shared import (
     _style_fig, _chart, _insight_note, _definition_block,
-    _page_footer, _section_header, _regime_banner, _narrative_box, _page_intro,
+    _page_header, _page_footer, _section_header, _regime_banner, _narrative_box, _page_intro,
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
@@ -442,14 +442,8 @@ def _narrate_cross_asset(
 
 
 def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Macro Intelligence Dashboard</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.7rem">Money flows · Valuations · Bond yields · Yield spreads · '
-        'Earnings growth · GDP · High-freq indicators · Retail participation</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Global Macro Lens",
+                 "Money flows · Valuations · Bond yields · Yield spreads · Earnings growth · GDP · High-freq indicators")
     _page_intro(
         "Macro conditions determine the <em>regime</em> under which equity-commodity spillover operates. "
         "In early-cycle recoveries, equities and commodities tend to rise together - spillover is "

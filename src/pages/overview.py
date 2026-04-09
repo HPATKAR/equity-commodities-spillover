@@ -34,7 +34,7 @@ from src.analysis.risk_score import (
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion,
-    _page_footer, _add_event_bands, _insight_note,
+    _page_header, _page_footer, _add_event_bands, _insight_note,
     _data_status_bar,
 )
 from src.analysis.proactive_alerts import compute_alerts
@@ -64,25 +64,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     _hdr_col, _btn_col = st.columns([5, 1])
     with _hdr_col:
-        _logo = _logo_b64()
-        _logo_tag = (
-            f'<img src="{_logo}" alt="logo" '
-            'style="height:32px;width:auto;object-fit:contain;'
-            'flex-shrink:0;margin-right:10px;vertical-align:middle;" />'
-            if _logo else ""
-        )
-        st.markdown(
-            f'<div style="display:flex;align-items:center;margin-bottom:0.25rem">'
-            f'{_logo_tag}'
-            f'<div>'
-            f'<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-            f'font-weight:700;margin:0 0 0.1rem">Equity-Commodities Spillover Monitor</h1>'
-            f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-            f'margin:0 0 0.6rem 0">15 equity indices · 17 commodity futures · '
-            f'Correlation regimes · Geopolitical risk · Spillover signals</p>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
+        _page_header("Market Spillover Command Center",
+                     "15 equity indices · 17 commodity futures · Correlation regimes · Geopolitical risk · Spillover signals")
     with _btn_col:
         _stale_color = "#c0392b" if _stale else "#27ae60"
         st.markdown(

@@ -549,7 +549,7 @@ def plot_risk_history(
         yaxis=dict(range=[0, 100], title="Score",
                    tickvals=[0, 25, 50, 75, 100],
                    ticktext=["0", "25<br>Low", "50<br>Mod", "75<br>Elev", "100"]),
-        title=dict(text="Historical Geopolitical Risk Score", font=dict(size=11)),
+        title_text="",
         margin=dict(l=50, r=20, t=40, b=40),
     )
     return fig

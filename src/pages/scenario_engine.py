@@ -17,7 +17,7 @@ import streamlit as st
 from src.data.loader import load_returns, load_combined_returns
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
-    _definition_block, _takeaway_block,
+    _definition_block, _takeaway_block, _page_header, _page_footer,
 )
 from src.ui.agent_panel import render_agent_output_block
 from src.agents.stress_engineer import run as _run_stress_engineer
@@ -497,11 +497,8 @@ def page_scenario_engine(
     fred_key: str | None = None,
 ) -> None:
     # ── Header ────────────────────────────────────────────────────────────
-    st.markdown(
-        f'<h1 style="font-size:1.15rem;font-weight:700;color:{_GOLD};'
-        f'letter-spacing:-0.01em;margin:0 0 0.2rem">Scenario Engine</h1>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Geopolitical Scenario Simulator",
+                 "Geopolitical scenario lens · Geo multiplier · Vol multiplier · Safe-haven / short-bias overlays")
     _page_intro(
         "Forward-looking parametric shock propagation. Shock any combination of oil, gold, "
         "interest rates, the US dollar, credit spreads, or a geopolitical disruption factor "
@@ -829,3 +826,4 @@ def page_scenario_engine(
             f'Stress Engineer agent is disabled. Enable it in the AI Workforce panel.</p>',
             unsafe_allow_html=True,
         )
+    _page_footer()

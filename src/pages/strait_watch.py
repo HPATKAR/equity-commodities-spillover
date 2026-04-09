@@ -15,7 +15,7 @@ import streamlit as st
 from src.data.loader import load_all_prices
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread,
-    _page_footer, _insight_note,
+    _page_header, _page_footer, _insight_note,
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
@@ -240,12 +240,8 @@ def page_strait_watch(start: str, end: str) -> None:
     today = datetime.date.today()
 
     # ── Header ────────────────────────────────────────────────────────────────
-    st.markdown(
-        '<h1 style="margin-top:0;margin-bottom:0.1rem">Strait Watch</h1>'
-        '<p style="font-size:0.72rem;color:#8890a1;margin:0 0 0.6rem 0">'
-        '5 maritime corridors · ~51% of global oil transit · Disruption risk assessment</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Strait Watch",
+                 "5 maritime corridors · ~51% of global oil transit · Disruption risk assessment")
     _page_intro(
         "Twenty-one percent of global oil supply transits a single 33-kilometre channel. "
         "This tracker monitors disruption severity at five critical maritime chokepoints - "

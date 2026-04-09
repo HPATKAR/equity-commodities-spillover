@@ -28,7 +28,7 @@ from src.analysis.correlations import (
 from src.analysis.risk_score import risk_score_history
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
-    _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _insight_note,
 )
 
@@ -453,6 +453,411 @@ def _mini_bar(value: float, max_val: float = 100.0, color: str = "#CFB991") -> s
     )
 
 
+def _render_system_reliability(
+    n_eq_cols: int = 0,
+    n_cmd_cols: int = 0,
+    n_obs: int = 0,
+    vix_available: bool = False,
+) -> None:
+    """
+    Live system health dashboard rendered after data loading on the Model Accuracy page.
+    All checks use real availability probes - no invented metrics.
+    """
+    _F  = "font-family:'DM Sans',sans-serif;"
+    _FM = "font-family:'JetBrains Mono',monospace;"
+
+    # ── Helper: health pill ────────────────────────────────────────────────
+    def _pill(label: str, state: str) -> str:
+        """state: 'ok' | 'warn' | 'bad' | 'unknown'"""
+        c = {"ok": "#27ae60", "warn": "#e67e22", "bad": "#c0392b", "unknown": "#555960"}[state]
+        ic = {"ok": "✓", "warn": "⚠", "bad": "✗", "unknown": "?"}[state]
+        return (
+            f'<span style="background:rgba(0,0,0,0.3);border:1px solid {c};color:{c};'
+            f'{_FM}font-size:7px;padding:2px 7px;letter-spacing:0.08em;white-space:nowrap">'
+            f'{ic} {label}</span>'
+        )
+
+    # ── 1. Component availability probes ──────────────────────────────────
+    checks: dict[str, str] = {}   # name → 'ok' | 'warn' | 'bad' | 'unknown'
+    check_notes: dict[str, str] = {}
+
+    # CIS / CONFLICTS
+    try:
+        from src.data.config import CONFLICTS
+        n_conflicts = len(CONFLICTS)
+        checks["CIS Data"] = "ok"   if n_conflicts >= 3 else "warn"
+        check_notes["CIS Data"] = f"{n_conflicts} conflicts loaded"
+    except Exception as e:
+        checks["CIS Data"] = "bad"
+        check_notes["CIS Data"] = str(e)[:60]
+
+    # TPS — check if conflict_model can score
+    try:
+        from src.analysis.conflict_model import score_all_conflicts
+        _cr = score_all_conflicts()
+        has_tps = any(v.get("tps", 0) > 0 for v in _cr.values())
+        checks["TPS Model"] = "ok" if has_tps else "warn"
+        check_notes["TPS Model"] = f"{len(_cr)} conflicts scored"
+    except Exception as e:
+        checks["TPS Model"] = "bad"
+        check_notes["TPS Model"] = "import failed"
+
+    # MCS components — use actually loaded data stats
+    if n_eq_cols > 0 and n_cmd_cols > 0:
+        checks["MCS / Market Data"] = "ok"
+        check_notes["MCS / Market Data"] = f"{n_eq_cols} equity · {n_cmd_cols} commodity · {n_obs} obs"
+    elif n_eq_cols > 0 or n_cmd_cols > 0:
+        checks["MCS / Market Data"] = "warn"
+        check_notes["MCS / Market Data"] = "Partial data loaded"
+    else:
+        checks["MCS / Market Data"] = "bad"
+        check_notes["MCS / Market Data"] = "No market data loaded"
+
+    # Scenario state
+    try:
+        from src.analysis.scenario_state import get_scenario
+        _sc = get_scenario()
+        checks["Scenario State"] = "ok" if _sc.get("id") else "warn"
+        check_notes["Scenario State"] = f"Active: {_sc.get('label', '?')} · geo_mult={_sc.get('geo_mult','?')}"
+    except Exception:
+        checks["Scenario State"] = "bad"
+        check_notes["Scenario State"] = "scenario_state unavailable"
+
+    # Exposure scoring
+    try:
+        from src.data.config import SECURITY_EXPOSURE
+        n_exp = len(SECURITY_EXPOSURE)
+        checks["Exposure Scoring"] = "ok" if n_exp > 20 else "warn"
+        check_notes["Exposure Scoring"] = f"{n_exp} assets in universe"
+    except Exception:
+        checks["Exposure Scoring"] = "bad"
+        check_notes["Exposure Scoring"] = "SECURITY_EXPOSURE unavailable"
+
+    # VIX availability (passed in from caller after actual fetch)
+    checks["VIX Ground Truth"] = "ok" if vix_available else "warn"
+    check_notes["VIX Ground Truth"] = (
+        "Fetched from yfinance" if vix_available
+        else "VIX unavailable — using event-onset fallback"
+    )
+
+    # GPR / News feed
+    try:
+        from src.analysis.freshness import get_status as _gs
+        _rss = _gs("rss_headlines")
+        if _rss["status"] in ("live", "recent"):
+            checks["News / GPR Feed"] = "ok"
+        elif _rss["status"] == "warn":
+            checks["News / GPR Feed"] = "warn"
+        else:
+            checks["News / GPR Feed"] = "unknown"
+        check_notes["News / GPR Feed"] = (
+            _rss["label"] if _rss["status"] != "unknown"
+            else "RSS not fetched — keyword GPR not active"
+        )
+    except Exception:
+        checks["News / GPR Feed"] = "unknown"
+        check_notes["News / GPR Feed"] = "Not tracked this session"
+
+    # LSEG premium feed
+    try:
+        lseg_ok = st.session_state.get("_lseg_ok")
+        if lseg_ok is True:
+            checks["LSEG Premium"] = "ok"
+            check_notes["LSEG Premium"] = "Eikon session active"
+        elif lseg_ok is False:
+            checks["LSEG Premium"] = "warn"
+            check_notes["LSEG Premium"] = "Not connected — yfinance fallback"
+        else:
+            checks["LSEG Premium"] = "unknown"
+            check_notes["LSEG Premium"] = "Not attempted this session"
+    except Exception:
+        checks["LSEG Premium"] = "unknown"
+        check_notes["LSEG Premium"] = ""
+
+    n_bad   = sum(1 for s in checks.values() if s == "bad")
+    n_warn  = sum(1 for s in checks.values() if s == "warn")
+    n_ok    = sum(1 for s in checks.values() if s == "ok")
+    overall = "bad" if n_bad > 0 else "warn" if n_warn > 0 else "ok"
+    overall_labels = {"ok": ("ALL SYSTEMS NOMINAL", "#27ae60"),
+                      "warn": ("PARTIAL — WARNINGS ACTIVE", "#e67e22"),
+                      "bad": ("DEGRADED — FAILURES DETECTED", "#c0392b")}
+    ov_label, ov_color = overall_labels[overall]
+
+    # ── 2. Freshness status ────────────────────────────────────────────────
+    try:
+        from src.analysis.freshness import all_statuses
+        freshness_data = all_statuses()
+    except Exception:
+        freshness_data = {}
+
+    n_stale   = sum(1 for v in freshness_data.values() if v["status"] == "stale")
+    n_unknown = sum(1 for v in freshness_data.values() if v["status"] == "unknown")
+    n_live    = sum(1 for v in freshness_data.values() if v["status"] in ("live", "recent"))
+
+    # ── 3. Agent state ─────────────────────────────────────────────────────
+    try:
+        from src.analysis.agent_state import init_agents, AGENTS, pending_count
+        init_agents()
+        _agents_raw = st.session_state.get("agents", {})
+        _pending = pending_count()
+    except Exception:
+        _agents_raw = {}
+        _pending = 0
+        AGENTS = {}
+
+    n_agents_with_output = sum(
+        1 for v in _agents_raw.values() if v.get("last_output")
+    )
+    n_agents_idle = len(_agents_raw) - n_agents_with_output
+
+    # ── Render ─────────────────────────────────────────────────────────────
+    st.markdown(
+        f'<div style="border:1px solid {ov_color};border-left:3px solid {ov_color};'
+        f'background:#0d0d0d;padding:0.5rem 0.85rem;margin-bottom:0.8rem;'
+        f'display:flex;align-items:center;gap:12px">'
+        f'<span style="{_FM}font-size:8px;font-weight:700;color:{ov_color};'
+        f'letter-spacing:0.15em">SYSTEM STATUS: {ov_label}</span>'
+        f'<span style="{_FM}font-size:7px;color:#555960;margin-left:auto">'
+        f'{n_ok} ok · {n_warn} warn · {n_bad} fail · '
+        f'{n_live} sources live · {n_stale + n_unknown} stale/unknown</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Signal Reliability KPI strip ───────────────────────────────────────
+    st.markdown(
+        f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.15em;color:#8890a1;margin:0.5rem 0 0.4rem">Signal Reliability</p>',
+        unsafe_allow_html=True,
+    )
+
+    def _rel_kpi(col, label, value, sub, col_val="#e8e8e8"):
+        col.markdown(
+            f'<div style="border:1px solid #1e1e1e;background:#0d0d0d;padding:0.5rem 0.7rem">'
+            f'<div style="{_FM}font-size:6.5px;color:#555960;letter-spacing:0.12em;'
+            f'text-transform:uppercase;margin-bottom:3px">{label}</div>'
+            f'<div style="{_F}font-size:0.9rem;font-weight:700;color:{col_val};line-height:1.1">{value}</div>'
+            f'<div style="{_FM}font-size:6.5px;color:#8890a1;margin-top:3px">{sub}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    r1, r2, r3, r4, r5 = st.columns(5)
+
+    # Geo risk confidence — from risk_score module
+    try:
+        from src.analysis.risk_score import compute_risk_score
+        from src.data.loader import load_returns as _lr_rel
+        _eq_rel, _cmd_rel = _lr_rel(
+            str((st.session_state.get("start_date", "2020-01-01"))),
+            str((st.session_state.get("end_date",   "2024-12-31"))),
+        )
+        from src.analysis.correlations import average_cross_corr_series as _acs_rel
+        _ac_rel = _acs_rel(_eq_rel, _cmd_rel, window=60)
+        _rs_rel = compute_risk_score(_ac_rel, _cmd_rel, _eq_rel)
+        _conf_rel = float(_rs_rel.get("confidence", 0))
+        _conf_col = "#27ae60" if _conf_rel >= 0.65 else "#e67e22" if _conf_rel >= 0.45 else "#c0392b"
+        _rel_kpi(r1, "Geo Risk Confidence", f"{_conf_rel*100:.0f}%",
+                 f"Score: {_rs_rel.get('score',0):.0f}/100", _conf_col)
+    except Exception:
+        _rel_kpi(r1, "Geo Risk Confidence", "–", "not computed", "#555960")
+
+    # Conflict model
+    _cm_state = checks.get("TPS Model", "unknown")
+    _cm_col = {"ok": "#27ae60", "warn": "#e67e22", "bad": "#c0392b", "unknown": "#555960"}[_cm_state]
+    _rel_kpi(r2, "Conflict Model", _cm_state.upper(),
+             check_notes.get("TPS Model", ""), _cm_col)
+
+    # MCS / market data
+    _mcs_state = checks.get("MCS / Market Data", "unknown")
+    _mcs_col = {"ok": "#27ae60", "warn": "#e67e22", "bad": "#c0392b", "unknown": "#555960"}[_mcs_state]
+    _rel_kpi(r3, "Market Signals (MCS)", _mcs_state.upper(),
+             check_notes.get("MCS / Market Data", ""), _mcs_col)
+
+    # Data freshness roll-up
+    _fresh_pct = int(n_live / max(len(freshness_data), 1) * 100)
+    _fresh_col = "#27ae60" if _fresh_pct >= 75 else "#e67e22" if _fresh_pct >= 40 else "#c0392b"
+    _rel_kpi(r4, "Data Freshness",
+             f"{_fresh_pct}%",
+             f"{n_live} live · {n_stale} stale · {n_unknown} untracked",
+             _fresh_col)
+
+    # Active warnings
+    _warn_total = n_bad + n_warn + n_stale
+    _warn_col = "#c0392b" if _warn_total >= 3 else "#e67e22" if _warn_total >= 1 else "#27ae60"
+    _rel_kpi(r5, "Active Warnings", str(_warn_total),
+             f"{_pending} pending agent review", _warn_col)
+
+    # ── Core Methodology Health ────────────────────────────────────────────
+    st.markdown(
+        f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.15em;color:#8890a1;margin:0.8rem 0 0.4rem">Methodology Health</p>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.8rem">'
+        + "".join(
+            _pill(f"{name} · {check_notes.get(name,'')[:35]}", state)
+            for name, state in checks.items()
+        )
+        + '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Data Integrity table ───────────────────────────────────────────────
+    if freshness_data:
+        st.markdown(
+            f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.15em;color:#8890a1;margin:0.2rem 0 0.35rem">Data Source Integrity</p>',
+            unsafe_allow_html=True,
+        )
+        _src_display = {
+            "yfinance_prices":  "Equity / Commodity Prices",
+            "yfinance_vix":     "VIX (Volatility Index)",
+            "fred_macro":       "FRED Macro Indicators",
+            "rss_headlines":    "News / RSS Headlines",
+            "conflict_manual":  "Conflict Intensity (Manual)",
+            "cot_positioning":  "CFTC COT Positioning",
+            "fred_spreads":     "Credit Spreads (FRED)",
+            "risk_score":       "Geo Risk Score (Computed)",
+            "conflict_model":   "Conflict Model Output",
+        }
+        _status_icons = {
+            "live":    ("●", "#27ae60"),
+            "recent":  ("●", "#CFB991"),
+            "warn":    ("●", "#e67e22"),
+            "stale":   ("●", "#c0392b"),
+            "unknown": ("○", "#555960"),
+        }
+        rows_html = ""
+        for src, fd in freshness_data.items():
+            _s = fd["status"]
+            _ic, _ic_col = _status_icons.get(_s, ("○", "#555960"))
+            _note = ""
+            if _s == "unknown":
+                _note = "Not fetched this session"
+            elif _s == "stale":
+                _note = "Check data pipeline"
+            elif _s == "warn":
+                _note = "Approaching staleness"
+            rows_html += (
+                f'<tr>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7.5px;color:{_ic_col}">{_ic}</td>'
+                f'<td style="padding:3px 8px;{_F}font-size:0.68rem;color:#e8e8e8">'
+                f'{_src_display.get(src, src)}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:{_ic_col};'
+                f'text-transform:uppercase;letter-spacing:0.08em">{_s}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#8890a1">{fd["label"]}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#555960">{_note}</td>'
+                f'</tr>'
+            )
+        st.markdown(
+            f'<table style="width:100%;border-collapse:collapse;background:#0d0d0d;'
+            f'border:1px solid #1e1e1e;margin-bottom:0.8rem">'
+            f'<thead><tr>'
+            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e"></th>'
+            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Source</th>'
+            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Status</th>'
+            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Last Seen</th>'
+            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Note</th>'
+            f'</tr></thead>'
+            f'<tbody>{rows_html}</tbody></table>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Agent Reliability ──────────────────────────────────────────────────
+    if _agents_raw:
+        st.markdown(
+            f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.15em;color:#8890a1;margin:0.2rem 0 0.1rem">'
+            f'Agent Reliability · {n_agents_with_output}/{len(_agents_raw)} agents active'
+            f'{f" · {_pending} pending review" if _pending else ""}</p>'
+            f'<p style="{_FM}font-size:6.5px;color:#444c5c;margin:0 0 0.35rem">'
+            f'Agents fire on their respective pages when API keys are configured in secrets.toml. '
+            f'Idle = not yet triggered this session.</p>',
+            unsafe_allow_html=True,
+        )
+        _ag_rows = ""
+        for aid, ameta in AGENTS.items() if AGENTS else []:
+            _astate = _agents_raw.get(aid, {})
+            _has_out = bool(_astate.get("last_output"))
+            _conf = _astate.get("confidence")
+            _last = _astate.get("last_run")
+            _status = _astate.get("status", "idle")
+            _enabled = _astate.get("enabled", True)
+            _state_col = "#27ae60" if _has_out else "#555960"
+            _out_label = "Real output" if _has_out else "No output yet"
+            _conf_str = f"{_conf*100:.0f}%" if isinstance(_conf, float) else "–"
+            _last_str = _last.strftime("%H:%M") if _last else "never"
+            _status_col = (
+                "#27ae60" if _status == "monitoring"
+                else "#e67e22" if _status in ("investigating", "awaiting_approval")
+                else "#c0392b" if _status in ("escalated",)
+                else "#555960"
+            )
+            _ag_rows += (
+                f'<tr style="border-bottom:1px solid #111">'
+                f'<td style="padding:3px 8px;{_FM}font-size:8px;font-weight:700;'
+                f'color:{ameta.get("color","#8890a1")}">{ameta.get("icon","?")}</td>'
+                f'<td style="padding:3px 8px;{_F}font-size:0.68rem;color:#e8e8e8">'
+                f'{ameta.get("short","?")}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:{_state_col}">'
+                f'{_out_label}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#CFB991">{_conf_str}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#555960">{_last_str}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:{_status_col};'
+                f'text-transform:uppercase;letter-spacing:0.06em">'
+                f'{"DISABLED" if not _enabled else _status}</td>'
+                f'</tr>'
+            )
+        if _ag_rows:
+            st.markdown(
+                f'<table style="width:100%;border-collapse:collapse;background:#0d0d0d;'
+                f'border:1px solid #1e1e1e;margin-bottom:0.8rem">'
+                f'<thead><tr>'
+                + "".join(
+                    f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+                    f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">{h}</th>'
+                    for h in ["", "Agent", "Output", "Confidence", "Last Run", "Status"]
+                )
+                + f'</tr></thead><tbody>{_ag_rows}</tbody></table>',
+                unsafe_allow_html=True,
+            )
+
+    # ── Honest limitations ─────────────────────────────────────────────────
+    _LIMITATIONS = [
+        ("Conflict intensity scores", "Manually set parameters — not ML-calibrated or back-tested"),
+        ("Market Confirmation Score", "EWM z-scores only; no tick-level or options flow data"),
+        ("COT positioning", "Reported weekly with ~3d lag; current session may not have fetched"),
+        ("News/GPR feed", "RSS keyword matching, not semantic NLP or LLM sentiment"),
+        ("Confidence overlay", "Heuristic blend of component agreement — not probabilistically calibrated"),
+        ("Regime detection", "Rule-based threshold on composite stress index; walk-forward ML is optional"),
+        ("LSEG premium data", "Requires local Eikon/Workspace — defaults to yfinance if unavailable"),
+        ("Exposure betas", "Structural exposure is analyst-assigned; no empirical regression to conflict events"),
+    ]
+    with st.expander("Known Limitations & Honest Gaps", expanded=False):
+        st.markdown(
+            f'<p style="{_FM}font-size:7px;color:#e67e22;letter-spacing:0.10em;'
+            f'text-transform:uppercase;margin-bottom:6px">What this dashboard does NOT do</p>'
+            + '<table style="width:100%;border-collapse:collapse">'
+            + "".join(
+                f'<tr><td style="padding:3px 10px 3px 0;{_FM}font-size:7.5px;color:#CFB991;'
+                f'white-space:nowrap;vertical-align:top">{name}</td>'
+                f'<td style="padding:3px 0;{_F}font-size:0.68rem;color:#8890a1">{note}</td></tr>'
+                for name, note in _LIMITATIONS
+            )
+            + '</table>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div style="border-top:1px solid #1e1e1e;margin:0.4rem 0 0.9rem"></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _signal_card(col, title, primary_metric, primary_label,
                  secondary_metric, badge_val, badge_threshold, badge_label,
                  sub_metrics: "list[tuple[str,float,str]] | None" = None):
@@ -534,13 +939,8 @@ def _signal_card(col, title, primary_metric, primary_label,
 def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     _F = "font-family:'DM Sans',sans-serif;"
 
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Signal Performance Review</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.7rem">Regime Detection &middot; Granger Lead-Lag &middot; Risk Score vs VIX &middot; COT Contrarian</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Model Signal Audit",
+                 "Regime Detection · Granger Lead-Lag · Risk Score vs VIX · COT Contrarian")
     _page_intro(
         "The spillover and correlation signals in this dashboard are only credible if they hold up "
         "out-of-sample. <strong>This page provides that validation.</strong> "
@@ -559,6 +959,13 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         st.error("Market data unavailable.")
         return
 
+    # Record successful fetches so freshness registry is populated before the dashboard renders
+    from src.analysis.freshness import record_fetch as _rf
+    if not eq_r.empty:
+        _rf("yfinance_prices")
+    if not cmd_r.empty:
+        _rf("conflict_model")
+
     with st.spinner("Building composite stress index…"):
         avg_corr   = average_cross_corr_series(eq_r, cmd_r, window=60)
         stress_idx = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
@@ -570,13 +977,24 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
     with st.spinner("Loading VIX ground truth…"):
         vix_mask     = _vix_ground_truth(regimes.index, threshold=25.0)
+    if vix_mask is not None:
+        _rf("yfinance_vix")
     ground_truth = vix_mask if vix_mask is not None else _event_onset_mask(regimes.index, GEOPOLITICAL_EVENTS)
     stats        = _regime_classification_stats(regimes, ground_truth)
 
     with st.spinner("Computing risk score…"):
         score_hist = risk_score_history(avg_corr, cmd_r, eq_r=eq_r)
+    _rf("risk_score")
     _, r2   = _risk_score_vs_vix(score_hist, cmd_r)
     r2_pct  = round((r2 or 0.0) * 100, 1)
+
+    # Render live system health NOW — freshness registry has real data
+    _render_system_reliability(
+        n_eq_cols=len(eq_r.columns),
+        n_cmd_cols=len(cmd_r.columns),
+        n_obs=len(eq_r),
+        vix_available=vix_mask is not None,
+    )
 
     # ── Signal scorecards ───────────────────────────────────────────────────
     st.markdown(

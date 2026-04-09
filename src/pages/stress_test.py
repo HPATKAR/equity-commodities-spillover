@@ -20,7 +20,7 @@ from src.data.loader import (
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
-    _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
 )
 
 
@@ -97,11 +97,8 @@ def _event_stats(
 # ── Page ───────────────────────────────────────────────────────────────────
 
 def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.3rem">Portfolio Stress Tester</h1>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Stress Lab",
+                 "Scenario shocks · Drawdown simulation · Tail risk · Cross-asset correlation stress")
     _page_intro(
         "The core finding of spillover research is that equity-commodity correlation spikes during "
         "crises - precisely when diversification is most needed. A portfolio built assuming low "

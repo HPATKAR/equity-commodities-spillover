@@ -1380,17 +1380,17 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     <li class="ni" id="gm">
       <span class="lnk">Macro <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="macro_dashboard" class="{'active' if current=='macro_dashboard' else ''}">Macro Intelligence Dashboard</a></li>
+        <li><a data-pg="macro_dashboard" class="{'active' if current=='macro_dashboard' else ''}">Global Macro Lens</a></li>
       </ul>
     </li>
 
     <li class="ni" id="ga">
       <span class="lnk">Analysis <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="correlation"    class="{'active' if current=='correlation' else ''}">Correlation Analysis</a></li>
-        <li><a data-pg="spillover"      class="{'active' if current=='spillover' else ''}">Spillover Analytics</a></li>
-        <li><a data-pg="geopolitical"   class="{'active' if current=='geopolitical' else ''}">Geopolitical Triggers</a></li>
-        <li><a data-pg="war_impact_map" class="{'active' if current=='war_impact_map' else ''}">War Impact Map</a></li>
+        <li><a data-pg="correlation"    class="{'active' if current=='correlation' else ''}">Cross-Asset Correlation</a></li>
+        <li><a data-pg="spillover"      class="{'active' if current=='spillover' else ''}">Spillover Network</a></li>
+        <li><a data-pg="geopolitical"   class="{'active' if current=='geopolitical' else ''}">Geopolitical Event Impact</a></li>
+        <li><a data-pg="war_impact_map" class="{'active' if current=='war_impact_map' else ''}">Global Conflict Risk Map</a></li>
         <li><a data-pg="strait_watch"   class="{'active' if current=='strait_watch' else ''}">Strait Watch</a></li>
       </ul>
     </li>
@@ -1398,41 +1398,41 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     <li class="ni" id="gintel">
       <span class="lnk">Intelligence <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="conflict_intelligence" class="{'active' if current=='conflict_intelligence' else ''}">Conflict Intelligence</a></li>
-        <li><a data-pg="threat_act_monitor"    class="{'active' if current=='threat_act_monitor' else ''}">Threat &amp; Act Monitor</a></li>
-        <li><a data-pg="transmission_matrix"   class="{'active' if current=='transmission_matrix' else ''}">Transmission Matrix</a></li>
-        <li><a data-pg="exposure_scoring"      class="{'active' if current=='exposure_scoring' else ''}">Exposure Scoring</a></li>
+        <li><a data-pg="conflict_intelligence" class="{'active' if current=='conflict_intelligence' else ''}">Conflict Intelligence Center</a></li>
+        <li><a data-pg="threat_act_monitor"    class="{'active' if current=='threat_act_monitor' else ''}">News GPR · Threat/Act Monitor</a></li>
+        <li><a data-pg="transmission_matrix"   class="{'active' if current=='transmission_matrix' else ''}">Market Transmission Matrix</a></li>
+        <li><a data-pg="exposure_scoring"      class="{'active' if current=='exposure_scoring' else ''}">Asset Exposure Engine</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gs">
       <span class="lnk">Strategy <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="trade_ideas" class="{'active' if current=='trade_ideas' else ''}">Trade Ideas</a></li>
-        <li><a data-pg="stress_test" class="{'active' if current=='stress_test' else ''}">Portfolio Stress Test</a></li>
-        <li><a data-pg="scenario_engine" class="{'active' if current=='scenario_engine' else ''}">Scenario Engine</a></li>
+        <li><a data-pg="trade_ideas" class="{'active' if current=='trade_ideas' else ''}">Structured Trade Ideas</a></li>
+        <li><a data-pg="stress_test" class="{'active' if current=='stress_test' else ''}">Stress Lab</a></li>
+        <li><a data-pg="scenario_engine" class="{'active' if current=='scenario_engine' else ''}">Geopolitical Scenario Simulator</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gmon">
       <span class="lnk">Monitor <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="watchlist" class="{'active' if current=='watchlist' else ''}">Commodities Watchlist</a></li>
+        <li><a data-pg="watchlist" class="{'active' if current=='watchlist' else ''}">Commodity Watchlist</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gr">
       <span class="lnk">Research <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Performance Review</a></li>
-        <li><a data-pg="ai_chat"        class="{'active' if current=='ai_chat' else ''}">AI Analyst</a></li>
+        <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Model Signal Audit</a></li>
+        <li><a data-pg="ai_chat"        class="{'active' if current=='ai_chat' else ''}">AI Research Desk</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gin">
       <span class="lnk">Insights <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="insights" class="{'active' if current=='insights' else ''}">Actionable Insights</a></li>
+        <li><a data-pg="insights" class="{'active' if current=='insights' else ''}">Intelligence Briefing</a></li>
       </ul>
     </li>
 
@@ -1442,7 +1442,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         <li><a data-pg="about_heramb"       class="{'active' if current=='about_heramb' else ''}">Heramb S. Patkar</a></li>
         <li><a data-pg="about_jiahe"        class="{'active' if current=='about_jiahe' else ''}">Jiahe Miao</a></li>
         <li><a data-pg="about_ilian"        class="{'active' if current=='about_ilian' else ''}">Ilian Zalomai</a></li>
-        <li><a data-pg="about_ai_workforce" class="{'active' if current=='about_ai_workforce' else ''}">AI Workforce</a></li>
+        <li><a data-pg="about_ai_workforce" class="{'active' if current=='about_ai_workforce' else ''}">AI Agent Team</a></li>
       </ul>
     </li>
   </ul>

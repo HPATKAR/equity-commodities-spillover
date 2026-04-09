@@ -5,7 +5,7 @@ Per-conflict scorecard grid — one card per conflict showing:
   CIS, TPS, confidence, trend, state, freshness
 
 Detailed drill-down for selected conflict:
-  - Intensity dimension breakdown (radar/bar)
+  - Intensity dimension breakdown (bar)
   - Transmission pressure heatmap (conflicts × channels)
   - Top affected assets table
   - Live news headlines (Threat/Act classified)
@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from src.ui.shared import _page_header, _page_footer
 
 from src.analysis.conflict_model import (
     score_all_conflicts,
@@ -65,260 +66,148 @@ def _freshness_color(label: str) -> str:
 def _render_scorecard_grid(results: dict) -> str | None:
     """
     Render conflict scorecards in a 3-column grid.
-    Returns the selected conflict_id from radio, or None.
+    Returns the selected conflict_id.
     """
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;text-transform:uppercase;'
-        'margin-bottom:0.4rem">CONFLICT SCORECARD GRID</p>',
-        unsafe_allow_html=True,
-    )
+    ids = list(results.keys())
+    if not ids:
+        return None
 
-    # Sort by CIS descending
-    ranked = sorted(results.values(), key=lambda r: r["cis"], reverse=True)
-    n = len(ranked)
-    cols_per_row = 3
+    # ── Selection state ────────────────────────────────────────────────────
+    if "ci_selected" not in st.session_state or st.session_state.ci_selected not in ids:
+        st.session_state.ci_selected = ids[0]
 
-    selected_id = st.session_state.get("ci_selected_conflict",
-                                        ranked[0]["id"] if ranked else None)
+    # ── Render cards in groups of 3 ────────────────────────────────────────
+    for row_start in range(0, len(ids), 3):
+        row_ids = ids[row_start:row_start + 3]
+        cols = st.columns(len(row_ids))
 
-    for row_start in range(0, n, cols_per_row):
-        batch = ranked[row_start: row_start + cols_per_row]
-        cols  = st.columns(len(batch))
-        for col, r in zip(cols, batch):
+        for col, cid in zip(cols, row_ids):
+            r = results[cid]
+            is_selected = (cid == st.session_state.ci_selected)
+            border_color = r["color"] if is_selected else "#2a2a2a"
+            bg_color     = "#0f0f0f" if is_selected else "#0a0a0a"
+            state_lbl, state_col = _state_badge(r["state"])
+            trend_sym = _trend_marker(r["trend"])
+            trend_col = {"rising": "#c0392b", "stable": "#8E9AAA", "falling": "#27ae60"}.get(r["trend"], "#8E9AAA")
+
             with col:
-                state_text, state_col = _state_badge(r["state"])
-                cis_col  = _cis_color(r["cis"])
-                tps_col  = _tps_color(r["tps"])
-                trend    = _trend_marker(r["trend"])
-                fresh_col = _freshness_color(r.get("freshness", "aging"))
-                is_sel   = (r["id"] == selected_id)
-                border   = f"1px solid {r['color']}" if is_sel else "1px solid #2a2a2a"
-
-                card_html = (
-                    f'<div style="background:#0d0d0d;border:{border};'
-                    f'padding:10px 12px;cursor:pointer">'
-                    # Header row
-                    f'<div style="display:flex;justify-content:space-between;'
-                    f'align-items:center;margin-bottom:6px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:9px;font-weight:700;color:{r["color"]}">'
-                    f'{r["label"]}</span>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:7px;color:{state_col};border:1px solid {state_col};'
-                    f'padding:1px 4px">{state_text}</span>'
+                st.markdown(
+                    f'<div style="border:1px solid {border_color};border-top:3px solid {r["color"]};'
+                    f'background:{bg_color};padding:.7rem .9rem;border-radius:0;">'
+                    # Label + state badge
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+                    f'color:{r["color"]}">{r["label"]}</span>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;font-weight:700;'
+                    f'color:{state_col};border:1px solid {state_col};padding:1px 5px">{state_lbl}</span>'
                     f'</div>'
                     # Name
-                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
-                    f'color:#c8cdd8;margin-bottom:8px;line-height:1.3">'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:600;'
+                    f'color:#e8e9ed;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
                     f'{r["name"]}</div>'
-                    # CIS / TPS
-                    f'<div style="display:flex;gap:16px;margin-bottom:4px">'
-                    f'<div>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:7px;color:#555960">CIS</span><br>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:16px;font-weight:700;color:{cis_col}">'
-                    f'{r["cis"]:.0f}</span>'
-                    f'</div>'
-                    f'<div>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:7px;color:#555960">TPS</span><br>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:16px;font-weight:700;color:{tps_col}">'
-                    f'{r["tps"]:.0f}</span>'
-                    f'</div>'
-                    f'<div>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:7px;color:#555960">CONF</span><br>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:16px;font-weight:700;color:#8E9AAA">'
-                    f'{r["confidence"]:.0%}</span>'
-                    f'</div>'
+                    # CIS / TPS scores
+                    f'<div style="display:flex;gap:10px;margin-bottom:5px">'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">CIS</span><br>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;'
+                    f'color:{_cis_color(r["cis"])}">{r["cis"]:.0f}</span></div>'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">TPS</span><br>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;'
+                    f'color:{_tps_color(r["tps"])}">{r["tps"]:.0f}</span></div>'
+                    f'<div style="margin-left:auto;text-align:right">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">CONF</span><br>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#CFB991">'
+                    f'{r["confidence"]:.0%}</span></div>'
                     f'</div>'
                     # Trend + freshness
-                    f'<div style="display:flex;justify-content:space-between;'
-                    f'margin-top:4px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:8px;color:{cis_col}">{trend} {r["trend"].upper()}</span>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:7px;color:{fresh_col}">'
-                    f'{r.get("freshness","aging").upper()}</span>'
+                    f'<div style="display:flex;justify-content:space-between;margin-top:3px">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+                    f'color:{trend_col}">{trend_sym} {r["trend"].upper()}</span>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'color:{_freshness_color(r["freshness"])}">{r["freshness"].upper()}</span>'
                     f'</div>'
-                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
                 )
-                st.markdown(card_html, unsafe_allow_html=True)
-
-                if st.button(
-                    f"{'▶ ' if is_sel else ''}Select",
-                    key=f"ci_sel_{r['id']}",
-                    use_container_width=True,
-                ):
-                    st.session_state["ci_selected_conflict"] = r["id"]
-                    selected_id = r["id"]
+                if st.button("Select", key=f"ci_sel_{cid}", use_container_width=True):
+                    st.session_state.ci_selected = cid
                     st.rerun()
 
-    return selected_id
-
-
-# ── Transmission heatmap ──────────────────────────────────────────────────────
-
-def _render_transmission_heatmap(results: dict) -> None:
-    """Conflicts × channels transmission pressure heatmap."""
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
-        'TRANSMISSION PRESSURE HEATMAP</p>',
-        unsafe_allow_html=True,
-    )
-
-    _CHANNELS = [
-        "oil_gas", "metals", "agriculture", "shipping", "chokepoint",
-        "sanctions", "equity_sector", "fx", "inflation",
-        "supply_chain", "credit", "energy_infra",
-    ]
-    _CH_LABELS = [
-        "Oil/Gas", "Metals", "Agri", "Shipping", "Chokepoint",
-        "Sanctions", "Equity", "FX", "Inflation",
-        "Supply Chain", "Credit", "Infra",
-    ]
-
-    ranked = sorted(results.values(), key=lambda r: r["cis"], reverse=True)
-    conflict_labels = [r["label"] for r in ranked]
-
-    from src.data.config import CONFLICTS
-    conf_map = {c["id"]: c for c in CONFLICTS}
-
-    z_data = []
-    for r in ranked:
-        conf = conf_map.get(r["id"], {})
-        tx   = conf.get("transmission", {})
-        row  = [float(tx.get(ch, 0.0)) for ch in _CHANNELS]
-        z_data.append(row)
-
-    z  = np.array(z_data)
-    fig = go.Figure(go.Heatmap(
-        z=z,
-        x=_CH_LABELS,
-        y=conflict_labels,
-        colorscale=[
-            [0.00, "#0d0d0d"],
-            [0.15, "#1a1f2e"],
-            [0.35, "#2c3a5a"],
-            [0.55, "#8E6F3E"],
-            [0.75, "#e67e22"],
-            [1.00, "#c0392b"],
-        ],
-        zmin=0, zmax=1,
-        text=[[f"{v:.2f}" for v in row] for row in z_data],
-        texttemplate="%{text}",
-        textfont=dict(size=7, family="JetBrains Mono, monospace"),
-        hoverongaps=False,
-        showscale=True,
-        colorbar=dict(
-            thickness=8, len=0.7,
-            tickfont=dict(size=7, family="JetBrains Mono, monospace"),
-            title=dict(text="", side="right"),
-        ),
-    ))
-    fig.update_layout(
-        height=220,
-        margin=dict(l=10, r=40, t=10, b=60),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(
-            tickfont=dict(size=7.5, family="JetBrains Mono, monospace"),
-            tickangle=-35,
-        ),
-        yaxis=dict(
-            tickfont=dict(size=8, family="JetBrains Mono, monospace"),
-            autorange="reversed",
-        ),
-    )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    return st.session_state.ci_selected
 
 
 # ── Intensity dimension breakdown ─────────────────────────────────────────────
 
-def _render_intensity_breakdown(conflict_id: str, result: dict) -> None:
-    """Horizontal bar chart of CIS dimension contributions for selected conflict."""
+def _render_intensity_breakdown(selected_id: str, selected: dict) -> None:
+    """
+    Horizontal bar chart of CIS intensity dimensions.
+    Uses the 7 standard CIS dimensions, pulling values from the CONFLICTS registry.
+    """
     from src.data.config import CONFLICTS
-    from src.analysis.conflict_model import _CIS_WEIGHTS, _ESCALATION_MAP, _recency_score
 
-    conf = next((c for c in CONFLICTS if c["id"] == conflict_id), None)
-    if conf is None:
+    conflict_raw = next((c for c in CONFLICTS if c["id"] == selected_id), None)
+    if conflict_raw is None:
+        st.caption("No dimension data.")
         return
 
+    from src.analysis.conflict_model import _ESCALATION_MAP, _recency_score
+
     dims = {
-        "Deadliness":          float(conf.get("deadliness",           0.5)),
-        "Civilian Danger":     float(conf.get("civilian_danger",      0.5)),
-        "Geo Diffusion":       float(conf.get("geographic_diffusion", 0.3)),
-        "Fragmentation":       float(conf.get("fragmentation",        0.2)),
-        "Escalation Trend":    _ESCALATION_MAP.get(
-                                    conf.get("escalation_trend", "stable"), 0.5),
-        "Recency":             _recency_score(conf),
-        "Source Coverage":     float(conf.get("source_coverage",      0.7)),
-    }
-    wt_keys = {
-        "Deadliness":          "deadliness",
-        "Civilian Danger":     "civilian_danger",
-        "Geo Diffusion":       "geographic_diffusion",
-        "Fragmentation":       "fragmentation",
-        "Escalation Trend":    "escalation_trend",
-        "Recency":             "recency",
-        "Source Coverage":     "source_coverage",
+        "Deadliness":           float(conflict_raw.get("deadliness",           0.5)),
+        "Civilian Danger":      float(conflict_raw.get("civilian_danger",      0.5)),
+        "Geo Diffusion":        float(conflict_raw.get("geographic_diffusion", 0.3)),
+        "Fragmentation":        float(conflict_raw.get("fragmentation",        0.2)),
+        "Escalation Trend":     _ESCALATION_MAP.get(
+                                    conflict_raw.get("escalation_trend", "stable"), 0.5),
+        "Recency":              _recency_score(conflict_raw),
+        "Source Coverage":      float(conflict_raw.get("source_coverage",      0.7)),
     }
 
-    labels   = list(dims.keys())
-    values   = [dims[k] for k in labels]
-    weights  = [_CIS_WEIGHTS.get(wt_keys[k], 0) for k in labels]
-    weighted = [v * w * 100 for v, w in zip(values, weights)]
-
+    labels = list(dims.keys())[::-1]
+    values = [dims[k] for k in labels]
     bar_colors = [
-        "#c0392b" if v >= 0.75 else "#e67e22" if v >= 0.45 else "#8E9AAA"
+        "#c0392b" if v >= 0.7 else "#e67e22" if v >= 0.45 else "#CFB991" if v >= 0.25 else "#8E9AAA"
         for v in values
     ]
 
     fig = go.Figure(go.Bar(
-        x=weighted,
-        y=labels,
-        orientation="h",
-        marker=dict(color=bar_colors, line=dict(width=0)),
-        text=[f"{v:.1f}  (raw {r:.2f})" for v, r in zip(weighted, values)],
+        x=values, y=labels, orientation="h",
+        marker_color=bar_colors,
+        text=[f"{v:.2f}" for v in values],
         textposition="outside",
-        textfont=dict(size=8, family="JetBrains Mono, monospace", color="#8E9AAA"),
-        hovertemplate="%{y}: weighted=%{x:.1f}<extra></extra>",
+        textfont=dict(family="JetBrains Mono, monospace", size=9, color="#8E9AAA"),
+        hovertemplate="%{y}: %{x:.2f}<extra></extra>",
     ))
     fig.update_layout(
-        height=230,
-        margin=dict(l=10, r=80, t=10, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(
-            range=[0, max(weighted) * 1.35 if weighted else 30],
-            tickfont=dict(size=7, family="JetBrains Mono, monospace"),
-            showgrid=True, gridcolor="#1e1e1e",
-        ),
-        yaxis=dict(
-            tickfont=dict(size=8, family="JetBrains Mono, monospace"),
-            autorange="reversed",
-        ),
-        bargap=0.28,
+        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        margin=dict(l=10, r=40, t=10, b=10),
+        height=220,
+        xaxis=dict(range=[0, 1.15], tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                   gridcolor="#1e1e1e", showgrid=True),
+        yaxis=dict(tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+                   showgrid=False),
+        showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
-# ── TPS channel breakdown for selected conflict ───────────────────────────────
+# ── TPS channel breakdown ─────────────────────────────────────────────────────
 
-def _render_tps_channels(conflict_id: str) -> None:
+def _render_tps_channels(selected_id: str) -> None:
+    """
+    Horizontal bar chart of TPS transmission channel weights for the selected conflict.
+    """
     from src.data.config import CONFLICTS
-    from src.analysis.conflict_model import _TPS_WEIGHTS
 
-    conf = next((c for c in CONFLICTS if c["id"] == conflict_id), None)
-    if conf is None:
+    conflict_raw = next((c for c in CONFLICTS if c["id"] == selected_id), None)
+    if conflict_raw is None:
+        st.caption("No transmission data.")
         return
 
-    tx = conf.get("transmission", {})
+    tx = conflict_raw.get("transmission", {})
+    if not tx:
+        st.caption("No transmission channels defined.")
+        return
+
     _CH_LABELS = {
         "oil_gas": "Oil/Gas", "metals": "Metals", "agriculture": "Agriculture",
         "shipping": "Shipping", "chokepoint": "Chokepoint", "sanctions": "Sanctions",
@@ -326,137 +215,243 @@ def _render_tps_channels(conflict_id: str) -> None:
         "supply_chain": "Supply Chain", "credit": "Credit", "energy_infra": "Energy Infra",
     }
 
-    channels = list(_TPS_WEIGHTS.keys())
-    vals     = [float(tx.get(ch, 0.0)) for ch in channels]
-    weighted = [v * _TPS_WEIGHTS[ch] * 100 for v, ch in zip(vals, channels)]
-    labels   = [_CH_LABELS.get(ch, ch) for ch in channels]
-
-    # Sort by weighted contribution desc
-    order = sorted(range(len(weighted)), key=lambda i: weighted[i], reverse=True)
-    labels_s   = [labels[i]   for i in order]
-    vals_s     = [vals[i]     for i in order]
-    weighted_s = [weighted[i] for i in order]
+    sorted_tx = sorted(tx.items(), key=lambda x: x[1])
+    channels = [_CH_LABELS.get(k, k) for k, _ in sorted_tx]
+    weights  = [v for _, v in sorted_tx]
 
     bar_colors = [
-        "#c0392b" if v >= 0.75 else "#e67e22" if v >= 0.45 else "#8E9AAA"
-        for v in vals_s
+        "#c0392b" if v >= 0.6 else "#e67e22" if v >= 0.35 else "#CFB991" if v >= 0.15 else "#555960"
+        for v in weights
     ]
 
     fig = go.Figure(go.Bar(
-        x=weighted_s,
-        y=labels_s,
-        orientation="h",
-        marker=dict(color=bar_colors, line=dict(width=0)),
-        text=[f"{v:.1f}" for v in weighted_s],
+        x=weights, y=channels, orientation="h",
+        marker_color=bar_colors,
+        text=[f"{v:.0%}" for v in weights],
         textposition="outside",
-        textfont=dict(size=8, family="JetBrains Mono, monospace", color="#8E9AAA"),
+        textfont=dict(family="JetBrains Mono, monospace", size=9, color="#8E9AAA"),
+        hovertemplate="%{y}: %{x:.0%}<extra></extra>",
     ))
     fig.update_layout(
-        height=260,
-        margin=dict(l=10, r=60, t=10, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(
-            tickfont=dict(size=7, family="JetBrains Mono, monospace"),
-            showgrid=True, gridcolor="#1e1e1e",
-        ),
-        yaxis=dict(
-            tickfont=dict(size=8, family="JetBrains Mono, monospace"),
-            autorange="reversed",
-        ),
-        bargap=0.25,
+        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        margin=dict(l=10, r=50, t=10, b=10),
+        height=220,
+        xaxis=dict(range=[0, 1.20], tickformat=".0%",
+                   tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                   gridcolor="#1e1e1e", showgrid=True),
+        yaxis=dict(tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+                   showgrid=False),
+        showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 # ── Top affected assets ───────────────────────────────────────────────────────
 
-def _render_affected_assets(conflict_id: str, conflict_result: dict) -> None:
-    assets = top_affected_assets(conflict_id, n=8)
-    if not assets:
-        # Fall back to config affected_commodities / affected_equities
-        from src.data.config import CONFLICTS
-        conf = next((c for c in CONFLICTS if c["id"] == conflict_id), None)
-        if conf:
-            all_assets = (
-                [(a, "commodity") for a in conf.get("affected_commodities", [])]
-                + [(a, "equity")   for a in conf.get("affected_equities",    [])]
-                + [(a, "hedge")    for a in conf.get("hedge_assets",         [])]
-            )
-            assets = [{"asset": a, "exposure": None, "type": t} for a, t in all_assets[:8]]
+def _render_affected_assets(selected_id: str, selected: dict) -> None:
+    """
+    Compact table of top affected commodities, equities, and hedge assets.
+    """
+    rows = []
 
-    if not assets:
-        st.caption("No affected assets configured.")
+    # Structured exposure scores
+    struct_assets = top_affected_assets(selected_id, n=5)
+    for item in struct_assets:
+        rows.append({"Asset": item["asset"], "Exposure": f'{item["exposure"]:.2f}', "Type": "Structured"})
+
+    # Fallback to config lists if no structured exposure
+    if not rows:
+        for a in selected.get("affected_commodities", [])[:3]:
+            rows.append({"Asset": a, "Exposure": "—", "Type": "Commodity"})
+        for a in selected.get("affected_equities", [])[:3]:
+            rows.append({"Asset": a, "Exposure": "—", "Type": "Equity"})
+
+    if not rows:
+        st.caption("No asset exposure data.")
         return
 
-    rows_html = ""
-    for item in assets:
-        asset  = item["asset"]
-        exp    = item.get("exposure")
-        exp_str = f"{exp:.2f}" if exp is not None else "—"
-        bar_w  = int((exp or 0.5) * 80)
-        rows_html += (
-            f'<div style="display:flex;align-items:center;gap:8px;'
-            f'padding:3px 0;border-bottom:1px solid #1a1a1a">'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
-            f'color:#c8cdd8;width:140px;flex-shrink:0">{asset}</span>'
-            f'<div style="flex:1;height:6px;background:#1a1a1a;border-radius:0">'
-            f'<div style="width:{bar_w}%;height:100%;'
-            f'background:#CFB991;border-radius:0"></div>'
-            f'</div>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            f'color:#CFB991;width:30px;text-align:right">{exp_str}</span>'
-            f'</div>'
+    # Hedge assets strip
+    hedge = selected.get("hedge_assets", [])
+
+    # Render as HTML table
+    header = (
+        '<table style="width:100%;border-collapse:collapse;font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+        '<thead><tr>'
+        '<th style="color:#555960;text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 6px">ASSET</th>'
+        '<th style="color:#555960;text-align:right;border-bottom:1px solid #2a2a2a;padding:3px 6px">EXPOSURE</th>'
+        '<th style="color:#555960;text-align:right;border-bottom:1px solid #2a2a2a;padding:3px 6px">TYPE</th>'
+        '</tr></thead><tbody>'
+    )
+    body = ""
+    for row in rows[:6]:
+        body += (
+            f'<tr style="border-bottom:1px solid #1a1a1a">'
+            f'<td style="color:#e8e9ed;padding:4px 6px">{row["Asset"]}</td>'
+            f'<td style="color:#CFB991;text-align:right;padding:4px 6px">{row["Exposure"]}</td>'
+            f'<td style="color:#555960;text-align:right;padding:4px 6px">{row["Type"]}</td>'
+            f'</tr>'
+        )
+    footer = '</tbody></table>'
+
+    st.markdown(header + body + footer, unsafe_allow_html=True)
+
+    if hedge:
+        hedge_str = " · ".join(hedge[:4])
+        st.markdown(
+            f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'color:#27ae60;margin-top:6px">HEDGE: {hedge_str}</p>',
+            unsafe_allow_html=True,
         )
 
-    st.markdown(
-        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
-        f'padding:8px 12px">{rows_html}</div>',
-        unsafe_allow_html=True,
-    )
 
+# ── Live conflict news ────────────────────────────────────────────────────────
 
-# ── News panel for selected conflict ─────────────────────────────────────────
-
-def _render_conflict_news(conflict_id: str) -> None:
+def _render_conflict_news(selected_id: str) -> None:
+    """
+    Render GPR-classified news headlines for the selected conflict.
+    Falls back to generic RSS panel if GPR layer unavailable.
+    """
     try:
-        from src.analysis.gpr_news import render_threat_act_feed, get_news_gpr_layer
+        from src.analysis.gpr_news import get_news_gpr_layer
         result = get_news_gpr_layer()
-        pc = result["per_conflict"].get(conflict_id, {})
-        if pc:
-            t_score = pc.get("threat", 0)
-            a_score = pc.get("act", 0)
-            gpr     = pc.get("news_gpr", 0)
-            n_hl    = pc.get("n_headlines", 0)
-            st.markdown(
-                f'<div style="display:flex;gap:16px;margin-bottom:8px">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-                f'color:#e67e22">THREAT {t_score:.0f}</span>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-                f'color:#c0392b">ACT {a_score:.0f}</span>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-                f'color:#CFB991">NEWS GPR {gpr:.0f}</span>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-                f'color:#8E9AAA">{n_hl} headlines</span>'
-                f'</div>',
-                unsafe_allow_html=True,
+        per_conflict = result.get("per_conflict", {})
+        headlines = result.get("headlines", [])
+
+        # Filter to headlines mentioning this conflict
+        conflict_headlines = [
+            h for h in headlines
+            if selected_id in getattr(h, "conflicts", [])
+        ]
+
+        if not conflict_headlines:
+            # Fall back to first 4 headlines sorted by act_score + threat_score
+            conflict_headlines = sorted(
+                headlines,
+                key=lambda h: getattr(h, "act_score", 0) + getattr(h, "threat_score", 0),
+                reverse=True,
+            )[:4]
+
+        if not conflict_headlines:
+            st.caption("No intelligence feed available.")
+            return
+
+        _TYPE_COLOR = {"threat": "#e67e22", "act": "#c0392b", "neutral": "#555960"}
+        _TYPE_LABEL = {"threat": "THR", "act": "ACT", "neutral": "NEU"}
+
+        rows_html = ""
+        for h in conflict_headlines[:5]:
+            news_type = getattr(h, "news_type", "neutral")
+            tc  = _TYPE_COLOR.get(news_type, "#555960")
+            tl  = _TYPE_LABEL.get(news_type, "NEU")
+            url_attr = f'href="{h.url}" target="_blank"' if getattr(h, "url", "") else ""
+            src = getattr(h, "source", "")
+            title = getattr(h, "title", "")
+            rows_html += (
+                f'<div style="border-bottom:1px solid #1a1a1a;padding:5px 0">'
+                f'<div style="display:flex;gap:6px;align-items:flex-start">'
+                f'<span style="font-size:7px;font-weight:700;color:{tc};border:1px solid {tc};'
+                f'padding:1px 4px;flex-shrink:0;margin-top:1px">{tl}</span>'
+                f'<div>'
+                f'<a {url_attr} style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+                f'font-weight:500;color:#e8e9ed;text-decoration:none;line-height:1.4;display:block">'
+                f'{title}</a>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">'
+                f'{src}</span>'
+                f'</div></div></div>'
             )
-        render_threat_act_feed(conflict_id=conflict_id, max_items=6)
+
+        st.markdown(
+            f'<div style="background:#0a0a0a;border:1px solid #2a2a2a;padding:.4rem .8rem">'
+            f'{rows_html}</div>',
+            unsafe_allow_html=True,
+        )
+
     except Exception:
-        st.caption("News feed unavailable.")
+        # Fallback to generic RSS panel
+        try:
+            from src.ingestion.geo_rss import render_rss_panel
+            render_rss_panel(max_items=4)
+        except Exception:
+            st.caption("Intelligence feed unavailable.")
 
 
-# ── Main page ─────────────────────────────────────────────────────────────────
+# ── Transmission heatmap ──────────────────────────────────────────────────────
 
-def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
-    # ── Header ─────────────────────────────────────────────────────────────
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-        'color:#8E9AAA;letter-spacing:3px;text-transform:uppercase;margin:0">'
-        'INTELLIGENCE / CONFLICT SCORECARD</p>'
-        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.35rem;'
-        'font-weight:700;color:#e8e9ed;margin:4px 0 16px">Conflict Intelligence</h2>',
-        unsafe_allow_html=True,
+def _render_transmission_heatmap(results: dict) -> None:
+    """
+    Heatmap of conflicts × transmission channels, cells weighted by CIS.
+    """
+    _CHANNELS = [
+        "oil_gas", "metals", "agriculture", "shipping", "chokepoint",
+        "sanctions", "equity_sector", "fx", "inflation",
+        "supply_chain", "credit", "energy_infra",
+    ]
+    _CH_LABELS = {
+        "oil_gas": "Oil/Gas", "metals": "Metals", "agriculture": "Agriculture",
+        "shipping": "Shipping", "chokepoint": "Chokepoint", "sanctions": "Sanctions",
+        "equity_sector": "Eq. Sector", "fx": "FX", "inflation": "Inflation",
+        "supply_chain": "Supply Chain", "credit": "Credit", "energy_infra": "Energy Infra",
+    }
+
+    from src.data.config import CONFLICTS
+    max_cis = max((r["cis"] for r in results.values()), default=100) + 1e-9
+
+    conflict_ids   = list(results.keys())
+    conflict_names = [results[cid]["label"] for cid in conflict_ids]
+
+    z = []
+    for cid in conflict_ids:
+        r  = results[cid]
+        tx = r.get("transmission", {})
+        weight = r["cis"] / max_cis
+        row = [float(tx.get(ch, 0.0)) * weight for ch in _CHANNELS]
+        z.append(row)
+
+    ch_labels = [_CH_LABELS.get(ch, ch) for ch in _CHANNELS]
+
+    fig = go.Figure(go.Heatmap(
+        z=z,
+        x=ch_labels,
+        y=conflict_names,
+        colorscale=[
+            [0.0,  "#0a0a0a"],
+            [0.15, "#1a1210"],
+            [0.40, "#5c2a0e"],
+            [0.70, "#c0392b"],
+            [1.0,  "#ff6b6b"],
+        ],
+        zmin=0, zmax=1,
+        hovertemplate="<b>%{y}</b><br>%{x}: %{z:.2f}<extra></extra>",
+        showscale=True,
+        colorbar=dict(
+            thickness=10, len=0.8,
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            title=dict(text="Weight", font=dict(family="JetBrains Mono", size=8, color="#555960")),
+        ),
+    ))
+    fig.update_layout(
+        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        margin=dict(l=10, r=10, t=10, b=50),
+        height=max(180, len(conflict_ids) * 38),
+        xaxis=dict(
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            tickangle=-35, showgrid=False,
+        ),
+        yaxis=dict(
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            showgrid=False,
+        ),
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+# ── Page entry point ──────────────────────────────────────────────────────────
+
+def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None:
+    _page_header(
+        "Conflict Intelligence Center",
+        "CIS scoring · 7-dimension intensity · State multiplier · Portfolio weighting",
+        "INTELLIGENCE / CONFLICT SCORECARD",
     )
 
     # ── Load scores ────────────────────────────────────────────────────────
@@ -464,13 +459,20 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
         results = score_all_conflicts()
     except Exception as e:
         st.error(f"Error loading conflict scores: {e}")
+        _page_footer()
         return
 
     if not results:
         st.warning("No conflict data available.")
+        _page_footer()
         return
 
     # ── Scorecard grid ─────────────────────────────────────────────────────
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        'color:#8E9AAA;letter-spacing:2px;margin-bottom:6px">CONFLICT SCORECARDS</p>',
+        unsafe_allow_html=True,
+    )
     selected_id = _render_scorecard_grid(results)
     if not selected_id or selected_id not in results:
         selected_id = next(iter(results))
@@ -478,9 +480,15 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
     selected = results[selected_id]
 
     # ── Heatmap ────────────────────────────────────────────────────────────
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'TRANSMISSION PRESSURE — CONFLICTS × CHANNELS</p>',
+        unsafe_allow_html=True,
+    )
     _render_transmission_heatmap(results)
 
-    # ── Conflict detail section ────────────────────────────────────────────
+    # ── Conflict detail header ─────────────────────────────────────────────
     st.markdown(
         f'<div style="border-left:3px solid {selected["color"]};'
         f'padding:4px 12px;margin:1.2rem 0 0.6rem">'
@@ -537,8 +545,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
         )
         _render_conflict_news(selected_id)
 
-    # ── AI Analyst Deliberation ────────────────────────────────────────────────
-    # Trigger and display the analyst team's assessment of the selected conflict.
+    # ── AI Analyst Deliberation ────────────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
         'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
@@ -558,12 +565,11 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
         with _col_trigger:
             if st.button("Run Assessment", key=f"ci_debate_{selected_id}",
                          use_container_width=True):
-                _cis = selected["cis"]
-                _tps = selected["tps"]
+                _cis   = selected["cis"]
+                _tps   = selected["tps"]
                 _trend = selected["trend"]
                 _state = selected["state"]
 
-                # Risk Officer opens the thread
                 _tid = send_message(
                     sender="risk_officer",
                     recipient="geopolitical_analyst",
@@ -576,7 +582,6 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
                     ),
                     subject_id=_conf_subject,
                 )
-                # Geopolitical Analyst responds
                 _trend_context = {
                     "rising":  "Escalation risk is real. Recommend elevated positioning.",
                     "stable":  "Holding steady — monitor for shift triggers.",
@@ -594,7 +599,6 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
                     subject_id=_conf_subject,
                     thread_id=_tid,
                 )
-                # Commodities Specialist assesses transmission
                 _top_ch = max(
                     selected.get("transmission", {}).items(),
                     key=lambda x: x[1], default=("unknown", 0)
@@ -614,7 +618,6 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
                     subject_id=_conf_subject,
                     thread_id=_tid,
                 )
-                # Macro Strategist concludes
                 _conf_label = (
                     "HIGH CONFIDENCE — act on signal" if selected.get("confidence", 0.5) >= 0.7
                     else "MODERATE CONFIDENCE — size conservatively"
@@ -656,3 +659,5 @@ def page_conflict_intelligence(start=None, end=None, fred_key="") -> None:
                 )
     except Exception as exc:
         st.caption(f"Agent deliberation unavailable: {exc}")
+
+    _page_footer()

@@ -33,7 +33,7 @@ from src.analysis.freshness import freshness_badge_html, record_fetch
 from src.data.loader import load_returns
 from src.analysis.correlations import average_cross_corr_series
 from src.analysis.risk_score import risk_score_history, plot_risk_history
-from src.ui.shared import _page_footer
+from src.ui.shared import _page_header, _page_footer
 
 _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
@@ -97,7 +97,7 @@ _STYLE = """<style>
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=900, show_spinner=False)
-def _load_market_risk(start: str, end: str) -> tuple[dict, pd.Series]:
+def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[dict, pd.Series]:
     """
     Load market returns, compute avg_corr, then run the full 3-layer risk score
     (identical to what overview.py uses: compute_risk_score(avg_corr, cmd_r, eq_r)).
@@ -120,6 +120,16 @@ def _load_market_risk(start: str, end: str) -> tuple[dict, pd.Series]:
 # ─────────────────────────────────────────────────────────────────────────────
 # § 1  MASTHEAD
 # ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def _home_logo_b64() -> str:
+    import base64
+    from pathlib import Path
+    p = Path(__file__).resolve().parent.parent.parent / "assets" / "logo.png"
+    if p.exists():
+        return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+    return ""
+
 
 def _render_masthead(conflict_agg: dict) -> None:
     now      = datetime.datetime.now()
@@ -144,28 +154,51 @@ def _render_masthead(conflict_agg: dict) -> None:
         else f'SCENARIO: <span style="color:#555960">BASE</span>'
     )
 
+    _logo = _home_logo_b64()
+    _logo_img = (
+        f'<img src="{_logo}" alt="" '
+        f'style="height:14px;width:auto;object-fit:contain;opacity:0.55;'
+        f'flex-shrink:0;display:block;margin-right:8px;" />'
+        if _logo else ""
+    )
+
+    # ── Hero identity block ────────────────────────────────────────────────
     st.markdown(
-        f'<div style="background:#080808;border-bottom:1px solid #1e1e1e;'
-        f'padding:.5rem 1rem;display:flex;align-items:center;gap:16px;'
+        f'<div style="border-left:2px solid {_GOLD};padding-left:12px;margin-bottom:0.75rem">'
+        # Eyebrow: logo mark + programme label
+        f'<div style="display:flex;align-items:center;margin-bottom:5px">'
+        f'{_logo_img}'
+        f'<span style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:#555960">'
+        f'Cross-Asset Spillover Monitor &nbsp;·&nbsp; Purdue Daniels &nbsp;·&nbsp; MGMT 69000-120'
+        f'</span>'
+        f'</div>'
+        # Page title
+        f'<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;font-weight:700;'
+        f'color:#e8e8e8;margin:0 0 3px">Command Center</h1>'
+        # Subtitle
+        f'<p style="{_M}font-size:7.5px;color:#555960;margin:0;letter-spacing:.06em">'
+        f'Geopolitical &amp; Cross-Asset Intelligence Terminal &nbsp;·&nbsp; '
+        f'Equity · Commodity · FX · Fixed Income</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Status bar ────────────────────────────────────────────────────────
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'padding:.4rem 1rem;display:flex;align-items:center;gap:16px;'
         f'flex-wrap:wrap;margin-bottom:.8rem">'
-        # Terminal identity
-        f'<span style="{_M}font-size:9px;font-weight:700;color:{_GOLD};'
-        f'letter-spacing:.12em;white-space:nowrap">'
-        f'GEOPOLITICAL &amp; CROSS-ASSET INTELLIGENCE TERMINAL</span>'
-        f'<span style="{_M}font-size:7px;color:#2a2a2a">│</span>'
         f'<span style="{_M}font-size:8px;color:#555960">'
-        f'Equity · Commodity · FX · Fixed Income spillover analysis '
-        f'under active geopolitical conflict</span>'
-        # Right cluster
-        f'<span style="{_M}font-size:8px;color:#555960;margin-left:auto">'
         f'{now.strftime("%a %d %b %Y · %H:%M")}'
         f'</span>'
+        f'<span style="{_M}font-size:7px;color:#2a2a2a">│</span>'
         f'<span style="{_M}font-size:8px;color:#555960">'
         f'{n_act} active conflict{"s" if n_act != 1 else ""}&nbsp;·&nbsp;'
         f'{sc_note}&nbsp;·&nbsp;'
         f'CIS <b style="color:{sit_color}">{cis:.0f}</b>'
         f'</span>'
-        f'<span style="background:{sit_color};color:#fff;'
+        f'<span style="background:{sit_color};color:#fff;margin-left:auto;'
         f'{_M}font-size:7px;font-weight:700;padding:2px 7px;letter-spacing:.12em">'
         f'{sit_label}</span>'
         f'</div>',
@@ -527,196 +560,198 @@ def _render_geo_risk_block(
     mcs_color = "#c0392b" if mcs >= 65 else "#e67e22" if mcs >= 45 else "#8E9AAA"
     conf_color = "#27ae60" if conf >= 0.7 else "#e67e22" if conf >= 0.5 else "#c0392b"
 
-    # Driver footer html
     top_c_disp  = top_c.replace("_", " ").title() if top_c and top_c != "—" else "—"
     top_ch_disp = top_ch.replace("_", " ").upper() if top_ch != "—" else "—"
-    news_gpr_html = (
-        f'<span style="{_M}font-size:7.5px;color:#8E9AAA">'
-        f'NEWS GPR&nbsp;<b style="color:{_GOLD}">{news_gpr:.0f}</b>'
-        f'&nbsp;({n_threat}T&nbsp;/&nbsp;{n_act_hl}A)</span>'
-        if news_gpr is not None
-        else f'<span style="{_M}font-size:7.5px;color:#333">NEWS GPR — awaiting signal</span>'
-    )
-    sc_mult_html = (
-        f'<span style="{_M}font-size:7.5px;color:{sc_color}">'
-        f'■&nbsp;{sc_label.upper()}&nbsp;×{geo_mult:.2f}</span>'
-    )
-    footer_html = (
-        f'<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;'
-        f'padding-top:8px;border-top:1px solid #1e1e1e;margin-top:4px">'
-        f'<span style="{_M}font-size:7.5px;color:#8E9AAA">'
-        f'LEAD&nbsp;<b style="color:{color}">{top_c_disp}</b></span>'
-        f'<span style="{_M}font-size:7.5px;color:#8E9AAA">'
-        f'TOP CH&nbsp;<b style="color:{tps_color}">{top_ch_disp}</b>'
-        + (f'&nbsp;{top_ch_val:.0%}' if top_ch_val else "")
-        + f'</span>'
-        + news_gpr_html
-        + sc_mult_html
-        + freshness
-        + f'</div>'
-    )
+    news_gpr_val = f'{news_gpr:.0f}' if news_gpr is not None else '—'
+    news_gpr_sub = f'{n_threat}T / {n_act_hl}A' if news_gpr is not None else 'awaiting'
 
-    # ── Outer border container ─────────────────────────────────────────────
+    # ── Panel header — full-width, sits above the two columns ─────────────
     st.markdown(
-        f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
-        f'border-top:3px solid {color};padding:.7rem 1rem .5rem;'
-        f'margin-bottom:.8rem">',
-        unsafe_allow_html=True,
-    )
-
-    # ── Two-column layout: speedometer | decomposition ─────────────────────
-    col_gauge, col_decomp = st.columns([1, 1.1], gap="large")
-
-    with col_gauge:
-        svg_gauge = _build_speedometer_svg(score, color, label, delta)
-        st.markdown(svg_gauge, unsafe_allow_html=True)
-
-        # Sparkline + confidence below the gauge
-        st.markdown(
-            f'<div style="display:flex;align-items:center;flex-wrap:wrap;'
-            f'margin-top:4px;padding:0 4px">'
-            f'{spark_html}'
-            f'</div>'
-            f'<div style="padding:0 4px;margin-top:4px">'
-            f'<span style="{_M}font-size:7.5px;color:#555960">'
-            f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
-            f'&nbsp;·&nbsp;40% CIS + 35% TPS + 25% MCS</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
-    with col_decomp:
-        st.markdown(
-            f'<div style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#333;margin-bottom:8px;padding-top:.6rem">'
-            f'Score Decomposition</div>',
-            unsafe_allow_html=True,
-        )
-        # Full component breakdown — same data as overview used
-        comp = risk.get("components", {})
-        if comp:
-            for name, val in comp.items():
-                c_col = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
-                pct   = min(val, 100)
-                indent = name.startswith("  ")
-                st.markdown(
-                    f'<div style="margin-bottom:4px;'
-                    f'{"padding-left:10px;border-left:2px solid #1e1e1e;" if indent else ""}">'
-                    f'<div style="display:flex;justify-content:space-between;'
-                    f'{_F}font-size:{"8" if not indent else "7.5"}px;margin-bottom:2px">'
-                    f'<span style="color:{"#a8b0c0" if not indent else "#6b7280"}">'
-                    f'{name.strip()}</span>'
-                    f'<span style="{_M}font-weight:700;color:{c_col}">{val:.0f}</span>'
-                    f'</div>'
-                    f'<div style="height:{"4" if not indent else "3"}px;'
-                    f'background:#1a1a1a;border-radius:1px">'
-                    f'<div style="width:{pct:.0f}%;height:{"4" if not indent else "3"}px;'
-                    f'background:{c_col};border-radius:1px"></div>'
-                    f'</div></div>',
-                    unsafe_allow_html=True,
-                )
-        else:
-            # Fallback to 3-bar summary when full components unavailable
-            for lbl, val, col in [
-                ("Conflict Intensity (40%)",    cis, cis_color),
-                ("Transmission Pressure (35%)", tps, tps_color),
-                ("Market Confirmation (25%)",   mcs, mcs_color),
-            ]:
-                pct = min(val, 100)
-                st.markdown(
-                    f'<div style="margin-bottom:4px">'
-                    f'<div style="display:flex;justify-content:space-between;'
-                    f'{_F}font-size:8px;margin-bottom:2px">'
-                    f'<span style="color:#a8b0c0">{lbl}</span>'
-                    f'<span style="{_M}font-weight:700;color:{col}">{val:.0f}</span>'
-                    f'</div>'
-                    f'<div style="height:4px;background:#1a1a1a;border-radius:1px">'
-                    f'<div style="width:{pct:.0f}%;height:4px;background:{col};'
-                    f'border-radius:1px"></div></div></div>',
-                    unsafe_allow_html=True,
-                )
-        # Dynamic weights row
-        dw = risk.get("weights", {})
-        if dw:
-            wt_items = "".join(
-                f'<div style="text-align:center;padding:2px 6px">'
-                f'<div style="{_F}font-size:7px;color:#555960">{k.replace("_"," ")}</div>'
-                f'<div style="{_M}font-weight:700;font-size:9px;color:{_GOLD}">'
-                f'{v*100:.0f}%</div></div>'
-                for k, v in dw.items()
-            )
-            st.markdown(
-                f'<div style="margin-top:8px;padding-top:6px;border-top:1px solid #111">'
-                f'<div style="{_M}font-size:6.5px;letter-spacing:.14em;text-transform:uppercase;'
-                f'color:#333;margin-bottom:4px">Today\'s Dynamic Weights</div>'
-                f'<div style="display:flex;flex-wrap:wrap">{wt_items}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-    # ── History chart — full width ─────────────────────────────────────────
-    st.markdown(
-        f'<div style="border-top:1px solid #1e1e1e;margin-top:.6rem;padding-top:.5rem">'
-        f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#333">Historical Risk Score</span>'
-        f'<span style="{_F}font-size:8.5px;color:#555960;margin-left:8px">'
-        f'Market-observable proxy · 30% corr · 25% oil-gold · 20% commodity vol · 15% eq vol'
-        f'</span>'
+        f'<div style="display:flex;align-items:center;gap:10px;'
+        f'border-top:3px solid {color};border-bottom:1px solid #1e1e1e;'
+        f'background:#0a0a0a;padding:.45rem .8rem;margin-bottom:.1rem">'
+        f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.22em;'
+        f'text-transform:uppercase;color:#8E9AAA">Geopolitical Risk Score</span>'
+        f'<span style="background:{color};color:#000;{_M}font-size:6.5px;font-weight:700;'
+        f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.0f}</span>'
+        f'<span style="{_M}font-size:7px;color:#555960;margin-left:4px">'
+        f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
+        f'&nbsp;·&nbsp;{spark_html}</span>'
+        f'<span style="margin-left:auto">{freshness}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
-    if score_history is not None and not score_history.empty:
-        fig_hist = plot_risk_history(score_history, height=240)
-        # Restyle to match home page dark aesthetic
-        fig_hist.update_layout(
-            paper_bgcolor="#0d0d0d",
-            plot_bgcolor="#0d0d0d",
-            font={"color": "#8E9AAA", "family": "JetBrains Mono, monospace", "size": 9},
-            title=None,
-            margin=dict(l=44, r=12, t=8, b=28),
-            xaxis=dict(
-                showgrid=False,
-                tickfont={"size": 8, "color": "#555960", "family": "JetBrains Mono"},
-                linecolor="#1e1e1e",
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#111",
-                tickfont={"size": 8, "color": "#555960", "family": "JetBrains Mono"},
-                linecolor="#1e1e1e",
-                title=None,
-                tickvals=[0, 25, 50, 75, 100],
-                ticktext=["0", "25 LOW", "50 MOD", "75 ELEV", "100"],
-            ),
-            legend=dict(
-                font={"size": 8, "color": "#8E9AAA"},
-                bgcolor="rgba(0,0,0,0)",
-                borderwidth=0,
-            ),
-        )
-        # Pin a horizontal line at the current score
-        fig_hist.add_hline(
-            y=float(risk["score"]),
-            line=dict(color=risk["color"], width=1.2, dash="dot"),
-            annotation_text=f'NOW {risk["score"]:.0f}',
-            annotation_font={"size": 8, "color": risk["color"],
-                             "family": "JetBrains Mono"},
-            annotation_position="right",
-        )
-        st.plotly_chart(fig_hist, use_container_width=True,
-                        config={"displayModeBar": False})
-    else:
+    # ── Two-column hero: gauge | history chart ─────────────────────────────
+    col_gauge, col_hist = st.columns([1, 1.65], gap="medium")
+
+    with col_gauge:
         st.markdown(
-            f'<div style="{_F}font-size:9px;color:#333;padding:.6rem 0">'
-            f'Historical series computing — available after market data loads.</div>',
+            f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+            f'text-transform:uppercase;color:#555960;margin:0 0 4px">Risk Gauge</p>',
+            unsafe_allow_html=True,
+        )
+        svg_gauge = _build_speedometer_svg(score, color, label, delta)
+        st.markdown(svg_gauge, unsafe_allow_html=True)
+        st.markdown(
+            f'<p style="{_M}font-size:7px;color:#555960;margin:.3rem 0 0;'
+            f'padding:0 2px">40% CIS&nbsp;·&nbsp;35% TPS&nbsp;·&nbsp;25% MCS</p>',
             unsafe_allow_html=True,
         )
 
-    # Footer row — full-width inside the outer div
-    st.markdown(footer_html, unsafe_allow_html=True)
+    with col_hist:
+        st.markdown(
+            f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+            f'text-transform:uppercase;color:#555960;margin:0 0 0">'
+            f'Historical Risk Score'
+            f'<span style="font-weight:400;letter-spacing:.06em;color:#3a3a3a;'
+            f'margin-left:8px;text-transform:none">market-observable proxy · corr · oil-gold · vol</span>'
+            f'</p>',
+            unsafe_allow_html=True,
+        )
+        if score_history is not None and not score_history.empty:
+            fig_hist = plot_risk_history(score_history, height=310)
+            fig_hist.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font={"color": "#8E9AAA", "family": "JetBrains Mono, monospace", "size": 9},
+                title_text="",
+                margin=dict(l=44, r=16, t=6, b=28),
+                xaxis=dict(
+                    showgrid=False,
+                    tickfont={"size": 8, "color": "#555960", "family": "JetBrains Mono"},
+                    linecolor="#1e1e1e",
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor="#1a1a1a",
+                    tickfont={"size": 8, "color": "#555960", "family": "JetBrains Mono"},
+                    linecolor="#1e1e1e",
+                    title_text="",
+                    tickvals=[0, 25, 50, 75, 100],
+                    ticktext=["0", "25 LOW", "50 MOD", "75 ELEV", "100"],
+                ),
+                legend=dict(
+                    font={"size": 8, "color": "#8E9AAA"},
+                    bgcolor="rgba(0,0,0,0)",
+                    borderwidth=0,
+                ),
+            )
+            fig_hist.add_hline(
+                y=float(score),
+                line=dict(color=color, width=1.2, dash="dot"),
+                annotation_text=f'NOW {score:.0f}',
+                annotation_font={"size": 8, "color": color, "family": "JetBrains Mono"},
+                annotation_position="right",
+            )
+            st.plotly_chart(fig_hist, use_container_width=True,
+                            config={"displayModeBar": False})
+        else:
+            st.markdown(
+                f'<div style="{_F}font-size:9px;color:#3a3a3a;padding:4rem 0;'
+                f'text-align:center;border:1px solid #1a1a1a;margin-top:4px">'
+                f'Historical series computing — loads after market data.</div>',
+                unsafe_allow_html=True,
+            )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # ── Score decomposition — pure CSS grid (no st.columns) ───────────────
+    comp = risk.get("components", {})
+    dw   = risk.get("weights", {})
+
+    if comp:
+        bars_html = ""
+        for name, val in comp.items():
+            c_col  = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
+            pct    = min(val, 100)
+            indent = name.startswith("  ")
+            bars_html += (
+                f'<div style="{"padding-left:10px;border-left:2px solid #1e1e1e;" if indent else ""}">'
+                f'<div style="display:flex;justify-content:space-between;'
+                f'{_F}font-size:{"7.5" if indent else "8"}px;margin-bottom:2px">'
+                f'<span style="color:{"#6b7280" if indent else "#a8b0c0"}">{name.strip()}</span>'
+                f'<span style="{_M}font-weight:700;color:{c_col}">{val:.0f}</span>'
+                f'</div>'
+                f'<div style="height:{"3" if indent else "4"}px;background:#111;border-radius:1px;margin-bottom:5px">'
+                f'<div style="width:{pct:.0f}%;height:{"3" if indent else "4"}px;'
+                f'background:{c_col};border-radius:1px"></div></div></div>'
+            )
+        decomp_inner = (
+            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">'
+            f'{bars_html}</div>'
+        )
+    else:
+        bars_html = ""
+        for lbl, val, col in [
+            ("Conflict Intensity (CIS · 40%)",    cis, cis_color),
+            ("Transmission Pressure (TPS · 35%)", tps, tps_color),
+            ("Market Confirmation (MCS · 25%)",   mcs, mcs_color),
+        ]:
+            pct = min(val, 100)
+            bars_html += (
+                f'<div>'
+                f'<div style="display:flex;justify-content:space-between;'
+                f'{_F}font-size:8px;margin-bottom:2px">'
+                f'<span style="color:#a8b0c0">{lbl}</span>'
+                f'<span style="{_M}font-weight:700;color:{col}">{val:.0f}</span></div>'
+                f'<div style="height:4px;background:#111;border-radius:1px;margin-bottom:5px">'
+                f'<div style="width:{pct:.0f}%;height:4px;background:{col};'
+                f'border-radius:1px"></div></div></div>'
+            )
+        decomp_inner = (
+            f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 24px">'
+            f'{bars_html}</div>'
+        )
+
+    wt_html = ""
+    if dw:
+        wt_items = "".join(
+            f'<span style="{_M}font-size:7px;color:#555960">'
+            f'{k.replace("_", " ")}&nbsp;<b style="color:{_GOLD}">{v*100:.0f}%</b></span>'
+            for k, v in dw.items()
+        )
+        wt_html = (
+            f'<div style="display:flex;gap:10px;flex-wrap:wrap;'
+            f'padding-top:5px;border-top:1px solid #111;margin-top:2px">'
+            f'<span style="{_M}font-size:6px;letter-spacing:.16em;text-transform:uppercase;'
+            f'color:#333;align-self:center">Dynamic&nbsp;Weights</span>'
+            f'{wt_items}</div>'
+        )
+
+    st.markdown(
+        f'<div style="border-top:1px solid #1e1e1e;margin-top:.3rem;'
+        f'padding:.55rem .4rem .3rem">'
+        f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:#555960;margin:0 0 .45rem">Score Decomposition</p>'
+        f'{decomp_inner}'
+        f'{wt_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── KPI strip — CSS grid guarantees equal-width tiles ─────────────────
+    def _kt(lbl: str, val: str, vc: str, sub: str = "") -> str:
+        return (
+            f'<div style="padding:.4rem .65rem;background:#080808;'
+            f'border:1px solid #1a1a1a;border-top:2px solid {vc}">'
+            f'<div style="{_M}font-size:5.5px;font-weight:700;letter-spacing:.16em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:3px">{lbl}</div>'
+            f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{vc};line-height:1.1">{val}</div>'
+            + (f'<div style="{_M}font-size:6px;color:#555960;margin-top:2px">{sub}</div>' if sub else "")
+            + f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;'
+        f'margin-top:.5rem;padding-top:.5rem;border-top:1px solid #1e1e1e">'
+        + _kt("Conflict Intensity",    f'{cis:.0f}',       cis_color, "CIS · 40% weight")
+        + _kt("Transmission Pressure", f'{tps:.0f}',       tps_color, "TPS · 35% weight")
+        + _kt("Market Confirmation",   f'{mcs:.0f}',       mcs_color, mcs_note or "MCS · 25% weight")
+        + _kt("Lead Conflict",         top_c_disp,         color,     "highest CIS actor")
+        + _kt("News GPR",              news_gpr_val,       _GOLD,     news_gpr_sub)
+        + _kt("Scenario",              sc_label.upper(),   sc_color,  f'geo ×{geo_mult:.2f}')
+        + f'</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -809,9 +844,9 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;'
-        f'border-left:3px solid #2a2a2a;padding:.6rem .9rem;margin-bottom:.7rem">'
-        f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#555960;display:block;margin-bottom:5px">'
+        f'border-left:3px solid #555960;padding:.6rem .9rem;margin-bottom:.7rem">'
+        f'<span style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:#8E9AAA;display:block;margin-bottom:6px">'
         f'Current Situation</span>'
         f'<p style="{_F}font-size:10px;color:#a8b0c0;line-height:1.65;margin:0 0 4px">'
         f'{s1}</p>'
@@ -827,34 +862,40 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_intel_panel(conflict_results: dict) -> None:
+    # Shared section header above both columns
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:8px;'
+        f'border-bottom:1px solid #1e1e1e;padding-bottom:.35rem;margin-bottom:.5rem">'
+        f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.22em;'
+        f'text-transform:uppercase;color:#8E9AAA">Intelligence Panel</span>'
+        f'<span style="{_F}font-size:8.5px;color:#555960">'
+        f'Active conflicts · CIS/TPS scores · transmission channel pressure</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
     col_left, col_right = st.columns([1.6, 1], gap="medium")
 
     # ── Left: Conflict table ───────────────────────────────────────────────
     with col_left:
-        st.markdown(
-            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#8E9AAA;margin-bottom:5px">'
-            f'Active Conflict Monitor — CIS / TPS / Top Channel</div>',
-            unsafe_allow_html=True,
-        )
         _TREND_I = {"rising": "▲", "stable": "—", "falling": "▼"}
         _TREND_C = {"rising": "#c0392b", "stable": "#8E9AAA", "falling": "#27ae60"}
 
-        header = (
-            f'<div style="display:flex;gap:8px;padding:0 0 4px;border-bottom:1px solid #1e1e1e;'
-            f'margin-bottom:2px">'
-            f'<span style="{_M}font-size:6.5px;color:#333;min-width:70px">CONFLICT</span>'
-            f'<span style="{_M}font-size:6.5px;color:#333;flex:1">CIS</span>'
-            f'<span style="{_M}font-size:6.5px;color:#333;min-width:26px"> </span>'
-            f'<span style="{_M}font-size:6.5px;color:#333;min-width:30px">TPS</span>'
-            f'<span style="{_M}font-size:6.5px;color:#333;min-width:16px"> </span>'
-            f'<span style="{_M}font-size:6.5px;color:#333">TOP CHANNEL</span>'
+        col_header = (
+            f'<div style="display:flex;gap:8px;padding:0 0 4px;'
+            f'border-bottom:1px solid #1e1e1e;margin-bottom:3px">'
+            f'<span style="{_M}font-size:6px;color:#555960;min-width:70px">CONFLICT</span>'
+            f'<span style="{_M}font-size:6px;color:#555960;flex:1">CIS INTENSITY</span>'
+            f'<span style="{_M}font-size:6px;color:#555960;min-width:26px;text-align:right">VAL</span>'
+            f'<span style="{_M}font-size:6px;color:#555960;min-width:16px"> </span>'
+            f'<span style="{_M}font-size:6px;color:#555960;min-width:34px">TPS</span>'
+            f'<span style="{_M}font-size:6px;color:#555960">TOP CHANNEL</span>'
             f'</div>'
         )
         rows = ""
         for cid, r in sorted(conflict_results.items(), key=lambda x: x[1]["cis"], reverse=True):
-            tx    = r.get("transmission", {})
-            top_ch = max(tx, key=tx.get) if tx else "—"
+            tx      = r.get("transmission", {})
+            top_ch  = max(tx, key=tx.get) if tx else "—"
             t_icon  = _TREND_I.get(r.get("trend", "stable"), "—")
             t_color = _TREND_C.get(r.get("trend", "stable"), "#8E9AAA")
             cis_col = "#c0392b" if r["cis"] >= 65 else "#e67e22" if r["cis"] >= 45 else "#8E9AAA"
@@ -870,27 +911,24 @@ def _render_intel_panel(conflict_results: dict) -> None:
                 f'<span style="{_M}font-size:9px;color:{cis_col};font-weight:700;'
                 f'min-width:26px;text-align:right">{r["cis"]:.0f}</span>'
                 f'<span style="{_M}font-size:9px;color:{t_color};min-width:16px">{t_icon}</span>'
-                f'<span style="{_M}font-size:8px;color:{tps_col};min-width:30px">'
+                f'<span style="{_M}font-size:8px;color:{tps_col};min-width:34px">'
                 f'TPS {tps_val:.0f}</span>'
                 f'<span style="{_F}font-size:8px;color:#555960">'
-                f'{top_ch.replace("_"," ")}</span>'
+                f'{top_ch.replace("_", " ")}</span>'
                 f'</div>'
             )
         st.markdown(
-            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;padding:.4rem .7rem">'
-            + header + rows
+            f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
+            f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#555960;margin:0 0 .35rem">'
+            f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
+            + col_header + rows
             + f'</div>',
             unsafe_allow_html=True,
         )
 
     # ── Right: Top transmission channels ──────────────────────────────────
     with col_right:
-        st.markdown(
-            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#8E9AAA;margin-bottom:5px">'
-            f'Top Transmission Channels</div>',
-            unsafe_allow_html=True,
-        )
         ch_scores: dict[str, float] = {}
         for r in conflict_results.values():
             if r.get("state") != "active":
@@ -903,31 +941,39 @@ def _render_intel_panel(conflict_results: dict) -> None:
             max_val = ranked[0][1] if ranked else 1.0
             rows_ch = ""
             for ch, val in ranked:
-                pct = min(val / max_val * 100, 100)
+                pct    = min(val / max_val * 100, 100)
                 ch_col = "#c0392b" if pct >= 80 else "#e67e22" if pct >= 55 else _GOLD
                 rows_ch += (
                     f'<div style="display:flex;align-items:center;gap:7px;padding:3px 0;'
-                    f'border-bottom:1px solid #0d0d0d">'
+                    f'border-bottom:1px solid #111">'
                     f'<span style="{_M}font-size:7.5px;color:#8890a1;min-width:90px;'
-                    f'white-space:nowrap">{ch.replace("_"," ").upper()}</span>'
+                    f'white-space:nowrap">{ch.replace("_", " ").upper()}</span>'
                     f'<div style="flex:1;background:#111;height:4px;border-radius:1px">'
                     f'<div style="width:{pct:.0f}%;height:4px;background:{ch_col};'
                     f'border-radius:1px"></div></div>'
-                    f'<span style="{_M}font-size:8px;color:{ch_col};min-width:26px;'
+                    f'<span style="{_M}font-size:8px;color:{ch_col};min-width:28px;'
                     f'text-align:right">{val:.2f}</span>'
                     f'</div>'
                 )
             st.markdown(
-                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;padding:.4rem .7rem">'
+                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
+                f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.18em;'
+                f'text-transform:uppercase;color:#555960;margin:0 0 .35rem">'
+                f'Top Transmission Channels</p>'
                 f'{rows_ch}</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                f'<div style="{_F}font-size:9px;color:#555960;padding:.4rem">'
-                f'No active transmission data.</div>',
+                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
+                f'<p style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.18em;'
+                f'text-transform:uppercase;color:#555960;margin:0 0 .35rem">'
+                f'Top Transmission Channels</p>'
+                f'<span style="{_F}font-size:9px;color:#3a3a3a">'
+                f'No active transmission data.</span></div>',
                 unsafe_allow_html=True,
             )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1418,7 +1464,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Full 3-layer risk score + history (market-data-fed, cached) ───────
     with st.spinner("Computing risk score…"):
-        risk, _score_hist = _load_market_risk(start, end)
+        risk, _score_hist = _load_market_risk(start, end, get_scenario_id())
         if not risk:
             # Fallback: conflict-model-only estimate when market data unavailable
             cis_f = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))

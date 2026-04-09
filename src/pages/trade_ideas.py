@@ -21,7 +21,7 @@ from src.analysis.correlations import (
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
-    _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _insight_note,
 )
 
@@ -234,6 +234,7 @@ def _render_trade_card(
     all_r_concat: pd.DataFrame,
     current: int,
     trade_idx: int,
+    asset_exposure: dict | None = None,
 ) -> None:
     """Render a single trade card with QC grade, confidence, payoff table, and debate thread."""
     cat_col = _CATEGORY_COLORS.get(trade["category"], "#CFB991")
@@ -412,6 +413,24 @@ def _render_trade_card(
             _cat = trade.get("category", "")
             if _cat and _cat != "all":
                 _pass_reasons.append(_cat)
+            # Add SAS-based why-now signals from exposure data
+            if asset_exposure:
+                _trade_assets = trade.get("assets", [])
+                _sas_vals = [asset_exposure[a]["sas"] for a in _trade_assets if a in asset_exposure]
+                if _sas_vals:
+                    _avg_sas = sum(_sas_vals) / len(_sas_vals)
+                    if _avg_sas >= 60:
+                        _pass_reasons.append(f"SAS {_avg_sas:.0f} — high exposure")
+                    elif _avg_sas >= 35:
+                        _pass_reasons.append(f"SAS {_avg_sas:.0f}")
+                # Hedge signal
+                _hedge_scores = [asset_exposure[a]["hedge_score"] for a in _trade_assets if a in asset_exposure]
+                if any(h >= 40 for h in _hedge_scores):
+                    _pass_reasons.append("Hedge signal active")
+                # Scenario alignment
+                _directions = [asset_exposure[a]["direction"] for a in _trade_assets if a in asset_exposure]
+                if "safe_haven" in _directions and any(d.lower() == "long" for d in trade.get("direction", [])):
+                    _pass_reasons.append("Safe-haven demand")
             if _pass_reasons:
                 st.markdown(
                     '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 2px">'
@@ -426,6 +445,50 @@ def _render_trade_card(
                 )
         except Exception:
             pass
+
+        # ── Exposure strip: per-asset SAS + direction + top conflict beta ──
+        if asset_exposure:
+            try:
+                _exp_items = []
+                for _a, _d in zip(trade.get("assets", []), trade.get("direction", [])):
+                    _ed = asset_exposure.get(_a)
+                    if not _ed:
+                        continue
+                    _sas = _ed["sas"]
+                    _dir = _ed["direction"]
+                    _top_c = _ed.get("top_conflict") or ""
+                    _top_beta = _ed["beta"].get(_top_c, 0.0) if _top_c else 0.0
+                    _dir_icon = "↑" if _dir == "long_geo_risk" else "↓" if _dir == "safe_haven" else "→"
+                    _sas_col = "#e67e22" if _sas >= 60 else "#CFB991" if _sas >= 30 else "#555960"
+                    _top_c_label = _top_c.replace("_", " ").upper()[:12] if _top_c else ""
+                    _beta_str = f"β={_top_beta:.2f}" if _top_c else ""
+                    _item_html = (
+                        f'<div style="background:#0a0a0a;border:1px solid #1a1a1a;'
+                        f'padding:2px 6px;display:flex;flex-direction:column;gap:1px;min-width:90px">'
+                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:6px;'
+                        f'color:#555960;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px">'
+                        f'{_a[:18]}</div>'
+                        f'<div style="display:flex;gap:5px;align-items:center">'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                        f'font-weight:700;color:{_sas_col}">SAS {_sas:.0f}</span>'
+                        f'<span style="font-size:8px;color:#8890a1">{_dir_icon}</span>'
+                        + (f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:6px;'
+                           f'color:#8890a1">{_beta_str}</span>' if _beta_str else "")
+                        + '</div>'
+                        + (f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:5.5px;'
+                           f'color:#444c5c">{_top_c_label}</div>' if _top_c_label else "")
+                        + '</div>'
+                    )
+                    _exp_items.append(_item_html)
+                if _exp_items:
+                    st.markdown(
+                        '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 2px">'
+                        + "".join(_exp_items)
+                        + '</div>',
+                        unsafe_allow_html=True,
+                    )
+            except Exception:
+                pass
 
         # ── Payoff table expander ──────────────────────────────────────────
         with st.expander(f"Scenario Payoff Table — {trade['name'][:40]}", expanded=False):
@@ -582,11 +645,8 @@ def _render_trade_card(
 
 
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.3rem">Trade Ideas</h1>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Structured Trade Ideas",
+                 "Regime-driven · Conflict-linked · Exposure-ranked · QC-graded")
     _page_intro(
         "Spillover analysis is only useful if it generates actionable positioning. "
         "<strong>Each idea here is a direct translation of a spillover or correlation regime signal into a trade.</strong> "
@@ -655,6 +715,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Conflict-driven candidates ─────────────────────────────────────────
     generated: list[dict] = []
     conflict_betas: dict  = {}
+    asset_exposure: dict  = {}
     try:
         from src.analysis.trade_generator import generate_conflict_trades, merge_with_library
         from src.analysis.exposure import score_all_assets
@@ -662,6 +723,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _cr  = score_all_conflicts()
         _aa  = score_all_assets(conflict_results=_cr)
         generated = generate_conflict_trades(regime=current, conflict_results=_cr, all_assets=_aa)
+        # Retain full exposure data for ranking and card display
+        asset_exposure = dict(_aa)
         conflict_betas = {
             name: {"beta": d["beta"]}
             for name, d in _aa.items()
@@ -691,10 +754,20 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             current_regime=current,
             current_scenario_id=_scenario_id,
             conflict_betas=conflict_betas,
+            asset_exposure=asset_exposure,
         )
     except Exception:
         # Fallback: basic regime filter
         active_trades = [t for t in all_candidates if current in t.get("regime", [current])]
+
+    # ── Re-rank by exposure × confidence composite ─────────────────────────
+    if asset_exposure:
+        def _exposure_rank_key(t: dict) -> float:
+            conf = float(t.get("confidence", 0.5))
+            sas_vals = [asset_exposure[a]["sas"] for a in t.get("assets", []) if a in asset_exposure]
+            avg_sas = (sum(sas_vals) / len(sas_vals)) if sas_vals else 0.0
+            return conf * (1 + avg_sas / 200)
+        active_trades.sort(key=_exposure_rank_key, reverse=True)
 
     # ── KPI strip ──────────────────────────────────────────────────────────
     _n_geo  = sum(1 for t in active_trades if t.get("generated"))
@@ -739,7 +812,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         f'<b style="color:#e8e8e8">{len(active_trades)}</b> ideas — '
         f'<b style="color:#e67e22">{_n_geo}</b> conflict-driven · '
         f'<b style="color:#8890a1">{_n_stat}</b> static · '
-        f'sorted by confidence · regime: '
+        f'sorted by exposure × confidence · regime: '
         f'<b style="color:{r_color}">{r_name}</b></p>',
         unsafe_allow_html=True,
     )
@@ -757,7 +830,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         pair = active_trades[row_start:row_start + 2]
         card_cols = st.columns(len(pair), gap="medium")
         for col, (trade, idx) in zip(card_cols, [(t, row_start + i) for i, t in enumerate(pair)]):
-            _render_trade_card(col, trade, all_r_concat, current, idx)
+            _render_trade_card(col, trade, all_r_concat, current, idx, asset_exposure or None)
 
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown(
@@ -925,7 +998,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     "All ideas assume liquid markets - slippage and execution risk not modelled",
                 ],
             }
-            _cqo_run(_cqo_ctx, _provider, _api_key, page="Trade Ideas")
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Structured Trade Ideas")
     except Exception:
         pass
 

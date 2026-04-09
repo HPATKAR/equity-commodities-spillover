@@ -16,6 +16,7 @@ from __future__ import annotations
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from src.ui.shared import _page_header, _page_footer
 
 from src.analysis.exposure import (
     score_all_assets,
@@ -297,14 +298,9 @@ def _exposure_filters() -> dict:
 # ── Main page ─────────────────────────────────────────────────────────────────
 
 def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-        'color:#8E9AAA;letter-spacing:3px;text-transform:uppercase;margin:0">'
-        'INTELLIGENCE / EXPOSURE</p>'
-        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.35rem;'
-        'font-weight:700;color:#e8e9ed;margin:4px 0 16px">Exposure Scoring</h2>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Exposure Scoring",
+                 "Per-asset SES · TAE · Scenario-adjusted score · Conflict beta · Hedge ranking",
+                 "INTELLIGENCE / EXPOSURE")
 
     # ── Scenario context ───────────────────────────────────────────────────
     scenario    = get_scenario()
@@ -451,3 +447,4 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
         '</div>',
         unsafe_allow_html=True,
     )
+    _page_footer()

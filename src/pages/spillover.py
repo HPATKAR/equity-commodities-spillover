@@ -22,7 +22,7 @@ from src.analysis.network import (
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
-    _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _insight_note,
 )
 
@@ -49,13 +49,8 @@ def _panel_note(txt: str) -> None:
 
 
 def page_spillover(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Spillover Analytics</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.7rem">Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Spillover Network",
+                 "Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph")
     _page_intro(
         "Correlation tells you <em>that</em> two markets move together. Spillover tells you <em>why</em> - "
         "and more importantly, <strong>which market is driving which.</strong> "

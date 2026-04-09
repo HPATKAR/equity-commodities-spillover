@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from src.ui.shared import _page_header, _page_footer
 
 from src.analysis.conflict_model import (
     score_all_conflicts,
@@ -66,320 +67,291 @@ _CH_ASSET_MAP = {
 def _render_weighted_heatmap(results: dict) -> None:
     """
     Full heatmap with rows = conflicts, cols = channels.
-    Cell values are channel transmission × (conflict CIS / max CIS) — so dominant
-    conflicts show proportionally stronger colour.
+    Cell values are channel transmission × (conflict CIS / max CIS).
     """
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin-bottom:4px">'
-        'CONFLICT × CHANNEL TRANSMISSION MATRIX  '
-        '<span style="color:#555960">(cell = raw channel intensity)</span></p>',
-        unsafe_allow_html=True,
+    if not results:
+        st.caption("No conflict data.")
+        return
+
+    max_cis = max((r["cis"] for r in results.values()), default=100) + 1e-9
+
+    conflict_ids   = list(results.keys())
+    conflict_names = [results[cid]["label"] for cid in conflict_ids]
+
+    z = []
+    for cid in conflict_ids:
+        r  = results[cid]
+        tx = r.get("transmission", {})
+        weight = r["cis"] / max_cis
+        row = [float(tx.get(ch, 0.0)) * weight for ch in _CHANNELS]
+        z.append(row)
+
+    ch_labels = [_CH_LABELS.get(ch, ch) for ch in _CHANNELS]
+
+    fig = go.Figure(go.Heatmap(
+        z=z,
+        x=ch_labels,
+        y=conflict_names,
+        colorscale=[
+            [0.0,  "#0a0a0a"],
+            [0.15, "#1a1210"],
+            [0.40, "#5c2a0e"],
+            [0.70, "#c0392b"],
+            [1.0,  "#ff6b6b"],
+        ],
+        zmin=0, zmax=1,
+        hovertemplate="<b>%{y}</b><br>%{x}: %{z:.2f}<extra></extra>",
+        showscale=True,
+        colorbar=dict(
+            thickness=12, len=0.85,
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            title=dict(text="CIS-Weighted", font=dict(family="JetBrains Mono", size=8, color="#555960")),
+        ),
+    ))
+    fig.update_layout(
+        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        margin=dict(l=10, r=10, t=10, b=60),
+        height=max(200, len(conflict_ids) * 42),
+        xaxis=dict(
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            tickangle=-40, showgrid=False,
+        ),
+        yaxis=dict(
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            showgrid=False,
+        ),
     )
-
-    ranked = sorted(results.values(), key=lambda r: r["cis"], reverse=True)
-    max_cis = max(r["cis"] for r in ranked) + 1e-9
-
-    conf_map = {c["id"]: c for c in CONFLICTS}
-    z_raw, z_weighted, labels_y = [], [], []
-
-    for r in ranked:
-        conf = conf_map.get(r["id"], {})
-        tx   = conf.get("transmission", {})
-        raw_row      = [float(tx.get(ch, 0.0)) for ch in _CHANNELS]
-        weighted_row = [v * (r["cis"] / max_cis) for v in raw_row]
-        z_raw.append(raw_row)
-        z_weighted.append(weighted_row)
-        labels_y.append(f'{r["label"]}  [{r["cis"]:.0f}]')
-
-    ch_labels_x = [_CH_LABELS[ch] for ch in _CHANNELS]
-
-    tab_raw, tab_wt = st.tabs(["Raw Intensity", "CIS-Weighted"])
-
-    for tab, z_data, title in [
-        (tab_raw, z_raw,      "Raw"),
-        (tab_wt,  z_weighted, "CIS-Weighted"),
-    ]:
-        with tab:
-            fig = go.Figure(go.Heatmap(
-                z=z_data,
-                x=ch_labels_x,
-                y=labels_y,
-                colorscale=[
-                    [0.00, "#090909"],
-                    [0.15, "#151c2b"],
-                    [0.30, "#1e3050"],
-                    [0.50, "#8E6F3E"],
-                    [0.70, "#e67e22"],
-                    [1.00, "#c0392b"],
-                ],
-                zmin=0,
-                zmax=1 if title == "Raw" else (max_cis / 100),
-                text=[[f"{v:.2f}" for v in row] for row in z_data],
-                texttemplate="%{text}",
-                textfont=dict(size=7, family="JetBrains Mono, monospace"),
-                hoverongaps=False,
-                showscale=True,
-                colorbar=dict(
-                    thickness=8, len=0.65,
-                    tickfont=dict(size=7, family="JetBrains Mono, monospace"),
-                ),
-            ))
-            fig.update_layout(
-                height=240,
-                margin=dict(l=10, r=40, t=10, b=70),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(
-                    tickfont=dict(size=7.5, family="JetBrains Mono, monospace"),
-                    tickangle=-35,
-                ),
-                yaxis=dict(
-                    tickfont=dict(size=8, family="JetBrains Mono, monospace"),
-                    autorange="reversed",
-                ),
-            )
-            st.plotly_chart(fig, use_container_width=True,
-                            config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 # ── Channel dominance bar chart ───────────────────────────────────────────────
 
 def _render_channel_dominance(results: dict) -> None:
     """
-    Portfolio-level channel stress: intensity-weighted average per channel.
+    Portfolio-wide channel stress: sum of CIS-weighted transmission per channel.
     """
-    conf_map = {c["id"]: c for c in CONFLICTS}
-    cis_vals = {r["id"]: r["cis"] for r in results.values()}
-    total_cis = sum(cis_vals.values()) + 1e-9
+    if not results:
+        st.caption("No data.")
+        return
 
-    channel_scores = {ch: 0.0 for ch in _CHANNELS}
-    for cid, cis in cis_vals.items():
-        conf = conf_map.get(cid, {})
-        tx   = conf.get("transmission", {})
-        w    = cis / total_cis
+    max_cis = max((r["cis"] for r in results.values()), default=100) + 1e-9
+    channel_stress: dict[str, float] = {ch: 0.0 for ch in _CHANNELS}
+
+    for r in results.values():
+        tx = r.get("transmission", {})
+        w  = r["cis"] / max_cis
         for ch in _CHANNELS:
-            channel_scores[ch] += float(tx.get(ch, 0.0)) * w
+            channel_stress[ch] += float(tx.get(ch, 0.0)) * w
 
-    # Normalize to 0–100
-    max_score = max(channel_scores.values()) + 1e-9
-    sorted_ch = sorted(channel_scores.items(), key=lambda x: x[1], reverse=True)
-
-    labels = [_CH_LABELS[ch] for ch, _ in sorted_ch]
-    values = [v * 100 / max_score for _, v in sorted_ch]
-    raw_v  = [v for _, v in sorted_ch]
+    # Normalize to 0-1
+    max_stress = max(channel_stress.values()) + 1e-9
+    sorted_ch  = sorted(channel_stress.items(), key=lambda x: x[1])
+    labels = [_CH_LABELS.get(k, k) for k, _ in sorted_ch]
+    values = [v / max_stress for _, v in sorted_ch]
 
     bar_colors = [
-        "#c0392b" if v >= 0.75 else "#e67e22" if v >= 0.45 else "#8E9AAA"
-        for v in raw_v
+        "#c0392b" if v >= 0.70 else "#e67e22" if v >= 0.45 else "#CFB991" if v >= 0.25 else "#555960"
+        for v in values
     ]
 
     fig = go.Figure(go.Bar(
-        x=values, y=labels,
-        orientation="h",
-        marker=dict(color=bar_colors, line=dict(width=0)),
-        text=[f"{v:.0f}" for v in values],
+        x=values, y=labels, orientation="h",
+        marker_color=bar_colors,
+        text=[f"{v:.0%}" for v in values],
         textposition="outside",
-        textfont=dict(size=8, family="JetBrains Mono, monospace", color="#8E9AAA"),
+        textfont=dict(family="JetBrains Mono", size=9, color="#8E9AAA"),
+        hovertemplate="%{y}: %{x:.0%}<extra></extra>",
     ))
     fig.update_layout(
-        height=300,
-        margin=dict(l=10, r=60, t=10, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(
-            range=[0, 120],
-            tickfont=dict(size=7, family="JetBrains Mono, monospace"),
-            showgrid=True, gridcolor="#1a1a1a",
-        ),
-        yaxis=dict(
-            tickfont=dict(size=8.5, family="JetBrains Mono, monospace"),
-            autorange="reversed",
-        ),
-        bargap=0.22,
+        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        margin=dict(l=10, r=50, t=10, b=10),
+        height=320,
+        xaxis=dict(range=[0, 1.25], tickformat=".0%",
+                   tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                   gridcolor="#1e1e1e", showgrid=True),
+        yaxis=dict(tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+                   showgrid=False),
+        showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
-# ── Sankey: conflict → channel → asset class ─────────────────────────────────
+# ── Sankey: conflict → channel → asset class ──────────────────────────────────
 
 def _render_sankey(results: dict) -> None:
-    conf_map = {c["id"]: c for c in CONFLICTS}
-    cis_vals = {r["id"]: r["cis"] for r in results.values()}
+    """
+    Sankey diagram: conflict nodes → channel nodes → asset class nodes.
+    Only includes links above a minimum threshold.
+    """
+    if not results:
+        st.caption("No data.")
+        return
 
-    # Nodes: conflicts + channels + asset classes
-    conflict_ids  = list(results.keys())
-    channel_ids   = _CHANNELS
-    asset_classes = list(dict.fromkeys(_CH_ASSET_MAP.values()))  # ordered unique
+    MIN_WEIGHT = 0.10
+    max_cis = max((r["cis"] for r in results.values()), default=100) + 1e-9
 
-    all_nodes = conflict_ids + channel_ids + asset_classes
-    node_idx  = {n: i for i, n in enumerate(all_nodes)}
-
-    conflict_colors = {r["id"]: r["color"] for r in results.values()}
-    ch_color = "#8E6F3E"
-    ac_colors = {
-        "Commodities":   "#e67e22",
-        "Logistics":     "#2980b9",
-        "Policy":        "#c0392b",
-        "Equities":      "#27ae60",
-        "FX":            "#8E9AAA",
-        "Macro":         "#CFB991",
-        "Fixed Income":  "#6c3483",
+    # Asset class display names — must NOT collide with any channel label.
+    # "FX" channel and "FX" asset class share the same string, causing a self-loop.
+    _ASSET_DISPLAY = {
+        "Commodities":  "Commodities",
+        "Equities":     "Equities",
+        "Fixed Income": "Fixed Income",
+        "FX":           "FX Markets",   # renamed to avoid collision with FX channel
+        "Logistics":    "Logistics",
+        "Macro":        "Macro",
+        "Policy":       "Policy",
     }
 
-    node_colors = (
-        [conflict_colors.get(cid, "#8E9AAA") for cid in conflict_ids]
-        + [ch_color] * len(channel_ids)
-        + [ac_colors.get(ac, "#8E9AAA") for ac in asset_classes]
-    )
+    # Build node lists
+    conflict_labels = [results[cid]["label"] for cid in results]
+    channel_labels  = [_CH_LABELS[ch] for ch in _CHANNELS]
+    asset_labels    = sorted(set(
+        _ASSET_DISPLAY.get(v, v) for v in _CH_ASSET_MAP.values()
+    ))
+
+    all_labels = conflict_labels + channel_labels + asset_labels
+    label_idx  = {lbl: i for i, lbl in enumerate(all_labels)}
 
     sources, targets, values, link_colors = [], [], [], []
 
-    min_cis = 5.0  # minimum flow threshold
-    for cid in conflict_ids:
-        conf = conf_map.get(cid, {})
-        tx   = conf.get("transmission", {})
-        cis  = cis_vals.get(cid, 30.0)
-        for ch in channel_ids:
-            raw = float(tx.get(ch, 0.0))
-            flow = raw * cis
-            if flow < min_cis:
-                continue
-            sources.append(node_idx[cid])
-            targets.append(node_idx[ch])
-            values.append(round(flow, 1))
-            base_c = conflict_colors.get(cid, "#8E9AAA")
-            link_colors.append(base_c.replace("#", "rgba(") + ",0.35)")
+    # Conflict → Channel
+    for cid, r in results.items():
+        tx  = r.get("transmission", {})
+        w   = r["cis"] / max_cis
+        for ch in _CHANNELS:
+            ch_val = float(tx.get(ch, 0.0)) * w
+            if ch_val >= MIN_WEIGHT:
+                sources.append(label_idx[r["label"]])
+                targets.append(label_idx[_CH_LABELS[ch]])
+                values.append(ch_val)
+                link_colors.append(f"rgba({int(r['color'][1:3],16)},{int(r['color'][3:5],16)},{int(r['color'][5:7],16)},0.25)")
 
-    # Fall back to proper rgba
-    link_colors_clean = []
-    for lc, base in zip(link_colors, [conflict_colors.get(conflict_ids[s - 0], "#8E9AAA")
-                                       for s in sources]):
-        try:
-            r = int(base[1:3], 16)
-            g = int(base[3:5], 16)
-            b = int(base[5:7], 16)
-            link_colors_clean.append(f"rgba({r},{g},{b},0.35)")
-        except Exception:
-            link_colors_clean.append("rgba(142,154,170,0.30)")
+    # Channel → Asset class
+    ch_asset_flow: dict[tuple, float] = {}
+    for cid, r in results.items():
+        tx = r.get("transmission", {})
+        w  = r["cis"] / max_cis
+        for ch in _CHANNELS:
+            ch_val = float(tx.get(ch, 0.0)) * w
+            if ch_val >= MIN_WEIGHT:
+                raw_asset = _CH_ASSET_MAP[ch]
+                key = (_CH_LABELS[ch], _ASSET_DISPLAY.get(raw_asset, raw_asset))
+                ch_asset_flow[key] = ch_asset_flow.get(key, 0.0) + ch_val
 
-    # Channel → asset class flows
-    for ch in channel_ids:
-        ac = _CH_ASSET_MAP.get(ch, "Commodities")
-        # Sum flow into this channel
-        ch_total = sum(
-            float(conf_map.get(cid, {}).get("transmission", {}).get(ch, 0.0)) * cis_vals.get(cid, 0)
-            for cid in conflict_ids
-        )
-        if ch_total < min_cis:
-            continue
-        sources.append(node_idx[ch])
-        targets.append(node_idx[ac])
-        values.append(round(ch_total, 1))
-        ac_color = ac_colors.get(ac, "#8E9AAA")
-        try:
-            r = int(ac_color[1:3], 16)
-            g = int(ac_color[3:5], 16)
-            b = int(ac_color[5:7], 16)
-            link_colors_clean.append(f"rgba({r},{g},{b},0.25)")
-        except Exception:
-            link_colors_clean.append("rgba(142,154,170,0.20)")
+    for (ch_lbl, asset_lbl), flow in ch_asset_flow.items():
+        sources.append(label_idx[ch_lbl])
+        targets.append(label_idx[asset_lbl])
+        values.append(flow)
+        link_colors.append("rgba(207,185,145,0.15)")
+
+    if not sources:
+        st.caption("Insufficient transmission data for Sankey.")
+        return
+
+    # Node colors
+    n_conflicts = len(conflict_labels)
+    n_channels  = len(channel_labels)
+    conflict_colors = [results[cid]["color"] for cid in results]
+    channel_colors  = ["#555960"] * n_channels
+    asset_colors    = ["#CFB991"] * len(asset_labels)
+    node_colors = conflict_colors + channel_colors + asset_colors
 
     fig = go.Figure(go.Sankey(
         node=dict(
             pad=12, thickness=14,
-            line=dict(color="#0a0a0a", width=0.3),
-            label=all_nodes,
+            label=all_labels,
             color=node_colors,
-            hovertemplate="%{label}<extra></extra>",
+            line=dict(color="#0a0a0a", width=0.5),
         ),
         link=dict(
-            source=sources,
-            target=targets,
-            value=values,
-            color=link_colors_clean,
-            hovertemplate="Flow: %{value:.0f}<extra></extra>",
+            source=sources, target=targets, value=values,
+            color=link_colors,
         ),
     ))
     fig.update_layout(
-        height=320,
+        paper_bgcolor="#0a0a0a",
+        font=dict(family="JetBrains Mono, monospace", size=8, color="#8E9AAA"),
         margin=dict(l=10, r=10, t=10, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(size=8, family="JetBrains Mono, monospace", color="#8E9AAA"),
+        height=340,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
-# ── Most-affected commodities table ──────────────────────────────────────────
+# ── Commodity exposure table ──────────────────────────────────────────────────
 
 def _render_commodity_exposure(results: dict) -> None:
     """
-    Conflict-commodity relevance matrix aggregated to portfolio level.
-    Shows top 12 most-affected commodities.
+    Table of commodities ranked by CIS-weighted exposure across all conflicts.
     """
-    matrix = conflict_commodity_matrix()
-    cis_vals = {r["id"]: r["cis"] for r in results.values()}
-    total_cis = sum(cis_vals.values()) + 1e-9
-
-    # Portfolio-level commodity exposure = CIS-weighted average
-    commodity_scores: dict[str, float] = {}
-    for cid, cm in matrix.items():
-        w = cis_vals.get(cid, 0) / total_cis
-        for commodity, score in cm.items():
-            commodity_scores[commodity] = commodity_scores.get(commodity, 0) + score * w
-
-    ranked = sorted(commodity_scores.items(), key=lambda x: x[1], reverse=True)[:12]
-    if not ranked:
+    try:
+        matrix = conflict_commodity_matrix()
+    except Exception:
+        st.caption("Commodity matrix unavailable.")
         return
 
-    rows_html = ""
-    for commodity, score in ranked:
-        bar_w = int(score * 100)
-        color = "#c0392b" if score >= 0.75 else "#e67e22" if score >= 0.45 else "#8E9AAA"
-        rows_html += (
-            f'<div style="display:flex;align-items:center;gap:8px;'
-            f'padding:3px 0;border-bottom:1px solid #1a1a1a">'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
-            f'color:#c8cdd8;width:160px;flex-shrink:0">{commodity}</span>'
-            f'<div style="flex:1;height:5px;background:#1a1a1a">'
-            f'<div style="width:{bar_w}%;height:100%;background:{color}"></div>'
-            f'</div>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            f'color:{color};width:35px;text-align:right">{score:.2f}</span>'
-            f'</div>'
-        )
+    max_cis = max((r["cis"] for r in results.values()), default=100) + 1e-9
+    commodity_scores: dict[str, float] = {}
 
-    st.markdown(
-        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
-        f'padding:8px 12px">{rows_html}</div>',
-        unsafe_allow_html=True,
+    for cid, r in results.items():
+        w = r["cis"] / max_cis
+        for commodity, rel in matrix.get(cid, {}).items():
+            commodity_scores[commodity] = commodity_scores.get(commodity, 0.0) + rel * w
+
+    if not commodity_scores:
+        st.caption("No commodity exposure data.")
+        return
+
+    sorted_commodities = sorted(commodity_scores.items(), key=lambda x: x[1], reverse=True)
+    max_score = max(v for _, v in sorted_commodities) + 1e-9
+
+    cols = st.columns(min(len(sorted_commodities), 6))
+    for i, (commodity, score) in enumerate(sorted_commodities[:6]):
+        norm  = score / max_score
+        color = "#c0392b" if norm >= 0.7 else "#e67e22" if norm >= 0.45 else "#CFB991" if norm >= 0.25 else "#555960"
+        bar_w = int(norm * 100)
+        with cols[i]:
+            st.markdown(
+                f'<div style="background:#0a0a0a;border:1px solid #2a2a2a;padding:.5rem .7rem">'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#555960;margin-bottom:3px">'
+                f'{commodity.upper()}</div>'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:16px;font-weight:700;'
+                f'color:{color}">{norm:.0%}</div>'
+                f'<div style="background:#1a1a1a;height:3px;margin-top:5px;border-radius:1px">'
+                f'<div style="background:{color};width:{bar_w}%;height:3px;border-radius:1px"></div>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+
+# ── Page entry point ──────────────────────────────────────────────────────────
+
+def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
+    _page_header(
+        "Market Transmission Matrix",
+        "Channel-level TPS · Conflict-to-market routing · Active pathway breakdown",
+        "INTELLIGENCE / TRANSMISSION",
     )
 
-
-# ── Main page ─────────────────────────────────────────────────────────────────
-
-def page_transmission_matrix(start=None, end=None, fred_key="") -> None:
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-        'color:#8E9AAA;letter-spacing:3px;text-transform:uppercase;margin:0">'
-        'INTELLIGENCE / TRANSMISSION</p>'
-        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.35rem;'
-        'font-weight:700;color:#e8e9ed;margin:4px 0 16px">Transmission Matrix</h2>',
-        unsafe_allow_html=True,
-    )
-
+    # ── Load scores ────────────────────────────────────────────────────────
     try:
         results = score_all_conflicts()
     except Exception as e:
         st.error(f"Error loading conflict scores: {e}")
+        _page_footer()
         return
 
     if not results:
         st.warning("No conflict data available.")
+        _page_footer()
         return
 
     # ── Section 1: Heatmap ─────────────────────────────────────────────────
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        'color:#8E9AAA;letter-spacing:2px;margin-bottom:4px">'
+        'CIS-WEIGHTED CONFLICT × CHANNEL HEATMAP</p>',
+        unsafe_allow_html=True,
+    )
     _render_weighted_heatmap(results)
 
     # ── Section 2: Channel dominance + Sankey ──────────────────────────────
@@ -412,3 +384,5 @@ def page_transmission_matrix(start=None, end=None, fred_key="") -> None:
         unsafe_allow_html=True,
     )
     _render_commodity_exposure(results)
+
+    _page_footer()

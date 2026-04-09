@@ -23,7 +23,7 @@ from src.analysis.correlations import (
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
-    _definition_block, _takeaway_block, _page_conclusion, _page_footer,
+    _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _add_event_bands, _insight_note, _line_style, _EQUITY_REGIONS,
 )
 
@@ -48,13 +48,8 @@ def _panel_note(txt: str) -> None:
 
 
 def page_correlation(start: str, end: str, fred_key: str = "") -> None:
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Correlation Analysis</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.7rem">Rolling Pearson · DCC-GARCH · Regime Detection · Markov Forecast</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Cross-Asset Correlation",
+                 "Rolling Pearson · DCC-GARCH · Regime Detection · Markov Forecast")
     _page_intro(
         "Correlation is the <em>first observable signal</em> of spillover: when equity returns and commodity "
         "returns start moving together, the channel between the two markets is open. "
@@ -110,24 +105,42 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
+    # ── Burn-in: load extra history so rolling windows have data to work with ──
+    # A 252d window on a 1m selection would otherwise return all NaN.
+    # Burn-in = same length as the selected period (1m → +1m, 3m → +3m, 6m → +6m).
+    # This guarantees the rolling window is always satisfied at the period boundary.
+    import datetime as _dt
+    _start_dt   = pd.Timestamp(start)
+    _end_dt     = pd.Timestamp(end)
+    _period_days = (_end_dt - _start_dt).days
+    _load_start = (_start_dt - _dt.timedelta(days=_period_days)).strftime("%Y-%m-%d")
+
     with st.spinner("Loading returns…"):
-        eq_r, cmd_r = load_returns(start, end)
+        eq_r, cmd_r = load_returns(_load_start, end)
 
     if eq_r.empty or cmd_r.empty:
         st.error("Market data unavailable.")
         return
 
     try:
-        fi_r = load_fixed_income_returns(start, end)
+        fi_r = load_fixed_income_returns(_load_start, end)
     except Exception:
         fi_r = pd.DataFrame()
     try:
-        fx_r = load_fx_returns(start, end)
+        fx_r = load_fx_returns(_load_start, end)
     except Exception:
         fx_r = pd.DataFrame()
 
     avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
     regimes  = detect_correlation_regime(avg_corr)
+
+    # Slice to the user-selected display window after rolling computation
+    eq_r   = eq_r.loc[_start_dt:]
+    cmd_r  = cmd_r.loc[_start_dt:]
+    fi_r   = fi_r.loc[_start_dt:]   if not fi_r.empty  else fi_r
+    fx_r   = fx_r.loc[_start_dt:]   if not fx_r.empty  else fx_r
+    avg_corr = avg_corr.loc[_start_dt:]
+    regimes  = regimes.loc[_start_dt:]
 
     # Build combined returns including FI and FX
     _r_frames = [eq_r, cmd_r]
@@ -480,10 +493,25 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
 
             p_stay   = float(trans.loc[current_r, current_r]) * 100
             p_crisis = float(trans.loc[current_r, 3]) * 100
-            _panel_note(
-                f"Current: <b style='color:{_REGIME_COLORS[current_r]}'>{_REGIME_NAMES[current_r]}</b> · "
-                f"Stay probability: <b>{p_stay:.1f}%</b> · "
-                f"Transition to Crisis: <b>{p_crisis:.1f}%</b>"
+            days_to_crisis = mfpt.get(current_r, float("nan"))
+            days_str = (
+                "already in Crisis"
+                if current_r == 3
+                else (f"{days_to_crisis:.0f} days" if days_to_crisis < 5000 else ">5,000 days")
+            )
+            avg_run = (
+                float(run_stats.loc[current_r, "mean"])
+                if current_r in run_stats.index else float("nan")
+            )
+            avg_run_str = f"{avg_run:.0f}d" if not np.isnan(avg_run) else "—"
+            _takeaway_block(
+                f"Current regime: <b style='color:{_REGIME_COLORS[current_r]}'>"
+                f"{_REGIME_NAMES[current_r]}</b>. "
+                f"One-step probability of transitioning to <b>Crisis</b>: "
+                f"<b>{p_crisis:.1f}%</b>. "
+                f"Expected time until next Crisis episode from this regime: <b>{days_str}</b>. "
+                f"Historical average duration in {_REGIME_NAMES[current_r]}: <b>{avg_run_str}</b>. "
+                f"Probability of staying in current regime next period: <b>{p_stay:.1f}%</b>."
             )
 
     # ── Equity-Bond Correlation Regime Note ───────────────────────────────────
@@ -566,7 +594,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     "Correlation ≠ causation - no causal inference drawn from this page",
                 ],
             }
-            _cqo_run(_cqo_ctx, _provider, _api_key, page="Correlation Analysis")
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Cross-Asset Correlation")
     except Exception:
         pass
 

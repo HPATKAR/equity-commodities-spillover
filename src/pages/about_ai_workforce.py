@@ -10,7 +10,7 @@ import datetime
 import streamlit as st
 
 from src.analysis.agent_state import AGENTS, STATUSES, init_agents, get_agent, is_enabled
-from src.ui.shared import _about_page_styles, _page_footer
+from src.ui.shared import _page_header, _about_page_styles, _page_footer
 
 _GOLD = "#CFB991"
 _F    = "font-family:'DM Sans',sans-serif;"
@@ -476,20 +476,8 @@ def page_about_ai_workforce() -> None:
     init_agents()
 
     # Page header
-    st.markdown(
-        f'<div style="border-top:2px solid {_GOLD};border-bottom:1px solid #2a2a2a;'
-        f'padding:0.8rem 0 0.6rem;margin-bottom:1.2rem">'
-        f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.16em;'
-        f'text-transform:uppercase;color:{_GOLD};margin-bottom:4px">About</div>'
-        f'<div style="{_F}font-size:1.1rem;font-weight:700;color:#e8e9ed;'
-        f'letter-spacing:-0.01em">AI Workforce</div>'
-        f'<div style="{_F}font-size:0.64rem;color:#8890a1;margin-top:4px">'
-        f'Eight specialized AI agents running a 4-round dependency-ordered pipeline. '
-        f'Outputs update every 30-60 minutes. The CQO audits every analysis page '
-        f'and automatically dispatches corrections to the relevant specialist.</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+    _page_header("AI Agent Team",
+                 "8 specialist agents · Monitoring · Analysis · Trade structuring · Quality assurance")
 
     # ── Run controls ──────────────────────────────────────────────────────────
     from src.analysis.agent_orchestrator import _is_fresh, PIPELINE as _PIPELINE

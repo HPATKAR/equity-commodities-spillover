@@ -20,7 +20,7 @@ from src.analysis.correlations import (
     composite_stress_index,
 )
 from src.analysis.risk_score import compute_risk_score, risk_score_history
-from src.ui.shared import _page_intro, _page_footer
+from src.ui.shared import _page_intro, _page_header, _page_footer
 from src.data.loader import load_private_credit_proxies
 
 # ── Colour palette ────────────────────────────────────────────────────────────
@@ -937,13 +937,8 @@ def _build_private_credit_insight(
 
 def page_insights(start: str, end: str, fred_key: str = "") -> None:
 
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.1rem">Actionable Insights</h1>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
-        'margin:0 0 0.7rem">Plain-language verdicts · Click any insight for the full reasoning</p>',
-        unsafe_allow_html=True,
-    )
+    _page_header("Intelligence Briefing",
+                 "Plain-language verdicts · Click any insight for the full reasoning")
     _page_intro(
         "No jargon. No charts you have to decode. Just the <strong>6 things you need to know "
         "right now</strong> about equity-commodity markets - and what to do about each one. "
@@ -1025,7 +1020,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
                     "All insight thresholds (e.g. corr > 0.45 = elevated) lack empirical validation",
                 ],
             }
-            _cqo_run(_cqo_ctx, _provider, _api_key, page="Actionable Insights")
+            _cqo_run(_cqo_ctx, _provider, _api_key, page="Intelligence Briefing")
     except Exception:
         pass
 

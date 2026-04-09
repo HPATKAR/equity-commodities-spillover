@@ -10,6 +10,7 @@ import datetime
 import numpy as np
 import pandas as pd
 import streamlit as st
+from src.ui.shared import _page_header, _page_footer
 
 from src.data.loader import load_returns, load_fixed_income_returns, load_fx_returns
 from src.data.config import GEOPOLITICAL_EVENTS
@@ -306,11 +307,8 @@ def page_ai_chat(start: str, end: str) -> None:
     """, unsafe_allow_html=True)
 
     # ── Header ───────────────────────────────────────────────────────────────
-    st.markdown(
-        '<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;'
-        'font-weight:700;margin-bottom:0.2rem">AI Analyst</h1>',
-        unsafe_allow_html=True,
-    )
+    _page_header("AI Research Desk",
+                 "Natural language · Cross-asset research · Regime-aware context")
     st.markdown(
         '<p style="font-size:0.70rem;color:#8890a1;margin:0 0 0.3rem;line-height:1.65">'
         'An analyst trained on the full equity-commodities spillover framework with live access to '
@@ -576,3 +574,4 @@ def page_ai_chat(start: str, end: str) -> None:
                     )
     except Exception:
         pass
+    _page_footer()
