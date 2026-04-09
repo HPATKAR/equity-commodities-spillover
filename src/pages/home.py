@@ -1172,57 +1172,86 @@ _TAG_META = {
 
 
 def _render_quickjump() -> None:
-    st.markdown(
-        f'<div style="display:flex;align-items:center;gap:8px;'
-        f'margin:.9rem 0 .4rem;flex-wrap:wrap">'
-        f'<span style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#8E9AAA">Navigate Terminal</span>'
-        f'<span style="{_F}font-size:8.5px;color:#555960">14 modules</span>'
-        f'<span style="margin-left:auto;display:flex;gap:8px;align-items:center">'
-        f'<span class="hm-tag hm-tag-daily">DAILY</span>'
-        f'<span style="{_M}font-size:7px;color:#555960">open every session</span>'
-        f'<span class="hm-tag hm-tag-alert" style="margin-left:4px">ON ALERT</span>'
-        f'<span style="{_M}font-size:7px;color:#555960">when a score moves</span>'
-        f'<span class="hm-tag hm-tag-deep" style="margin-left:4px">DEEP-DIVE</span>'
-        f'<span style="{_M}font-size:7px;color:#555960">research &amp; sizing</span>'
-        f'</span></div>',
-        unsafe_allow_html=True,
+    import streamlit.components.v1 as _components
+
+    _TAG_STYLES = {
+        "daily": ("DAILY",     "#0a1a2e", "#2980b9"),
+        "alert": ("ON ALERT",  "#1a0a00", "#e67e22"),
+        "deep":  ("DEEP-DIVE", "#0a1a0a", "#27ae60"),
+    }
+
+    css = """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:transparent;font-family:'DM Sans',sans-serif}
+    .nav-card{background:#0f0f0f;border:1px solid #1e1e1e;padding:6px 8px;
+      cursor:pointer;transition:box-shadow .15s,border-color .15s;user-select:none}
+    .nav-card:hover{box-shadow:0 0 0 1px #CFB991,inset 0 0 8px rgba(207,185,145,.07);border-color:#CFB991}
+    .nav-card:hover .sc{border-color:#CFB991;color:#CFB991}
+    .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:7.5px;
+      font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:1px 4px;
+      border-radius:1px;margin-left:3px;vertical-align:middle}
+    .sc{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:7px;
+      font-weight:700;color:#555960;border:1px solid #2a2a2a;border-radius:2px;
+      padding:0 3px;margin-left:3px;vertical-align:middle;line-height:1.6}
+    .grid{display:grid;gap:5px;margin-bottom:5px}
+    </style>
+    """
+
+    body = '<body style="background:transparent;padding:2px 0">'
+
+    # Header legend
+    body += (
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;font-weight:700;'
+        'letter-spacing:.18em;text-transform:uppercase;color:#8E9AAA">Navigate Terminal</span>'
+        '<span style="font-family:\'DM Sans\',sans-serif;font-size:8.5px;color:#555960">14 modules</span>'
+        '<span style="margin-left:auto;display:flex;gap:8px;align-items:center">'
+        '<span class="tag" style="background:#0a1a2e;color:#2980b9">DAILY</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">open every session</span>'
+        '<span class="tag" style="background:#1a0a00;color:#e67e22;margin-left:4px">ON ALERT</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">when a score moves</span>'
+        '<span class="tag" style="background:#0a1a0a;color:#27ae60;margin-left:4px">DEEP-DIVE</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">research &amp; sizing</span>'
+        '</span></div>'
     )
 
     for group in _JUMP_GROUPS:
-        g_color = group["color"]
-        st.markdown(
-            f'<div style="display:flex;align-items:baseline;gap:8px;'
-            f'border-left:2px solid {g_color};padding-left:7px;margin:10px 0 5px">'
-            f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{g_color}">{group["group"]}</span>'
-            f'<span style="{_F}font-size:8.5px;color:#555960">{group["caption"]}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
+        gc = group["color"]
+        body += (
+            f'<div style="display:flex;align-items:baseline;gap:8px;border-left:2px solid {gc};'
+            f'padding-left:7px;margin:10px 0 5px">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;font-weight:700;'
+            f'letter-spacing:.18em;text-transform:uppercase;color:{gc}">{group["group"]}</span>'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:8.5px;color:#555960">'
+            f'{group["caption"]}</span></div>'
         )
-
-        items  = group["items"]
-        n_cols = min(len(items), 4)
-        cols   = st.columns(n_cols)
-
-        for i, (label, page_id, desc, tag, sc) in enumerate(items):
-            tag_label, tag_cls = _TAG_META.get(tag, ("", ""))
-            col = cols[i % n_cols]
-            with col:
-                st.markdown(
-                    f'<div class="hm-nav" style="border-top:2px solid {g_color};cursor:pointer"'
-                    f' onclick="window.location.href=\'?page={page_id}\'">'
+        items = group["items"]
+        for row_start in range(0, len(items), 4):
+            row = items[row_start:row_start + 4]
+            n   = len(row)
+            body += f'<div class="grid" style="grid-template-columns:repeat({n},1fr)">'
+            for label, page_id, desc, tag, sc in row:
+                tl, tbg, tc = _TAG_STYLES.get(tag, ("", "#111", "#555960"))
+                body += (
+                    f'<div class="nav-card" style="border-top:2px solid {gc}"'
+                    f' onclick="window.parent.location.href=\'?page={page_id}\'">'
                     f'<div style="display:flex;align-items:center;margin-bottom:3px">'
-                    f'<span style="{_M}font-size:8px;font-weight:700;color:{g_color}">'
-                    f'{label}</span>'
-                    f'<span class="hm-tag {tag_cls}">{tag_label}</span>'
-                    f'<span class="hm-sc">{sc}</span>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                    f'font-weight:700;color:{gc}">{label}</span>'
+                    f'<span class="tag" style="background:{tbg};color:{tc}">{tl}</span>'
+                    f'<span class="sc">{sc}</span>'
                     f'</div>'
-                    f'<div style="{_F}font-size:8px;color:#555960;line-height:1.4">'
-                    f'{desc}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:8px;'
+                    f'color:#555960;line-height:1.4">{desc}</div>'
+                    f'</div>'
                 )
+            body += '</div>'
+
+    body += '</body>'
+
+    _components.html(css + body, height=490, scrolling=False)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
