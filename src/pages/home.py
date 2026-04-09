@@ -1214,16 +1214,12 @@ def _render_quickjump() -> None:
                     f'<span style="{_M}font-size:8px;font-weight:700;color:{g_color}">'
                     f'{label}</span>'
                     f'<span class="hm-tag {tag_cls}">{tag_label}</span>'
-                    f'<span class="hm-sc">{sc}</span>'
                     f'</div>'
                     f'<div style="{_F}font-size:8px;color:#555960;line-height:1.4">'
                     f'{desc}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                if st.button("Open →", key=f"qj_{page_id}", use_container_width=True):
-                    st.session_state["current_page"] = page_id
-                    st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1727,6 +1723,32 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════
     # RENDER SECTIONS
     # ══════════════════════════════════════════════════════════════════════
+
+    # ── Last-updated / refresh controls (top-right, matching Overview) ────
+    if "home_last_loaded" not in st.session_state:
+        st.session_state["home_last_loaded"] = datetime.datetime.now()
+    _age_s   = int((datetime.datetime.now() - st.session_state["home_last_loaded"]).total_seconds())
+    _age_lbl = f"{_age_s // 60}m {_age_s % 60}s ago" if _age_s >= 60 else f"{_age_s}s ago"
+    _stale   = _age_s > 300
+
+    _, _ctrl_col = st.columns([5, 1])
+    with _ctrl_col:
+        _sc = "#c0392b" if _stale else "#27ae60"
+        st.markdown(
+            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+            f'padding:0.4rem 0.6rem;margin-bottom:0.4rem;text-align:center">'
+            f'<div style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#3a3a3a;margin-bottom:2px">LAST UPDATED</div>'
+            f'<div style="{_M}font-size:0.65rem;color:{_sc}">{_age_lbl}</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Refresh", key="home_refresh_btn", use_container_width=True):
+            st.session_state["home_last_loaded"] = datetime.datetime.now()
+            st.cache_data.clear()
+            st.rerun()
+        if st.button("Open Analyst", key="home_analyst_btn", type="primary", use_container_width=True):
+            st.session_state["current_page"] = "ai_chat"
+            st.rerun()
 
     # § 1  Masthead
     _render_masthead(conflict_agg)
