@@ -78,11 +78,21 @@ _STYLE = """<style>
 .hm-tag-daily{background:#0a1a2e;color:#2980b9!important}
 .hm-tag-alert{background:#1a0a00;color:#e67e22!important}
 .hm-tag-deep {background:#0a1a0a;color:#27ae60!important}
-/* ── Shortcut hint ── */
+/* ── Shortcut hint (static badge) ── */
 .hm-sc{display:inline-block;font-family:'JetBrains Mono',monospace!important;
   font-size:7px!important;font-weight:700;color:#555960!important;
   border:1px solid #2a2a2a;border-radius:2px;padding:0 3px;
   margin-left:3px;vertical-align:middle;line-height:1.6}
+/* ── Nav badge buttons — scoped to columns that contain a .hm-nav card ── */
+[data-testid="stVerticalBlock"]:has(.hm-nav) [data-testid="stButton"]>button{
+  background:transparent!important;border:1px solid #2a2a2a!important;
+  border-radius:2px!important;color:#555960!important;
+  font-family:'JetBrains Mono',monospace!important;font-size:7px!important;
+  font-weight:700!important;padding:1px 5px!important;
+  height:auto!important;min-height:0!important;
+  line-height:1.5!important;width:auto!important;margin-top:2px!important}
+[data-testid="stVerticalBlock"]:has(.hm-nav) [data-testid="stButton"]>button:hover{
+  border-color:#CFB991!important;color:#CFB991!important}
 /* ── Recommendation row ── */
 .hm-rec{border-left:3px solid;padding:.4rem .7rem;margin-bottom:5px;
   background:#0a0a0a;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -1172,86 +1182,55 @@ _TAG_META = {
 
 
 def _render_quickjump() -> None:
-    import streamlit.components.v1 as _components
-
-    _TAG_STYLES = {
-        "daily": ("DAILY",     "#0a1a2e", "#2980b9"),
-        "alert": ("ON ALERT",  "#1a0a00", "#e67e22"),
-        "deep":  ("DEEP-DIVE", "#0a1a0a", "#27ae60"),
-    }
-
-    css = """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:transparent;font-family:'DM Sans',sans-serif}
-    .nav-card{background:#0f0f0f;border:1px solid #1e1e1e;padding:6px 8px;
-      cursor:pointer;transition:box-shadow .15s,border-color .15s;user-select:none}
-    .nav-card:hover{box-shadow:0 0 0 1px #CFB991,inset 0 0 8px rgba(207,185,145,.07);border-color:#CFB991}
-    .nav-card:hover .sc{border-color:#CFB991;color:#CFB991}
-    .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:7.5px;
-      font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:1px 4px;
-      border-radius:1px;margin-left:3px;vertical-align:middle}
-    .sc{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:7px;
-      font-weight:700;color:#555960;border:1px solid #2a2a2a;border-radius:2px;
-      padding:0 3px;margin-left:3px;vertical-align:middle;line-height:1.6}
-    .grid{display:grid;gap:5px;margin-bottom:5px}
-    </style>
-    """
-
-    body = '<body style="background:transparent;padding:2px 0">'
-
-    # Header legend
-    body += (
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
-        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;font-weight:700;'
-        'letter-spacing:.18em;text-transform:uppercase;color:#8E9AAA">Navigate Terminal</span>'
-        '<span style="font-family:\'DM Sans\',sans-serif;font-size:8.5px;color:#555960">14 modules</span>'
-        '<span style="margin-left:auto;display:flex;gap:8px;align-items:center">'
-        '<span class="tag" style="background:#0a1a2e;color:#2980b9">DAILY</span>'
-        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">open every session</span>'
-        '<span class="tag" style="background:#1a0a00;color:#e67e22;margin-left:4px">ON ALERT</span>'
-        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">when a score moves</span>'
-        '<span class="tag" style="background:#0a1a0a;color:#27ae60;margin-left:4px">DEEP-DIVE</span>'
-        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">research &amp; sizing</span>'
-        '</span></div>'
+    # Header + legend
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:8px;margin:.6rem 0 .35rem;flex-wrap:wrap">'
+        f'<span style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#8E9AAA">Navigate Terminal</span>'
+        f'<span style="{_F}font-size:8.5px;color:#555960">14 modules</span>'
+        f'<span style="margin-left:auto;display:flex;gap:8px;align-items:center">'
+        f'<span class="hm-tag hm-tag-daily">DAILY</span>'
+        f'<span style="{_M}font-size:7px;color:#555960">open every session</span>'
+        f'<span class="hm-tag hm-tag-alert" style="margin-left:4px">ON ALERT</span>'
+        f'<span style="{_M}font-size:7px;color:#555960">when a score moves</span>'
+        f'<span class="hm-tag hm-tag-deep" style="margin-left:4px">DEEP-DIVE</span>'
+        f'<span style="{_M}font-size:7px;color:#555960">research &amp; sizing</span>'
+        f'</span></div>',
+        unsafe_allow_html=True,
     )
 
     for group in _JUMP_GROUPS:
-        gc = group["color"]
-        body += (
-            f'<div style="display:flex;align-items:baseline;gap:8px;border-left:2px solid {gc};'
-            f'padding-left:7px;margin:10px 0 5px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;font-weight:700;'
-            f'letter-spacing:.18em;text-transform:uppercase;color:{gc}">{group["group"]}</span>'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:8.5px;color:#555960">'
-            f'{group["caption"]}</span></div>'
+        g_color = group["color"]
+        st.markdown(
+            f'<div style="display:flex;align-items:baseline;gap:8px;'
+            f'border-left:2px solid {g_color};padding-left:7px;margin:8px 0 4px">'
+            f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:{g_color}">{group["group"]}</span>'
+            f'<span style="{_F}font-size:8.5px;color:#555960">{group["caption"]}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
-        items = group["items"]
-        for row_start in range(0, len(items), 4):
-            row = items[row_start:row_start + 4]
-            n   = len(row)
-            body += f'<div class="grid" style="grid-template-columns:repeat({n},1fr)">'
-            for label, page_id, desc, tag, sc in row:
-                tl, tbg, tc = _TAG_STYLES.get(tag, ("", "#111", "#555960"))
-                body += (
-                    f'<div class="nav-card" style="border-top:2px solid {gc}"'
-                    f' onclick="window.parent.location.href=\'?page={page_id}\'">'
+
+        items  = group["items"]
+        n_cols = min(len(items), 4)
+        cols   = st.columns(n_cols, gap="small")
+
+        for i, (label, page_id, desc, tag, sc) in enumerate(items):
+            tag_label, tag_cls = _TAG_META.get(tag, ("", ""))
+            with cols[i % n_cols]:
+                st.markdown(
+                    f'<div class="hm-nav" style="border-top:2px solid {g_color};min-height:52px">'
                     f'<div style="display:flex;align-items:center;margin-bottom:3px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-                    f'font-weight:700;color:{gc}">{label}</span>'
-                    f'<span class="tag" style="background:{tbg};color:{tc}">{tl}</span>'
-                    f'<span class="sc">{sc}</span>'
+                    f'<span style="{_M}font-size:8px;font-weight:700;color:{g_color}">{label}</span>'
+                    f'<span class="hm-tag {tag_cls}">{tag_label}</span>'
                     f'</div>'
-                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:8px;'
-                    f'color:#555960;line-height:1.4">{desc}</div>'
-                    f'</div>'
+                    f'<div style="{_F}font-size:8px;color:#555960;line-height:1.4">{desc}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
                 )
-            body += '</div>'
-
-    body += '</body>'
-
-    _components.html(css + body, height=490, scrolling=False)
+                if st.button(str(sc), key=f"qj_{page_id}"):
+                    st.session_state["current_page"] = page_id
+                    st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1355,11 +1334,9 @@ def _render_market_pulse() -> None:
 
     tiles_html = "".join(_tile(d) for d in data)
     st.markdown(
-        f'<div style="display:flex;gap:4px;flex-wrap:wrap;margin:.4rem 0 .5rem;'
-        f'align-items:stretch">'
-        f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#333;writing-mode:vertical-rl;'
-        f'transform:rotate(180deg);align-self:center;padding:4px 0">MARKET PULSE</div>'
+        f'<div style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#333;margin-bottom:4px">Market Pulse</div>'
+        f'<div style="display:flex;gap:4px;flex-wrap:nowrap;margin-bottom:.5rem">'
         f'{tiles_html}</div>',
         unsafe_allow_html=True,
     )
@@ -1458,17 +1435,17 @@ def _render_portfolio_pulse() -> None:
     with col_nav:
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1a1a1a;'
-            f'border-top:2px solid {_GOLD};padding:.45rem .65rem;height:100%">'
-            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
+            f'border-top:2px solid {_GOLD};padding:.4rem .65rem">'
+            f'<div style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#333;margin-bottom:4px">Portfolio NAV</div>'
-            f'<div style="{_M}font-size:1.2rem;font-weight:700;color:{_GOLD};line-height:1.1">'
+            f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD};line-height:1.1">'
             f'${total_usd:,.0f}</div>'
             f'<div style="{_M}font-size:7.5px;color:#555960;margin-top:2px">'
             f'{n} positions &nbsp;·&nbsp; as of {loaded_at}</div>'
-            f'<div style="margin-top:.5rem;padding-top:.4rem;border-top:1px solid #1a1a1a">'
-            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.16em;'
-            f'text-transform:uppercase;color:#333;margin-bottom:3px">Est. 1-Day P&amp;L</div>'
-            f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{pl_color}">'
+            f'<div style="margin-top:.4rem;padding-top:.35rem;border-top:1px solid #1a1a1a">'
+            f'<div style="{_M}font-size:7px;font-weight:700;letter-spacing:.16em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:2px">Est. 1-Day P&amp;L</div>'
+            f'<div style="{_M}font-size:0.95rem;font-weight:700;color:{pl_color}">'
             f'{pl_arrow} {pl_sign}${dollar_pl:,.0f}'
             f'<span style="font-size:8px;margin-left:5px">{pl_sign}{port_ret:.2f}%</span>'
             f'</div></div></div>',
@@ -1478,9 +1455,9 @@ def _render_portfolio_pulse() -> None:
     with col_movers:
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1a1a1a;'
-            f'border-top:2px solid #2a2a2a;padding:.45rem .65rem;height:100%">'
-            f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#333;margin-bottom:6px">Top Movers</div>'
+            f'border-top:2px solid #2a2a2a;padding:.4rem .65rem">'
+            f'<div style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#333;margin-bottom:5px">Top Movers</div>'
             f'{movers_html}</div>',
             unsafe_allow_html=True,
         )
