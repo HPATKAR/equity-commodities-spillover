@@ -64,13 +64,12 @@ _STYLE = """<style>
 .hm-crow{display:flex;align-items:center;gap:8px;padding:5px 0;
   border-bottom:1px solid #111}
 /* ── Nav card ── */
-.hm-nav-link{text-decoration:none!important;display:block;color:inherit!important}
 .hm-nav{background:#0f0f0f;border:1px solid #1e1e1e;
   padding:6px 8px;margin-bottom:3px;
   transition:box-shadow .15s ease,border-color .15s ease}
-.hm-nav-link:hover .hm-nav{box-shadow:0 0 0 1px #CFB991,inset 0 0 8px rgba(207,185,145,.07);
+.hm-nav:hover{box-shadow:0 0 0 1px #CFB991,inset 0 0 8px rgba(207,185,145,.07);
   border-color:#CFB991!important}
-.hm-nav-link:hover .hm-sc{border-color:#CFB991!important;color:#CFB991!important}
+.hm-nav:hover .hm-sc{border-color:#CFB991!important;color:#CFB991!important}
 /* ── Use-case tags ── */
 .hm-tag{display:inline-block;font-family:'JetBrains Mono',monospace!important;
   font-size:7.5px!important;font-weight:700!important;letter-spacing:.12em;
@@ -1211,8 +1210,8 @@ def _render_quickjump() -> None:
             col = cols[i % n_cols]
             with col:
                 st.markdown(
-                    f'<a href="?page={page_id}" target="_self" class="hm-nav-link">'
-                    f'<div class="hm-nav" style="border-top:2px solid {g_color}">'
+                    f'<div class="hm-nav" style="border-top:2px solid {g_color};cursor:pointer"'
+                    f' onclick="window.location.href=\'?page={page_id}\'">'
                     f'<div style="display:flex;align-items:center;margin-bottom:3px">'
                     f'<span style="{_M}font-size:8px;font-weight:700;color:{g_color}">'
                     f'{label}</span>'
@@ -1221,7 +1220,7 @@ def _render_quickjump() -> None:
                     f'</div>'
                     f'<div style="{_F}font-size:8px;color:#555960;line-height:1.4">'
                     f'{desc}</div>'
-                    f'</div></a>',
+                    f'</div>',
                     unsafe_allow_html=True,
                 )
 
