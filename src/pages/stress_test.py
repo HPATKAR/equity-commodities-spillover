@@ -17,6 +17,9 @@ from src.data.loader import (
     load_all_prices, load_sp500_prices, get_sp500_constituents,
     load_fixed_income_prices,
 )
+from src.data.portfolio_loader import (
+    build_portfolio, get_portfolio, set_portfolio, clear_portfolio, get_template_csv,
+)
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
@@ -148,6 +151,137 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         )
     except Exception:
         pass
+
+    # ── Portfolio Import ───────────────────────────────────────────────────────
+    _existing_portfolio = get_portfolio()
+    with st.expander(
+        "📂  Import Portfolio  —  CSV / Excel upload · dollar amounts · auto FX conversion · auto weights",
+        expanded=(_existing_portfolio is None),
+    ):
+        _M = "font-family:'JetBrains Mono',monospace;"
+
+        st.markdown(
+            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8E9AAA;'
+            'line-height:1.6;margin-bottom:6px">'
+            'Upload your portfolio as a CSV or Excel file. Required columns: '
+            '<b style="color:#CFB991">ticker</b>, '
+            '<b style="color:#CFB991">dollar_amount</b>. '
+            'Optional: <b>currency</b> (ISO 4217 — non-USD converted at live spot rate), '
+            '<b>cusip</b>, <b>isin</b>, <b>name</b>, <b>sector</b>. '
+            'Weights are computed automatically from dollar amounts — no manual percentage entry needed.'
+            '</p>',
+            unsafe_allow_html=True,
+        )
+
+        _ic1, _ic2, _ic3 = st.columns([2, 1, 1])
+
+        with _ic1:
+            _uploaded = st.file_uploader(
+                "Portfolio file",
+                type=["csv", "xlsx", "xls"],
+                key="portfolio_upload",
+                label_visibility="collapsed",
+            )
+
+        with _ic2:
+            st.download_button(
+                "Download Template CSV",
+                data=get_template_csv(),
+                file_name="portfolio_template.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+        with _ic3:
+            if _existing_portfolio and st.button(
+                "Clear Portfolio", use_container_width=True, key="clear_pf_btn"
+            ):
+                clear_portfolio()
+                st.rerun()
+
+        if _uploaded is not None:
+            with st.spinner("Fetching live prices and FX rates…"):
+                try:
+                    _pf = build_portfolio(_uploaded)
+                    set_portfolio(_pf)
+                    _existing_portfolio = _pf
+                    st.success(
+                        f"Portfolio loaded — {_pf['n']} positions · "
+                        f"Total NAV: ${_pf['total_usd']:,.0f}"
+                    )
+                    for w in _pf.get("warnings", []):
+                        st.warning(w)
+                    for e in _pf.get("errors", [])[:5]:
+                        st.caption(e)
+                except ValueError as e:
+                    st.error(f"Could not parse file: {e}")
+                except Exception as e:
+                    st.error(f"Unexpected error: {e}")
+
+        # ── Show current portfolio summary ─────────────────────────────────
+        if _existing_portfolio:
+            _pf = _existing_portfolio
+            positions = _pf["positions"]
+            # Sort by weight desc
+            top_pos = sorted(positions, key=lambda p: p["weight"], reverse=True)
+
+            st.markdown(
+                f'<div style="display:flex;gap:16px;flex-wrap:wrap;'
+                f'margin:.6rem 0 .3rem;border-top:1px solid #1e1e1e;padding-top:.5rem">'
+                f'<div><span style="{_M}font-size:7px;color:#555960">POSITIONS</span><br>'
+                f'<span style="{_M}font-size:16px;font-weight:700;color:#e8e9ed">{_pf["n"]}</span></div>'
+                f'<div><span style="{_M}font-size:7px;color:#555960">TOTAL NAV (USD)</span><br>'
+                f'<span style="{_M}font-size:16px;font-weight:700;color:#CFB991">'
+                f'${_pf["total_usd"]:,.0f}</span></div>'
+                f'<div><span style="{_M}font-size:7px;color:#555960">LOADED</span><br>'
+                f'<span style="{_M}font-size:11px;color:#8E9AAA">{_pf["loaded_at"][:16]}</span></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Mini holdings table
+            rows_html = "".join(
+                f'<tr style="border-bottom:1px solid #1a1a1a">'
+                f'<td style="{_M}font-size:9px;color:#CFB991;padding:3px 8px">{p["ticker"]}</td>'
+                f'<td style="{_M}font-size:9px;color:#8E9AAA;padding:3px 8px">'
+                f'{p["name"][:28] if p["name"] else "—"}</td>'
+                f'<td style="{_M}font-size:9px;color:#e8e9ed;padding:3px 8px">'
+                f'{p["sector"][:18] if p["sector"] else "—"}</td>'
+                f'<td style="{_M}font-size:9px;color:#e8e9ed;text-align:right;padding:3px 8px">'
+                f'${p["dollar_amount_usd"]:,.0f}</td>'
+                f'<td style="{_M}font-size:9px;color:#e8e9ed;text-align:right;padding:3px 8px">'
+                f'{p["weight"]:.1%}</td>'
+                f'<td style="{_M}font-size:9px;color:#555960;text-align:right;padding:3px 8px">'
+                f'{p["currency"]}</td>'
+                f'</tr>'
+                for p in top_pos[:10]
+            )
+            st.markdown(
+                f'<table style="width:100%;border-collapse:collapse">'
+                f'<thead><tr>'
+                f'<th style="{_M}font-size:7px;color:#555960;text-align:left;'
+                f'padding:3px 8px;border-bottom:1px solid #2a2a2a">TICKER</th>'
+                f'<th style="{_M}font-size:7px;color:#555960;text-align:left;'
+                f'padding:3px 8px;border-bottom:1px solid #2a2a2a">NAME</th>'
+                f'<th style="{_M}font-size:7px;color:#555960;text-align:left;'
+                f'padding:3px 8px;border-bottom:1px solid #2a2a2a">SECTOR</th>'
+                f'<th style="{_M}font-size:7px;color:#555960;text-align:right;'
+                f'padding:3px 8px;border-bottom:1px solid #2a2a2a">MKT VALUE (USD)</th>'
+                f'<th style="{_M}font-size:7px;color:#555960;text-align:right;'
+                f'padding:3px 8px;border-bottom:1px solid #2a2a2a">WEIGHT</th>'
+                f'<th style="{_M}font-size:7px;color:#555960;text-align:right;'
+                f'padding:3px 8px;border-bottom:1px solid #2a2a2a">CCY</th>'
+                f'</tr></thead><tbody>{rows_html}</tbody></table>',
+                unsafe_allow_html=True,
+            )
+            if len(positions) > 10:
+                st.caption(f"+ {len(positions) - 10} more positions.")
+
+            # ── Auto-populate weights into session state so Sections A/B pick them up ──
+            _pf_weights = _pf["weights"]
+            for tk, w in _pf_weights.items():
+                st.session_state[f"w_{tk}"]  = round(w * 100, 2)
+                st.session_state[f"sw_{tk}"] = round(w * 100, 2)
 
     with st.spinner("Loading index and commodity price data…"):
         eq_p, cmd_p = load_all_prices(start, end)

@@ -23,6 +23,7 @@ def _logo_b64() -> str:
     return ""
 
 from src.data.loader import load_returns, load_all_prices, load_fixed_income_returns, load_fx_returns
+from src.data.portfolio_loader import get_portfolio
 from src.data.config import GEOPOLITICAL_EVENTS, EQUITY_REGIONS, COMMODITY_GROUPS, PALETTE
 from src.analysis.correlations import (
     cross_asset_corr, average_cross_corr_series, detect_correlation_regime,
@@ -91,6 +92,41 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "The KPIs quantify how tight the spillover channel is right now. The heatmap shows which "
         "specific equity-commodity pairs are most coupled. Start here before reading any other page."
     )
+
+    # ── Portfolio Pulse (shows when a portfolio has been imported) ─────────────
+    _pf = get_portfolio()
+    if _pf:
+        _M = "font-family:'JetBrains Mono',monospace;"
+        _top5 = sorted(_pf["positions"], key=lambda p: p["weight"], reverse=True)[:5]
+        _badges_parts = []
+        for p in _top5:
+            _price_html = (
+                f'<span style="{_M}font-size:7px;color:#8E9AAA;margin-left:4px">'
+                f'${p["live_price"]:.2f}</span>'
+                if p.get("live_price") else ""
+            )
+            _badges_parts.append(
+                f'<span style="background:#0a0a0a;border:1px solid #2a2a2a;'
+                f'padding:3px 8px;margin-right:6px;display:inline-block">'
+                f'<span style="{_M}font-size:8px;font-weight:700;color:#CFB991">{p["ticker"]}</span>'
+                f'<span style="{_M}font-size:7px;color:#555960;margin-left:5px">{p["weight"]:.1%}</span>'
+                f'{_price_html}</span>'
+            )
+        _badges = "".join(_badges_parts)
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid #CFB991;padding:.45rem .9rem;'
+            f'margin-bottom:.6rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+            f'<span style="{_M}font-size:7px;font-weight:700;color:#CFB991;white-space:nowrap">'
+            f'PORTFOLIO</span>'
+            f'<span style="{_M}font-size:7px;color:#555960">'
+            f'{_pf["n"]} positions · ${_pf["total_usd"]:,.0f} NAV</span>'
+            f'{_badges}'
+            f'<a style="{_M}font-size:7px;color:#555960;margin-left:auto;cursor:pointer" '
+            f'onclick="void(0)">→ Stress Lab to re-import</a>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     with st.spinner("Loading market data…"):
         eq_r, cmd_r = load_returns(start, end)
