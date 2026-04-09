@@ -1214,6 +1214,7 @@ def _render_quickjump() -> None:
                     f'<span style="{_M}font-size:8px;font-weight:700;color:{g_color}">'
                     f'{label}</span>'
                     f'<span class="hm-tag {tag_cls}">{tag_label}</span>'
+                    f'<span class="hm-sc">{sc}</span>'
                     f'</div>'
                     f'<div style="{_F}font-size:8px;color:#555960;line-height:1.4">'
                     f'{desc}</div>'
