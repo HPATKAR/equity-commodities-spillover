@@ -183,6 +183,11 @@ def load_cot_data(years: int = 3) -> pd.DataFrame:
 
     out = pd.concat(result_rows, ignore_index=True)
     out = out.sort_values("date").reset_index(drop=True)
+    try:
+        from src.analysis.freshness import record_fetch
+        record_fetch("cot_positioning")
+    except Exception:
+        pass
     return out
 
 

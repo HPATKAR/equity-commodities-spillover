@@ -824,6 +824,100 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     )
     _chart(fig_dd)
 
+    # ── Geo Risk Beta — CAPM-style geopolitical amplification (Benjamin) ──────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+
+        _geo_cr  = score_all_conflicts()
+        _geo_agg = aggregate_portfolio_scores(_geo_cr)
+        _geo_cis = float(_geo_agg.get("portfolio_cis", 50.0))
+        _geo_beta = _geo_cis / 100.0   # 0–1 scale; 1.0 = maximum geopolitical stress
+
+        _geo_col = "#c0392b" if _geo_cis >= 65 else "#e67e22" if _geo_cis >= 45 else "#CFB991"
+        _M_geo = "font-family:'JetBrains Mono',monospace;"
+        _F_geo = "font-family:'DM Sans',sans-serif;"
+
+        # Build comparison rows: base vs. geo-adjusted drawdown
+        _geo_rows_html = ""
+        for r in results:
+            _base_dd  = r["max_dd"]     if not np.isnan(r["max_dd"])     else None
+            _base_ret = r["during_ret"] if not np.isnan(r["during_ret"]) else None
+            if _base_dd is None or _base_ret is None:
+                continue
+            # Adjusted drawdown: amplified by geo_beta (more negative)
+            _adj_dd  = _base_dd  * (1 + _geo_beta)
+            # Adjusted during return: losses amplified; gains muted (sign preserved)
+            _sign = np.sign(_base_ret) if _base_ret != 0 else -1
+            _adj_ret = _base_ret * (1 + _geo_beta * abs(_sign))
+
+            _dd_worse = _adj_dd < _base_dd
+            _ret_worse = (_adj_ret < _base_ret) if _base_ret < 0 else (_adj_ret > _base_ret and _base_ret >= 0)
+
+            _geo_rows_html += (
+                f'<tr style="border-bottom:1px solid #1a1a1a">'
+                f'<td style="{_M_geo}font-size:0.68rem;color:#b8b8b8;padding:4px 8px">{r["event"]}</td>'
+                f'<td style="{_F_geo}font-size:0.68rem;color:#8890a1;padding:4px 8px">{r["name"][:36]}</td>'
+                f'<td style="{_M_geo}font-size:0.68rem;color:#f87171;padding:4px 8px;text-align:right">'
+                f'{_base_dd:.2f}%</td>'
+                f'<td style="{_M_geo}font-size:0.68rem;color:{"#f87171" if _dd_worse else "#4ade80"};'
+                f'font-weight:700;padding:4px 8px;text-align:right">{_adj_dd:.2f}%</td>'
+                f'<td style="{_M_geo}font-size:0.68rem;color:#e8e9ed;padding:4px 8px;text-align:right">'
+                f'{_base_ret:+.2f}%</td>'
+                f'<td style="{_M_geo}font-size:0.68rem;color:{"#f87171" if _base_ret < 0 else "#4ade80"};'
+                f'font-weight:700;padding:4px 8px;text-align:right">{_adj_ret:+.2f}%</td>'
+                f'</tr>'
+            )
+
+        if _geo_rows_html:
+            st.markdown("---")
+            st.subheader("Geo Risk Beta — Geopolitically Adjusted Drawdowns")
+            _section_note(
+                f"Current CIS of {_geo_cis:.0f}/100 implies a geo-risk beta of {_geo_beta:.2f}. "
+                "Scenario drawdowns amplified accordingly — consistent with Benjamin's CAPM-style "
+                "geo risk factor approach: countries/portfolios with higher observed geopolitical risk "
+                "experience 100% of the stress × (Geopolitical Risk Factor)."
+            )
+
+            st.markdown(
+                f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                f'border-left:3px solid {_geo_col};padding:.5rem .9rem;margin-bottom:.6rem">'
+                f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:.3rem">'
+                f'<span style="{_M_geo}font-size:0.52rem;font-weight:700;letter-spacing:.16em;'
+                f'text-transform:uppercase;color:{_geo_col}">GEO RISK FACTOR</span>'
+                f'<span style="{_M_geo}font-size:0.72rem;font-weight:700;color:{_geo_col}">'
+                f'β = {_geo_beta:.2f}</span>'
+                f'<span style="{_F_geo}font-size:0.62rem;color:#8890a1">'
+                f'CIS {_geo_cis:.0f}/100 · Adjusted DD = Base DD × (1 + {_geo_beta:.2f})</span>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+            _geo_tbl_css = """<style>
+.geo-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.geo-table th{background:#1c1c1c;color:#CFB991;padding:6px 8px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.65rem}
+.geo-table td{border-bottom:1px solid #1e1e1e}
+.geo-table tr:nth-child(even) td{background:#171717}
+.geo-table tr:nth-child(odd) td{background:#111111}
+.geo-table tr:hover td{background:#202020}
+</style>"""
+            st.markdown(
+                _geo_tbl_css
+                + "<table class='geo-table'><thead><tr>"
+                + "<th>Event</th><th>Name</th>"
+                + "<th style='text-align:right'>Base DD</th>"
+                + "<th style='text-align:right'>Geo-Adj DD</th>"
+                + "<th style='text-align:right'>Base During</th>"
+                + "<th style='text-align:right'>Geo-Adj During</th>"
+                + "</tr></thead><tbody>"
+                + _geo_rows_html
+                + "</tbody></table>",
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
+
     # ── Portfolio path (relative days from event start) ───────────────────────
     st.subheader("Portfolio Value Path: Days from Event Start (Base = 100)")
     _section_note(

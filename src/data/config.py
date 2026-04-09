@@ -673,6 +673,25 @@ EQUITY_REGIONS = {
     "India":  ["Sensex", "Nifty 50"],
 }
 
+# ── Sector ETF universe (Benjamin: sector SPDRs for narrower analysis) ─────
+# These complement the broad-index EQUITY_REGIONS with sector-level granularity.
+# Each maps to a yfinance-compatible ticker.
+SECTOR_ETFS: dict[str, str] = {
+    "XLE":  "Energy Select SPDR",
+    "XLF":  "Financial Select SPDR",
+    "XLI":  "Industrial Select SPDR",
+    "XLB":  "Materials Select SPDR",
+    "XLP":  "Consumer Staples SPDR",
+    "XLU":  "Utilities Select SPDR",
+    "XLV":  "Health Care SPDR",
+    "XLK":  "Technology Select SPDR",
+    "XLY":  "Consumer Discr SPDR",
+    "IYT":  "iShares US Transportation",   # Oil/Transport pair Benjamin suggested
+    "USO":  "US Oil Fund (WTI proxy)",
+    "UNG":  "US Nat Gas Fund",
+    "PDBC": "Invesco Optimum Yield Commodities",
+}
+
 # ── Commodity tickers (yfinance) ───────────────────────────────────────────
 COMMODITY_TICKERS = {
     # Energy

@@ -687,6 +687,42 @@ def _about_page_styles():
     }
     </style>""", unsafe_allow_html=True)
 
+# ── Page header ────────────────────────────────────────────────────────────
+
+def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
+    """
+    Branded page header used on every page.
+    Gold left-border structural anchor · logo mark eyebrow · clean h1 title.
+    """
+    import streamlit.components.v1 as _cmp
+    _cmp.html('<script>window.parent.scrollTo({top:0,behavior:"instant"});</script>', height=0)
+    _Fh = "font-family:'DM Sans',sans-serif;"
+    _Mh = "font-family:'JetBrains Mono',monospace;"
+    _eye = eyebrow or "Cross-Asset Spillover Monitor \u00b7 Purdue Daniels \u00b7 MGMT 69000-120"
+    _logo = _footer_logo_b64()
+    _logo_img = (
+        f'<img src="{_logo}" alt="" style="height:14px;width:auto;object-fit:contain;'
+        f'opacity:0.55;flex-shrink:0;display:block;margin-right:8px;" />'
+        if _logo else ""
+    )
+    _sub_html = (
+        f'<p style="{_Fh}font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem 0">{subtitle}</p>'
+        if subtitle else '<div style="margin-bottom:0.5rem"></div>'
+    )
+    st.markdown(
+        f'<div style="border-left:2px solid #CFB991;padding-left:12px;margin-bottom:0.75rem">'
+        f'<div style="display:flex;align-items:center;margin-bottom:5px">'
+        f'{_logo_img}'
+        f'<span style="{_Mh}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:#555960">{_eye}</span>'
+        f'</div>'
+        f'<h1 style="{_Fh}font-size:1.25rem;font-weight:700;color:#e8e8e8;margin:0 0 3px">{title}</h1>'
+        f'{_sub_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
 # ── Footer ─────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=86400)

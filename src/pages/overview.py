@@ -43,6 +43,119 @@ from src.ui.alert_banner import render_alert_banner
 
 _F = "font-family:'DM Sans',sans-serif;"
 
+# ── Market Snapshot — Bloomberg-style strip (Benjamin feedback) ────────────
+_SNAPSHOT_TICKERS = {
+    # Equities
+    "SPY":  ("S&P 500",        "equity"),
+    "QQQ":  ("Nasdaq-100",     "equity"),
+    "IWM":  ("Russell 2000",   "equity"),
+    "EFA":  ("Intl Developed", "equity"),
+    # Sectors (Benjamin: sector SPDRs)
+    "XLE":  ("Energy",         "sector"),
+    "XLF":  ("Financials",     "sector"),
+    "XLI":  ("Industrials",    "sector"),
+    "XLK":  ("Technology",     "sector"),
+    "IYT":  ("Transport",      "sector"),
+    # Commodities
+    "GLD":  ("Gold",           "commodity"),
+    "SLV":  ("Silver",         "commodity"),
+    "USO":  ("WTI Oil",        "commodity"),
+    "UNG":  ("Nat Gas",        "commodity"),
+    # Fixed income
+    "TLT":  ("20Y Treasury",   "fixed_income"),
+    "HYG":  ("HY Credit",      "fixed_income"),
+    # Macro
+    "UUP":  ("US Dollar",      "macro"),
+    "^VIX": ("VIX",            "macro"),
+}
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _fetch_snapshot_prices() -> dict[str, dict]:
+    """Fetch 2-day close for snapshot tickers, return {ticker: {price, chg_pct, chg_abs}}."""
+    import yfinance as yf
+    tickers = list(_SNAPSHOT_TICKERS.keys())
+    try:
+        raw = yf.download(tickers, period="5d", auto_adjust=True, progress=False, threads=True)
+        if raw.empty:
+            return {}
+        close = raw["Close"] if "Close" in raw.columns else raw
+        result = {}
+        for tk in tickers:
+            try:
+                if isinstance(close, __import__("pandas").Series):
+                    s = close.dropna()
+                    col = tk
+                else:
+                    if tk not in close.columns:
+                        continue
+                    s = close[tk].dropna()
+                if len(s) >= 2:
+                    price = float(s.iloc[-1])
+                    prev  = float(s.iloc[-2])
+                    result[tk] = {
+                        "price":   price,
+                        "chg_pct": (price - prev) / prev * 100,
+                        "chg_abs": price - prev,
+                    }
+            except Exception:
+                continue
+        return result
+    except Exception:
+        return {}
+
+
+def _render_market_snapshot(snap: dict) -> None:
+    """Compact Bloomberg-style market snapshot strip."""
+    if not snap:
+        return
+
+    _M = "font-family:'JetBrains Mono',monospace;"
+    _F2 = "font-family:'DM Sans',sans-serif;"
+
+    # Group by category
+    _GROUPS = [
+        ("Equities",       ["SPY", "QQQ", "IWM", "EFA"],           "#2980b9"),
+        ("Sectors",        ["XLE", "XLF", "XLI", "XLK", "IYT"],   "#CFB991"),
+        ("Commodities",    ["GLD", "SLV", "USO", "UNG"],           "#e67e22"),
+        ("Fixed Inc / Macro", ["TLT", "HYG", "UUP", "^VIX"],      "#27ae60"),
+    ]
+
+    st.markdown(
+        f'<p style="{_M}font-size:0.52rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.16em;color:#8E6F3E;margin:0.75rem 0 0.35rem">Market Snapshot</p>',
+        unsafe_allow_html=True,
+    )
+
+    for group_label, tickers, g_color in _GROUPS:
+        available = [tk for tk in tickers if tk in snap]
+        if not available:
+            continue
+        n = len(available)
+        cols = st.columns(n, gap="small")
+        for i, tk in enumerate(available):
+            d = snap[tk]
+            label, _ = _SNAPSHOT_TICKERS[tk]
+            chg = d["chg_pct"]
+            price = d["price"]
+            c = "#27ae60" if chg >= 0 else "#c0392b"
+            arrow = "▲" if chg >= 0 else "▼"
+            # VIX: invert color logic (rising VIX = bad)
+            if tk == "^VIX":
+                c = "#c0392b" if chg >= 0 else "#27ae60"
+
+            cols[i].markdown(
+                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                f'border-top:2px solid {g_color};padding:0.35rem 0.5rem">'
+                f'<div style="{_M}font-size:0.52rem;font-weight:700;letter-spacing:0.12em;'
+                f'text-transform:uppercase;color:#8890a1;margin-bottom:2px">{label}</div>'
+                f'<div style="{_M}font-size:0.80rem;font-weight:700;color:#e8e9ed;line-height:1.1">'
+                f'${price:,.2f}</div>'
+                f'<div style="{_M}font-size:0.60rem;color:{c};font-weight:600">'
+                f'{arrow} {abs(chg):.2f}%</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
 
 def _label(txt: str) -> None:
     st.markdown(
@@ -97,33 +210,47 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _pf = get_portfolio()
     if _pf:
         _M = "font-family:'JetBrains Mono',monospace;"
-        _top5 = sorted(_pf["positions"], key=lambda p: p["weight"], reverse=True)[:5]
-        _badges_parts = []
-        for p in _top5:
-            _price_html = (
-                f'<span style="{_M}font-size:7px;color:#8E9AAA;margin-left:4px">'
-                f'${p["live_price"]:.2f}</span>'
-                if p.get("live_price") else ""
+        _F2 = "font-family:'DM Sans',sans-serif;"
+        _top10 = sorted(_pf["positions"], key=lambda p: p["weight"], reverse=True)[:10]
+
+        # Build holdings rows
+        _rows = ""
+        for p in _top10:
+            _px  = f'${p["live_price"]:,.2f}' if p.get("live_price") else "—"
+            _name = (p.get("name") or p["ticker"])[:22]
+            _rows += (
+                f'<div style="display:flex;align-items:center;gap:0;'
+                f'border-bottom:1px solid #111;padding:3px 0">'
+                f'<span style="{_M}font-size:0.62rem;font-weight:700;color:#CFB991;min-width:52px">'
+                f'{p["ticker"]}</span>'
+                f'<span style="{_F2}font-size:0.62rem;color:#8890a1;flex:1;'
+                f'overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{_name}</span>'
+                f'<span style="{_M}font-size:0.62rem;color:#e8e9ed;min-width:48px;text-align:right">'
+                f'{_px}</span>'
+                f'<span style="{_M}font-size:0.62rem;color:#CFB991;min-width:46px;text-align:right">'
+                f'{p["weight"]:.1%}</span>'
+                f'</div>'
             )
-            _badges_parts.append(
-                f'<span style="background:#0a0a0a;border:1px solid #2a2a2a;'
-                f'padding:3px 8px;margin-right:6px;display:inline-block">'
-                f'<span style="{_M}font-size:8px;font-weight:700;color:#CFB991">{p["ticker"]}</span>'
-                f'<span style="{_M}font-size:7px;color:#555960;margin-left:5px">{p["weight"]:.1%}</span>'
-                f'{_price_html}</span>'
-            )
-        _badges = "".join(_badges_parts)
+
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
-            f'border-left:3px solid #CFB991;padding:.45rem .9rem;'
-            f'margin-bottom:.6rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
-            f'<span style="{_M}font-size:7px;font-weight:700;color:#CFB991;white-space:nowrap">'
-            f'PORTFOLIO</span>'
-            f'<span style="{_M}font-size:7px;color:#555960">'
-            f'{_pf["n"]} positions · ${_pf["total_usd"]:,.0f} NAV</span>'
-            f'{_badges}'
-            f'<a style="{_M}font-size:7px;color:#555960;margin-left:auto;cursor:pointer" '
-            f'onclick="void(0)">→ Stress Lab to re-import</a>'
+            f'border-left:3px solid #CFB991;padding:.5rem .9rem;margin-bottom:.6rem">'
+            f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:.4rem">'
+            f'<span style="{_M}font-size:0.52rem;font-weight:700;letter-spacing:.16em;'
+            f'text-transform:uppercase;color:#CFB991">Portfolio</span>'
+            f'<span style="{_M}font-size:0.62rem;color:#8890a1">'
+            f'{_pf["n"]} positions · <b style="color:#e8e9ed">${_pf["total_usd"]:,.0f}</b> NAV</span>'
+            f'<span style="{_F2}font-size:0.60rem;color:#555960;margin-left:auto">'
+            f'Loaded {_pf["loaded_at"][:10]} · Top {len(_top10)} shown · Weights from dollar amounts</span>'
+            f'</div>'
+            f'<div style="display:flex;gap:0;padding-bottom:3px;border-bottom:1px solid #2a2a2a;'
+            f'margin-bottom:2px">'
+            f'<span style="{_M}font-size:0.52rem;color:#555960;min-width:52px">TICKER</span>'
+            f'<span style="{_M}font-size:0.52rem;color:#555960;flex:1">NAME</span>'
+            f'<span style="{_M}font-size:0.52rem;color:#555960;min-width:48px;text-align:right">PRICE</span>'
+            f'<span style="{_M}font-size:0.52rem;color:#555960;min-width:46px;text-align:right">WEIGHT</span>'
+            f'</div>'
+            f'{_rows}'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -204,6 +331,10 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if _v is not None:
             _status_items.append((_iv_name, f"{_v:.1f}", 300))   # 5-min TTL
     _data_status_bar(_status_items)
+
+    # ── Market Snapshot — daily spot-check strip (Benjamin feedback) ──────────
+    _snap = _fetch_snapshot_prices()
+    _render_market_snapshot(_snap)
 
     # ── Implied Vol History (OVX / GVZ / VIX / VVIX) ─────────────────────
     try:

@@ -289,7 +289,14 @@ def load_fred_series(
             except Exception:
                 pass
         if dfs:
-            return pd.DataFrame(dfs).sort_index()
+            result = pd.DataFrame(dfs).sort_index()
+            try:
+                from src.analysis.freshness import record_fetch
+                record_fetch("fred_macro")
+                record_fetch("fred_spreads")
+            except Exception:
+                pass
+            return result
     except Exception:
         pass
     return pd.DataFrame()
@@ -657,9 +664,16 @@ def load_implied_vol(
         "GVZ":  "^GVZ",
         "VVIX": "^VVIX",
     }
-    return _fill_gaps(
+    result = _fill_gaps(
         _fetch_yf(_IV_TICKERS, date.fromisoformat(start), date.fromisoformat(end))
     )
+    if not result.empty:
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("yfinance_vix")
+        except Exception:
+            pass
+    return result
 
 
 @st.cache_data(ttl=300, show_spinner=False)

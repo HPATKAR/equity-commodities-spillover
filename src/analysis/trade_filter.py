@@ -30,6 +30,7 @@ from typing import Optional
 DEFAULTS = {
     "min_confidence":    0.45,
     "min_beta":          0.0,       # 0 = no beta filter
+    "min_sas":           0.0,       # 0 = no SAS filter
     "direction":         "all",
     "category":          "all",
     "regime_match":      True,
@@ -178,6 +179,28 @@ def _passes_conflict_id_filter(trade: dict, conflict_ids: list[str]) -> bool:
     return trade_conflict in conflict_ids
 
 
+def _passes_min_sas(
+    trade: dict,
+    min_sas: float,
+    asset_exposure: Optional[dict] = None,
+) -> bool:
+    """
+    Require at least one asset in the trade to have SAS >= min_sas.
+    Passes if min_sas == 0 or no exposure data available.
+    Static trades (no conflict_id) are not filtered by SAS.
+    """
+    if min_sas <= 0 or asset_exposure is None:
+        return True
+    if not trade.get("conflict_id"):
+        return True   # static library trades bypass SAS filter
+    assets = trade.get("assets", [])
+    for a in assets:
+        ed = asset_exposure.get(a)
+        if ed and ed.get("sas", 0.0) >= min_sas:
+            return True
+    return False
+
+
 def _passes_country_perspective(trade: dict, perspective: str) -> bool:
     """
     Allow trades where at least one asset is in the country's relevant asset universe.
@@ -199,13 +222,14 @@ def apply_filters(
     current_regime: int = 1,
     current_scenario_id: str = "base",
     conflict_betas: Optional[dict] = None,
+    asset_exposure: Optional[dict] = None,
 ) -> list[dict]:
     """
     Apply all active filters to a list of trade candidates.
     Returns filtered list, sorted by confidence desc.
 
     filters dict keys (all optional, defaults from DEFAULTS):
-        min_confidence, min_beta, direction, category,
+        min_confidence, min_beta, min_sas, direction, category,
         regime_match, scenario_match, max_qc_flags,
         conflict_ids, country_perspective
     """
@@ -214,6 +238,7 @@ def apply_filters(
 
     min_conf         = float(filters.get("min_confidence",    DEFAULTS["min_confidence"]))
     min_beta         = float(filters.get("min_beta",          DEFAULTS["min_beta"]))
+    min_sas          = float(filters.get("min_sas",           DEFAULTS["min_sas"]))
     direction        = filters.get("direction",               DEFAULTS["direction"])
     category         = filters.get("category",                DEFAULTS["category"])
     regime_match     = bool(filters.get("regime_match",       DEFAULTS["regime_match"]))
@@ -241,6 +266,8 @@ def apply_filters(
         if not _passes_conflict_id_filter(t, conflict_ids):
             continue
         if not _passes_country_perspective(t, country_persp):
+            continue
+        if not _passes_min_sas(t, min_sas, asset_exposure):
             continue
         result.append(t)
 
@@ -362,7 +389,7 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
              "Commodity", "Fixed Income", "India/EM", "Private Credit"],
             key=f"{key_prefix}_category",
         )
-        c4, c5, c6 = st.columns(3)
+        c4, c5, c6, c7 = st.columns(4)
         regime_match = c4.checkbox("Regime-matched only", value=True,
                                    key=f"{key_prefix}_regime")
         min_beta = c5.slider(
@@ -370,7 +397,12 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
             key=f"{key_prefix}_min_beta",
             help="Only show ideas where lead asset has ≥ this beta to an active conflict",
         )
-        max_flags = c6.number_input(
+        min_sas = c6.slider(
+            "Min asset SAS", 0, 80, 0, 5,
+            key=f"{key_prefix}_min_sas",
+            help="Require at least one trade asset to have Scenario-Adjusted Score ≥ this value (0 = no filter). Static library trades are exempt.",
+        )
+        max_flags = c7.number_input(
             "Max QC flags", 0, 5, 2, key=f"{key_prefix}_max_flags",
         )
 
@@ -387,6 +419,8 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
             _active_summary.append(f"Confidence ≥ {min_confidence:.0%}")
         if min_beta > 0:
             _active_summary.append(f"Beta ≥ {min_beta:.2f}")
+        if min_sas > 0:
+            _active_summary.append(f"SAS ≥ {min_sas}")
         if direction != "all":
             _active_summary.append(f"Direction: {direction.title()}")
         if category != "all":
@@ -413,6 +447,7 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
         "category":            category,
         "regime_match":        regime_match,
         "min_beta":            min_beta,
+        "min_sas":             float(min_sas),
         "max_qc_flags":        int(max_flags),
         "conflict_ids":        selected_conflict_ids,
         "country_perspective": country_perspective,

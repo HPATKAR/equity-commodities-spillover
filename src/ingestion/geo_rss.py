@@ -205,6 +205,12 @@ def ingest_headlines(
             ))
 
     results.sort(key=lambda h: h.relevance, reverse=True)
+    if results:
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("rss_headlines")
+        except Exception:
+            pass
     return results
 
 
