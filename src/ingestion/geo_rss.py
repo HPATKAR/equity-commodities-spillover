@@ -205,6 +205,39 @@ def ingest_headlines(
             ))
 
     results.sort(key=lambda h: h.relevance, reverse=True)
+
+    # ── Pandera-style row validation on RSS output ─────────────────────────
+    # Validates at the system boundary before headlines enter the pipeline.
+    # Checks: id is non-empty 12-char hex, title non-empty, relevance in [0,100],
+    # regions and commodities are lists. Drops malformed rows with a warning.
+    valid_results: list[GeoHeadline] = []
+    _drop_count = 0
+    for h in results:
+        _ok = True
+        if not h.id or len(h.id) != 12:
+            _ok = False
+        if not h.title or not h.title.strip():
+            _ok = False
+        if not (0.0 <= h.relevance <= 100.0):
+            _ok = False
+        if not isinstance(h.regions, list) or not isinstance(h.commodities, list):
+            _ok = False
+        if _ok:
+            valid_results.append(h)
+        else:
+            _drop_count += 1
+    if _drop_count:
+        try:
+            import streamlit as _st
+            _st.warning(
+                f"RSS validation: {_drop_count} malformed headline(s) dropped "
+                f"(missing id/title or relevance out of range).",
+                icon="⚠️",
+            )
+        except Exception:
+            pass
+    results = valid_results
+
     if results:
         try:
             from src.analysis.freshness import record_fetch

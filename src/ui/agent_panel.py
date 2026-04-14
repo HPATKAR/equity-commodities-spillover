@@ -660,40 +660,73 @@ def render_morning_briefing_panel(
     top_alerts: list[str],
     top_conflict: str | None = None,
     auto_run: bool = True,
+    start: str = "",
+    end: str = "",
 ) -> str | None:
     """
     Trigger the morning briefing agent protocol and render the deliberation.
-    auto_run: triggers the protocol if no morning_briefing thread exists today.
+    Runs once per browser session (session_state flag), so every page reload
+    generates a fresh briefing with the latest live data.
     Returns thread_id or None.
     """
     try:
         from src.analysis.agent_dialogue import (
+            build_briefing_context,
             run_morning_briefing_protocol,
             get_subject_threads,
         )
     except ImportError:
         return None
 
-    existing = get_subject_threads("morning_briefing")
-    import datetime as _dt
-    today_str = _dt.date.today().isoformat()
-    today_threads = [m for m in existing if str(m["ts"]).startswith(today_str)]
+    # Session-scoped flag — cleared on every browser reload since session_state
+    # resets. Within a session, navigating away and back does NOT re-run.
+    thread_id: str | None = st.session_state.get("_morning_briefing_tid")
 
-    thread_id: str | None = None
-    if auto_run and not today_threads:
-        thread_id = run_morning_briefing_protocol(
-            risk_score=risk_score,
-            top_alerts=top_alerts,
-            top_conflict=top_conflict,
-        )
-    elif today_threads:
-        thread_id = today_threads[0].get("thread_id")
+    if auto_run and thread_id is None:
+        # Build comprehensive live context
+        ctx: dict = {}
+        try:
+            if start and end:
+                ctx = build_briefing_context(start, end)
+            else:
+                # Fallback: minimal context from parameters
+                ctx = {
+                    "date": __import__("datetime").date.today().isoformat(),
+                    "risk_score": risk_score,
+                    "cis": 50.0, "tps": 50.0, "mcs": 50.0,
+                    "top_conflict": top_conflict,
+                    "top_conflict_name": (top_conflict or "").replace("_", " ").title() or "No dominant conflict",
+                    "n_active": 0, "active_conflicts": [],
+                    "regime": 1, "regime_label": "Normal",
+                    "corr_pct": 50.0, "scenario": "Base", "geo_mult": 1.0,
+                    "top_alerts": top_alerts,
+                    "top_eq_winner": None, "top_eq_winner_ret": None,
+                    "top_eq_loser": None,  "top_eq_loser_ret": None,
+                    "top_cmd_winner": None,"top_cmd_winner_ret": None,
+                    "top_cmd_loser": None, "top_cmd_loser_ret": None,
+                    "vix": None, "ovx": None, "gvz": None, "vvix": None,
+                    "yield_curve": None, "credit_spread": None, "dollar_60d": None,
+                    "cot_summary": [], "model_confidence": 0.5,
+                    "n_news_threat": 0, "n_news_act": 0,
+                }
+        except Exception:
+            pass
+
+        # Inject alert titles (computed by caller)
+        if top_alerts:
+            ctx["top_alerts"] = top_alerts
+
+        try:
+            thread_id = run_morning_briefing_protocol(ctx)
+            st.session_state["_morning_briefing_tid"] = thread_id
+        except Exception:
+            pass
 
     if thread_id:
         render_deliberation_panel(
             thread_id=thread_id,
             title="Morning Briefing Chain",
-            max_msgs=8,
+            max_msgs=12,
             show_consensus=False,
         )
 

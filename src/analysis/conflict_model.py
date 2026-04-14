@@ -222,6 +222,11 @@ def score_all_conflicts() -> dict[str, dict]:
             "hedge_assets":         c.get("hedge_assets",         []),
             "last_updated":         str(c.get("last_updated", "")),
         }
+    try:
+        from src.analysis.freshness import record_fetch
+        record_fetch("conflict_manual")
+    except Exception:
+        pass
     return results
 
 

@@ -695,8 +695,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'</div></div>',
             unsafe_allow_html=True,
         )
-    except Exception:
-        pass
+    except Exception as _geo_err:
+        st.caption(f"Geo context unavailable — conflict model load failed: {_geo_err}")
 
     with st.spinner("Loading data…"):
         eq_r, cmd_r = load_returns(start, end)
@@ -968,8 +968,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         st.markdown("---")
         render_pending_review()
 
-    except Exception:
-        pass
+    except Exception as _ts_err:
+        st.caption(f"AI Trade Structurer unavailable: {_ts_err}")
 
     # CQO runs silently - output visible in About > AI Workforce
     try:

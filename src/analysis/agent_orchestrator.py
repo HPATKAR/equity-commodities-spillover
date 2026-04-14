@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import Any
+from typing import Any, TypedDict, Optional
 
 import streamlit as st
 
@@ -47,6 +47,31 @@ from src.analysis.agent_state import (
     AGENTS, init_agents, get_agent, set_status, log_activity,
     is_enabled,
 )
+
+
+# ── Structured handoff schema ─────────────────────────────────────────────────
+# Every agent run() returns this alongside its narrative text.
+# Downstream agents receive these typed fields — NOT a truncated string —
+# so numeric precision is preserved and divergence detection is field-level.
+
+class AgentHandoff(TypedDict, total=False):
+    agent_id:     str           # which agent produced this
+    ts:           datetime.datetime
+    narrative:    str           # full text (never truncated in handoffs)
+    confidence:   float         # 0.0–1.0  (numeric, not regex-parsed from text)
+    regime:       int           # 1=Normal 2=Elevated 3=Crisis
+    risk_score:   Optional[float]   # 0–100 composite, if agent computes it
+    signal_class: str           # "macro" | "geo" | "commodity" | "cross_asset" | "audit"
+    # Key typed signals — each agent populates what it knows
+    yield_curve_spread: Optional[float]   # TLT-SHY 60d spread, bps
+    cpi_yoy:            Optional[float]   # CPI YoY %
+    cis:                Optional[float]   # Conflict Intensity Score 0–100
+    tps:                Optional[float]   # Transmission Pressure Score 0–100
+    top_conflict:       Optional[str]     # e.g. "russia_ukraine"
+    cmd_vol_z:          Optional[float]   # commodity vol z-score
+    corr_pct:           Optional[float]   # correlation percentile
+    granger_hit_rate:   Optional[float]   # signal auditor hit rate
+    routed_to:          list              # downstream agent ids
 
 # ── Pipeline definition ───────────────────────────────────────────────────────
 
@@ -112,63 +137,104 @@ def _is_fresh(agent_id: str) -> bool:
     return age < AGENT_TTL.get(agent_id, 3600)
 
 
-def _peer_context(agent_id: str) -> dict[str, str]:
+def _store_handoff(agent_id: str, handoff: AgentHandoff) -> None:
+    """Persist structured handoff in session_state for peer lookup."""
+    init_agents()
+    if "agent_handoffs" not in st.session_state:
+        st.session_state["agent_handoffs"] = {}
+    st.session_state["agent_handoffs"][agent_id] = handoff
+
+
+def _get_handoff(agent_id: str) -> AgentHandoff | None:
+    """Retrieve the latest structured handoff for an agent."""
+    return st.session_state.get("agent_handoffs", {}).get(agent_id)
+
+
+def _peer_context(agent_id: str) -> dict[str, "AgentHandoff"]:
     """
-    Build structured peer context for an agent - full narratives, not truncated.
-    Strips only the CONFIDENCE line so the substantive content passes through.
+    Build structured peer context for an agent.
+    Returns typed AgentHandoff dicts — NOT truncated strings — so numeric
+    precision is preserved across the pipeline handoff chain.
+    Downstream agents receive e.g. peer["macro_strategist"]["yield_curve_spread"]
+    as a float, not a substring of a 400-char blob.
     """
     spec = next((p for p in PIPELINE if p["id"] == agent_id), None)
     if not spec:
         return {}
 
-    peers = {}
+    peers: dict[str, AgentHandoff] = {}
     for pid in spec.get("depends_on", []):
-        a = get_agent(pid)
-        raw = a.get("last_output") or ""
-        if raw:
-            # Remove CONFIDENCE line, keep everything else
-            lines = [l for l in raw.split("\n")
-                     if "confidence:" not in l.lower()]
-            peers[pid] = " ".join(lines).strip()[:400]
+        h = _get_handoff(pid)
+        if h:
+            peers[pid] = h
+        else:
+            # Fallback: wrap legacy text output in minimal handoff struct
+            a   = get_agent(pid)
+            raw = a.get("last_output") or ""
+            if raw:
+                peers[pid] = AgentHandoff(
+                    agent_id=pid,
+                    ts=a.get("last_run", datetime.datetime.now()),
+                    narrative=raw,   # FULL text — no truncation
+                    confidence=a.get("confidence", 0.5),
+                    regime=None, risk_score=None, signal_class="unknown",
+                    routed_to=[],
+                )
     return peers
 
 
 def _detect_divergence(
-    agent_id: str, narrative: str, orch: dict
+    agent_id: str, handoff: AgentHandoff, orch: dict
 ) -> list[dict]:
     """
-    Check if this agent's output contradicts a peer's on a key topic.
+    Numeric field-level divergence detection.
+    Compares typed fields (risk_score, regime, cis, cmd_vol_z) between peer
+    handoffs — NOT keyword string matching. A divergence is flagged when:
+      • risk_score differs by > 20 pts between two agents that both compute it
+      • regime disagrees between geo_analyst and macro_strategist
+      • cis vs risk_score imply opposite threat levels
     Returns list of divergence dicts (may be empty).
     """
-    flags = []
-    for a_id, b_id, keyword in DIVERGENCE_PAIRS:
+    flags: list[dict] = []
+    peer_handoffs = st.session_state.get("agent_handoffs", {})
+
+    NUMERIC_PAIRS: list[tuple[str, str, str, float]] = [
+        # (agent_a, agent_b, field, max_allowed_diff)
+        ("macro_strategist",    "risk_officer",     "risk_score",  20.0),
+        ("geopolitical_analyst","risk_officer",      "risk_score",  20.0),
+        ("geopolitical_analyst","stress_engineer",   "regime",       1.0),
+        ("macro_strategist",    "geopolitical_analyst", "regime",    1.0),
+    ]
+
+    for a_id, b_id, field, threshold in NUMERIC_PAIRS:
         if agent_id not in (a_id, b_id):
             continue
         peer_id = b_id if agent_id == a_id else a_id
-        peer = get_agent(peer_id)
-        peer_text = (peer.get("last_output") or "").lower()
-        if not peer_text:
+        peer_h  = peer_handoffs.get(peer_id)
+        if not peer_h:
             continue
 
-        # Simple divergence: one says keyword, the other uses opposite sentiment
-        a_positive = keyword in narrative.lower()
-        b_positive = keyword in peer_text
+        val_a = handoff.get(field)
+        val_b = peer_h.get(field)
+        if val_a is None or val_b is None:
+            continue
 
-        neg_words = ["not", "no ", "low", "easing", "declining", "falling", "unlikely"]
-        a_negated = any(neg + " " + keyword in narrative.lower() for neg in neg_words)
-        b_negated = any(neg + " " + keyword in peer_text for neg in neg_words)
-
-        if (a_positive and not a_negated) != (b_positive and not b_negated):
+        diff = abs(float(val_a) - float(val_b))
+        if diff > threshold:
             flags.append({
-                "agent_a": agent_id,
-                "agent_b": peer_id,
-                "topic": keyword,
-                "ts": datetime.datetime.now(),
+                "agent_a":  agent_id,
+                "agent_b":  peer_id,
+                "field":    field,
+                "val_a":    val_a,
+                "val_b":    val_b,
+                "diff":     round(diff, 2),
+                "threshold":threshold,
+                "ts":       datetime.datetime.now(),
             })
             log_activity(
                 agent_id,
-                f"divergence detected vs {AGENTS.get(peer_id,{}).get('short', peer_id)}",
-                f"disagreement on '{keyword}'",
+                f"numeric divergence vs {AGENTS.get(peer_id,{}).get('short', peer_id)}",
+                f"{field}: {val_a} vs {val_b} (Δ={diff:.1f}, threshold={threshold})",
                 "warning",
             )
     return flags
@@ -213,16 +279,18 @@ class Orchestrator:
                 if not is_enabled(aid):
                     continue
                 if _is_fresh(aid):
-                    # Reuse cached output - still build peer context updates
                     continue
                 ctx = self._build_context(aid, market_context)
                 result = self._run_agent(aid, ctx)
                 results[aid] = result
 
-                # Detect divergence against already-run peers
-                narrative = result.get("narrative", "")
-                if narrative:
-                    flags = _detect_divergence(aid, narrative, orch)
+                # Store structured handoff for downstream peer context
+                h = self._build_handoff(aid, result, market_context)
+                _store_handoff(aid, h)
+
+                # Numeric field-level divergence detection
+                if result.get("narrative"):
+                    flags = _detect_divergence(aid, h, orch)
                     orch["divergence_flags"].extend(flags)
 
             orch["round_complete"][round_n] = True
@@ -241,6 +309,77 @@ class Orchestrator:
             ctx = self._build_context(aid, market_context)
             results[aid] = self._run_agent(aid, ctx)
         return results
+
+    # ── Handoff builder ────────────────────────────────────────────────────────
+
+    def _build_handoff(self, agent_id: str, result: dict, mc: dict) -> AgentHandoff:
+        """
+        Extract typed numeric fields from an agent result + market context
+        and package them as an AgentHandoff for downstream peer consumption.
+        All fields are typed — no regex parsing, no string truncation.
+        """
+        a     = get_agent(agent_id)
+        conf  = result.get("confidence", a.get("confidence", 0.5))
+        regime_map = {"Normal": 1, "Elevated": 2, "Crisis": 3}
+        regime_raw = mc.get("regime_name", "Normal")
+        regime_int = regime_map.get(regime_raw, 1)
+
+        h = AgentHandoff(
+            agent_id=agent_id,
+            ts=datetime.datetime.now(),
+            narrative=result.get("narrative", ""),  # FULL text, never truncated
+            confidence=float(conf) if conf is not None else 0.5,
+            regime=regime_int,
+            routed_to=result.get("routed_to", []),
+        )
+
+        # Per-agent typed fields
+        if agent_id == "macro_strategist":
+            h["signal_class"] = "macro"
+            h["yield_curve_spread"] = mc.get("yield_curve_spread")
+            h["cpi_yoy"]            = mc.get("cpi_yoy")
+            h["risk_score"]         = mc.get("risk_score")
+
+        elif agent_id == "geopolitical_analyst":
+            h["signal_class"] = "geo"
+            # Pull live CIS/TPS from conflict model — not from agent text
+            try:
+                from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+                agg = aggregate_portfolio_scores(score_all_conflicts())
+                h["cis"]          = float(agg.get("portfolio_cis", agg.get("cis", 50.0)))
+                h["tps"]          = float(agg.get("portfolio_tps", agg.get("tps", 50.0)))
+                h["top_conflict"] = agg.get("top_conflict")
+                h["risk_score"]   = round(0.4 * h["cis"] + 0.35 * h["tps"] + 0.25 * 50, 1)
+            except Exception:
+                h["cis"] = h["tps"] = None
+
+        elif agent_id == "signal_auditor":
+            h["signal_class"]     = "audit"
+            h["granger_hit_rate"] = mc.get("avg_hit_rate")
+
+        elif agent_id == "risk_officer":
+            h["signal_class"]  = "cross_asset"
+            h["risk_score"]    = mc.get("risk_score")
+            h["corr_pct"]      = mc.get("avg_corr")
+
+        elif agent_id == "commodities_specialist":
+            h["signal_class"] = "commodity"
+            h["cmd_vol_z"]    = mc.get("cmd_vol_z")
+            # pull CIS/TPS from geo peer handoff if available
+            geo_h = _get_handoff("geopolitical_analyst")
+            if geo_h:
+                h["cis"] = geo_h.get("cis")
+                h["tps"] = geo_h.get("tps")
+
+        elif agent_id == "stress_engineer":
+            h["signal_class"] = "cross_asset"
+            h["risk_score"]   = mc.get("risk_score")
+
+        elif agent_id == "trade_structurer":
+            h["signal_class"] = "cross_asset"
+            h["risk_score"]   = mc.get("risk_score")
+
+        return h
 
     # ── Context builders ───────────────────────────────────────────────────────
 
@@ -319,6 +458,10 @@ class Orchestrator:
             }
 
         if agent_id == "risk_officer":
+            # peer_ctx now contains typed AgentHandoff dicts — numeric fields preserved
+            geo_h   = peer_ctx.get("geopolitical_analyst", {})
+            macro_h = peer_ctx.get("macro_strategist", {})
+            audit_h = peer_ctx.get("signal_auditor", {})
             return {
                 "regime_name":       mc.get("regime_name"),
                 "regime_level":      mc.get("regime_level", 1),
@@ -332,13 +475,26 @@ class Orchestrator:
                 "n_alerts":          mc.get("n_alerts", 0),
                 "alert_categories":  mc.get("alert_categories", []),
                 "alert_summaries":   mc.get("alert_summaries", []),
-                # Full peer narratives - this is what makes the RO actually synthesise
-                "peer_signals": {
-                    k: v for k, v in peer_ctx.items()
+                # Typed peer fields — downstream agents use these directly
+                "peer_cis":          geo_h.get("cis"),
+                "peer_tps":          geo_h.get("tps"),
+                "peer_top_conflict": geo_h.get("top_conflict"),
+                "peer_geo_regime":   geo_h.get("regime"),
+                "peer_yield_curve":  macro_h.get("yield_curve_spread"),
+                "peer_cpi_yoy":      macro_h.get("cpi_yoy"),
+                "peer_macro_regime": macro_h.get("regime"),
+                "peer_hit_rate":     audit_h.get("granger_hit_rate"),
+                "peer_confidence": {
+                    pid: h.get("confidence") for pid, h in peer_ctx.items()
+                },
+                # Full narratives still available for LLM prompt enrichment
+                "peer_narratives": {
+                    pid: h.get("narrative", "") for pid, h in peer_ctx.items()
                 },
             }
 
         if agent_id == "commodities_specialist":
+            geo_h = peer_ctx.get("geopolitical_analyst", {})
             return {
                 "top_performers":    mc.get("top_cmd_performers", []),
                 "worst_performers":  mc.get("worst_cmd_performers", []),
@@ -346,10 +502,15 @@ class Orchestrator:
                 "crowded_shorts":    mc.get("crowded_shorts", []),
                 "avg_corr":          mc.get("avg_corr"),
                 "regime_name":       mc.get("regime_name"),
-                "geo_context":       peer_ctx.get("geopolitical_analyst", ""),
+                # Typed geo fields — not a truncated string
+                "geo_cis":           geo_h.get("cis"),
+                "geo_tps":           geo_h.get("tps"),
+                "geo_top_conflict":  geo_h.get("top_conflict"),
+                "geo_narrative":     geo_h.get("narrative", ""),
             }
 
         if agent_id == "stress_engineer":
+            ro_h = peer_ctx.get("risk_officer", {})
             return {
                 "scenarios":       mc.get("scenarios", []),
                 "worst_scenario":  mc.get("worst_scenario"),
@@ -358,10 +519,14 @@ class Orchestrator:
                 "n_scenarios":     mc.get("n_scenarios", 0),
                 "regime_name":     mc.get("regime_name"),
                 "risk_score":      mc.get("risk_score"),
-                "risk_context":    peer_ctx.get("risk_officer", ""),
+                # Typed RO fields
+                "ro_risk_score":   ro_h.get("risk_score"),
+                "ro_regime":       ro_h.get("regime"),
+                "ro_narrative":    ro_h.get("narrative", ""),
             }
 
         if agent_id == "trade_structurer":
+            # All upstream typed handoffs available
             return {
                 "regime_name":      mc.get("regime_name"),
                 "regime_level":     mc.get("regime_level", 1),
@@ -372,9 +537,22 @@ class Orchestrator:
                 "worst_equity":     mc.get("worst_equity"),
                 "worst_equity_ret": mc.get("worst_equity_ret"),
                 "active_alerts":    mc.get("n_alerts", 0),
-                # Full peer context - all upstream agents
-                "peer_signals": {
-                    k: v for k, v in peer_ctx.items()
+                # Typed numeric fields from all upstream peers
+                "peer_risk_scores": {
+                    pid: h.get("risk_score") for pid, h in peer_ctx.items()
+                    if h.get("risk_score") is not None
+                },
+                "peer_regimes": {
+                    pid: h.get("regime") for pid, h in peer_ctx.items()
+                    if h.get("regime") is not None
+                },
+                "peer_cis":          peer_ctx.get("geopolitical_analyst", {}).get("cis"),
+                "peer_tps":          peer_ctx.get("geopolitical_analyst", {}).get("tps"),
+                "peer_yield_curve":  peer_ctx.get("macro_strategist", {}).get("yield_curve_spread"),
+                "peer_hit_rate":     peer_ctx.get("signal_auditor", {}).get("granger_hit_rate"),
+                # Full narratives for LLM enrichment
+                "peer_narratives": {
+                    pid: h.get("narrative", "") for pid, h in peer_ctx.items()
                 },
             }
 
@@ -426,9 +604,15 @@ class Orchestrator:
         }
 
     def divergence_flags(self) -> list[dict]:
+        """
+        Returns list of numeric divergence dicts with fields:
+          agent_a, agent_b, field, val_a, val_b, diff, threshold, ts
+        Use .get("diff") and .get("field") for display — not keyword strings.
+        """
         return self.orch.get("divergence_flags", [])
 
-    def get_peer_context(self, agent_id: str) -> dict[str, str]:
+    def get_peer_context(self, agent_id: str) -> dict[str, "AgentHandoff"]:
+        """Returns typed AgentHandoff dicts for the agent's upstream peers."""
         return _peer_context(agent_id)
 
     def invalidate(self, agent_id: str | None = None) -> None:

@@ -330,7 +330,107 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _v = _iv_snap.get(_iv_name)
         if _v is not None:
             _status_items.append((_iv_name, f"{_v:.1f}", 300))   # 5-min TTL
+
+    # Inject geo risk into the freshness bar
+    _geo_cis, _geo_tps, _geo_score = None, None, None
+    _geo_top, _geo_n_active, _geo_sc_label, _geo_sc_color = "—", 0, "Base", "#CFB991"
+    _geo_conflict_rows: list[dict] = []
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        from src.analysis.scenario_state import get_scenario, get_scenario_id
+        _geo_cr  = score_all_conflicts()
+        _geo_agg = aggregate_portfolio_scores(_geo_cr)
+        _geo_sc  = get_scenario()
+        _geo_cis = _geo_agg.get("portfolio_cis", _geo_agg.get("cis", 50.0))
+        _geo_tps = _geo_agg.get("portfolio_tps", _geo_agg.get("tps", 50.0))
+        _geo_top = (_geo_agg.get("top_conflict") or "—").replace("_", " ").title()
+        _geo_n_active = sum(1 for r in _geo_cr.values() if r.get("state") == "active")
+        _geo_sc_label = _geo_sc.get("label", "Base")
+        _geo_sc_color = _geo_sc.get("color", "#CFB991")
+        # Per-conflict rows for the strip (top 5 by CIS, active only)
+        _active = [(cid, r) for cid, r in _geo_cr.items() if r.get("state") == "active"]
+        _active.sort(key=lambda x: x[1]["cis"], reverse=True)
+        for _cid, _r in _active[:5]:
+            _tx = _r.get("transmission", {})
+            _top_ch = max(_tx, key=_tx.get) if _tx else "—"
+            _geo_conflict_rows.append({
+                "label":   _r.get("label", _cid),
+                "color":   _r.get("color", "#CFB991"),
+                "cis":     _r["cis"],
+                "tps":     _r.get("tps", _r.get("transmission_pressure", 50)),
+                "trend":   _r.get("trend", "stable"),
+                "top_ch":  _top_ch,
+            })
+        # Append to freshness bar
+        if _geo_cis is not None:
+            _status_items.append(("CIS", f"{_geo_cis:.0f}", 300))
+            _status_items.append(("TPS", f"{_geo_tps:.0f}", 300))
+    except Exception:
+        pass
+
     _data_status_bar(_status_items)
+
+    # ── Geopolitical Risk Strip ───────────────────────────────────────────────
+    if _geo_cis is not None:
+        _cis_col = "#c0392b" if _geo_cis >= 65 else "#e67e22" if _geo_cis >= 45 else "#27ae60"
+        _tps_col = "#c0392b" if _geo_tps >= 60 else "#e67e22" if _geo_tps >= 40 else "#8E9AAA"
+        _geo_lbl = "HIGH CONFLICT" if _geo_cis >= 65 else ("ELEVATED" if _geo_cis >= 45 else "CONTAINED")
+        _M_ov = "font-family:'JetBrains Mono',monospace;"
+        _F_ov = "font-family:'DM Sans',sans-serif;"
+
+        # Build per-conflict mini-rows
+        _trend_icon = {"rising": "▲", "stable": "—", "falling": "▼"}
+        _trend_col  = {"rising": "#c0392b", "stable": "#555960", "falling": "#27ae60"}
+        _conf_rows_html = ""
+        for _row in _geo_conflict_rows:
+            _tc = "#c0392b" if _row["cis"] >= 65 else "#e67e22" if _row["cis"] >= 45 else "#8E9AAA"
+            _ti = _trend_icon.get(_row["trend"], "—")
+            _tcolor = _trend_col.get(_row["trend"], "#555960")
+            _conf_rows_html += (
+                f'<span style="{_M_ov}font-size:9px;color:{_row["color"]};font-weight:700">'
+                f'{_row["label"]}</span>'
+                f'<span style="{_M_ov}font-size:9px;color:{_tc};margin:0 4px 0 3px">'
+                f'CIS&nbsp;{_row["cis"]:.0f}</span>'
+                f'<span style="{_M_ov}font-size:8px;color:{_tcolor}">{_ti}</span>'
+                f'<span style="{_M_ov}font-size:9px;color:#8E9AAA;margin:0 12px 0 4px">'
+                f'ch:{_row["top_ch"].replace("_"," ")}</span>'
+            )
+
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid {_cis_col};padding:.45rem 1rem;margin-bottom:.5rem">'
+            f'<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+
+            # Section label
+            f'<span style="{_M_ov}font-size:8px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:{_cis_col}">■ GEO RISK</span>'
+
+            # Score pill
+            f'<span style="{_M_ov}font-size:9px;color:{_cis_col};font-weight:700">'
+            f'{_geo_lbl}</span>'
+
+            # CIS / TPS
+            f'<span style="{_M_ov}font-size:9px;color:{_cis_col}">CIS&nbsp;<b>{_geo_cis:.0f}</b></span>'
+            f'<span style="{_M_ov}font-size:9px;color:{_tps_col}">TPS&nbsp;<b>{_geo_tps:.0f}</b></span>'
+
+            # Lead conflict
+            f'<span style="{_F_ov}font-size:9px;color:#8E9AAA">'
+            f'Lead:&nbsp;<b style="color:{_cis_col}">{_geo_top}</b></span>'
+
+            # Active count
+            f'<span style="{_M_ov}font-size:9px;color:#A8B8C8">'
+            f'{_geo_n_active}&nbsp;active</span>'
+
+            # Scenario
+            f'<span style="background:{_geo_sc_color};color:#000;{_M_ov}font-size:8px;'
+            f'font-weight:700;padding:1px 5px;letter-spacing:.08em">{_geo_sc_label.upper()}</span>'
+
+            # Divider + per-conflict breakdown
+            + (f'<span style="color:#1e1e1e;margin:0 4px">|</span>{_conf_rows_html}' if _conf_rows_html else "")
+
+            + f'</div></div>',
+            unsafe_allow_html=True,
+        )
 
     # ── Market Snapshot — daily spot-check strip (Benjamin feedback) ──────────
     _snap = _fetch_snapshot_prices()
@@ -538,7 +638,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _briefing_expanded = _briefing_risk >= 50
     try:
         from src.ui.agent_panel import render_morning_briefing_panel
-        _top_alert_texts = [a.get("title", "") for a in _alerts[:3] if a.get("title")]
+        _top_alert_texts = [getattr(a, "title", "") for a in _alerts[:3] if getattr(a, "title", "")]
         _top_conflict    = risk_result.get("top_conflict")
         _briefing_label = (
             f"⚡ AI Analyst Team — Morning Briefing (Risk {_briefing_risk:.0f}/100)"
@@ -871,7 +971,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                         )
                         st.session_state[_narrative_key] = _resp.choices[0].message.content
             except Exception as _e:
-                st.session_state[_narrative_key] = f"__error__{_e}"
+                # Do NOT cache the error — let it retry on next render.
+                st.warning(f"Narrative generation failed: {_e}", icon="⚠️")
 
     _narrative_val = st.session_state.get(_narrative_key, "")
     st.markdown(
@@ -881,8 +982,6 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     )
     if not _narrative_val:
         st.info("Add `anthropic_api_key` or `openai_api_key` to `.streamlit/secrets.toml` to enable AI narratives.")
-    elif _narrative_val.startswith("__error__"):
-        st.error(f"Narrative generation failed: {_narrative_val[9:]}")
     else:
         st.markdown(
             f'<div style="padding:0.8rem 1rem;'

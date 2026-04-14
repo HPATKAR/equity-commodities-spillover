@@ -715,7 +715,7 @@ def _render_system_reliability(
             "rss_headlines":    "News / RSS Headlines",
             "conflict_manual":  "Conflict Intensity (Manual)",
             "cot_positioning":  "CFTC COT Positioning",
-            "fred_spreads":     "Credit Spreads (FRED)",
+            "fred_spreads":     "Credit Spreads (HYG/LQD)",
             "risk_score":       "Geo Risk Score (Computed)",
             "conflict_model":   "Conflict Model Output",
         }
@@ -1636,5 +1636,133 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 render_agent_output_block("signal_auditor", _sa_result)
     except Exception:
         pass
+
+    # ── Agent-Level Benchmark Panel ───────────────────────────────────────────
+    st.markdown("---")
+    _FM = "font-family:'JetBrains Mono',monospace;"
+    _FS = "font-family:'DM Sans',sans-serif;"
+    st.markdown(
+        f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.15em;color:#8890a1;margin:0.2rem 0 0.35rem">'
+        f'Agent-Level Benchmark · Historical Snapshot Validation</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<p style="{_FS}font-size:0.68rem;color:#8890a1;margin-bottom:0.8rem">'
+        f'20 frozen real market dates with ground-truth regime labels and field-level '
+        f'assertions. Each agent is scored on whether its structured output (typed fields, '
+        f'not text) satisfies the expected conditions. Hit rates feed '
+        f'<code>calibrate_confidence()</code> as posterior priors.</p>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.analysis.agent_benchmark import (
+            SNAPSHOTS, run_full_benchmark, compute_dynamic_posteriors, POSTERIOR_ACCURACY,
+        )
+        from src.analysis.agent_state import AGENTS as _AGENTS
+        import pandas as _bm_pd
+
+        _bm_agent_ids = [
+            "risk_officer", "macro_strategist", "geopolitical_analyst",
+            "commodities_specialist", "signal_auditor", "stress_engineer", "trade_structurer",
+        ]
+
+        # Run benchmark against real historical data (cached in session_state)
+        _run_btn_col, _status_col = st.columns([2, 5])
+        with _run_btn_col:
+            _run_bm = st.button(
+                "Run Historical Benchmark",
+                key="run_agent_benchmark",
+                help="Loads price data for 20 real market dates and runs the model. "
+                     "Results are cached for this session. Takes ~30s on first run.",
+            )
+        if _run_bm:
+            # Clear cache so it re-runs
+            st.session_state.pop("_agent_benchmark_results", None)
+
+        _bm_results = run_full_benchmark(_bm_agent_ids)
+        _dynamic_posteriors = compute_dynamic_posteriors(_bm_results)
+
+        with _status_col:
+            _n_computed = sum(
+                1 for s in SNAPSHOTS
+                if st.session_state.get("_agent_benchmark_results") is not None
+            )
+            _computed_str = "Computed from historical market data" if _bm_results else "Not yet run"
+            st.markdown(
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.60rem;'
+                f'color:#27ae60">{_computed_str} · {len(SNAPSHOTS)} snapshots · '
+                f'posteriors fed into calibrate_confidence()</span>',
+                unsafe_allow_html=True,
+            )
+
+        # Summary table with DYNAMIC posteriors from actual back-test runs
+        _bm_rows = []
+        for _aid in _bm_agent_ids:
+            _res  = _bm_results.get(_aid, {})
+            _post_dynamic = _dynamic_posteriors.get(_aid)
+            _post_static  = POSTERIOR_ACCURACY.get(_aid, {}).get("base", 0.65)
+            _ag   = _AGENTS.get(_aid, {})
+            _hr   = _res.get("hit_rate")
+            _bm_rows.append({
+                "Agent":            _ag.get("short", _aid),
+                "Snapshots tested": _res.get("total", 0),
+                "Passed":           _res.get("passed", 0),
+                "Hit Rate (actual)":f"{_hr:.0%}" if _hr is not None else "—",
+                "Posterior (dynamic)": f"{_post_dynamic:.0%}" if _post_dynamic else f"{_post_static:.0%} (static)",
+                "Used in conf?":    "✓ dynamic" if (_hr is not None and _res.get("total", 0) >= 3) else "static prior",
+            })
+
+        _bm_df = _bm_pd.DataFrame(_bm_rows)
+        st.dataframe(_bm_df, use_container_width=True, hide_index=True)
+        st.caption(
+            "Hit Rate = model assertions passed on historical price data for each snapshot date. "
+            "Posterior feeds calibrate_confidence() as α=40% weight alongside model self-report. "
+            "Dynamic posteriors replace static priors once ≥ 3 assertions have been evaluated."
+        )
+
+        # Per-agent drill-down
+        with st.expander("Assertion Detail by Agent", expanded=False):
+            _sel_agent = st.selectbox(
+                "Agent", _bm_agent_ids,
+                format_func=lambda x: _AGENTS.get(x, {}).get("short", x),
+                key="bm_agent_select",
+            )
+            _sel_res = _bm_results.get(_sel_agent, {})
+            if _sel_res.get("details"):
+                _detail_rows = [
+                    {
+                        "Date":     d["date"],
+                        "Event":    d["label"],
+                        "Field":    d["field"],
+                        "Expected": f"{d['comparator']} {d['expected']}",
+                        "Actual":   d["actual"],
+                        "Pass":     "✓" if d["passed"] else "✗",
+                        "Computed": "live" if d.get("computed") else "proxy",
+                    }
+                    for d in _sel_res["details"]
+                ]
+                st.dataframe(_bm_pd.DataFrame(_detail_rows), use_container_width=True, hide_index=True)
+            else:
+                st.caption("No assertions for this agent in the benchmark registry.")
+
+        # Snapshot registry
+        with st.expander(f"Snapshot Registry ({len(SNAPSHOTS)} dates)", expanded=False):
+            _snap_rows = []
+            for _s in SNAPSHOTS:
+                _n_assert = sum(len(v) for v in _s.get("assertions", {}).values())
+                _snap_rows.append({
+                    "Date":         _s["date"],
+                    "Event":        _s["label"],
+                    "Regime GT":    {1: "Normal", 2: "Elevated", 3: "Crisis"}.get(_s["regime"], "?"),
+                    "VIX (approx)": _s.get("vix_approx", "—"),
+                    "Assertions":   _n_assert,
+                    "Agents":       ", ".join(_s.get("assertions", {}).keys()),
+                })
+            st.dataframe(_bm_pd.DataFrame(_snap_rows), use_container_width=True, hide_index=True)
+            st.caption("VIX > 35 = Crisis ground truth · VIX > 22 = Elevated · else Normal. "
+                       "CIS/TPS proxied from risk_score when conflict model can't be back-tested.")
+    except Exception as _bm_err:
+        st.caption(f"Agent benchmark unavailable: {_bm_err}")
 
     _page_footer()

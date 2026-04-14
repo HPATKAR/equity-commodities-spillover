@@ -112,12 +112,14 @@ def _build_insights(
     fred_key: str,
     start: str,
     end: str,
-) -> list[dict]:
-    """Compute all insights from live data. Returns list of card kwargs."""
+) -> tuple[list[dict], int]:
+    """Compute all insights from live data. Returns (cards, n_attempted) tuple."""
 
     cards: list[dict] = []
+    _n_attempted = 0  # tracks how many sections were attempted (for load-count display)
 
     # ── 1. Overall market stress ──────────────────────────────────────────────
+    _n_attempted += 1
     try:
         avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
         risk     = compute_risk_score(avg_corr, cmd_r)
@@ -179,6 +181,7 @@ def _build_insights(
         pass
 
     # ── 2. Diversification: are stocks and commodities moving together? ───────
+    _n_attempted += 1
     try:
         avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
         regimes   = detect_correlation_regime(avg_corr)
@@ -240,6 +243,7 @@ def _build_insights(
         pass
 
     # ── 3. Which commodity is leading / lagging equities ─────────────────────
+    _n_attempted += 1
     try:
         if not eq_r.empty and not cmd_r.empty:
             common = eq_r.index.intersection(cmd_r.index)
@@ -298,6 +302,7 @@ def _build_insights(
         pass
 
     # ── 4. Early warning: is a stress event approaching? ─────────────────────
+    _n_attempted += 1
     try:
         avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
         regimes   = detect_correlation_regime(avg_corr)
@@ -365,6 +370,7 @@ def _build_insights(
         pass
 
     # ── 5. Biggest commodity mover (last 5 days) ──────────────────────────────
+    _n_attempted += 1
     try:
         if not cmd_r.empty and len(cmd_r) >= 5:
             recent = cmd_r.iloc[-5:].sum()
@@ -414,6 +420,7 @@ def _build_insights(
         pass
 
     # ── 6. Active geopolitical events ─────────────────────────────────────────
+    _n_attempted += 1
     try:
         from datetime import date
         today = date.today()
@@ -549,6 +556,7 @@ def _build_insights(
         pass
 
     # ── 7. Private credit bubble risk ─────────────────────────────────────
+    _n_attempted += 1
     try:
         pc_card = _build_private_credit_insight(fred_key, start, end, eq_r)
         if pc_card is not None:
@@ -557,6 +565,7 @@ def _build_insights(
         pass
 
     # ── 8. Yield curve regime ──────────────────────────────────────────────
+    _n_attempted += 1
     try:
         fi_r_ins = load_fixed_income_returns(start, end)
         if not fi_r_ins.empty:
@@ -608,6 +617,7 @@ def _build_insights(
         pass
 
     # ── 9. Dollar and FX impact ────────────────────────────────────────────
+    _n_attempted += 1
     try:
         fx_r_ins = load_fx_returns(start, end)
         fi_r_ins2 = load_fixed_income_returns(start, end)
@@ -662,6 +672,7 @@ def _build_insights(
         pass
 
     # ── 10. India / Rupee macro signal ────────────────────────────────────
+    _n_attempted += 1
     try:
         fx_r_india = load_fx_returns(start, end)
         if not fx_r_india.empty and "USD/INR" in fx_r_india.columns:
@@ -733,7 +744,7 @@ def _build_insights(
     except Exception:
         pass
 
-    return cards
+    return cards, _n_attempted
 
 
 # ── 7. Private credit bubble risk ─────────────────────────────────────────
@@ -952,16 +963,20 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
         st.error("Market data unavailable. Check your internet connection.")
         return
 
-    cards = _build_insights(eq_r, cmd_r, fred_key, start, end)
+    cards, _n_attempted = _build_insights(eq_r, cmd_r, fred_key, start, end)
 
     if not cards:
         st.info("Could not compute insights - data may be limited for the selected date range.")
         return
 
+    _n_loaded = len(cards)
+    _load_color = "#27ae60" if _n_loaded == _n_attempted else ("#e67e22" if _n_loaded >= _n_attempted // 2 else "#c0392b")
     st.markdown(
         f'<p style="{_F}font-size:0.66rem;color:#888;margin-bottom:1.2rem">'
         f'Insights computed from data in your selected date range. '
-        f'Click any card to expand the full reasoning.</p>',
+        f'Click any card to expand the full reasoning. '
+        f'<span style="color:{_load_color};font-weight:600">'
+        f'{_n_loaded} of {_n_attempted} insight modules loaded.</span></p>',
         unsafe_allow_html=True,
     )
 

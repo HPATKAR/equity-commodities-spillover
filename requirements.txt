@@ -18,3 +18,4 @@ requests>=2.31.0
 reportlab>=4.2.0
 feedparser>=6.0.10
 Pillow>=10.0.0
+pydantic>=2.0.0

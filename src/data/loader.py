@@ -26,6 +26,82 @@ from src.data.config import (
 )
 
 
+# ── Pandera schema validation ─────────────────────────────────────────────────
+# Validates loader outputs at system boundary (external data → our pipeline).
+# Failures emit warnings — never crash the dashboard. Schema checks:
+#   • log-return DataFrames: finite values, -50% < return < +50% per row
+#   • price DataFrames: strictly positive, no all-NaN columns
+#   • FRED series: numeric, non-empty index
+# Pandera is optional — validation degrades gracefully if not installed.
+
+def _validate_returns(df: pd.DataFrame, source: str) -> pd.DataFrame:
+    """
+    Validate a log-return DataFrame. Emits st.warning on failure.
+    Checks: column count ≥ 1, values finite, |return| < 0.50 (50%) per cell.
+    Returns df unchanged — validation is non-destructive.
+    """
+    if df.empty:
+        return df
+    try:
+        import pandera as pa
+        schema = pa.DataFrameSchema(
+            columns={},   # column names are dynamic (asset names)
+            checks=[
+                pa.Check(
+                    lambda df: df.apply(lambda col: col.dropna().abs().lt(0.50).all()).all(),
+                    error=f"{source}: log-return magnitude ≥ 50% — likely a price error or corporate action",
+                ),
+                pa.Check(
+                    lambda df: df.apply(lambda col: col.dropna().apply(lambda x: np.isfinite(x)).all()).all(),
+                    error=f"{source}: non-finite values (inf/NaN) in return series",
+                ),
+            ],
+            coerce=False,
+        )
+        schema.validate(df, lazy=True)
+    except ImportError:
+        pass   # pandera not installed — skip silently
+    except Exception as _ve:
+        try:
+            st.warning(f"Data quality warning ({source}): {_ve}", icon="⚠️")
+        except Exception:
+            pass
+    return df
+
+
+def _validate_prices(df: pd.DataFrame, source: str) -> pd.DataFrame:
+    """
+    Validate a price DataFrame. Prices must be positive; columns must not be all-NaN.
+    """
+    if df.empty:
+        return df
+    try:
+        import pandera as pa
+        schema = pa.DataFrameSchema(
+            columns={},
+            checks=[
+                pa.Check(
+                    lambda df: (df.fillna(0) >= 0).all().all(),
+                    error=f"{source}: negative prices detected — check ticker mapping",
+                ),
+                pa.Check(
+                    lambda df: not df.isna().all().any(),
+                    error=f"{source}: one or more columns are entirely NaN",
+                ),
+            ],
+            coerce=False,
+        )
+        schema.validate(df, lazy=True)
+    except ImportError:
+        pass
+    except Exception as _ve:
+        try:
+            st.warning(f"Data quality warning ({source}): {_ve}", icon="⚠️")
+        except Exception:
+            pass
+    return df
+
+
 # ── LSEG RIC map ───────────────────────────────────────────────────────────
 # Maps the dashboard's asset names → LSEG RIC codes.
 # Continuous futures use the "1!" convention (front-month roll).
@@ -174,13 +250,18 @@ def _fetch_lseg_snapshot(names: list[str]) -> pd.DataFrame:
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
-def _fetch_yf(tickers: dict[str, str], start: date, end: date) -> pd.DataFrame:
+def _fetch_yf(tickers: dict[str, str], start, end) -> pd.DataFrame:
     """Download adjusted close prices for a dict of {name: ticker}."""
     reverse = {v: k for k, v in tickers.items()}
+    # yfinance end is EXCLUSIVE — add 1 day so today's close is always included.
+    # end may arrive as str or date, so normalise before arithmetic.
+    if isinstance(end, str):
+        end = date.fromisoformat(end)
+    end_exclusive = str(end + timedelta(days=1))
     raw = yf.download(
         list(tickers.values()),
         start=str(start),
-        end=str(end),
+        end=end_exclusive,
         auto_adjust=True,
         progress=False,
         threads=True,
@@ -229,7 +310,7 @@ def load_commodity_prices(
     return _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_all_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -240,7 +321,7 @@ def load_all_prices(
     return eq, cmd
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -249,6 +330,9 @@ def load_returns(
     eq, cmd = load_all_prices(start, end)
     eq_r  = _log_returns(eq)
     cmd_r = _log_returns(cmd)
+    # Schema validation at the system boundary — non-destructive
+    eq_r  = _validate_returns(eq_r,  "equity_returns")
+    cmd_r = _validate_returns(cmd_r, "commodity_returns")
     if not eq_r.empty:
         try:
             from src.analysis.freshness import record_fetch
@@ -290,6 +374,7 @@ def load_fred_series(
                 pass
         if dfs:
             result = pd.DataFrame(dfs).sort_index()
+            result = _validate_prices(result, "fred_macro")  # FRED series are levels not returns
             try:
                 from src.analysis.freshness import record_fetch
                 record_fetch("fred_macro")
@@ -610,9 +695,16 @@ def load_fixed_income_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Daily close prices for fixed income ETF proxies."""
+    """Daily close prices for fixed income ETF proxies (HYG/LQD = credit spread proxies)."""
     from src.data.config import FIXED_INCOME_TICKERS
-    return _fill_gaps(_fetch_yf(FIXED_INCOME_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))
+    result = _fill_gaps(_fetch_yf(FIXED_INCOME_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))
+    if not result.empty:
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("fred_spreads")   # HYG/LQD are yfinance proxies for credit spreads
+        except Exception:
+            pass
+    return result
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -621,7 +713,8 @@ def load_fixed_income_returns(
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
     """Daily log returns for fixed income ETF proxies."""
-    return _log_returns(load_fixed_income_prices(start, end))
+    result = _log_returns(load_fixed_income_prices(start, end))
+    return _validate_returns(result, "fixed_income_returns")
 
 
 @st.cache_data(ttl=3600, show_spinner=False)

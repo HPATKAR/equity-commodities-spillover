@@ -9,7 +9,7 @@ from __future__ import annotations
 import streamlit as st
 from src.analysis.agent_state import (
     set_status, set_output, log_activity, calibrate_confidence,
-    is_enabled,
+    context_confidence, is_enabled,
 )
 
 _SYSTEM = (
@@ -25,16 +25,18 @@ _AGENT = "stress_engineer"
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _call_ai(context_str: str, provider: str, api_key: str) -> tuple[str, float]:
+def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     prompt = (
         f"STRESS TEST RESULTS (live scenarios):\n{context_str}\n\n"
         "Provide a 3–5 sentence stress assessment covering: "
         "1) the scenario with the worst expected portfolio drawdown, "
         "2) which asset class is the primary transmission vector, "
-        "3) what hedge or risk-reduction action is most impactful right now. "
-        "End with CONFIDENCE: X%."
+        "3) what hedge or risk-reduction action is most impactful right now."
     )
+    import time
+    from src.analysis.trace_logger import log_trace
     try:
+        t0 = time.monotonic()
         if provider == "anthropic":
             import anthropic as _ant
             client = _ant.Anthropic(api_key=api_key)
@@ -45,6 +47,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> tuple[str, float]
                 system=_SYSTEM,
             )
             text = resp.content[0].text.strip()
+            model_name = "claude-sonnet-4-6"
         else:
             from openai import OpenAI as _OAI
             client = _OAI(api_key=api_key)
@@ -57,19 +60,12 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> tuple[str, float]
                 max_tokens=350, temperature=0.2,
             )
             text = resp.choices[0].message.content.strip()
-
-        conf = 0.62
-        for line in text.split("\n")[-3:]:
-            if "confidence" in line.lower() and "%" in line:
-                import re
-                m = re.search(r"(\d+)%", line)
-                if m:
-                    conf = int(m.group(1)) / 100
-                    break
-
-        return text, conf
+            model_name = "gpt-4o"
+        log_trace(_AGENT, provider, model_name, len(prompt), len(text),
+                  (time.monotonic() - t0) * 1000)
+        return text
     except Exception as e:
-        return f"Stress Engineer unavailable: {e}", 0.0
+        return f"Stress Engineer unavailable: {e}"
 
 
 def run(
@@ -134,8 +130,8 @@ def run(
         set_status(_AGENT, "monitoring")
         return {"status": "monitoring", "context": ctx_str}
 
-    narrative, raw_conf = _call_ai(ctx_str, provider, api_key)
-    conf = calibrate_confidence(raw_conf, _AGENT)
+    narrative = _call_ai(ctx_str, provider, api_key)
+    conf = calibrate_confidence(context_confidence(_AGENT, context), _AGENT)
 
     routed = None
     if worst < -10:

@@ -467,8 +467,8 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             if _ga_result.get("narrative"):
                 st.markdown("---")
                 render_agent_output_block("geopolitical_analyst", _ga_result)
-    except Exception:
-        pass
+    except Exception as _ga_err:
+        st.caption(f"AI Geopolitical Analyst unavailable: {_ga_err}")
 
     # CQO runs silently - output visible in About > AI Workforce
     try:

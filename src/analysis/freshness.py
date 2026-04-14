@@ -29,7 +29,7 @@ _THRESHOLDS: dict[str, dict] = {
     "rss_headlines":      {"warn_h": 1,    "stale_h": 4},
     "conflict_manual":    {"warn_h": 168,  "stale_h": 720},   # 7d warn, 30d stale
     "cot_positioning":    {"warn_h": 72,   "stale_h": 240},
-    "fred_spreads":       {"warn_h": 48,   "stale_h": 168},
+    "fred_spreads":       {"warn_h": 4,    "stale_h": 26},   # yfinance proxy — same cadence as prices
     "risk_score":         {"warn_h": 4,    "stale_h": 26},
     "conflict_model":     {"warn_h": 24,   "stale_h": 72},
 }
@@ -41,7 +41,7 @@ _SOURCE_LABELS: dict[str, str] = {
     "rss_headlines":     "RSS",
     "conflict_manual":   "Manual",
     "cot_positioning":   "CFTC/COT",
-    "fred_spreads":      "FRED",
+    "fred_spreads":      "YF/HYG·LQD",
     "risk_score":        "Computed",
     "conflict_model":    "Model",
 }

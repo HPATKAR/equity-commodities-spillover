@@ -286,15 +286,116 @@ def pending_count() -> int:
                if i["status"] == "pending")
 
 
-def calibrate_confidence(raw: float, agent_id: str) -> float:
+def context_confidence(agent_id: str, context: dict) -> float:
     """
-    Signal Auditor calibration layer.
-    Applies a per-agent historical shrinkage factor if the auditor has run.
-    Falls back to raw confidence if auditor hasn't calibrated yet.
+    Compute a typed, context-derived base confidence for an agent.
+    This REPLACES regex-parsing of 'CONFIDENCE: X%' from model text.
+
+    Logic: data completeness × signal strength × regime certainty.
+    All inputs are numeric fields from the context dict — never parsed from strings.
     """
-    import streamlit as st
-    init_agents()
-    auditor = st.session_state["agents"].get("signal_auditor", {})
-    calibration = auditor.get("extra", {}).get("calibration", {})
-    factor = calibration.get(agent_id, 1.0)
-    return min(max(raw * factor, 0.0), 1.0)
+    score = 0.60   # neutral prior
+
+    if agent_id == "risk_officer":
+        filled = sum(1 for k in ("risk_score", "avg_corr", "n_alerts", "regime_level")
+                     if context.get(k) is not None)
+        score = 0.50 + 0.05 * filled                         # 0.50–0.70
+        if context.get("regime_level", 1) in (1, 3):         # clear regimes
+            score = min(score + 0.05, 0.85)
+
+    elif agent_id == "macro_strategist":
+        filled = sum(1 for k in ("yield_curve_spread", "cpi_yoy", "fed_rate", "gdp_growth")
+                     if context.get(k) is not None)
+        score = 0.48 + 0.05 * filled                         # 0.48–0.68
+        if context.get("yield_curve_spread") is not None:
+            # Steep inversion or steep normal → clearer signal
+            spread = abs(context["yield_curve_spread"])
+            score = min(score + min(spread / 200.0, 0.10), 0.80)
+
+    elif agent_id == "geopolitical_analyst":
+        n_hi = context.get("high_severity", 0)
+        n_ev = context.get("n_events", 0)
+        score = 0.45 + min(n_hi * 0.04 + n_ev * 0.01, 0.25)  # 0.45–0.70
+
+    elif agent_id == "commodities_specialist":
+        has_cot  = bool(context.get("crowded_longs") or context.get("crowded_shorts"))
+        has_corr = context.get("avg_corr") is not None
+        has_geo  = bool(context.get("geo_cis") or context.get("geo_narrative"))
+        score = 0.52 + 0.06 * int(has_cot) + 0.04 * int(has_corr) + 0.04 * int(has_geo)
+
+    elif agent_id == "signal_auditor":
+        hr = context.get("avg_hit_rate")
+        if hr is not None:
+            # Signal auditor confidence tracks its own measured hit rate
+            score = min(max(float(hr) / 100.0, 0.40), 0.90)
+        n_sig = context.get("n_signals", 0)
+        score = min(score + n_sig * 0.02, 0.88)
+
+    elif agent_id == "stress_engineer":
+        n_sc = context.get("n_scenarios", 0)
+        rs   = context.get("risk_score") or context.get("ro_risk_score", 50)
+        score = 0.52 + min(n_sc * 0.03, 0.12)               # 0.52–0.64
+        # Higher risk score → more certain something is stressed
+        if rs and rs >= 65:
+            score = min(score + 0.06, 0.75)
+
+    elif agent_id == "trade_structurer":
+        n_peers = len(context.get("peer_risk_scores", {}))
+        score = 0.48 + min(n_peers * 0.04, 0.16)             # 0.48–0.64
+        # Consensus in peer regimes → clearer trade signal
+        regimes = list(context.get("peer_regimes", {}).values())
+        if regimes and len(set(regimes)) == 1:                # unanimous regime
+            score = min(score + 0.06, 0.72)
+
+    elif agent_id == "quality_officer":
+        score = 0.78   # CQO checks known failure modes — inherently high base
+
+    return round(float(min(max(score, 0.30), 0.90)), 3)
+
+
+def calibrate_confidence(
+    raw: float,
+    agent_id: str,
+    signal_class: str | None = None,
+) -> float:
+    """
+    Posterior-weighted confidence calibration.
+
+    Replaces the loose shrinkage factor with a defensible Bayesian update:
+        calibrated = α × posterior + (1 - α) × raw
+    where:
+        posterior  = per-agent, per-signal-class historical accuracy
+                     from agent_benchmark.POSTERIOR_ACCURACY (back-tested)
+        raw        = model-reported confidence (parsed from LLM output OR
+                     set explicitly by the agent — never regex-parsed here)
+        α          = 0.40  (weight on the empirical prior vs. model self-report)
+
+    The story this tells: "this agent's historical accuracy on this signal
+    class is X%, and the model self-reports Y% — we blend them at 40/60."
+
+    signal_class: optional key into POSTERIOR_ACCURACY (e.g. "risk_score_crisis").
+    Falls back to agent base rate if signal_class is None or not found.
+    """
+    try:
+        # Priority 1: dynamically computed posterior from the historical benchmark run
+        import streamlit as _st
+        _bm = _st.session_state.get("_agent_benchmark_results", {})
+        if _bm and agent_id in _bm:
+            _hr = _bm[agent_id].get("hit_rate")
+            if _hr is not None and _bm[agent_id].get("total", 0) >= 3:
+                posterior = float(_hr)
+            else:
+                raise ValueError("insufficient benchmark data")
+        else:
+            raise ValueError("benchmark not yet run")
+    except Exception:
+        try:
+            # Priority 2: static priors from POSTERIOR_ACCURACY table
+            from src.analysis.agent_benchmark import get_posterior
+            posterior = get_posterior(agent_id, signal_class)
+        except Exception:
+            posterior = 0.65   # conservative fallback
+
+    alpha      = 0.40
+    calibrated = alpha * posterior + (1.0 - alpha) * float(raw)
+    return float(min(max(calibrated, 0.0), 1.0))

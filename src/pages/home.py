@@ -124,25 +124,54 @@ _STYLE = """<style>
 # Score history loader (cached — market data only fetched once per TTL)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[dict, pd.Series]:
     """
-    Load market returns, compute avg_corr, then run the full 3-layer risk score
-    (identical to what overview.py uses: compute_risk_score(avg_corr, cmd_r, eq_r)).
-    Also computes the historical series for the chart.
+    Load market returns, compute avg_corr, then run the full 3-layer risk score.
     Returns (risk_result, score_history).
+
+    risk_result always contains:
+      _computed_at  : ISO timestamp string of when this computation ran
+      _market_fallback : True when market data was unavailable
+      _is_eod       : True when latest data is from a prior close (not intraday)
+      _data_date    : str date of the latest available market close
     """
     from src.analysis.risk_score import compute_risk_score
+    computed_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
         eq_r, cmd_r = load_returns(start, end)
         if eq_r.empty or cmd_r.empty:
-            return {}, pd.Series(dtype=float)
-        avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
-        risk      = compute_risk_score(avg_corr, cmd_r, eq_r=eq_r)
-        hist      = risk_score_history(avg_corr, cmd_r, eq_r=eq_r, window=252)
+            return {
+                "_computed_at": computed_at,
+                "_market_fallback": True,
+                "_is_eod": None,
+                "_data_date": None,
+            }, pd.Series(dtype=float)
+
+        # Detect whether latest data is a prior close (EOD) or same-day
+        today = datetime.date.today()
+        last_date = cmd_r.index[-1].date() if hasattr(cmd_r.index[-1], "date") else None
+        is_eod = last_date is not None and last_date < today
+
+        avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
+        risk     = compute_risk_score(avg_corr, cmd_r, eq_r=eq_r)
+        hist     = risk_score_history(avg_corr, cmd_r, eq_r=eq_r, window=252)
+
+        risk["_computed_at"]      = computed_at
+        risk["_market_fallback"]  = False
+        risk["_is_eod"]           = is_eod
+        risk["_data_date"]        = str(last_date) if last_date else None
+
+        record_fetch("risk_score")
         return risk, hist
+
     except Exception:
-        return {}, pd.Series(dtype=float)
+        return {
+            "_computed_at": computed_at,
+            "_market_fallback": True,
+            "_is_eod": None,
+            "_data_date": None,
+        }, pd.Series(dtype=float)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -550,7 +579,29 @@ def _render_geo_risk_block(
     news_gpr  = risk.get("news_gpr")
     n_threat  = risk.get("n_threat", 0)
     n_act_hl  = risk.get("n_act", 0)
-    freshness = freshness_badge_html("conflict_model")
+
+    # ── Freshness: track risk_score, not conflict_model ────────────────────
+    is_fallback  = risk.get("_market_fallback", False)
+    computed_at  = risk.get("_computed_at", "")
+    is_eod       = risk.get("_is_eod", None)
+    data_date    = risk.get("_data_date", "")
+
+    from src.analysis.freshness import get_status
+    rs_status = get_status("risk_score")
+    if is_fallback:
+        freshness_color = "#e67e22"
+        freshness_text  = f"CONFLICT MODEL ONLY · No market data · {computed_at[11:16] if computed_at else '—'}"
+    elif is_eod:
+        freshness_color = "#CFB991"
+        freshness_text  = f"EOD Close · {data_date} · computed {computed_at[11:16] if computed_at else '—'}"
+    else:
+        freshness_color = rs_status["color"]
+        freshness_text  = f"{'LIVE' if rs_status['status']=='live' else rs_status['label']} · {computed_at[11:16] if computed_at else '—'}"
+
+    freshness = (
+        f'<span style="{_M}font-size:9px;color:{freshness_color};letter-spacing:.06em">'
+        f'{freshness_text}</span>'
+    )
 
     # Score history → sparkline
     history: list = list(st.session_state.get("_score_history", []))
@@ -594,21 +645,48 @@ def _render_geo_risk_block(
     news_gpr_sub = f'{n_threat}T / {n_act_hl}A' if news_gpr is not None else 'awaiting'
 
     # ── Panel header — full-width, sits above the two columns ─────────────
-    st.markdown(
-        f'<div style="display:flex;align-items:center;gap:10px;'
-        f'border-top:3px solid {color};border-bottom:1px solid #1e1e1e;'
-        f'background:#0a0a0a;padding:.3rem .8rem;margin-bottom:.1rem">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">Geopolitical Risk Score</span>'
-        f'<span style="background:{color};color:#000;{_M}font-size:11px;font-weight:700;'
-        f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.0f}</span>'
-        f'<span style="{_M}font-size:10px;color:#C8D4E0;margin-left:4px">'
-        f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
-        f'&nbsp;·&nbsp;{spark_html}</span>'
-        f'<span style="margin-left:auto">{freshness}</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+    _hdr_col, _btn_col = st.columns([10, 1], gap="small")
+    with _hdr_col:
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:10px;'
+            f'border-top:3px solid {color};border-bottom:1px solid #1e1e1e;'
+            f'background:#0a0a0a;padding:.3rem .8rem;margin-bottom:.1rem">'
+            f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#DCE4F0">Geopolitical Risk Score</span>'
+            f'<span style="background:{color};color:#000;{_M}font-size:11px;font-weight:700;'
+            f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.0f}</span>'
+            f'<span style="{_M}font-size:10px;color:#C8D4E0;margin-left:4px">'
+            f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
+            f'&nbsp;·&nbsp;{spark_html}</span>'
+            f'<span style="margin-left:auto">{freshness}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    with _btn_col:
+        if st.button("↻", key="geo_refresh_btn", help="Force-refresh market data and recompute score"):
+            from src.data.loader import load_returns as _lr, load_all_prices as _lap
+            _load_market_risk.clear()
+            _lr.clear()
+            _lap.clear()
+            st.rerun()
+
+    # ── Fallback warning — shown only when market data was unavailable ──────
+    if is_fallback:
+        st.markdown(
+            f'<div style="background:#1a0a00;border:1px solid #e67e22;border-left:3px solid #e67e22;'
+            f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:#e67e22">'
+            f'⚠ MARKET DATA UNAVAILABLE — score is Conflict Model estimate only '
+            f'(40% CIS + 35% TPS). MCS layer set to neutral 50. '
+            f'Hit ↻ to retry.</div>',
+            unsafe_allow_html=True,
+        )
+    elif is_eod:
+        st.markdown(
+            f'<div style="background:#0d0d08;border:1px solid #CFB991;border-left:3px solid #CFB991;'
+            f'padding:.2rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:#CFB991">'
+            f'Latest market close: {data_date} · Market Confirmation layer uses prior-day prices.</div>',
+            unsafe_allow_html=True,
+        )
 
     # ── Two-column hero: gauge | history chart ─────────────────────────────
     col_gauge, col_hist = st.columns([1, 1.65], gap="medium")
@@ -678,7 +756,7 @@ def _render_geo_risk_block(
             st.markdown(
                 f'<div style="{_F}font-size:12px;color:#A8B8C8;padding:4rem 0;'
                 f'text-align:center;border:1px solid #1a1a1a;margin-top:4px">'
-                f'Historical series computing — loads after market data.</div>',
+                f'No market data available — check connection or date range.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -1691,8 +1769,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # ── Full 3-layer risk score + history (market-data-fed, cached) ───────
     with st.spinner("Computing risk score…"):
         risk, _score_hist = _load_market_risk(start, end, get_scenario_id())
-        if not risk:
-            # Fallback: conflict-model-only estimate when market data unavailable
+        if risk.get("_market_fallback") or not risk.get("score"):
+            # Fallback: conflict-model-only estimate when market data unavailable.
+            # Clearly labeled — never silently substituted.
             cis_f = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
             tps_f = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
             raw   = round(0.40 * cis_f + 0.35 * tps_f + 0.25 * 50, 1)
@@ -1700,6 +1779,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             elif raw < 50: lbl, col = "Moderate", "#8E9AAA"
             elif raw < 75: lbl, col = "Elevated", "#e67e22"
             else:          lbl, col = "High",     "#c0392b"
+            _fallback_at = risk.get("_computed_at", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             risk = {
                 "score": raw, "label": lbl, "color": col,
                 "cis": cis_f, "tps": tps_f, "mcs": 50.0,
@@ -1708,6 +1788,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 "news_gpr": None, "n_threat": 0, "n_act": 0,
                 "mcs_components": {}, "components": {}, "weights": {},
                 "conflict_detail": {},
+                # Fallback markers — rendered as warning in geo risk block
+                "_market_fallback": True,
+                "_computed_at": _fallback_at,
+                "_is_eod": None,
+                "_data_date": None,
             }
 
     # ── Populate session-state deltas ──────────────────────────────────────
@@ -1756,6 +1841,56 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     # § 2  Geopolitical Risk Score — DOMINANT ELEMENT
     _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
+
+    # § 2.5  Proactive Alerts + Morning Briefing Chain
+    try:
+        from src.analysis.proactive_alerts import compute_alerts
+        from src.analysis.correlations import detect_correlation_regime
+        from src.ui.alert_banner import render_alert_banner
+        _al_eq_r, _al_cmd_r = load_returns(start, end)  # cache hit — already computed above
+        if not _al_eq_r.empty and not _al_cmd_r.empty:
+            _al_corr    = average_cross_corr_series(_al_eq_r, _al_cmd_r, window=60)
+            _al_regimes = detect_correlation_regime(_al_corr)
+            _alerts     = compute_alerts(
+                eq_r=_al_eq_r, cmd_r=_al_cmd_r,
+                avg_corr=_al_corr, regimes=_al_regimes,
+                risk_score=float(risk["score"]),
+                risk_history=_score_hist if isinstance(_score_hist, pd.Series)
+                             else pd.Series(dtype=float),
+            )
+            # Show only critical alerts on Home (warnings live on Overview)
+            _critical = [a for a in _alerts if a.severity == "critical"]
+            if _critical:
+                render_alert_banner(_critical, market_context=(
+                    f"Geo risk {risk['score']:.0f}/100 ({risk['label']}). "
+                    f"CIS {risk['cis']:.0f} · TPS {risk['tps']:.0f}. "
+                    f"Regime: {_al_regimes.iloc[-1] if not _al_regimes.empty else 1}/3. "
+                    f"Lead conflict: {(conflict_agg.get('top_conflict') or 'none').replace('_',' ')}."
+                ))
+
+            # Morning Briefing Chain — runs synthetically (no API key needed for the
+            # deliberation messages; API key only needed for the AI enrichment text).
+            from src.ui.agent_panel import render_morning_briefing_panel
+            _top_texts   = [getattr(a, "title", "") for a in _alerts[:3] if getattr(a, "title", "")]
+            _top_conflict = conflict_agg.get("top_conflict")
+            _risk_val     = float(risk["score"])
+            _expanded     = _risk_val >= 50
+            _panel_label  = (
+                f"⚡ AI Analyst Team — Morning Briefing (Risk {_risk_val:.0f}/100)"
+                if _expanded else
+                f"AI Analyst Team — Morning Briefing (Risk {_risk_val:.0f}/100)"
+            )
+            with st.expander(_panel_label, expanded=_expanded):
+                render_morning_briefing_panel(
+                    risk_score=_risk_val,
+                    top_alerts=_top_texts,
+                    top_conflict=_top_conflict,
+                    auto_run=True,
+                    start=start,
+                    end=end,
+                )
+    except Exception:
+        pass
 
     # § 3  Context Narrative
     _render_context_narrative(risk, conflict_results)

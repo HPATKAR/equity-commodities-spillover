@@ -1,0 +1,227 @@
+[
+  {
+    "date": "2020-03-16",
+    "label": "COVID Crash",
+    "regime": 3,
+    "vix_approx": 83.0,
+    "notes": "VIX hit 82.7; S&P -12% single day; oil -10%; gold initial sell-off.",
+    "assertions": {
+      "risk_officer":         [["risk_score", "gte", 75], ["regime", "eq", 3]],
+      "macro_strategist":     [["regime", "eq", 3]],
+      "signal_auditor":       [["granger_hit_rate", "lte", 0.45]],
+      "geopolitical_analyst": [["cis", "lte", 40]],
+      "stress_engineer":      [["regime", "eq", 3]]
+    }
+  },
+  {
+    "date": "2020-03-23",
+    "label": "COVID Trough",
+    "regime": 3,
+    "vix_approx": 66.0,
+    "notes": "S&P intraday bottom. Fed balance sheet expansion begins.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "gte", 70], ["regime", "eq", 3]],
+      "macro_strategist": [["regime", "eq", 3]]
+    }
+  },
+  {
+    "date": "2022-02-24",
+    "label": "Russia-Ukraine Invasion",
+    "regime": 3,
+    "vix_approx": 37.0,
+    "notes": "Russia invades Ukraine. WTI +8%, wheat +5%, Brent +9%. NATO mobilises.",
+    "assertions": {
+      "risk_officer":           [["risk_score", "gte", 70], ["regime", "eq", 3]],
+      "geopolitical_analyst":   [["cis", "gte", 75], ["tps", "gte", 65]],
+      "commodities_specialist": [["cmd_vol_z", "gte", 1.5]]
+    }
+  },
+  {
+    "date": "2022-03-08",
+    "label": "Ukraine War — Peak Commodity Spike",
+    "regime": 3,
+    "vix_approx": 36.0,
+    "notes": "WTI $130/bbl. Wheat +40% MTD. LME nickel halted at $100k/t.",
+    "assertions": {
+      "risk_officer":           [["risk_score", "gte", 75]],
+      "geopolitical_analyst":   [["cis", "gte", 80], ["tps", "gte", 75]],
+      "commodities_specialist": [["cmd_vol_z", "gte", 2.0]]
+    }
+  },
+  {
+    "date": "2023-03-10",
+    "label": "SVB Collapse",
+    "regime": 2,
+    "vix_approx": 26.0,
+    "notes": "SVB bank run. Regional bank contagion fear. 2Y Treasury -50bps in 3 days.",
+    "assertions": {
+      "risk_officer":         [["risk_score", "gte", 55], ["regime", "gte", 2]],
+      "macro_strategist":     [["yield_curve_spread", "lt", 0]],
+      "geopolitical_analyst": [["cis", "lte", 50]]
+    }
+  },
+  {
+    "date": "2022-06-13",
+    "label": "CPI 9.1% — Inflation Peak",
+    "regime": 2,
+    "vix_approx": 34.0,
+    "notes": "US CPI YoY 9.1%. Fed fast-tracks 75bp hike. S&P YTD -24%.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "between", [55, 80]]],
+      "macro_strategist": [["cpi_yoy", "gte", 8.0], ["regime", "gte", 2]]
+    }
+  },
+  {
+    "date": "2018-12-24",
+    "label": "Fed Tightening Tantrum",
+    "regime": 2,
+    "vix_approx": 36.0,
+    "notes": "S&P -20% YTD. Powell 'far from neutral'. Christmas Eve low.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "gte", 55]],
+      "macro_strategist": [["regime", "gte", 2]]
+    }
+  },
+  {
+    "date": "2015-08-24",
+    "label": "China Devaluation / Black Monday",
+    "regime": 3,
+    "vix_approx": 53.0,
+    "notes": "China devalues CNY 2%. Global equity sell-off. VIX hits 53.",
+    "assertions": {
+      "risk_officer":         [["risk_score", "gte", 70], ["regime", "eq", 3]],
+      "geopolitical_analyst": [["cis", "between", [40, 65]]]
+    }
+  },
+  {
+    "date": "2023-10-07",
+    "label": "Hamas Attack / Gaza Escalation",
+    "regime": 2,
+    "vix_approx": 19.0,
+    "notes": "Hamas attacks Israel. Oil +4%, gold +1%. Middle East risk premium spikes.",
+    "assertions": {
+      "risk_officer":         [["risk_score", "between", [50, 75]]],
+      "geopolitical_analyst": [["cis", "gte", 65], ["tps", "gte", 55]]
+    }
+  },
+  {
+    "date": "2018-10-11",
+    "label": "Fed-Driven Equity Drawdown",
+    "regime": 2,
+    "vix_approx": 28.0,
+    "notes": "S&P -7% in 3 days. Powell: 'we may have gone past neutral'. Rate shock.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "between", [50, 70]]],
+      "macro_strategist": [["regime", "gte", 2]]
+    }
+  },
+  {
+    "date": "2022-09-28",
+    "label": "UK Gilt Crisis / LDI Unwind",
+    "regime": 2,
+    "vix_approx": 32.0,
+    "notes": "UK gilts +100bps in 3 days. BOE emergency intervention. GBP to parity risk.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "gte", 58]],
+      "macro_strategist": [["yield_curve_spread", "lt", 0]]
+    }
+  },
+  {
+    "date": "2008-09-15",
+    "label": "Lehman Collapse",
+    "regime": 3,
+    "vix_approx": 30.0,
+    "notes": "Lehman files Ch.11. Reserve Primary Fund breaks the buck. Credit freeze.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "gte", 85], ["regime", "eq", 3]],
+      "macro_strategist": [["regime", "eq", 3]],
+      "signal_auditor":   [["granger_hit_rate", "lte", 0.40]]
+    }
+  },
+  {
+    "date": "2023-08-01",
+    "label": "Fitch US Downgrade",
+    "regime": 2,
+    "vix_approx": 16.0,
+    "notes": "Fitch cuts US AAA to AA+. S&P -1.4%. Treasury yields +10bps.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "between", [45, 65]]],
+      "macro_strategist": [["regime", "gte", 1]]
+    }
+  },
+  {
+    "date": "2024-04-15",
+    "label": "Iran Drone Attack on Israel",
+    "regime": 2,
+    "vix_approx": 19.0,
+    "notes": "Iran launches 300+ drones on Israel. Oil +3%. Risk-off bid.",
+    "assertions": {
+      "risk_officer":         [["risk_score", "between", [50, 72]]],
+      "geopolitical_analyst": [["cis", "gte", 70], ["tps", "gte", 60]]
+    }
+  },
+  {
+    "date": "2021-11-26",
+    "label": "Omicron Discovery",
+    "regime": 2,
+    "vix_approx": 28.0,
+    "notes": "WHO designates Omicron. S&P -2.3%. Travel bans. Oil -13%.",
+    "assertions": {
+      "risk_officer":           [["risk_score", "between", [55, 75]]],
+      "commodities_specialist": [["cmd_vol_z", "gte", 1.0]]
+    }
+  },
+  {
+    "date": "2021-06-01",
+    "label": "Post-COVID Recovery Peak",
+    "regime": 1,
+    "vix_approx": 16.0,
+    "notes": "S&P at ATH. Vaccine rollout complete. Reopening trade. Soft macro.",
+    "assertions": {
+      "risk_officer":   [["risk_score", "lte", 45], ["regime", "eq", 1]],
+      "signal_auditor": [["granger_hit_rate", "gte", 0.55]]
+    }
+  },
+  {
+    "date": "2023-11-01",
+    "label": "Soft Landing Optimism",
+    "regime": 1,
+    "vix_approx": 18.0,
+    "notes": "US jobs data soft. Fed pause expectations firm. S&P +5% in 2 weeks.",
+    "assertions": {
+      "risk_officer":     [["risk_score", "lte", 50], ["regime", "lte", 2]],
+      "macro_strategist": [["regime", "lte", 2]]
+    }
+  },
+  {
+    "date": "2024-01-02",
+    "label": "2024 Start — Risk-On",
+    "regime": 1,
+    "vix_approx": 13.0,
+    "notes": "VIX 13, lowest since 2019. S&P and Nasdaq near ATH. Gold stable.",
+    "assertions": {
+      "risk_officer":   [["risk_score", "lte", 40], ["regime", "eq", 1]],
+      "signal_auditor": [["granger_hit_rate", "gte", 0.55]]
+    }
+  },
+  {
+    "date": "2019-09-01",
+    "label": "Trade War Pause",
+    "regime": 1,
+    "vix_approx": 19.0,
+    "notes": "US-China trade truce. S&P +6% from trough. Macro soft but stable.",
+    "assertions": {
+      "risk_officer": [["risk_score", "between", [30, 55]]]
+    }
+  },
+  {
+    "date": "2017-01-01",
+    "label": "Low-Vol Calm",
+    "regime": 1,
+    "vix_approx": 11.0,
+    "notes": "VIX below 12 for most of year. Record low realized vol. Markets complacent.",
+    "assertions": {
+      "risk_officer": [["risk_score", "lte", 35], ["regime", "eq", 1]]
+    }
+  }
+]

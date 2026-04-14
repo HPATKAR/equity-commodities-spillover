@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import streamlit as st
 from src.analysis.agent_state import (
-    set_status, set_output, log_activity, is_enabled,
+    set_status, set_output, log_activity, context_confidence, is_enabled,
 )
 
 _SYSTEM = (
@@ -28,16 +28,15 @@ _SYSTEM = (
     "Format your response as numbered flags: "
     "start each flag on a new line as '⚠ FLAG N: [title] - [precise explanation]'. "
     "If something is actually solid, you may note it as '✓ PASS: [item]'. "
-    "End with a single line: SEVERITY: Critical | High | Medium | Low. "
-    "Then: CONFIDENCE: X%."
+    "End with a single line: SEVERITY: Critical | High | Medium | Low."
 )
 
 _AGENT = "quality_officer"
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> tuple[str, float]:
-    """Returns (narrative, raw_confidence). Cached 30 minutes."""
+def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> str:
+    """Returns narrative text. Cached 30 minutes."""
     prompt = (
         f"PAGE: {page}\n\n"
         f"ANALYSIS CONTEXT:\n{context_str}\n\n"
@@ -47,9 +46,12 @@ def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> tuple[
         "If the sample is too small, state the actual N and what N you would need. "
         "If a correlation is spurious, name the confound. "
         "If a score is hardcoded and divorced from live data, say so explicitly. "
-        "End with SEVERITY: and CONFIDENCE: lines."
+        "End with SEVERITY: Critical | High | Medium | Low."
     )
+    import time
+    from src.analysis.trace_logger import log_trace
     try:
+        t0 = time.monotonic()
         if provider == "anthropic":
             import anthropic as _ant
             client = _ant.Anthropic(api_key=api_key)
@@ -60,6 +62,7 @@ def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> tuple[
                 system=_SYSTEM,
             )
             text = resp.content[0].text.strip()
+            model_name = "claude-sonnet-4-6"
         else:
             from openai import OpenAI as _OAI
             client = _OAI(api_key=api_key)
@@ -72,19 +75,12 @@ def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> tuple[
                 max_tokens=450, temperature=0.15,
             )
             text = resp.choices[0].message.content.strip()
-
-        conf = 0.80  # CQO defaults high - it's checking known failure modes
-        import re
-        for line in text.split("\n")[-4:]:
-            if "confidence" in line.lower() and "%" in line:
-                m = re.search(r"(\d+)%", line)
-                if m:
-                    conf = int(m.group(1)) / 100
-                    break
-
-        return text, conf
+            model_name = "gpt-4o"
+        log_trace(_AGENT, provider, model_name, len(prompt), len(text),
+                  (time.monotonic() - t0) * 1000)
+        return text
     except Exception as e:
-        return f"Chief Quality Officer unavailable: {e}", 0.0
+        return f"Chief Quality Officer unavailable: {e}"
 
 
 def run(
@@ -221,20 +217,21 @@ def run(
         set_status(_AGENT, "monitoring")
         return {"status": "monitoring", "context": ctx_str}
 
-    narrative, raw_conf = _call_ai(ctx_str, page, provider, api_key)
+    narrative = _call_ai(ctx_str, page, provider, api_key)
+    conf = context_confidence(_AGENT, context)
 
     # If any critical flags detected, log at warning level
     critical_keywords = ["critical", "look-ahead", "hardcoded", "spurious", "p-hack"]
     severity = "warning" if any(k in narrative.lower() for k in critical_keywords) else "info"
 
-    set_output(_AGENT, narrative, confidence=raw_conf)
+    set_output(_AGENT, narrative, confidence=conf)
     sev_label = _extract_severity(narrative)
     log_activity(_AGENT, f"quality audit complete: {page}",
                  f"severity: {sev_label}", severity)
 
     result = {
         "narrative": narrative,
-        "confidence": raw_conf,
+        "confidence": conf,
         "context": ctx_str,
         "page": page,
     }
