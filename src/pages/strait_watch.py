@@ -777,6 +777,260 @@ def page_strait_watch(start: str, end: str) -> None:
             )
             _hist_chart(s3, height=240)
 
+    # ── IMF PortWatch – Live Hormuz Tanker Data ───────────────────────────────
+    _divider("1.2rem", "0.5rem")
+    _thread(
+        "The vessel traffic numbers above are AIS estimates. "
+        "IMF PortWatch provides verified daily transit counts directly from satellite AIS signals — "
+        "the most authoritative public source for chokepoint throughput. "
+        "Fetching live data for Strait of Hormuz…"
+    )
+    _section_label("IMF PortWatch — Strait of Hormuz Daily Tanker Transits (Live)")
+
+    try:
+        from src.data.portwatch import load_hormuz_tankers
+        with st.spinner("Fetching IMF PortWatch data…"):
+            pw_df = load_hormuz_tankers(days=365)
+    except Exception:
+        pw_df = pd.DataFrame()
+
+    if not pw_df.empty and len(pw_df) >= 7:
+        # Compute rolling 30d MA
+        pw_ma30      = pw_df.set_index("date")["oil_tanker"].rolling(30).mean()
+        pw_tanker_ma = pw_df.set_index("date")["n_tanker"].rolling(30).mean()
+        latest_pw    = pw_df.iloc[-1]
+        pw_avg_90    = pw_df["oil_tanker"].tail(90).mean() if len(pw_df) >= 90 else pw_df["oil_tanker"].mean()
+
+        # KPIs
+        pk1, pk2, pk3, pk4 = st.columns(4)
+        for col, label, value, sub in [
+            (pk1, "Latest Oil Tankers/Day",
+             f"{int(latest_pw['oil_tanker'])}",
+             f"As of {pd.Timestamp(latest_pw['date']).strftime('%b %d, %Y')}"),
+            (pk2, "Total Tankers/Day",
+             f"{int(latest_pw['n_tanker'])}",
+             f"60% proxy → {int(latest_pw['oil_tanker'])} oil tankers"),
+            (pk3, "90d Average (Oil)",
+             f"{pw_avg_90:.0f}/day",
+             "Rolling 90-day baseline"),
+            (pk4, "vs 90d Avg",
+             f"{((latest_pw['oil_tanker'] / pw_avg_90) - 1) * 100:+.1f}%",
+             "Oil tanker flow deviation"),
+        ]:
+            _kpi(col, label, value, sub)
+
+        # Chart: oil tanker count + MA30
+        fig_pw = go.Figure()
+        fig_pw.add_trace(go.Scatter(
+            x=pw_df["date"], y=pw_df["oil_tanker"],
+            name="Oil Tankers/day (60% proxy)",
+            line=dict(color="#CFB991", width=1.2),
+            fill="tozeroy", fillcolor="rgba(207,185,145,0.07)",
+        ))
+        fig_pw.add_trace(go.Scatter(
+            x=pw_ma30.index, y=pw_ma30.values,
+            name="30d MA",
+            line=dict(color="#e67e22", width=1.5, dash="dot"),
+        ))
+        fig_pw.add_trace(go.Scatter(
+            x=pw_tanker_ma.index, y=pw_tanker_ma.values,
+            name="All tankers 30d MA",
+            line=dict(color="#2980b9", width=1, dash="dot"),
+            visible="legendonly",
+        ))
+        fig_pw.update_layout(
+            yaxis_title="Ships / day",
+            legend=dict(
+                orientation="h", y=1.08, x=0,
+                font=dict(size=9, family="JetBrains Mono"),
+                bgcolor="rgba(0,0,0,0)",
+            ),
+        )
+        _chart(_style_fig(fig_pw, height=240))
+        _insight_note(
+            "Oil tanker proxy = 60% of IMF PortWatch n_tanker (strips LNG, LPG, and product carriers). "
+            "Source: IMF PortWatch (portwatch.imf.org) via ArcGIS Feature Service · "
+            f"Updated daily · {len(pw_df)} observations loaded."
+        )
+    else:
+        # Graceful degradation — show config instructions
+        st.markdown(
+            f'<div style="background:#131313;border:1px solid #2a2a2a;border-radius:0;'
+            f'padding:0.9rem 1.1rem">'
+            f'<div style="{_F}font-size:0.62rem;font-weight:700;color:#CFB991;margin-bottom:6px">'
+            f'IMF PortWatch API Not Connected</div>'
+            f'<div style="{_F}font-size:0.65rem;color:#8890a1;line-height:1.75">'
+            f'To enable live data, add the PortWatch ArcGIS endpoint to '
+            f'<code>.streamlit/secrets.toml</code>:<br>'
+            f'<code style="background:#1e1e1e;padding:3px 6px;border-radius:2px;font-size:0.60rem">'
+            f'[keys]<br>portwatch_endpoint = "https://services.arcgis.com/..."<br>'
+            f'portwatch_token    = "your-token"  # optional</code><br><br>'
+            f'Get the endpoint URL from <b>portwatch.imf.org</b> → open browser DevTools → '
+            f'Network tab → filter for "query" → copy the FeatureServer URL.<br>'
+            f'Chokepoint IDs: Suez=chokepoint1 (confirmed) · Hormuz=chokepoint3 (likely).'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Brent Disruption Sensitivity Table ────────────────────────────────────
+    _divider("1.2rem", "0.5rem")
+    _thread(
+        "The sensitivity table below translates tanker disruption scenarios directly into "
+        "estimated Brent prices — using both the empirical OLS elasticity from IMF PortWatch + "
+        "FRED data and the structural elasticity range applied by EIA/IEA forecasters. "
+        "The empirical elasticity appears counterintuitive because a simple regression cannot "
+        "untangle war-risk premia, insurance costs, Cape rerouting, and OPEC responses. "
+        "Structural models — which embed supply-demand accounting — are the right tool for extreme scenarios."
+    )
+    _section_label("Brent Crude — Disruption Sensitivity Analysis (USD/bbl)")
+
+    # Live base price from loaded Brent series, fallback $99
+    _base = round(float(brent.iloc[-1]), 2) if not brent.empty else 99.0
+
+    try:
+        from src.data.portwatch import brent_sensitivity_table
+        sens_df = brent_sensitivity_table(_base)
+    except Exception:
+        sens_df = pd.DataFrame()
+
+    if not sens_df.empty:
+        # ── Render HTML color-coded table matching the friend's format ─────────
+        disruption_cols = ["-10%", "-25%", "-50%", "-75%", "-100%"]
+        row_labels = {
+            0.004:  ("0.004", "Empirical — 2026 blockade only",       "#2980b9"),
+            0.014:  ("0.014", "Empirical — 2019–2026 full dataset",   "#2980b9"),
+            -0.25:  ("−0.25", "Forecaster structural (EIA/IEA low)",  "#CFB991"),
+            -0.35:  ("−0.35", "Forecaster structural (mid-range)",    "#CFB991"),
+            -0.50:  ("−0.50", "Forecaster structural (IEA high-end)", "#c0392b"),
+        }
+
+        def _cell_color(price: float, base: float) -> str:
+            pct = (price / base - 1) * 100
+            if pct <= -5:    return "#1a3a2a"   # deep green (big drop)
+            elif pct <= 0:   return "#1e2a1e"   # mild green
+            elif pct <= 5:   return "#1c1c1c"   # neutral
+            elif pct <= 15:  return "#2a200a"   # mild amber
+            elif pct <= 30:  return "#2a1a0a"   # orange
+            elif pct <= 50:  return "#2a1010"   # red
+            else:            return "#3a0808"   # deep red
+
+        def _cell_text_color(price: float, base: float) -> str:
+            pct = (price / base - 1) * 100
+            if pct <= -5:    return "#27ae60"
+            elif pct <= 0:   return "#2ecc71"
+            elif pct <= 5:   return "#c8c8c8"
+            elif pct <= 15:  return "#e67e22"
+            elif pct <= 30:  return "#e07b39"
+            elif pct <= 50:  return "#e74c3c"
+            else:            return "#c0392b"
+
+        # Header
+        col_widths = "200px " + " ".join(["100px"] * 5)
+        header_html = (
+            f'<div style="overflow-x:auto">'
+            f'<table style="{_F}border-collapse:collapse;width:100%;min-width:650px">'
+            f'<thead><tr>'
+            f'<th style="background:#1c1c1c;border:1px solid #2a2a2a;padding:6px 10px;'
+            f'font-size:0.55rem;font-weight:700;letter-spacing:0.12em;color:#CFB991;'
+            f'text-align:left;text-transform:uppercase">Elasticity</th>'
+        )
+        for dc in disruption_cols:
+            header_html += (
+                f'<th style="background:#1c1c1c;border:1px solid #2a2a2a;padding:6px 10px;'
+                f'font-size:0.58rem;font-weight:700;color:#e8e9ed;text-align:center">{dc}</th>'
+            )
+        header_html += "</tr></thead><tbody>"
+
+        # Base price row
+        header_html += (
+            f'<tr>'
+            f'<td style="background:#111;border:1px solid #2a2a2a;padding:5px 10px;'
+            f'font-size:0.55rem;color:#555960;font-style:italic">Base price</td>'
+        )
+        for _ in disruption_cols:
+            header_html += (
+                f'<td style="background:#111;border:1px solid #2a2a2a;padding:5px 10px;'
+                f'font-size:0.68rem;font-weight:700;color:#8890a1;text-align:center;'
+                f'font-family:JetBrains Mono,monospace">${_base:.2f}</td>'
+            )
+        header_html += "</tr>"
+
+        # Data rows
+        rows_html = header_html
+        for eps_key, (eps_label, eps_desc, eps_color) in row_labels.items():
+            if eps_key not in sens_df.index:
+                continue
+            row_data = sens_df.loc[eps_key]
+            rows_html += (
+                f'<tr>'
+                f'<td style="background:#131313;border:1px solid #2a2a2a;padding:5px 10px">'
+                f'<div style="font-family:JetBrains Mono,monospace;font-size:0.70rem;'
+                f'font-weight:700;color:{eps_color}">{eps_label}</div>'
+                f'<div style="font-size:0.48rem;color:#444;margin-top:1px">{eps_desc}</div>'
+                f'</td>'
+            )
+            for dc in disruption_cols:
+                price = row_data.get(dc, _base)
+                bg    = _cell_color(price, _base)
+                tc    = _cell_text_color(price, _base)
+                rows_html += (
+                    f'<td style="background:{bg};border:1px solid #2a2a2a;padding:5px 10px;'
+                    f'text-align:center;font-family:JetBrains Mono,monospace;'
+                    f'font-size:0.72rem;font-weight:700;color:{tc}">'
+                    f'${price:.2f}</td>'
+                )
+            rows_html += "</tr>"
+
+        rows_html += "</tbody></table></div>"
+
+        st.markdown(rows_html, unsafe_allow_html=True)
+
+        st.markdown(
+            f'<div style="{_F}font-size:0.54rem;color:#444;margin-top:8px;line-height:1.7">'
+            f'<b style="color:#6b7280">Formula:</b> Price = Base × (1 + ε × (−disruption%)) · '
+            f'<b style="color:#6b7280">Base:</b> Brent ${_base:.2f}/bbl (live FRED DCOILBRENTEU) · '
+            f'<b style="color:#6b7280">Empirical ε:</b> OLS regression, IMF PortWatch n_tanker × 60% proxy vs FRED Brent, 2019–2026 · '
+            f'<b style="color:#6b7280">Structural ε:</b> EIA/IEA/Oxford Energy forecaster range for supply-shock scenarios · '
+            f'Positive ε rows show the counterintuitive empirical result: regression conflates supply shocks '
+            f'with demand collapses. Use structural range for extreme scenario analysis.'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Elasticity summary box
+        _divider("0.8rem", "0.4rem")
+        el1, el2 = st.columns(2)
+        el1.markdown(
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;border-radius:0;'
+            f'padding:0.6rem 0.9rem">'
+            f'<div style="{_F}font-size:0.52rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.12em;color:#2980b9;margin-bottom:4px">Empirical Elasticities (OLS)</div>'
+            f'<div style="{_M}font-size:0.82rem;font-weight:700;color:#e8e9ed">ε = 0.014 (2019–2026)</div>'
+            f'<div style="{_M}font-size:0.72rem;color:#8890a1;margin-top:2px">ε = 0.004 (2026 crisis only)</div>'
+            f'<div style="{_F}font-size:0.58rem;color:#555960;margin-top:6px;line-height:1.6">'
+            f'Small positive ε reflects demand co-movement dominating the regression — '
+            f'both oil price and tanker count fell during COVID/demand shocks, '
+            f'creating a spurious positive relationship. The war-risk premium, '
+            f'insurance costs, and Cape rerouting channels are left in the residual.'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+        el2.markdown(
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;border-radius:0;'
+            f'padding:0.6rem 0.9rem">'
+            f'<div style="{_F}font-size:0.52rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.12em;color:#CFB991;margin-bottom:4px">Structural Elasticities (EIA/IEA)</div>'
+            f'<div style="{_M}font-size:0.82rem;font-weight:700;color:#e8e9ed">ε = 0.25 – 0.50</div>'
+            f'<div style="{_F}font-size:0.58rem;color:#555960;margin-top:6px;line-height:1.6">'
+            f'Applied in supply-demand scenario models. A 75% blockade at ε=0.50 '
+            f'implies Brent ~${brent_sensitivity_table(_base).loc[-0.50, "-75%"]:.0f}/bbl; '
+            f'full closure ~${brent_sensitivity_table(_base).loc[-0.50, "-100%"]:.0f}/bbl. '
+            f'Multiple simultaneous shocks (OPEC response, fertilizer, rerouting costs) '
+            f'can push realized prices above the structural model range.'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+
     # ── Methodology ────────────────────────────────────────────────────────────
     _divider("1.0rem", "0.5rem")
     st.markdown(
@@ -789,7 +1043,11 @@ def page_strait_watch(start: str, end: str) -> None:
         f'Disruption scores are composite research estimates drawing on incident frequency, '
         f'war-risk insurance tier (Lloyd\'s), AIS vessel density (BIMCO), and conflict event '
         f'data (ACLED). Scores are updated quarterly or on material incidents. '
-        f'Price data: Yahoo Finance (BZ=F, CL=F, NG=F). '
+        f'Price data: Yahoo Finance (BZ=F, CL=F, NG=F) · FRED (DCOILBRENTEU). '
+        f'Live tanker transit data: IMF PortWatch (portwatch.imf.org) via ArcGIS Feature Service — '
+        f'verified daily AIS-derived chokepoint counts. '
+        f'Brent disruption sensitivity: OLS elasticity from IMF PortWatch n_tanker (60% oil proxy) '
+        f'vs FRED Brent 2019–2026; structural elasticity range from EIA/IEA scenario analysis. '
         f'Crisis timeline: publicly scheduled diplomatic and regulatory deadlines. '
         f'<b style="color:#6b7280">Note:</b> scores are research estimates, not tradeable signals.'
         f'</div></div>',
@@ -823,6 +1081,9 @@ def page_strait_watch(start: str, end: str) -> None:
                     "Crisis timeline events are scheduled dates - actual outcomes may differ materially",
                     "Global oil % figures assume no rerouting - actual exposure understated when Cape route is active",
                     "Five chokepoints cover ~51% of global oil - ignores pipeline and land-based supply chains entirely",
+                    "IMF PortWatch n_tanker includes LNG/LPG/product carriers; 60% proxy is an approximation",
+                    "Empirical OLS elasticity (0.014) reflects demand co-movement, not supply shock channel",
+                    "Structural elasticity range (0.25-0.50) from EIA/IEA scenario models - not regression-derived",
                 ],
             }
             _cqo_run(_cqo_ctx, _provider, _api_key, page="Strait Watch")
