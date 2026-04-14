@@ -50,7 +50,7 @@ _SCHEMA_HINT = """{
 }"""
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
     """
     Returns a validated TradeOutput dict.
@@ -189,8 +189,14 @@ def run(
         log_activity(_AGENT, "normal regime - no active trade idea", "", "info")
         return {"status": "monitoring"}
 
-    trade_dict = _call_ai(ctx_str, provider, api_key)
     conf = calibrate_confidence(context_confidence(_AGENT, context), _AGENT)
+
+    if conf < 0.45:
+        set_status(_AGENT, "monitoring")
+        log_activity(_AGENT, "confidence below threshold — skipped", f"conf={conf:.2f}", "info")
+        return {"status": "monitoring", "reason": f"confidence too low ({conf:.2f})"}
+
+    trade_dict = _call_ai(ctx_str, provider, api_key)
 
     if "error" in trade_dict:
         set_status(_AGENT, "idle")

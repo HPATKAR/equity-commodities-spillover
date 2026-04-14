@@ -26,7 +26,7 @@ _SYSTEM = (
 _AGENT = "risk_officer"
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     """Returns narrative text. Cached 1 hour."""
     import time

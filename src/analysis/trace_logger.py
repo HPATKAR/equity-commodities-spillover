@@ -52,6 +52,17 @@ def _ensure_log() -> None:
         pass
 
 
+def _accumulate_in_session(row: dict) -> None:
+    """Fallback: store trace rows in Streamlit session_state when file I/O fails."""
+    try:
+        import streamlit as st
+        if "_trace_buffer" not in st.session_state:
+            st.session_state["_trace_buffer"] = []
+        st.session_state["_trace_buffer"].append(row)
+    except Exception:
+        pass
+
+
 def log_trace(
     agent_id:         str,
     provider:         str,
@@ -62,7 +73,8 @@ def log_trace(
 ) -> None:
     """
     Append one trace row to logs/agent_traces.csv.
-    Silent on any failure — must never crash an agent.
+    Falls back to session_state accumulation if file I/O fails.
+    Silent on any remaining failure — must never crash an agent.
     """
     try:
         prompt_tokens     = max(prompt_chars     // 4, 1)
@@ -84,20 +96,30 @@ def log_trace(
             "latency_ms":            f"{latency_ms:.0f}",
             "cost_usd_est":          f"{cost_usd:.6f}",
         }
-        _ensure_log()
-        with open(_LOG_FILE, "a", newline="") as f:
-            csv.DictWriter(f, fieldnames=_FIELDS).writerow(row)
+        try:
+            _ensure_log()
+            with open(_LOG_FILE, "a", newline="") as f:
+                csv.DictWriter(f, fieldnames=_FIELDS).writerow(row)
+        except Exception:
+            _accumulate_in_session(row)
     except Exception:
         pass
 
 
 def read_traces() -> "list[dict]":
-    """Return all trace rows as a list of dicts. Returns [] if log not found."""
+    """Return all trace rows as a list of dicts. Merges file + session_state buffer."""
+    rows: list[dict] = []
     try:
         with open(_LOG_FILE, newline="") as f:
-            return list(csv.DictReader(f))
+            rows = list(csv.DictReader(f))
     except Exception:
-        return []
+        pass
+    try:
+        import streamlit as st
+        rows.extend(st.session_state.get("_trace_buffer", []))
+    except Exception:
+        pass
+    return rows
 
 
 def session_cost_summary(traces: "list[dict]") -> dict:

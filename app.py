@@ -666,8 +666,46 @@ def _get_secret(key: str, default: str = "") -> str:
     except Exception:
         return default
 
-_FRED_KEY = _get_secret("fred_api_key")
-_FD_KEY   = _get_secret("financial_datasets_key")
+_FRED_KEY        = _get_secret("fred_api_key")
+_FD_KEY          = _get_secret("financial_datasets_key")
+_ANTHROPIC_KEY   = _get_secret("anthropic_api_key")
+_OPENAI_KEY      = _get_secret("openai_api_key")
+
+
+def _validate_api_keys() -> None:
+    """Attempt a minimal API call to verify keys at startup. Shows st.error on failure."""
+    if not st.session_state.get("_api_keys_validated"):
+        if _ANTHROPIC_KEY:
+            try:
+                import anthropic as _ant
+                _ant.Anthropic(api_key=_ANTHROPIC_KEY).models.list()
+            except Exception as e:
+                err = str(e)
+                if "authentication" in err.lower() or "api_key" in err.lower() or "401" in err:
+                    st.error(
+                        "Anthropic API key appears invalid — agents will not run. "
+                        "Check `secrets.toml` → `[keys]` → `anthropic_api_key`.",
+                        icon="🔑",
+                    )
+        elif _OPENAI_KEY:
+            try:
+                from openai import OpenAI as _OAI
+                _OAI(api_key=_OPENAI_KEY).models.list()
+            except Exception as e:
+                err = str(e)
+                if "authentication" in err.lower() or "api_key" in err.lower() or "401" in err:
+                    st.error(
+                        "OpenAI API key appears invalid — agents will not run. "
+                        "Check `secrets.toml` → `[keys]` → `openai_api_key`.",
+                        icon="🔑",
+                    )
+        else:
+            st.warning(
+                "No AI provider key found in secrets — agents will run in monitoring mode. "
+                "Add `anthropic_api_key` or `openai_api_key` under `[keys]` in `.streamlit/secrets.toml`.",
+                icon="🔑",
+            )
+        st.session_state["_api_keys_validated"] = True
 
 # ── Navigation state ──────────────────────────────────────────────────────────
 _VALID_PAGES = {
@@ -1475,7 +1513,24 @@ _is_about = current in _ABOUT_PAGES
 
 # Always initialise dates from session_state first (persists across interactions)
 start_date = st.session_state.get("g_start", date(2010, 1, 1))
-end_date   = st.session_state.get("g_end",   date.today())
+
+# End date: always default to today, and force-reset any stale widget state.
+# The text_input widget (key="g_end_txt") persists its value in session_state
+# across server restarts via browser reconnect, so g_end_txt can be frozen at
+# whatever date the session started. Detect a past date and reset it to today.
+_today = date.today()
+_raw_widget_end = st.session_state.get("g_end_txt", "")
+try:
+    _widget_date = date.fromisoformat(_raw_widget_end)
+    if _widget_date < _today:
+        # Stale widget — reset both the widget state and the stored g_end
+        st.session_state["g_end_txt"] = str(_today)
+        st.session_state.pop("g_end", None)
+except (ValueError, TypeError):
+    st.session_state["g_end_txt"] = str(_today)
+    st.session_state.pop("g_end", None)
+
+end_date = st.session_state.get("g_end", _today)
 
 if not _is_about:
     from src.analysis.agent_state import init_agents, AGENTS, STATUSES, pending_count
@@ -1680,6 +1735,42 @@ except ImportError:
 
 _start = str(start_date)
 _end   = str(end_date)
+
+# ── Startup pre-warm: populate market risk cache before first page render ────
+# Clears morning briefing thread so it regenerates fresh from live data every
+# session. session_state["_morning_briefing_tid"] = None triggers a new run.
+st.session_state.pop("_morning_briefing_tid", None)
+
+_validate_api_keys()
+
+if not st.session_state.get("_startup_warmed"):
+    # Market risk + geo risk (already in place)
+    try:
+        from src.pages.home import _load_market_risk
+        from src.analysis.scenario_state import get_scenario_id
+        _load_market_risk(_start, _end, get_scenario_id())
+    except Exception:
+        pass
+    # Credit spreads proxy (HYG/LQD via yfinance) — records fred_spreads freshness
+    try:
+        from src.data.loader import load_fixed_income_prices
+        load_fixed_income_prices(_start, _end)
+    except Exception:
+        pass
+    # RSS headlines — records rss_headlines freshness (public feeds, no API key)
+    try:
+        from src.ingestion.geo_rss import ingest_headlines
+        ingest_headlines()
+    except Exception:
+        pass
+    # COT positioning — records cot_positioning freshness (CFTC public data)
+    try:
+        from src.analysis.cot import load_cot_data
+        load_cot_data(years=2)
+    except Exception:
+        pass
+    st.session_state["_startup_warmed"] = True
+
 
 def _stub_page(name: str):
     st.markdown(

@@ -24,7 +24,7 @@ _SYSTEM = (
 _AGENT = "commodities_specialist"
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     prompt = (
         f"COMMODITIES CONTEXT (live data):\n{context_str}\n\n"

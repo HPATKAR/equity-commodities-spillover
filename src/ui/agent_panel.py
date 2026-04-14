@@ -376,13 +376,32 @@ def render_activity_feed(max_entries: int = 20, collapsible: bool = False) -> No
                 unsafe_allow_html=True,
             )
 
+    # Session cost chip
+    try:
+        from src.analysis.trace_logger import read_traces, session_cost_summary
+        _summary = session_cost_summary(read_traces())
+        _cost_html = (
+            f'<span style="{_F}font-size:0.50rem;color:#555960;margin-left:0.6rem">'
+            f'Session cost: <span style="color:#CFB991">'
+            f'${_summary["total_cost_usd"]:.4f}</span> '
+            f'· {_summary["calls"]} call{"s" if _summary["calls"] != 1 else ""}'
+            f'</span>'
+        ) if _summary["calls"] > 0 else ""
+    except Exception:
+        _cost_html = ""
+
     if collapsible:
         with st.expander("Agent Activity Feed", expanded=False):
+            if _cost_html:
+                st.markdown(_cost_html, unsafe_allow_html=True)
             _render_feed_inner()
     else:
         st.markdown(
-            f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#8890a1;margin:0.8rem 0 0.4rem">Activity Feed</div>',
+            f'<div style="display:flex;align-items:center;margin:0.8rem 0 0.4rem">'
+            f'<span style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:#8890a1">Activity Feed</span>'
+            f'{_cost_html}'
+            f'</div>',
             unsafe_allow_html=True,
         )
         _render_feed_inner()

@@ -81,6 +81,29 @@ def _generate_briefing(alert_summary: str, market_context: str,
 
 # ── Renderer ─────────────────────────────────────────────────────────────────
 
+_SNOOZE_HOURS = 2
+
+
+def _snooze_key(alert: "Alert") -> str:
+    return f"{alert.title}|{alert.severity}"
+
+
+def _is_snoozed(alert: "Alert") -> bool:
+    snoozed = st.session_state.get("_snoozed_alerts", {})
+    until = snoozed.get(_snooze_key(alert))
+    if until and datetime.datetime.now() < until:
+        return True
+    return False
+
+
+def _snooze_alert(alert: "Alert") -> None:
+    if "_snoozed_alerts" not in st.session_state:
+        st.session_state["_snoozed_alerts"] = {}
+    st.session_state["_snoozed_alerts"][_snooze_key(alert)] = (
+        datetime.datetime.now() + datetime.timedelta(hours=_SNOOZE_HOURS)
+    )
+
+
 def render_alert_banner(
     alerts: list[Alert],
     market_context: str = "",
@@ -90,9 +113,15 @@ def render_alert_banner(
     Render the proactive alert feed at the top of a page.
     Shows at most `max_alerts` cards plus an optional AI briefing.
     Does nothing if the alert list is empty.
+    Critical alerts cannot be snoozed; warning/info can be dismissed for 2 h.
     """
-    if not alerts:
+    # Filter out snoozed alerts (critical alerts bypass snooze)
+    visible = [a for a in alerts if a.severity == "critical" or not _is_snoozed(a)]
+
+    if not visible:
         return
+
+    alerts = visible
 
     # ── Read API keys from secrets ────────────────────────────────────────
     anthropic_key = openai_key = ""
@@ -183,6 +212,15 @@ def render_alert_banner(
                 f'</div>',
                 unsafe_allow_html=True,
             )
+            # Snooze button for non-critical alerts
+            if alert.severity != "critical":
+                if st.button(
+                    f"Snooze {_SNOOZE_HOURS}h",
+                    key=f"snooze_{_snooze_key(alert)}_{i}",
+                    help=f"Hide this alert for {_SNOOZE_HOURS} hours",
+                ):
+                    _snooze_alert(alert)
+                    st.rerun()
 
     if len(alerts) > max_alerts:
         st.markdown(
