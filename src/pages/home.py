@@ -523,12 +523,12 @@ def _build_speedometer_svg(
     # SCORE — hero number
     S.append(
         f'<text x="{cx}" y="{TY_SCORE}" text-anchor="middle" '
-        f'font-family="JetBrains Mono,monospace" font-size="66" font-weight="700" '
-        f'letter-spacing="-3" fill="{color}" filter="url(#gT)">{score:.0f}</text>'
+        f'font-family="JetBrains Mono,monospace" font-size="56" font-weight="700" '
+        f'letter-spacing="-2" fill="{color}" filter="url(#gT)">{score:.1f}</text>'
     )
     # /100 suffix
     S.append(
-        f'<text x="{cx+58}" y="{TY_SCORE-20}" text-anchor="start" '
+        f'<text x="{cx+68}" y="{TY_SCORE-20}" text-anchor="start" '
         f'font-family="JetBrains Mono,monospace" font-size="13" '
         f'fill="{color}" opacity="0.35">/100</text>'
     )
