@@ -219,26 +219,10 @@ def _render_masthead(conflict_agg: dict) -> None:
         if _logo else ""
     )
 
-    # ── Hero identity block ────────────────────────────────────────────────
-    st.markdown(
-        f'<div style="border-left:2px solid {_GOLD};padding-left:12px;margin-bottom:0.75rem">'
-        # Eyebrow: logo mark + programme label
-        f'<div style="display:flex;align-items:center;margin-bottom:5px">'
-        f'{_logo_img}'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">'
-        f'Cross-Asset Spillover Monitor &nbsp;·&nbsp; Purdue Daniels &nbsp;·&nbsp; MGMT 69000-120'
-        f'</span>'
-        f'</div>'
-        # Page title
-        f'<h1 style="font-family:\'DM Sans\',sans-serif;font-size:1.25rem;font-weight:700;'
-        f'color:#e8e8e8;margin:0 0 3px">Command Center</h1>'
-        # Subtitle
-        f'<p style="{_M}font-size:10px;color:#C8D4E0;margin:0;letter-spacing:.06em">'
-        f'Geopolitical &amp; Cross-Asset Intelligence Terminal &nbsp;·&nbsp; '
-        f'Equity · Commodity · FX · Fixed Income</p>'
-        f'</div>',
-        unsafe_allow_html=True,
+    # ── Header ────────────────────────────────────────────────────────────
+    _page_header(
+        "Command Center",
+        "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
     )
 
     # ── Status bar ────────────────────────────────────────────────────────
