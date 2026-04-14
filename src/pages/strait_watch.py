@@ -251,6 +251,36 @@ def page_strait_watch(start: str, end: str) -> None:
         "spillover channel analysed throughout this dashboard. Watch these before watching price."
     )
 
+    # ── Load PortWatch live data early so cards can use real counts ───────────
+    import copy
+    _straits = copy.deepcopy(_STRAITS)   # mutable local copy — don't mutate the module-level list
+
+    try:
+        from src.data.portwatch import load_hormuz_tankers
+        _pw_df = load_hormuz_tankers(days=7)  # just need the most recent reading
+        if not _pw_df.empty:
+            _latest = _pw_df.iloc[-1]
+            _live_total   = int(_latest["n_tanker"])
+            _live_oil     = int(_latest["oil_tanker"])
+            _live_date    = pd.Timestamp(_latest["date"]).strftime("%b %d")
+            # Previous day delta (if ≥ 2 rows available)
+            _prev_oil = int(_pw_df.iloc[-2]["oil_tanker"]) if len(_pw_df) >= 2 else _live_oil
+            _live_delta   = _live_oil - _prev_oil
+
+            for s in _straits:
+                if s["id"] == "hormuz":
+                    s["ships_current"]    = _live_oil
+                    s["ships_24h_change"] = _live_delta
+                    s["ships_context"] = (
+                        f"IMF PortWatch (live · {_live_date}): {_live_total} total tankers/day · "
+                        f"{_live_oil} estimated oil tankers (60% proxy, stripping LNG/LPG/product carriers). "
+                        f"Baseline: {s['ships_baseline']}/day historical average (AIS estimates). "
+                        "Source: IMF PortWatch ArcGIS Feature Service."
+                    )
+                    break
+    except Exception:
+        pass   # falls back to hardcoded values silently
+
     # ── Load price data ────────────────────────────────────────────────────────
     with st.spinner("Loading commodity price data…"):
         try:
@@ -274,11 +304,11 @@ def page_strait_watch(start: str, end: str) -> None:
     spread_now = (brent_now - wti_now) if brent_now and wti_now else None
 
     # ── Global KPI strip ──────────────────────────────────────────────────────
-    active_straits  = [s for s in _STRAITS if s["status"] in ("critical", "elevated")]
-    caution_straits = [s for s in _STRAITS if s["status"] == "caution"]
+    active_straits  = [s for s in _straits if s["status"] in ("critical", "elevated")]
+    caution_straits = [s for s in _straits if s["status"] == "caution"]
     oil_at_risk_mbd = sum(s["oil_mbd"] for s in active_straits)
     global_pct_risk = sum(s["global_oil_pct"] for s in active_straits)
-    worst_strait    = max(_STRAITS, key=lambda s: s["disruption_score"])
+    worst_strait    = max(_straits, key=lambda s: s["disruption_score"])
 
     def _kpi(col, label: str, value: str, sub: str = "", sub_color: str = "#8890a1", accent: str | None = None) -> None:
         bl = f"" if accent else ""
@@ -324,7 +354,7 @@ def page_strait_watch(start: str, end: str) -> None:
     # ── Vessel traffic cards ──────────────────────────────────────────────────
     _section_label("Active Vessel Traffic - Ships / Day (AIS Estimates)")
     vt_cols = st.columns(5, gap="small")
-    for col, s in zip(vt_cols, _STRAITS):
+    for col, s in zip(vt_cols, _straits):
         sc       = _STATUS_COLOR[s["status"]]
         sl       = _STATUS_LABEL[s["status"]]
         cur      = s["ships_current"]
@@ -387,7 +417,7 @@ def page_strait_watch(start: str, end: str) -> None:
     # ── Chokepoint cards ──────────────────────────────────────────────────────
     _section_label("Chokepoint Status")
     strait_cols = st.columns(5, gap="small")
-    for col, s in zip(strait_cols, _STRAITS):
+    for col, s in zip(strait_cols, _straits):
         sc    = _STATUS_COLOR[s["status"]]
         sl    = _STATUS_LABEL[s["status"]]
         ds    = s["disruption_score"]
@@ -742,7 +772,7 @@ def page_strait_watch(start: str, end: str) -> None:
     _section_label("Vessel Traffic History - Ships / Day (AIS Estimates, 2021–Present)")
 
     # Row 1: Hormuz (full width - most strategically important)
-    s_hormuz = next(s for s in _STRAITS if s["id"] == "hormuz")
+    s_hormuz = next(s for s in _straits if s["id"] == "hormuz")
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
@@ -754,7 +784,7 @@ def page_strait_watch(start: str, end: str) -> None:
     # Row 2: Red Sea + Bab-el-Mandeb (same disruption driver - side by side)
     r2a, r2b = st.columns(2, gap="small")
     for col2, sid2 in zip([r2a, r2b], ["red_sea", "bab_el_mandeb"]):
-        s2 = next(s for s in _STRAITS if s["id"] == sid2)
+        s2 = next(s for s in _straits if s["id"] == sid2)
         with col2:
             st.markdown(
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
@@ -767,7 +797,7 @@ def page_strait_watch(start: str, end: str) -> None:
     # Row 3: Malacca + Turkish Straits
     r3a, r3b = st.columns(2, gap="small")
     for col3, sid3 in zip([r3a, r3b], ["malacca", "turkish"]):
-        s3 = next(s for s in _STRAITS if s["id"] == sid3)
+        s3 = next(s for s in _straits if s["id"] == sid3)
         with col3:
             st.markdown(
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
