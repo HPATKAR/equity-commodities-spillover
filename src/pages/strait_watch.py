@@ -253,33 +253,38 @@ def page_strait_watch(start: str, end: str) -> None:
 
     # ── Load PortWatch live data early so cards can use real counts ───────────
     import copy
-    _straits = copy.deepcopy(_STRAITS)   # mutable local copy — don't mutate the module-level list
+    _straits  = copy.deepcopy(_STRAITS)  # mutable local copy
+    _pw_df    = pd.DataFrame()           # shared across the full page
+    _pw_loaded = False
 
     try:
         from src.data.portwatch import load_hormuz_tankers
-        _pw_df = load_hormuz_tankers(days=7)  # just need the most recent reading
+        with st.spinner("Fetching IMF PortWatch live tanker data…"):
+            _pw_df = load_hormuz_tankers(days=365)
         if not _pw_df.empty:
-            _latest = _pw_df.iloc[-1]
-            _live_total   = int(_latest["n_tanker"])
-            _live_oil     = int(_latest["oil_tanker"])
-            _live_date    = pd.Timestamp(_latest["date"]).strftime("%b %d")
-            # Previous day delta (if ≥ 2 rows available)
-            _prev_oil = int(_pw_df.iloc[-2]["oil_tanker"]) if len(_pw_df) >= 2 else _live_oil
-            _live_delta   = _live_oil - _prev_oil
+            _pw_loaded  = True
+            _latest     = _pw_df.iloc[-1]
+            _live_total = int(_latest["n_tanker"])
+            _live_oil   = int(_latest["oil_tanker"])
+            _live_date  = pd.Timestamp(_latest["date"]).strftime("%b %d")
+            _prev_oil   = int(_pw_df.iloc[-2]["oil_tanker"]) if len(_pw_df) >= 2 else _live_oil
+            _live_delta = _live_oil - _prev_oil
 
             for s in _straits:
                 if s["id"] == "hormuz":
                     s["ships_current"]    = _live_oil
                     s["ships_24h_change"] = _live_delta
+                    s["_live"]            = True
+                    s["_live_date"]       = _live_date
+                    s["_live_total"]      = _live_total
                     s["ships_context"] = (
                         f"IMF PortWatch (live · {_live_date}): {_live_total} total tankers/day · "
-                        f"{_live_oil} estimated oil tankers (60% proxy, stripping LNG/LPG/product carriers). "
-                        f"Baseline: {s['ships_baseline']}/day historical average (AIS estimates). "
-                        "Source: IMF PortWatch ArcGIS Feature Service."
+                        f"{_live_oil} estimated oil tankers (60% proxy). "
+                        f"Baseline: {s['ships_baseline']}/day historical average."
                     )
                     break
     except Exception:
-        pass   # falls back to hardcoded values silently
+        pass  # silent fallback to hardcoded
 
     # ── Load price data ────────────────────────────────────────────────────────
     with st.spinner("Loading commodity price data…"):
@@ -364,14 +369,30 @@ def page_strait_watch(start: str, end: str) -> None:
         chg_col  = "#27ae60" if chg_24h > 0 else "#c0392b" if chg_24h < 0 else "#8890a1"
         chg_sym  = "▲" if chg_24h > 0 else "▼" if chg_24h < 0 else "-"
         pct_col  = "#27ae60" if pct_chg >= 0 else "#e67e22" if pct_chg > -30 else "#c0392b"
+        is_live  = s.get("_live", False)
+        src_badge = (
+            f'<span style="{_F}font-size:0.40rem;font-weight:700;letter-spacing:0.08em;'
+            f'background:#0d2a0d;border:1px solid #27ae6066;color:#27ae60;'
+            f'padding:1px 5px;border-radius:2px;margin-left:5px">● LIVE</span>'
+            if is_live else
+            f'<span style="{_F}font-size:0.40rem;font-weight:700;letter-spacing:0.08em;'
+            f'background:#1e1a0a;border:1px solid #6b708055;color:#6b7280;'
+            f'padding:1px 5px;border-radius:2px;margin-left:5px">EST.</span>'
+        )
+        src_line = (
+            f'IMF PortWatch · {s["_live_date"]}' if is_live
+            else "AIS density · BIMCO / Lloyd's · Est. weekly"
+        )
 
         with col:
             st.markdown(
                 f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
                 f'border-radius:0;padding:0.7rem 0.75rem">'
 
-                f'<div style="{_F}font-size:0.60rem;font-weight:700;color:#c8c8c8;'
-                f'margin-bottom:2px">{s["name"]}</div>'
+                f'<div style="display:flex;align-items:center;margin-bottom:2px">'
+                f'<span style="{_F}font-size:0.60rem;font-weight:700;color:#c8c8c8">{s["name"]}</span>'
+                f'{src_badge}</div>'
+
                 f'<div style="display:inline-flex;align-items:center;'
                 f'background:{sc}18;border:1px solid {sc}55;border-radius:2px;'
                 f'padding:1px 5px;margin-bottom:10px">'
@@ -402,7 +423,7 @@ def page_strait_watch(start: str, end: str) -> None:
 
                 f'<div style="{_F}font-size:0.44rem;color:#333;margin-top:8px;'
                 f'padding-top:6px;border-top:1px solid #1a1a1a">'
-                f'AIS vessel density · BIMCO / Lloyd\'s intel · Est. weekly</div>'
+                f'{src_line}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -817,12 +838,7 @@ def page_strait_watch(start: str, end: str) -> None:
     )
     _section_label("IMF PortWatch — Strait of Hormuz Daily Tanker Transits (Live)")
 
-    try:
-        from src.data.portwatch import load_hormuz_tankers
-        with st.spinner("Fetching IMF PortWatch data…"):
-            pw_df = load_hormuz_tankers(days=365)
-    except Exception:
-        pw_df = pd.DataFrame()
+    pw_df = _pw_df  # reuse data already fetched at page top
 
     if not pw_df.empty and len(pw_df) >= 7:
         # Compute rolling 30d MA
