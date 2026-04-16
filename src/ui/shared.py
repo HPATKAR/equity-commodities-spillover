@@ -689,6 +689,30 @@ def _about_page_styles():
 
 # ── Page header ────────────────────────────────────────────────────────────
 
+def _no_api_key_banner(context: str = "AI analysis features") -> None:
+    """
+    Show a one-liner st.info banner when no AI provider key is configured.
+    Safe to call on any page — silently does nothing if a key is present.
+    """
+    try:
+        import streamlit as _st
+        _keys = _st.secrets.get("keys", {})
+        _has_key = bool(
+            (_keys.get("anthropic_api_key") or "")
+            or (_keys.get("openai_api_key") or "")
+        )
+    except Exception:
+        _has_key = False
+    if not _has_key:
+        import streamlit as _st
+        _st.info(
+            f"{context} require an AI provider key. "
+            "Add `anthropic_api_key` or `openai_api_key` under `[keys]` in "
+            "`.streamlit/secrets.toml` to enable agent-generated insights.",
+            icon="🔑",
+        )
+
+
 def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
     """
     Branded page header used on every page.
@@ -738,9 +762,164 @@ def _footer_logo_b64() -> str:
 
 def _page_footer() -> None:
     import streamlit.components.v1 as _comp
-    from datetime import datetime
+    from datetime import datetime, date as _date
     yr  = datetime.now().year
     ts  = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
+
+    # ── Controls tray — inline, just above the footer ─────────────────────
+    # Rendered here (inside _page_footer) so every page gets it automatically
+    # without any per-page wiring. Skipped on About pages and when agent state
+    # is not yet initialised (e.g., very first cold boot before init_agents()).
+    if (
+        not st.session_state.get("_is_about", False)
+        and st.session_state.get("agents")
+    ):
+        try:
+            from src.analysis.agent_state import AGENTS, pending_count
+            from src.ui.agent_panel import _render_workforce_content
+
+            _n   = sum(1 for a in st.session_state["agents"].values()
+                       if a.get("enabled", True))
+            _p   = pending_count()
+            _dc  = "#27ae60" if _n == 8 else ("#e67e22" if _n >= 5 else "#c0392b")
+            _s0  = st.session_state.get("g_start", _date(2010, 1, 1))
+            _e0  = st.session_state.get("g_end",   _date.today())
+            _ss  = _s0.strftime("%Y-%m-%d")
+            _es  = _e0.strftime("%Y-%m-%d")
+            _lbl = f"CONTROLS  ·  {_n}/8"
+
+            # CSS: style the trigger button and popover panel.
+            # No position:fixed — button sits inline in page flow.
+            st.markdown("""<style>
+/* Controls tray row: right-align within its column */
+div[data-testid="stColumn"]:has(div[data-testid="stPopover"]) {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+}
+div[data-testid="stPopover"] > button {
+    background: #0d0d0d !important;
+    border: 1px solid rgba(207,185,145,0.28) !important;
+    border-left: 3px solid #CFB991 !important;
+    color: #CFB991 !important;
+    border-radius: 3px !important;
+    padding: 0 1.1rem 0 0.85rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.56rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    box-shadow: none !important;
+    height: 30px !important;
+    white-space: nowrap !important;
+    transition: background 0.15s !important;
+}
+div[data-testid="stPopover"] > button:hover {
+    background: rgba(207,185,145,0.07) !important;
+}
+div[data-testid="stPopoverBody"] {
+    background: #070707 !important;
+    border: 1px solid #282828 !important;
+    border-top: 2px solid #CFB991 !important;
+    border-radius: 3px !important;
+    min-width: 380px !important;
+    max-width: 500px !important;
+    padding: 0.9rem 1rem 0.8rem !important;
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.6) !important;
+}
+div[data-testid="stPopoverBody"] [data-testid="stTextInput"] label p {
+    font-size: 0.48rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+    color: #555960 !important;
+}
+div[data-testid="stPopoverBody"] [data-testid="stTextInput"] input {
+    font-size: 0.62rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    height: 28px !important;
+    background: #111 !important;
+    border-color: #222 !important;
+    color: #c8c8c8 !important;
+    letter-spacing: 0.04em !important;
+}
+div[data-testid="stPopoverBody"] .stButton > button {
+    padding: 0.20rem 0.3rem !important;
+    font-size: 0.46rem !important;
+    letter-spacing: 0.04em !important;
+    min-width: 0 !important;
+    border-radius: 2px !important;
+    text-align: left !important;
+}
+</style>""", unsafe_allow_html=True)
+
+            # Separator + right-aligned trigger row
+            st.markdown(
+                '<div style="border-top:1px solid #1e1e1e;margin:2rem 0 0.5rem"></div>',
+                unsafe_allow_html=True,
+            )
+            _gap, _btn_col = st.columns([0.82, 0.18])
+            with _btn_col:
+                with st.popover(_lbl, use_container_width=True):
+                    # Section header helper
+                    def _sec(label: str, sub: str = "") -> None:
+                        _sh = (
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                            f'font-size:0.42rem;color:#444;letter-spacing:0.08em;margin-left:6px">'
+                            f'{sub}</span>' if sub else ""
+                        )
+                        st.markdown(
+                            f'<div style="display:flex;align-items:baseline;'
+                            f'border-left:2px solid #CFB991;padding-left:6px;margin:0 0 7px 0">'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.47rem;'
+                            f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+                            f'color:#8890a1">{label}</span>'
+                            f'{_sh}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    _sec("Date Range", f"{_ss} → {_es}")
+                    _c1, _c2 = st.columns(2)
+                    _sr = _c1.text_input("From", value=_ss, key="g_start_txt", help="YYYY-MM-DD")
+                    _er = _c2.text_input("To",   value=_es, key="g_end_txt",   help="YYYY-MM-DD")
+                    try:
+                        _ps = _date.fromisoformat(_sr)
+                        if _ps != _s0:
+                            st.session_state["g_start"] = _ps
+                    except ValueError:
+                        pass
+                    try:
+                        _pe = _date.fromisoformat(_er)
+                        if _pe != _e0:
+                            st.session_state["g_end"] = _pe
+                    except ValueError:
+                        pass
+
+                    st.markdown(
+                        '<div style="border-top:1px solid #1a1a1a;margin:0.75rem 0 0.65rem"></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    _al = "ALL OPERATIONAL" if _n == 8 else f"{_n}/8 ACTIVE"
+                    st.markdown(
+                        f'<div style="display:flex;align-items:baseline;'
+                        f'border-left:2px solid #CFB991;padding-left:6px;margin:0 0 7px 0">'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.47rem;'
+                        f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+                        f'color:#8890a1">AI Workforce</span>'
+                        f'<span style="font-size:0.42rem;margin-left:6px;color:{_dc}">● {_al}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _render_workforce_content(
+                        agents_state=st.session_state["agents"],
+                        agent_list=list(AGENTS.items()),
+                        n_pending=_p,
+                        key_prefix="ctrl_",
+                    )
+        except Exception:
+            pass  # never crash the footer
+
     _logo_src = _footer_logo_b64()
     if _logo_src:
         logo_html = (

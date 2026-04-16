@@ -173,42 +173,47 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "War",
         "color":   "#c0392b",
-        "last_updated": date(2026, 4, 1),
 
-        "deadliness":           0.70,
-        "civilian_danger":      0.60,
-        "geographic_diffusion": 0.45,
+        # 2026-04-14: Active Hormuz blockade confirmed (PortWatch: 2–3 oil
+        # tankers/day vs 71 pre-crisis). US carrier confrontation escalating.
+        # ~20% of global oil supply disrupted. Updated from "stable" to reflect
+        # live market conditions — this is the primary geopolitical risk driver.
+        "deadliness":           0.82,   # active military blockade, US carrier confrontation
+        "civilian_danger":      0.72,   # global oil supply crisis, humanitarian downstream
+        "geographic_diffusion": 0.68,   # Persian Gulf + global supply chain disruption
         "fragmentation":        0.30,
-        "escalation_trend":     "stable",
-        "source_coverage":      0.90,
+        "escalation_trend":     "escalating",
+        "source_coverage":      0.92,
+        "last_updated":         date(2026, 4, 14),
 
         "transmission": {
-            "oil_gas":       0.95,
+            "oil_gas":       0.97,   # ~20% of global crude flows blocked
             "metals":        0.15,
             "agriculture":   0.10,
-            "shipping":      0.85,
-            "chokepoint":    0.95,   # Strait of Hormuz
+            "shipping":      0.90,   # near-complete tanker halt
+            "chokepoint":    0.97,   # Strait of Hormuz — live PortWatch: 2–3 tankers/day
             "sanctions":     0.90,
-            "equity_sector": 0.60,
-            "fx":            0.40,
-            "inflation":     0.85,
-            "supply_chain":  0.55,
-            "credit":        0.35,
-            "energy_infra":  0.80,
+            "equity_sector": 0.65,   # energy, defense, refining
+            "fx":            0.45,   # USD strengthens on safe-haven; EM oil importers hit
+            "inflation":     0.92,   # direct fuel cost transmission globally
+            "supply_chain":  0.72,   # Asian manufacturing (India, China, Japan, Korea)
+            "credit":        0.40,
+            "energy_infra":  0.85,
         },
 
         "keywords": ["iran", "hormuz", "strait of hormuz", "tehran",
                      "iranian nuclear", "irgc", "us iran", "israel iran",
-                     "iranian oil", "persian gulf", "oil tanker iran"],
+                     "iranian oil", "persian gulf", "oil tanker iran",
+                     "hormuz blockade", "tanker halt", "persian gulf crisis"],
 
         "affected_equities":    ["S&P 500", "Nikkei 225", "Sensex", "Nifty 50",
-                                 "Hang Seng"],
+                                 "Hang Seng", "Kospi", "Shanghai Comp"],
         "affected_commodities": ["WTI Crude Oil", "Brent Crude", "Natural Gas",
                                  "Gasoline (RBOB)", "Heating Oil"],
-        "affected_fx":          ["USD/JPY"],
+        "affected_fx":          ["USD/JPY", "USD/INR", "USD/KRW"],
         "hedge_assets":         ["Gold", "Silver"],
 
-        "data_confidence": 0.82,
+        "data_confidence": 0.88,
     },
 
     {

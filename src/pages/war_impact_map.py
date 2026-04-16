@@ -18,7 +18,7 @@ from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
 from src.data.loader import load_returns
 from src.ui.shared import (
     _chart, _page_intro, _section_note, _definition_block,
-    _page_conclusion, _page_header, _page_footer,
+    _page_conclusion, _page_header, _page_footer, _no_api_key_banner,
 )
 
 
@@ -826,6 +826,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     # ── Page header ───────────────────────────────────────────────────────────
     _page_header("Global Conflict Risk Map",
                  "Live conflict risk · Composite 0–100 index · Active theatre mapping")
+    _no_api_key_banner("AI-generated conflict narratives")
     st.markdown(
         f'<p style="{_F}font-size:0.70rem;color:#8890a1;margin:0 0 0.8rem;line-height:1.6">'
         f'Active conflicts disrupt commodity supply chains - oil, wheat, metals - causing those '

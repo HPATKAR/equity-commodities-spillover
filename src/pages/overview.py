@@ -36,7 +36,7 @@ from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion,
     _page_header, _page_footer, _add_event_bands, _insight_note,
-    _data_status_bar,
+    _data_status_bar, _no_api_key_banner,
 )
 from src.analysis.proactive_alerts import compute_alerts
 from src.ui.alert_banner import render_alert_banner
@@ -198,6 +198,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if st.button("Open Analyst", key="hdr_ai_analyst_btn", type="primary", use_container_width=True):
             st.session_state["current_page"] = "ai_chat"
             st.rerun()
+    _no_api_key_banner("AI analyst and agent-generated insights")
     _page_intro(
         "The central research question of this dashboard: <strong>do equity market shocks spill into "
         "commodities - and in which direction?</strong> This page is your live answer. The regime badge "

@@ -282,6 +282,12 @@ def page_strait_watch(start: str, end: str) -> None:
                         f"{_live_oil} estimated oil tankers (60% proxy). "
                         f"Baseline: {s['ships_baseline']}/day historical average."
                     )
+                    # Publish disruption level to session_state so conflict_model.py
+                    # can use it in build_market_signals() for dynamic ranking.
+                    # disruption = 1 − (live_oil / baseline_oil_estimate)
+                    _baseline_oil = round(s["ships_baseline"] * 0.60)
+                    _disruption   = max(0.0, 1.0 - _live_oil / max(_baseline_oil, 1))
+                    st.session_state["_hormuz_disruption"] = round(_disruption, 3)
                     break
     except Exception:
         pass  # silent fallback to hardcoded

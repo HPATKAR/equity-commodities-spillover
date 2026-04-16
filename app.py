@@ -1536,162 +1536,11 @@ if not _is_about:
     from src.analysis.agent_state import init_agents, AGENTS, STATUSES, pending_count
     from src.ui.agent_panel import _render_workforce_content, toggle_agent
     init_agents()
-
-    # ── CSS: anchor popover to navbar row (above iframe z-index) ────────
     _n_active = sum(
         1 for a in st.session_state["agents"].values() if a.get("enabled", True)
     )
-    _n_pend = pending_count()
+    _n_pend   = pending_count()
     _dot_color = "#27ae60" if _n_active == 8 else ("#e67e22" if _n_active >= 5 else "#c0392b")
-
-    st.markdown(f"""<style>
-/* ── Controls button - fixed bottom-right corner ── */
-div.element-container:has(div[data-testid="stPopover"]) {{
-    position: fixed !important;
-    bottom: 24px !important;
-    right: 24px !important;
-    z-index: 9999 !important;
-    width: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}}
-/* Trigger button - institutional terminal style */
-div[data-testid="stPopover"] > button {{
-    background: #0d0d0d !important;
-    border: 1px solid rgba(207,185,145,0.28) !important;
-    border-left: 3px solid #CFB991 !important;
-    color: #CFB991 !important;
-    border-radius: 3px !important;
-    padding: 0 1.1rem 0 0.85rem !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.56rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    box-shadow: 0 2px 18px rgba(0,0,0,0.65), inset 0 0 0 0 transparent !important;
-    height: 34px !important;
-    transition: background 0.15s, box-shadow 0.15s !important;
-    white-space: nowrap !important;
-}}
-div[data-testid="stPopover"] > button:hover {{
-    background: rgba(207,185,145,0.07) !important;
-    box-shadow: 0 2px 18px rgba(0,0,0,0.65), 0 0 12px rgba(207,185,145,0.12) !important;
-}}
-/* Popover panel - opens upward from footer */
-div[data-testid="stPopoverBody"] {{
-    background: #070707 !important;
-    border: 1px solid #282828 !important;
-    border-top: 2px solid #CFB991 !important;
-    border-radius: 0 0 6px 6px !important;
-    min-width: 380px !important;
-    max-width: 500px !important;
-    padding: 0.9rem 1rem 0.8rem !important;
-    box-shadow: 0 14px 36px rgba(0,0,0,0.75) !important;
-}}
-/* Text date inputs inside popover */
-div[data-testid="stPopoverBody"] [data-testid="stTextInput"] label p {{
-    font-size: 0.48rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.12em !important;
-    color: #555960 !important;
-}}
-div[data-testid="stPopoverBody"] [data-testid="stTextInput"] input {{
-    font-size: 0.62rem !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    height: 28px !important;
-    background: #111 !important;
-    border-color: #222 !important;
-    color: #c8c8c8 !important;
-    letter-spacing: 0.04em !important;
-}}
-/* Agent toggle buttons inside popover */
-div[data-testid="stPopoverBody"] .stButton > button {{
-    padding: 0.20rem 0.3rem !important;
-    font-size: 0.46rem !important;
-    letter-spacing: 0.04em !important;
-    min-width: 0 !important;
-    border-radius: 2px !important;
-    text-align: left !important;
-}}
-</style>""", unsafe_allow_html=True)
-
-    # Build button label: shows date range + agent status at a glance
-    _start_str = start_date.strftime("%Y-%m-%d")
-    _end_str   = end_date.strftime("%Y-%m-%d")
-    _btn_label = f"CONTROLS  ·  {_n_active}/8"
-
-    with st.popover(_btn_label, use_container_width=False):
-        # ── Section header helper ─────────────────────────────────────────
-        def _sec(label: str, sub: str = "") -> None:
-            sub_html = (
-                f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                f'font-size:0.42rem;color:#444;letter-spacing:0.08em;margin-left:6px">'
-                f'{sub}</span>' if sub else ""
-            )
-            st.markdown(
-                f'<div style="display:flex;align-items:baseline;gap:0;'
-                f'border-left:2px solid #CFB991;padding-left:6px;margin:0 0 7px 0">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.47rem;'
-                f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
-                f'color:#8890a1">{label}</span>'
-                f'{sub_html}</div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── Section: Date Range ───────────────────────────────────────────
-        _sec("Date Range", f"{_start_str} → {_end_str}")
-        _col_s, _col_e = st.columns(2)
-        _s_raw = _col_s.text_input(
-            "From", value=_start_str, key="g_start_txt",
-            help="YYYY-MM-DD",
-        )
-        _e_raw = _col_e.text_input(
-            "To", value=_end_str, key="g_end_txt",
-            help="YYYY-MM-DD",
-        )
-        # Parse and persist valid dates
-        try:
-            _parsed_s = date.fromisoformat(_s_raw)
-            if _parsed_s != start_date:
-                st.session_state["g_start"] = _parsed_s
-                start_date = _parsed_s
-        except ValueError:
-            pass
-        try:
-            _parsed_e = date.fromisoformat(_e_raw)
-            if _parsed_e != end_date:
-                st.session_state["g_end"] = _parsed_e
-                end_date = _parsed_e
-        except ValueError:
-            pass
-
-        st.markdown(
-            '<div style="border-top:1px solid #1a1a1a;margin:0.75rem 0 0.65rem"></div>',
-            unsafe_allow_html=True,
-        )
-
-        # ── Section: AI Workforce ─────────────────────────────────────────
-        _active_label = "ALL OPERATIONAL" if _n_active == 8 else f"{_n_active}/8 ACTIVE"
-        _dot_html = (
-            f'<span style="font-size:0.42rem;margin-left:6px;'
-            f'color:{_dot_color}">● {_active_label}</span>'
-        )
-        st.markdown(
-            f'<div style="display:flex;align-items:baseline;'
-            f'border-left:2px solid #CFB991;padding-left:6px;margin:0 0 7px 0">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.47rem;'
-            f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
-            f'color:#8890a1">AI Workforce</span>'
-            f'{_dot_html}</div>',
-            unsafe_allow_html=True,
-        )
-        _render_workforce_content(
-            agents_state=st.session_state["agents"],
-            agent_list=list(AGENTS.items()),
-            n_pending=_n_pend,
-            key_prefix="ctrl_",
-        )
 
 # ── Router ────────────────────────────────────────────────────────────────────
 from src.pages.home            import page_home
@@ -1811,5 +1660,8 @@ _PAGE_MAP = {
     "about_ilian":         page_about_ilian,
     "about_ai_workforce":  page_about_ai_workforce,
 }
+
+# Publish is-about flag so _page_footer() can skip controls on About pages.
+st.session_state["_is_about"] = _is_about
 
 _PAGE_MAP.get(current, _PAGE_MAP["home"])()

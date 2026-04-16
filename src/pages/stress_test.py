@@ -24,6 +24,7 @@ from src.data.config import GEOPOLITICAL_EVENTS, PALETTE, EQUITY_REGIONS, COMMOD
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
+    _no_api_key_banner,
 )
 
 
@@ -102,6 +103,7 @@ def _event_stats(
 def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Stress Lab",
                  "Scenario shocks · Drawdown simulation · Tail risk · Cross-asset correlation stress")
+    _no_api_key_banner("AI stress scenario commentary")
     _page_intro(
         "The core finding of spillover research is that equity-commodity correlation spikes during "
         "crises - precisely when diversification is most needed. A portfolio built assuming low "

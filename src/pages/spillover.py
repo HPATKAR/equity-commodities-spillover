@@ -23,7 +23,7 @@ from src.analysis.network import (
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
-    _insight_note,
+    _insight_note, _no_api_key_banner,
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
@@ -51,6 +51,7 @@ def _panel_note(txt: str) -> None:
 def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Spillover Network",
                  "Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph")
+    _no_api_key_banner("AI spillover interpretation")
     _page_intro(
         "Correlation tells you <em>that</em> two markets move together. Spillover tells you <em>why</em> - "
         "and more importantly, <strong>which market is driving which.</strong> "

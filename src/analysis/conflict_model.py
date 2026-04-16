@@ -73,6 +73,23 @@ _STATE_MULT: dict[str, float] = {
     "frozen":  0.15,
 }
 
+# ── Model configuration (single source of truth for conflict_model) ───────────
+
+_CM_CONFIG: dict = {
+    # Confidence score sub-weights (must sum to 1.0)
+    "confidence_weights": {
+        "source_coverage": 0.30,
+        "data_confidence": 0.25,
+        "freshness":       0.25,
+        "completeness":    0.20,
+    },
+    # Staleness cap: conflicts not updated within this many days get a
+    # confidence penalty and a CIS soft-cap to prevent stale data inflating rank
+    "staleness_warn_days":  90,   # yellow flag
+    "staleness_cap_days":   180,  # hard cap applied
+    "staleness_cis_cap":    65.0, # CIS capped at this value when stale
+}
+
 
 # ── Recency decay ─────────────────────────────────────────────────────────────
 
@@ -117,6 +134,28 @@ def _freshness_score(conflict: dict) -> float:
         return 0.15
 
 
+# ── Staleness check ───────────────────────────────────────────────────────────
+
+def _check_conflict_freshness(conflict: dict) -> tuple[bool, bool]:
+    """
+    Returns (is_stale_warn, is_stale_cap).
+
+    is_stale_warn — last_updated > staleness_warn_days (90d): yellow flag.
+    is_stale_cap  — last_updated > staleness_cap_days (180d): hard cap on CIS.
+
+    Used by compute_cis() and compute_confidence() to prevent stale manual
+    data from inflating a conflict's rank above fresher, market-confirmed ones.
+    """
+    last = conflict.get("last_updated")
+    if last is None:
+        return True, True
+    days = (datetime.date.today() - last).days
+    return (
+        days > _CM_CONFIG["staleness_warn_days"],
+        days > _CM_CONFIG["staleness_cap_days"],
+    )
+
+
 # ── Per-conflict scorers ──────────────────────────────────────────────────────
 
 def compute_cis(conflict: dict) -> float:
@@ -139,7 +178,15 @@ def compute_cis(conflict: dict) -> float:
     }
 
     raw = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
-    return float(np.clip(raw * state_mult * 100, 0, 100))
+    cis = float(np.clip(raw * state_mult * 100, 0, 100))
+
+    # Staleness cap: prevent stale manual data from outranking fresh, market-
+    # confirmed conflicts. Cap only kicks in after staleness_cap_days (180d).
+    _, is_cap = _check_conflict_freshness(conflict)
+    if is_cap:
+        cis = min(cis, _CM_CONFIG["staleness_cis_cap"])
+
+    return cis
 
 
 def compute_tps(conflict: dict) -> float:
@@ -157,7 +204,12 @@ def compute_confidence(conflict: dict) -> float:
     """
     Confidence score for a single conflict's scoring.
     Returns value in [0, 1].
+
+    Weights from _CM_CONFIG["confidence_weights"].
+    Applies additional staleness penalties at 90d (warn) and 180d (cap) thresholds.
     """
+    cw = _CM_CONFIG["confidence_weights"]
+
     source_cov    = float(conflict.get("source_coverage",   0.70))
     data_conf     = float(conflict.get("data_confidence",   0.70))
     freshness     = _freshness_score(conflict)
@@ -170,11 +222,19 @@ def compute_confidence(conflict: dict) -> float:
     completeness = max(0.0, 1.0 - missing * 0.15)
 
     confidence = (
-        0.30 * source_cov
-        + 0.25 * data_conf
-        + 0.25 * freshness
-        + 0.20 * completeness
+        cw["source_coverage"] * source_cov
+        + cw["data_confidence"] * data_conf
+        + cw["freshness"]       * freshness
+        + cw["completeness"]    * completeness
     )
+
+    # Staleness penalty (additive on top of freshness already captured above)
+    is_warn, is_cap = _check_conflict_freshness(conflict)
+    if is_cap:
+        confidence *= 0.70   # hard reduction: stale data → less reliable
+    elif is_warn:
+        confidence *= 0.90   # soft reduction: getting stale
+
     return float(np.clip(confidence, 0.0, 1.0))
 
 
@@ -185,9 +245,77 @@ def compute_trend(conflict: dict) -> str:
             "de-escalating": "falling"}.get(t, "stable")
 
 
+def compute_market_freshness(conflict: dict, market_data: dict) -> float:
+    """
+    Market-freshness multiplier [0.7, 1.5] for a single conflict.
+
+    Measures how actively this conflict is moving live markets RIGHT NOW.
+    Conflicts whose primary transmission channels show large live moves get
+    a boost; conflicts whose channels are quiet get a mild discount.
+
+    market_data keys (all optional, float):
+        brent_pct_1d    — Brent crude 1-day % change
+        wti_pct_1d      — WTI crude 1-day % change
+        natgas_pct_1d   — Natural gas 1-day % change
+        wheat_pct_1d    — Wheat 1-day % change
+        tanker_disruption — 0–1 (1 = complete blockade, from PortWatch)
+        vix_1d          — VIX 1-day point change
+
+    Channel-to-signal mapping (per conflict's transmission weights):
+        oil_gas / chokepoint  → brent, wti, tanker_disruption
+        energy_infra          → natgas
+        agriculture           → wheat
+        equity_sector         → vix
+    """
+    if not market_data:
+        return 1.0
+
+    tx = conflict.get("transmission", {})
+
+    # Collect signal magnitudes, weighted by this conflict's transmission strength
+    signals: list[float] = []
+
+    # Oil / chokepoint — dominant channel for Hormuz/Iran
+    oil_weight = max(float(tx.get("oil_gas", 0)), float(tx.get("chokepoint", 0)))
+    if oil_weight > 0.3:
+        brent_abs = abs(float(market_data.get("brent_pct_1d", 0.0)))
+        wti_abs   = abs(float(market_data.get("wti_pct_1d",   0.0)))
+        tanker    = float(market_data.get("tanker_disruption", 0.0))
+        oil_sig   = max(brent_abs / 3.0, wti_abs / 3.0, tanker) * oil_weight
+        signals.append(min(oil_sig, 1.0))
+
+    # Natural gas / energy infra — dominant for Russia-Ukraine
+    eg_weight = max(float(tx.get("energy_infra", 0)), float(tx.get("oil_gas", 0)) * 0.5)
+    if eg_weight > 0.3:
+        ng_abs  = abs(float(market_data.get("natgas_pct_1d", 0.0)))
+        ng_sig  = (ng_abs / 5.0) * eg_weight
+        signals.append(min(ng_sig, 1.0))
+
+    # Agriculture — Ukraine/Russia primary
+    ag_weight = float(tx.get("agriculture", 0))
+    if ag_weight > 0.3:
+        wheat_abs = abs(float(market_data.get("wheat_pct_1d", 0.0)))
+        ag_sig    = (wheat_abs / 4.0) * ag_weight
+        signals.append(min(ag_sig, 1.0))
+
+    # Equity volatility — broad signal
+    eq_weight = float(tx.get("equity_sector", 0))
+    if eq_weight > 0.3:
+        vix_abs = abs(float(market_data.get("vix_1d", 0.0)))
+        eq_sig  = (vix_abs / 5.0) * eq_weight
+        signals.append(min(eq_sig, 1.0))
+
+    if not signals:
+        return 1.0
+
+    avg_signal = float(np.mean(signals))
+    # Map [0, 1] signal → [0.7, 1.5] multiplier
+    return float(np.clip(0.7 + avg_signal * 0.8, 0.7, 1.5))
+
+
 # ── Portfolio aggregation ─────────────────────────────────────────────────────
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def score_all_conflicts() -> dict[str, dict]:
     """
     Compute CIS, TPS, and confidence for every conflict in CONFLICTS.
@@ -195,6 +323,9 @@ def score_all_conflicts() -> dict[str, dict]:
 
     Cached for 30 minutes — structural data changes slowly; news GPR
     layer is separate and not cached here.
+
+    market_freshness is initialised to 1.0 here; callers with live market
+    data should call apply_market_freshness() to update it before ranking.
     """
     results: dict[str, dict] = {}
     for c in CONFLICTS:
@@ -215,6 +346,7 @@ def score_all_conflicts() -> dict[str, dict]:
             "trend":        compute_trend(c),
             "freshness":    _freshness_label(c),
             "escalation":   c.get("escalation_trend", "stable"),
+            "market_freshness": 1.0,   # updated by apply_market_freshness()
             # Pass through for display
             "transmission": c.get("transmission", {}),
             "affected_commodities": c.get("affected_commodities", []),
@@ -228,6 +360,76 @@ def score_all_conflicts() -> dict[str, dict]:
     except Exception:
         pass
     return results
+
+
+def apply_market_freshness(
+    conflict_results: dict[str, dict],
+    market_data: dict,
+) -> dict[str, dict]:
+    """
+    Enrich per-conflict results with live market_freshness multipliers.
+
+    Call this after score_all_conflicts() when live price/vol data is available.
+    Updates the "market_freshness" field in-place on a shallow copy.
+
+    market_data keys (all float, all optional):
+        brent_pct_1d, wti_pct_1d, natgas_pct_1d, wheat_pct_1d,
+        tanker_disruption (0–1), vix_1d
+
+    Returns the enriched dict (same reference as input for convenience).
+    """
+    conflict_by_id = {c["id"]: c for c in CONFLICTS}
+    for cid, result in conflict_results.items():
+        conf = conflict_by_id.get(cid)
+        if conf is None:
+            continue
+        mf = compute_market_freshness(conf, market_data)
+        result["market_freshness"] = round(mf, 3)
+    return conflict_results
+
+
+def build_market_signals(cmd_r: "pd.DataFrame") -> dict:
+    """
+    Extract live market-freshness signals from a commodity log-returns DataFrame.
+
+    Returns a dict compatible with compute_market_freshness() and
+    apply_market_freshness(). Safe to call with None or empty DataFrame —
+    returns {} which leaves all market_freshness values at 1.0.
+
+    Signal keys (all floats, approximate 1-day % move):
+        brent_pct_1d, wti_pct_1d, natgas_pct_1d, wheat_pct_1d
+
+    Also reads tanker_disruption (0–1) from session_state["_hormuz_disruption"]
+    if available (set by strait_watch.py from live PortWatch data).
+    """
+    signals: dict = {}
+    try:
+        if cmd_r is None or cmd_r.empty:
+            return signals
+        last = cmd_r.iloc[-1]
+        _col_map = {
+            "Brent Crude":   "brent_pct_1d",
+            "WTI Crude Oil": "wti_pct_1d",
+            "Natural Gas":   "natgas_pct_1d",
+            "Wheat":         "wheat_pct_1d",
+        }
+        for col, key in _col_map.items():
+            if col in last.index and not np.isnan(float(last[col])):
+                # log return × 100 ≈ % change (exact for small moves)
+                signals[key] = float(last[col]) * 100.0
+    except Exception:
+        pass
+
+    # Hormuz tanker disruption — set by strait_watch.py from live PortWatch data
+    # tanker_disruption = 1 − (live_ships / baseline_ships), clamped [0, 1]
+    try:
+        disruption = st.session_state.get("_hormuz_disruption")
+        if disruption is not None:
+            signals["tanker_disruption"] = float(np.clip(disruption, 0.0, 1.0))
+    except Exception:
+        pass
+
+    return signals
 
 
 def _freshness_label(conflict: dict) -> str:
@@ -262,6 +464,17 @@ def aggregate_portfolio_scores(
         return {"cis": 50.0, "tps": 50.0, "confidence": 0.50,
                 "conflict_weights": {}, "top_conflict": None}
 
+    # Apply live market-freshness multipliers from session_state.
+    # Signals are injected by compute_risk_score() (risk_score.py) and by
+    # home.py, both of which have access to live commodity returns.
+    # Falls back silently — all market_freshness values remain 1.0 (no ranking change).
+    try:
+        mf_signals = st.session_state.get("_mf_signals", {})
+        if mf_signals:
+            apply_market_freshness(conflict_results, mf_signals)
+    except Exception:
+        pass
+
     # Weight by CIS (higher-intensity conflicts get more weight in TPS aggregate)
     cis_vals = {cid: r["cis"] for cid, r in conflict_results.items()}
     total_cis = sum(cis_vals.values()) + 1e-9
@@ -282,7 +495,14 @@ def aggregate_portfolio_scores(
 
     avg_conf = float(np.mean([r["confidence"] for r in conflict_results.values()]))
 
-    top = max(conflict_results.items(), key=lambda x: x[1]["cis"])
+    # Rank by CIS × market_freshness so conflicts actively moving markets
+    # surface above equally intense but priced-in conflicts.
+    # market_freshness defaults to 1.0 (no change to ranking) unless
+    # apply_market_freshness() was called with live price data.
+    top = max(
+        conflict_results.items(),
+        key=lambda x: x[1]["cis"] * x[1].get("market_freshness", 1.0),
+    )
 
     return {
         "cis":              round(portfolio_cis, 1),

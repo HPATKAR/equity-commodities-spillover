@@ -19,7 +19,7 @@ from src.analysis.events import (
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
-    _insight_note, _line_style, _EQUITY_REGIONS,
+    _insight_note, _line_style, _EQUITY_REGIONS, _no_api_key_banner,
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
@@ -36,6 +36,7 @@ def _label(txt: str) -> None:
 def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Geopolitical Event Impact",
                  "Event windows · Pre/During/Post performance · Vol shifts · Correlation regime change")
+    _no_api_key_banner("AI-generated geopolitical analysis")
     _page_intro(
         "Geopolitical shocks are the most potent external trigger of equity-commodity decoupling. "
         "Wars disrupt commodity supply chains - oil embargoes, grain blockades, metal sanctions - "

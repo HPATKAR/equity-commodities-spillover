@@ -33,7 +33,52 @@ import plotly.graph_objects as go
 import yfinance as yf
 from datetime import date, timedelta
 
+import streamlit as st
 from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
+
+
+# ── Model configuration (single source of truth) ──────────────────────────────
+
+_MODEL_CONFIG: dict = {
+    # Top-level layer weights (must sum to 1.0)
+    "weights": {
+        "cis":  0.40,   # Conflict Intensity Score  (conflict_model.py)
+        "tps":  0.35,   # Transmission Pressure Score (conflict_model.py)
+        "mcs":  0.25,   # Market Confirmation Score   (this file)
+    },
+    # MCS sub-signal weights (must sum to 1.0)
+    "mcs_weights": {
+        "eq_vol":     0.15,
+        "rates_vol":  0.15,
+        "cmd_vol":    0.15,
+        "safe_haven": 0.22,
+        "oil_gold":   0.18,
+        "corr_accel": 0.15,   # correlation acceleration (2nd derivative, orthog to level)
+    },
+    # risk_score_history() weights — approximates live model using mkt-only signals
+    "history_weights": {
+        "eq_vol":     0.40,
+        "oil_gold":   0.35,
+        "cmd_vol":    0.13,
+        "corr_accel": 0.12,
+    },
+}
+
+
+# ── Cached auxiliary fetches ──────────────────────────────────────────────────
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _fetch_tlt() -> pd.Series:
+    """
+    Single cached TLT fetch (200d) shared by _rates_vol_score and _safe_haven_score.
+    Avoids two separate uncached network calls on every risk score computation.
+    Returns Close price series; empty Series on failure.
+    """
+    try:
+        s = yf.Ticker("TLT").history(period="200d")["Close"]
+        return s if not s.empty else pd.Series(dtype=float)
+    except Exception:
+        return pd.Series(dtype=float)
 
 
 # ── EWM z-score helper ────────────────────────────────────────────────────────
@@ -73,7 +118,7 @@ def _rates_vol_score(cmd_r: pd.DataFrame) -> float:
     More orthogonal to equity vol than VIX.
     """
     try:
-        tlt = yf.Ticker("TLT").history(period="200d")["Close"]
+        tlt = _fetch_tlt()
         if tlt.empty or len(tlt) < 40:
             return 50.0
         tlt_r = tlt.pct_change().dropna()
@@ -146,13 +191,14 @@ def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
 
     g_z = float(_ewm_zscore(g_cum, span=60).iloc[-1])
 
-    # TLT corroboration (if equity data has TLT-like proxy)
+    # TLT corroboration — reuse the cached 200d fetch (60d subset is sufficient)
     tlt_boost = 0.0
     try:
-        tlt = yf.Ticker("TLT").history(period="60d")["Close"]
-        if not tlt.empty:
-            tlt_ret = float(tlt.pct_change().dropna().iloc[-20:].sum() * 100)
-            tlt_z   = tlt_ret / max(float(tlt.pct_change().dropna().std() * np.sqrt(20) * 100), 1)
+        tlt = _fetch_tlt()
+        if not tlt.empty and len(tlt) >= 20:
+            tlt_r   = tlt.pct_change().dropna()
+            tlt_ret = float(tlt_r.iloc[-20:].sum() * 100)
+            tlt_z   = tlt_ret / max(float(tlt_r.std() * np.sqrt(20) * 100), 1)
             if g_z > 0.5 and tlt_z > 0.3:
                 tlt_boost = min(tlt_z * 4, 10.0)
     except Exception:
@@ -192,11 +238,12 @@ def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict
     g_z = float(_ewm_zscore(g_roll.dropna(), span=60).iloc[-1]) if len(g_roll.dropna()) > 30 else 0.0
     o_z = float(_ewm_zscore(o_roll.dropna(), span=60).iloc[-1]) if len(o_roll.dropna()) > 30 else 0.0
 
-    gold_contribution = float(np.clip(g_z * 15, -30, 35))
+    gold_contribution = float(np.clip(g_z * 14, -28, 35))   # was *15 (slight overbias)
     oil_amplifier     = float(np.clip(o_z * 8,  -15, 20))
-    conflict_bonus    = 0.0
-    if g_z > 1.0 and o_z > 1.0:
-        conflict_bonus = min(g_z * o_z * 5, 20)
+    # Flat bonus: avoid zero-collapse when one signal is neutral. +5 pts when
+    # both gold AND oil are elevated (g_z > 1, o_z > 1) — a joint geopolitical
+    # premium that is signal-magnitude-independent.
+    conflict_bonus    = 5.0 if (g_z > 1.0 and o_z > 1.0) else 0.0
 
     score = float(np.clip(50 + gold_contribution + oil_amplifier + conflict_bonus, 0, 100))
     return score, {
@@ -207,12 +254,27 @@ def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict
     }
 
 
-def _spillover_score(avg_corr: pd.Series) -> float:
-    """Cross-asset spillover signal: percentile of current correlation in history."""
-    if avg_corr.empty or len(avg_corr) < 60:
+def _corr_accel_score(avg_corr: pd.Series, span: int = 20) -> float:
+    """
+    Correlation acceleration score — second derivative of rolling correlation.
+
+    Uses the *rate-of-change* of correlation rather than its level, making
+    this signal orthogonal to CIS which already incorporates geographic_diffusion
+    (a level-based proxy). Avoids double-counting that existed with the old
+    correlation-percentile approach.
+
+    Returns 0–100 where 100 = correlation is accelerating at the fastest pace
+    ever seen in the sample.
+    """
+    if avg_corr.empty or len(avg_corr) < 90:
         return 50.0
-    current = float(avg_corr.iloc[-1])
-    return float((avg_corr < current).mean() * 100)
+    smooth   = avg_corr.ewm(span=span).mean()
+    velocity = smooth.diff()
+    accel    = velocity.ewm(span=span).mean().dropna()
+    if len(accel) < 60:
+        return 50.0
+    current_accel = float(accel.iloc[-1])
+    return float(np.clip((accel < current_accel).mean() * 100, 0, 100))
 
 
 def _market_confirmation_score(
@@ -229,28 +291,27 @@ def _market_confirmation_score(
     cmd_vol  = _commodity_vol_residual_score(cmd_r, eq_r)
     safe_hav = _safe_haven_score(cmd_r, eq_r)
     og_score, og_detail = _oil_gold_signal(cmd_r)
-    spill    = _spillover_score(avg_corr)
+    corr_accel = _corr_accel_score(avg_corr)
 
-    # Weights — oil-gold and safe-haven carry most geopolitical signal
-    w = {"eq_vol": 0.15, "rates_vol": 0.15, "cmd_vol": 0.15,
-         "safe_haven": 0.22, "oil_gold": 0.18, "spillover": 0.15}
+    # Weights from _MODEL_CONFIG — oil-gold and safe-haven carry most geo signal
+    w = _MODEL_CONFIG["mcs_weights"]
 
     mcs = (
-        w["eq_vol"]    * eq_vol
-        + w["rates_vol"] * rates_vol
-        + w["cmd_vol"]   * cmd_vol
-        + w["safe_haven"]* safe_hav
-        + w["oil_gold"]  * og_score
-        + w["spillover"] * spill
+        w["eq_vol"]     * eq_vol
+        + w["rates_vol"]  * rates_vol
+        + w["cmd_vol"]    * cmd_vol
+        + w["safe_haven"] * safe_hav
+        + w["oil_gold"]   * og_score
+        + w["corr_accel"] * corr_accel
     )
 
     components = {
-        "Equity Vol (orthog)":     round(eq_vol,    1),
-        "Rates Vol (TLT proxy)":   round(rates_vol, 1),
-        "Commodity Vol (residual)":round(cmd_vol,   1),
-        "Safe-Haven Bid":          round(safe_hav,  1),
-        "Oil-Gold Signal":         round(og_score,  1),
-        "Cross-Asset Spillover":   round(spill,     1),
+        "Equity Vol (orthog)":     round(eq_vol,      1),
+        "Rates Vol (TLT proxy)":   round(rates_vol,   1),
+        "Commodity Vol (residual)":round(cmd_vol,      1),
+        "Safe-Haven Bid":          round(safe_hav,     1),
+        "Oil-Gold Signal":         round(og_score,     1),
+        "Correlation Accel":       round(corr_accel,   1),
     }
     return float(np.clip(mcs, 0, 100)), components
 
@@ -273,8 +334,20 @@ def compute_risk_score(
     Scenario multiplier from session_state["scenario"] applied after assembly.
     Returns dict with score, label, color, components, confidence, and detail.
     """
-    from src.analysis.conflict_model import aggregate_portfolio_scores
+    from src.analysis.conflict_model import aggregate_portfolio_scores, build_market_signals
     from src.analysis.scenario_state import get_scenario
+
+    # Inject live market signals into session_state so aggregate_portfolio_scores()
+    # can rank conflicts by current market impact, not just static intensity.
+    # This runs every time compute_risk_score() is called (TTL=300), ensuring
+    # the "Lead Conflict" on the command center reflects today's market moves.
+    try:
+        import streamlit as _st
+        _mf_signals = build_market_signals(cmd_r)
+        if _mf_signals:
+            _st.session_state["_mf_signals"] = _mf_signals
+    except Exception:
+        pass
 
     # Layer 1 + 2: Conflict Intensity and Transmission Pressure
     conflict_agg = aggregate_portfolio_scores()
@@ -286,13 +359,15 @@ def compute_risk_score(
     mcs, mcs_components = _market_confirmation_score(avg_corr, cmd_r, eq_r)
 
     # Assembly
+    _w = _MODEL_CONFIG["weights"]
     raw = (
-        0.40 * cis_portfolio
-        + 0.35 * tps_portfolio
-        + 0.25 * mcs
+        _w["cis"] * cis_portfolio
+        + _w["tps"] * tps_portfolio
+        + _w["mcs"] * mcs
     )
 
-    # Scenario multiplier
+    # Scenario multiplier — hard clamp [0, 100] prevents score runaway.
+    # geo_mult is user-controlled from scenario_state; baseline = 1.0.
     scenario = get_scenario()
     geo_mult = scenario.get("geo_mult", 1.0)
     total    = float(np.clip(raw * geo_mult, 0.0, 100.0))
@@ -305,6 +380,17 @@ def compute_risk_score(
         + 0.30 * mcs_agreement_score
         + 0.20 * (1.0 if not avg_corr.empty else 0.5)
     )
+
+    # Confidence intervals (quadrature combination of per-layer uncertainty)
+    # Uncertainty grows as confidence falls; at 100% confidence → ±0 pts.
+    # At 0% confidence → ±(weight * score) — i.e., layer is effectively unknown.
+    _w = _MODEL_CONFIG["weights"]
+    cis_err = (1.0 - conflict_conf) * cis_portfolio * _w["cis"]
+    tps_err = (1.0 - conflict_conf) * tps_portfolio * _w["tps"]
+    mcs_err = (1.0 - mcs_agreement_score) * mcs       * _w["mcs"]
+    score_uncertainty = float(np.sqrt(cis_err**2 + tps_err**2 + mcs_err**2))
+    score_low  = round(max(0.0,   total - score_uncertainty), 1)
+    score_high = round(min(100.0, total + score_uncertainty), 1)
 
     if total < 25:   label, color = "Low",      "#2e7d32"
     elif total < 50: label, color = "Moderate", "#8E9AAA"
@@ -332,6 +418,9 @@ def compute_risk_score(
 
     return {
         "score":          round(total, 1),
+        "score_low":      score_low,
+        "score_high":     score_high,
+        "uncertainty":    round(score_uncertainty, 1),
         "label":          label,
         "color":          color,
         "confidence":     round(overall_confidence, 2),
@@ -348,7 +437,7 @@ def compute_risk_score(
         "mcs_components":  mcs_components,
         # Legacy fields (kept for backward compat with existing pages)
         "weights": {"conflict_intensity": 0.40, "transmission": 0.35, "market_conf": 0.25},
-        "corr_pct": round(_spillover_score(avg_corr), 1),
+        "corr_pct": round(_corr_accel_score(avg_corr), 1),
         "components": {
             f"Conflict Intensity (40%)":    round(cis_portfolio, 1),
             f"Transmission Pressure (35%)": round(tps_portfolio, 1),
@@ -370,8 +459,12 @@ def risk_score_history(
     Rolling daily risk score using market-confirmation signals only
     (conflict model scores are not available historically at daily frequency).
 
-    Weights: 30% correlation pct + 25% oil-gold + 20% commodity vol +
-             15% equity vol + 10% neutral placeholder (conflict)
+    Weights (from _MODEL_CONFIG["history_weights"]):
+        40% equity vol  +  35% oil-gold  +  13% commodity vol  +  12% corr accel
+
+    Aligned to match the live model's top-two drivers (equity vol and oil-gold).
+    Replaced legacy correlation-percentile with correlation-acceleration to avoid
+    double-counting the correlation-level signal already present in CIS.
     """
     if cmd_r.empty:
         return pd.Series(dtype=float)
@@ -389,10 +482,15 @@ def risk_score_history(
     if avg_corr.empty:
         return pd.Series(dtype=float)
 
-    # 1. Correlation percentile
-    corr_pct = avg_corr.rolling(window, min_periods=60).apply(
-        lambda x: float((x[:-1] < x[-1]).mean() * 100), raw=True
-    )
+    hw = _MODEL_CONFIG["history_weights"]
+
+    # 1. Correlation acceleration (2nd derivative — orthogonal to CIS level signal)
+    smooth   = avg_corr.ewm(span=20).mean()
+    velocity = smooth.diff()
+    accel    = velocity.ewm(span=20).mean()
+    a_mean   = accel.ewm(span=60).mean()
+    a_std    = accel.ewm(span=60).std().replace(0, np.nan)
+    corr_accel_score = (50 + ((accel - a_mean) / a_std).clip(-3, 3) * 16.67).clip(0, 100)
 
     # 2. Commodity vol z-score (EWM)
     energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
@@ -406,20 +504,21 @@ def risk_score_history(
     else:
         vol_score = pd.Series(50.0, index=avg_corr.index)
 
-    # 3. Oil-Gold signal (rolling EWM z-scores)
+    # 3. Oil-Gold signal (rolling EWM z-scores, flat conflict bonus — matches live)
     gold_col = next((c for c in ["Gold"] if c in cmd_r.columns), None)
     oil_col  = next((c for c in ["WTI Crude Oil", "Brent Crude"] if c in cmd_r.columns), None)
     if gold_col and oil_col:
-        g_cum = cmd_r[gold_col].rolling(20).sum() * 100
-        o_cum = cmd_r[oil_col].rolling(20).sum()  * 100
+        g_cum  = cmd_r[gold_col].rolling(20).sum() * 100
+        o_cum  = cmd_r[oil_col].rolling(20).sum()  * 100
         g_mean = g_cum.ewm(span=60).mean()
         g_std  = g_cum.ewm(span=60).std().replace(0, np.nan)
         o_mean = o_cum.ewm(span=60).mean()
         o_std  = o_cum.ewm(span=60).std().replace(0, np.nan)
-        g_z = ((g_cum - g_mean) / g_std).clip(-4, 4)
-        o_z = ((o_cum - o_mean) / o_std).clip(-4, 4)
-        conflict_bonus = ((g_z > 1) & (o_z > 1)) * (g_z * o_z * 5).clip(0, 20)
-        og_score = (50 + g_z * 15 + o_z * 8 + conflict_bonus).clip(0, 100)
+        g_z    = ((g_cum - g_mean) / g_std).clip(-4, 4)
+        o_z    = ((o_cum - o_mean) / o_std).clip(-4, 4)
+        # Flat +5 bonus when both elevated (matches live _oil_gold_signal fix)
+        conflict_bonus = ((g_z > 1) & (o_z > 1)).astype(float) * 5.0
+        og_score = (50 + g_z * 14 + o_z * 8 + conflict_bonus).clip(0, 100)
     else:
         og_score = pd.Series(50.0, index=avg_corr.index)
 
@@ -432,17 +531,18 @@ def risk_score_history(
     else:
         eq_vol_score = pd.Series(50.0, index=avg_corr.index)
 
-    aligned = pd.concat([corr_pct, vol_score, og_score, eq_vol_score], axis=1).dropna()
+    aligned = pd.concat(
+        [corr_accel_score, vol_score, og_score, eq_vol_score], axis=1
+    ).dropna()
     if aligned.empty:
         return pd.Series(dtype=float)
-    aligned.columns = ["corr", "vol", "og", "eq"]
+    aligned.columns = ["corr_accel", "vol", "og", "eq"]
 
     return (
-        0.30 * aligned["corr"]
-        + 0.25 * aligned["og"]
-        + 0.20 * aligned["vol"]
-        + 0.15 * aligned["eq"]
-        + 0.10 * 50
+        hw["eq_vol"]     * aligned["eq"]
+        + hw["oil_gold"]   * aligned["og"]
+        + hw["cmd_vol"]    * aligned["vol"]
+        + hw["corr_accel"] * aligned["corr_accel"]
     ).clip(0, 100).round(1)
 
 

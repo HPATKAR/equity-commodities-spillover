@@ -250,11 +250,78 @@ _GEO_SENSITIVITY: dict[str, float] = {
 }
 
 
+_GDP_SENSITIVITY: dict[str, float] = {
+    # Sensitivity to a +1% GDP growth shock (positive = beneficiary of growth)
+    "S&P 500":       0.040,
+    "Nasdaq 100":    0.050,
+    "DJIA":          0.030,
+    "Russell 2000":  0.045,
+    "FTSE 100":      0.028,
+    "DAX":           0.032,
+    "Eurostoxx 50":  0.030,
+    "Nikkei 225":    0.025,
+    "Hang Seng":     0.022,
+    "Sensex":        0.020,
+    "WTI Crude Oil": 0.022,
+    "Brent Crude":   0.020,
+    "Natural Gas":   0.010,
+    "Gold":         -0.015,
+    "Silver":       -0.008,
+    "Copper":        0.035,
+    "Wheat":         0.006,
+    "Corn":          0.006,
+}
+
+_CPI_SENSITIVITY: dict[str, float] = {
+    # Sensitivity to a +1% unexpected CPI surprise (negative = inflation hurts)
+    "S&P 500":      -0.025,
+    "Nasdaq 100":   -0.040,
+    "DJIA":         -0.015,
+    "Russell 2000": -0.020,
+    "FTSE 100":     -0.015,
+    "DAX":          -0.018,
+    "Eurostoxx 50": -0.018,
+    "Nikkei 225":   -0.010,
+    "Hang Seng":    -0.012,
+    "Sensex":       -0.015,
+    "Gold":          0.020,
+    "Silver":        0.015,
+    "Copper":        0.012,
+    "WTI Crude Oil": 0.025,
+    "Brent Crude":   0.025,
+    "Natural Gas":   0.010,
+    "Wheat":         0.015,
+    "Corn":          0.015,
+}
+
+_UNEMP_SENSITIVITY: dict[str, float] = {
+    # Sensitivity to +1pp unemployment rate shock (negative = hurt by rising unemployment)
+    "S&P 500":      -0.030,
+    "Nasdaq 100":   -0.025,
+    "DJIA":         -0.035,
+    "Russell 2000": -0.045,
+    "FTSE 100":     -0.020,
+    "DAX":          -0.025,
+    "Eurostoxx 50": -0.022,
+    "Nikkei 225":   -0.018,
+    "Hang Seng":    -0.015,
+    "Sensex":       -0.012,
+    "Gold":          0.015,
+    "Silver":        0.005,
+    "Copper":       -0.030,
+    "WTI Crude Oil": -0.020,
+    "Brent Crude":  -0.018,
+    "Natural Gas":  -0.008,
+    "Wheat":        -0.005,
+    "Corn":         -0.005,
+}
+
+
 def _apply_fixed_sensitivity(
     impact: dict[str, float],
     shocks: dict[str, float],
 ) -> dict[str, float]:
-    """Add yield, DXY, credit, and geo contributions using fixed sensitivity tables."""
+    """Add yield, DXY, credit, geo, and macro contributions using fixed sensitivity tables."""
     targets = _EQUITY_TARGETS + _COMMODITY_TARGETS
     for t in targets:
         if "yield_bps" in shocks:
@@ -265,6 +332,12 @@ def _apply_fixed_sensitivity(
             impact[t] = impact.get(t, 0.0) + _CREDIT_SENSITIVITY.get(t, 0.0) * (shocks["credit_bps"] / 100)
         if "geo" in shocks:
             impact[t] = impact.get(t, 0.0) + _GEO_SENSITIVITY.get(t, 0.0) * shocks["geo"]
+        if "gdp_pct" in shocks:
+            impact[t] = impact.get(t, 0.0) + _GDP_SENSITIVITY.get(t, 0.0) * shocks["gdp_pct"]
+        if "cpi_pct" in shocks:
+            impact[t] = impact.get(t, 0.0) + _CPI_SENSITIVITY.get(t, 0.0) * shocks["cpi_pct"]
+        if "unemp_pct" in shocks:
+            impact[t] = impact.get(t, 0.0) + _UNEMP_SENSITIVITY.get(t, 0.0) * shocks["unemp_pct"]
     return impact
 
 
@@ -477,6 +550,85 @@ def _var_table(var_es: dict[str, dict[str, float]], assets: list[str]) -> None:
     )
 
 
+def _scenario_comparison_chart(
+    impacts: dict[str, dict[str, float]],
+    asset_group: list[str],
+    height: int = 420,
+) -> go.Figure:
+    """Grouped bar chart comparing impact across multiple scenarios for a set of assets."""
+    scenario_names = list(impacts.keys())
+    # palette cycling for up to 8 scenarios
+    palette = ["#CFB991", "#c0392b", "#2980b9", "#27ae60", "#e67e22", "#8e44ad", "#16a085", "#e74c3c"]
+    fig = go.Figure()
+    for i, name in enumerate(scenario_names):
+        impact_row = impacts[name]
+        vals = [impact_row.get(a, 0.0) * 100 for a in asset_group]
+        fig.add_trace(go.Bar(
+            name=name,
+            x=asset_group,
+            y=vals,
+            marker_color=palette[i % len(palette)],
+            hovertemplate=f"<b>{name}</b><br>%{{x}}: %{{y:.2f}}%<extra></extra>",
+            opacity=0.85,
+        ))
+    fig.update_layout(
+        template="plotly_dark",
+        height=height,
+        paper_bgcolor="#111111",
+        plot_bgcolor="#111111",
+        font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=11),
+        xaxis=dict(tickangle=-35, showgrid=False),
+        yaxis=dict(title="Estimated Return Impact (%)", showgrid=True, gridcolor="#1e1e1e",
+                   zeroline=True, zerolinecolor="#2a2a2a"),
+        legend=dict(orientation="h", y=-0.30, x=0, font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
+        margin=dict(l=48, r=24, t=24, b=100),
+        barmode="group",
+        bargap=0.15,
+        bargroupgap=0.04,
+    )
+    return fig
+
+
+def _comparison_table(impacts: dict[str, dict[str, float]], assets: list[str]) -> None:
+    """Render multi-scenario comparison as an HTML table."""
+    scenario_names = list(impacts.keys())
+    palette = ["#CFB991", "#c0392b", "#2980b9", "#27ae60", "#e67e22", "#8e44ad"]
+
+    header_cells = (
+        '<th style="padding:0.35rem 0.6rem;font-size:0.55rem;letter-spacing:.12em;'
+        'text-transform:uppercase;color:#8890a1;text-align:left;font-weight:600">Asset</th>'
+    )
+    for i, sname in enumerate(scenario_names):
+        col_c = palette[i % len(palette)]
+        header_cells += (
+            f'<th style="padding:0.35rem 0.6rem;font-size:0.55rem;letter-spacing:.10em;'
+            f'text-transform:uppercase;color:{col_c};text-align:right;font-weight:600">'
+            f'{sname[:22]}{"…" if len(sname) > 22 else ""}</th>'
+        )
+
+    rows_html = ""
+    for a in assets:
+        row = f'<td style="padding:0.28rem 0.6rem;font-size:0.70rem;color:#c8c8c8">{a}</td>'
+        for i, sname in enumerate(scenario_names):
+            pct = impacts[sname].get(a, 0.0) * 100
+            col_c = _RED if pct < 0 else _GREEN
+            sign  = "+" if pct >= 0 else ""
+            row += (
+                f'<td style="padding:0.28rem 0.6rem;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:0.70rem;color:{col_c};text-align:right">{sign}{pct:.2f}%</td>'
+            )
+        rows_html += f"<tr>{row}</tr>"
+
+    st.markdown(
+        f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
+        <table style="width:100%;border-collapse:collapse;background:#1c1c1c">
+        <thead><tr style="border-bottom:1px solid #2a2a2a">{header_cells}</tr></thead>
+        <tbody>{rows_html}</tbody>
+        </table></div>""",
+        unsafe_allow_html=True,
+    )
+
+
 def _shock_badge(label: str, value: str, active: bool) -> str:
     color  = _GOLD if active else _MUTED
     border = f"1px solid {_GOLD}" if active else f"1px solid #2a2a2a"
@@ -566,27 +718,39 @@ def page_scenario_engine(
         key="se_preset",
     )
     preset = _PRESETS.get(preset_name, {})
+    is_custom = preset_name == "Custom"
+
+    if is_custom:
+        custom_name = st.text_input(
+            "Custom scenario name",
+            value=st.session_state.get("se_custom_name", "My Custom Scenario"),
+            key="se_custom_name",
+            help="Label for your custom scenario — shown in comparison views.",
+        )
 
     col1, col2 = st.columns(2)
     with col1:
         oil_pct = st.slider(
             "Oil shock (%)",
             min_value=-60.0, max_value=80.0,
-            value=float(preset.get("oil_pct", 0.0)),
+            value=float(preset.get("oil_pct", 0.0)) if not is_custom
+                  else float(st.session_state.get("_cust_oil", 0.0)),
             step=1.0, key="se_oil",
             help="Percentage change in WTI Crude Oil price.",
         )
         gold_pct = st.slider(
             "Gold shock (%)",
             min_value=-30.0, max_value=40.0,
-            value=float(preset.get("gold_pct", 0.0)),
+            value=float(preset.get("gold_pct", 0.0)) if not is_custom
+                  else float(st.session_state.get("_cust_gold", 0.0)),
             step=0.5, key="se_gold",
             help="Percentage change in Gold price.",
         )
         yield_bps = st.slider(
             "Yield shock (bps)",
             min_value=-200, max_value=300,
-            value=int(preset.get("yield_bps", 0)),
+            value=int(preset.get("yield_bps", 0)) if not is_custom
+                  else int(st.session_state.get("_cust_yield", 0)),
             step=5, key="se_yield",
             help="Parallel shift in 10-year yield (basis points).",
         )
@@ -594,35 +758,110 @@ def page_scenario_engine(
         dxy_pct = st.slider(
             "DXY shock (%)",
             min_value=-10.0, max_value=12.0,
-            value=float(preset.get("dxy_pct", 0.0)),
+            value=float(preset.get("dxy_pct", 0.0)) if not is_custom
+                  else float(st.session_state.get("_cust_dxy", 0.0)),
             step=0.5, key="se_dxy",
             help="Percentage change in the US Dollar Index.",
         )
         credit_bps = st.slider(
             "Credit spread shock (bps)",
             min_value=-100, max_value=400,
-            value=int(preset.get("credit_bps", 0)),
+            value=int(preset.get("credit_bps", 0)) if not is_custom
+                  else int(st.session_state.get("_cust_credit", 0)),
             step=5, key="se_credit",
             help="Change in investment-grade credit spreads (basis points).",
         )
         geo = st.slider(
             "Geopolitical disruption factor",
             min_value=0.0, max_value=10.0,
-            value=float(preset.get("geo", 0.0)),
+            value=float(preset.get("geo", 0.0)) if not is_custom
+                  else float(st.session_state.get("_cust_geo", 0.0)),
             step=0.5, key="se_geo",
             help="Abstract disruption score (0 = neutral, 10 = severe crisis).",
         )
 
+    # ── Custom macro variables (only in Custom mode) ──────────────────────
+    natgas_pct = 0.0
+    copper_pct = 0.0
+    gdp_pct    = 0.0
+    cpi_pct    = 0.0
+    unemp_pct  = 0.0
+
+    if is_custom:
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;border-left:3px solid {_GOLD};'
+            f'padding:.5rem .9rem;margin:.8rem 0 .4rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.60rem;font-weight:700;'
+            f'letter-spacing:.14em;text-transform:uppercase;color:{_GOLD}">Custom Macro Variables</span>'
+            f'<p style="font-size:0.68rem;color:#8890a1;margin:.3rem 0 0;line-height:1.5">'
+            f'Extend the scenario with commodity and macroeconomic shocks unavailable in presets. '
+            f'GDP, CPI, and unemployment sensitivities are calibrated to cross-asset empirical literature.</p>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        cm1, cm2 = st.columns(2)
+        with cm1:
+            natgas_pct = st.slider(
+                "Natural Gas shock (%)",
+                min_value=-60.0, max_value=100.0,
+                value=float(st.session_state.get("_cust_natgas", 0.0)),
+                step=1.0, key="se_natgas",
+                help="Percentage change in Henry Hub Natural Gas price.",
+            )
+            gdp_pct = st.slider(
+                "GDP growth shock (%)",
+                min_value=-5.0, max_value=3.0,
+                value=float(st.session_state.get("_cust_gdp", 0.0)),
+                step=0.1, key="se_gdp",
+                help="Annualized GDP growth surprise relative to consensus (negative = recession shock).",
+            )
+            cpi_pct = st.slider(
+                "CPI surprise (%)",
+                min_value=-3.0, max_value=6.0,
+                value=float(st.session_state.get("_cust_cpi", 0.0)),
+                step=0.1, key="se_cpi",
+                help="Unexpected CPI deviation from consensus (positive = inflation surprise).",
+            )
+        with cm2:
+            copper_pct = st.slider(
+                "Copper shock (%)",
+                min_value=-40.0, max_value=50.0,
+                value=float(st.session_state.get("_cust_copper", 0.0)),
+                step=1.0, key="se_copper",
+                help="Percentage change in Copper price (industrial demand proxy).",
+            )
+            unemp_pct = st.slider(
+                "Unemployment shock (pp)",
+                min_value=-2.0, max_value=5.0,
+                value=float(st.session_state.get("_cust_unemp", 0.0)),
+                step=0.1, key="se_unemp",
+                help="Change in unemployment rate in percentage points (positive = rising unemployment).",
+            )
+
+        # Persist custom values to session_state
+        for k, v in [
+            ("_cust_oil", oil_pct), ("_cust_gold", gold_pct), ("_cust_yield", yield_bps),
+            ("_cust_dxy", dxy_pct), ("_cust_credit", credit_bps), ("_cust_geo", geo),
+            ("_cust_natgas", natgas_pct), ("_cust_copper", copper_pct),
+            ("_cust_gdp", gdp_pct), ("_cust_cpi", cpi_pct), ("_cust_unemp", unemp_pct),
+        ]:
+            st.session_state[k] = v
+
     # Active shocks summary badges
     badges = ""
-    if oil_pct    != 0: badges += _shock_badge("Oil",    f"{oil_pct:+.0f}%",    True)
-    if gold_pct   != 0: badges += _shock_badge("Gold",   f"{gold_pct:+.0f}%",   True)
-    if yield_bps  != 0: badges += _shock_badge("Yields", f"{yield_bps:+d}bps",  True)
-    if dxy_pct    != 0: badges += _shock_badge("DXY",    f"{dxy_pct:+.1f}%",    True)
-    if credit_bps != 0: badges += _shock_badge("Credit", f"{credit_bps:+d}bps", True)
-    if geo        != 0: badges += _shock_badge("Geo",    f"{geo:.1f}/10",        True)
+    if oil_pct    != 0: badges += _shock_badge("Oil",       f"{oil_pct:+.0f}%",    True)
+    if gold_pct   != 0: badges += _shock_badge("Gold",      f"{gold_pct:+.0f}%",   True)
+    if yield_bps  != 0: badges += _shock_badge("Yields",    f"{yield_bps:+d}bps",  True)
+    if dxy_pct    != 0: badges += _shock_badge("DXY",       f"{dxy_pct:+.1f}%",    True)
+    if credit_bps != 0: badges += _shock_badge("Credit",    f"{credit_bps:+d}bps", True)
+    if geo        != 0: badges += _shock_badge("Geo",       f"{geo:.1f}/10",        True)
+    if natgas_pct != 0: badges += _shock_badge("Nat Gas",   f"{natgas_pct:+.0f}%", True)
+    if copper_pct != 0: badges += _shock_badge("Copper",    f"{copper_pct:+.0f}%", True)
+    if gdp_pct    != 0: badges += _shock_badge("GDP",       f"{gdp_pct:+.1f}%",    True)
+    if cpi_pct    != 0: badges += _shock_badge("CPI",       f"{cpi_pct:+.1f}%",    True)
+    if unemp_pct  != 0: badges += _shock_badge("Unemp",     f"{unemp_pct:+.1f}pp", True)
     if not badges:
-        badges = f'<span style="color:{_MUTED};font-size:0.70rem">No active shocks - adjust sliders above.</span>'
+        badges = f'<span style="color:{_MUTED};font-size:0.70rem">No active shocks — adjust sliders above.</span>'
 
     st.markdown(
         f'<div style="margin:0.6rem 0 1.2rem;line-height:2">{badges}</div>',
@@ -631,7 +870,9 @@ def page_scenario_engine(
 
     # Zero-shock guard
     all_zero = (oil_pct == 0 and gold_pct == 0 and yield_bps == 0
-                and dxy_pct == 0 and credit_bps == 0 and geo == 0)
+                and dxy_pct == 0 and credit_bps == 0 and geo == 0
+                and natgas_pct == 0 and copper_pct == 0
+                and gdp_pct == 0 and cpi_pct == 0 and unemp_pct == 0)
 
     if all_zero:
         st.info("Set at least one shock parameter to run the propagation engine.")
@@ -656,17 +897,22 @@ def page_scenario_engine(
     # ── Run propagation ───────────────────────────────────────────────────
     # Build shock dictionary for OLS-beta channel
     raw_shocks: dict[str, float] = {}
-    if oil_pct  != 0: raw_shocks[_SHOCK_PROXY["oil"]]  = oil_pct  / 100
-    if gold_pct != 0: raw_shocks[_SHOCK_PROXY["gold"]] = gold_pct / 100
+    if oil_pct    != 0: raw_shocks[_SHOCK_PROXY["oil"]]    = oil_pct    / 100
+    if gold_pct   != 0: raw_shocks[_SHOCK_PROXY["gold"]]   = gold_pct   / 100
+    if natgas_pct != 0: raw_shocks[_SHOCK_PROXY["natgas"]] = natgas_pct / 100
+    if copper_pct != 0: raw_shocks[_SHOCK_PROXY["copper"]] = copper_pct / 100
 
     impact = _propagate_shock(betas, raw_shocks)
 
-    # Add yield, DXY, credit, geo via fixed sensitivity tables
+    # Add yield, DXY, credit, geo, and macro via fixed sensitivity tables
     fixed_shocks: dict[str, float] = {}
     if yield_bps  != 0: fixed_shocks["yield_bps"]  = float(yield_bps)
     if dxy_pct    != 0: fixed_shocks["dxy_pct"]    = dxy_pct
     if credit_bps != 0: fixed_shocks["credit_bps"] = float(credit_bps)
     if geo        != 0: fixed_shocks["geo"]         = geo
+    if gdp_pct    != 0: fixed_shocks["gdp_pct"]    = gdp_pct
+    if cpi_pct    != 0: fixed_shocks["cpi_pct"]    = cpi_pct
+    if unemp_pct  != 0: fixed_shocks["unemp_pct"]  = unemp_pct
 
     impact = _apply_fixed_sensitivity(impact, fixed_shocks)
 
@@ -677,6 +923,11 @@ def page_scenario_engine(
         + abs(dxy_pct / 100)
         + abs(credit_bps / 10000) * 50
         + geo * 0.05
+        + abs(natgas_pct / 100) * 0.5
+        + abs(copper_pct / 100) * 0.5
+        + abs(gdp_pct) * 0.3
+        + abs(cpi_pct) * 0.2
+        + abs(unemp_pct) * 0.15
     )
     shocked_var_es = _parametric_var_es(impact, var_es, scale_factor=total_shock_magnitude)
 
@@ -786,7 +1037,10 @@ def page_scenario_engine(
     api_key  = st.session_state.get("api_key", "")
 
     if provider and api_key and is_enabled("stress_engineer"):
-        scenario_desc = preset_name if preset_name != "Custom" else "custom scenario"
+        scenario_desc = (
+            st.session_state.get("se_custom_name", "Custom Scenario")
+            if preset_name == "Custom" else preset_name
+        )
         shock_parts = []
         if oil_pct    != 0: shock_parts.append(f"oil {oil_pct:+.0f}%")
         if gold_pct   != 0: shock_parts.append(f"gold {gold_pct:+.0f}%")
@@ -794,6 +1048,11 @@ def page_scenario_engine(
         if dxy_pct    != 0: shock_parts.append(f"DXY {dxy_pct:+.1f}%")
         if credit_bps != 0: shock_parts.append(f"credit {credit_bps:+d}bps")
         if geo        != 0: shock_parts.append(f"geo-factor {geo:.1f}/10")
+        if natgas_pct != 0: shock_parts.append(f"nat-gas {natgas_pct:+.0f}%")
+        if copper_pct != 0: shock_parts.append(f"copper {copper_pct:+.0f}%")
+        if gdp_pct    != 0: shock_parts.append(f"GDP {gdp_pct:+.1f}%")
+        if cpi_pct    != 0: shock_parts.append(f"CPI {cpi_pct:+.1f}%")
+        if unemp_pct  != 0: shock_parts.append(f"unemployment {unemp_pct:+.1f}pp")
         transmission = ", ".join(shock_parts) or "no active shocks"
 
         _se_ctx = {
@@ -826,4 +1085,56 @@ def page_scenario_engine(
             f'Stress Engineer agent is disabled. Enable it in the AI Workforce panel.</p>',
             unsafe_allow_html=True,
         )
+    # ── Multi-Scenario Comparison ─────────────────────────────────────────
+    _section_label("Multi-Scenario Comparison")
+    st.markdown(
+        f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.7rem;line-height:1.55">'
+        f'Select 2–6 preset scenarios to compare estimated cross-asset impacts side-by-side. '
+        f'Betas are shared across scenarios; only shock inputs differ.</p>',
+        unsafe_allow_html=True,
+    )
+
+    preset_options = [k for k in _PRESETS.keys() if k != "Custom"]
+    compare_selected = st.multiselect(
+        "Scenarios to compare",
+        preset_options,
+        default=preset_options[:3],
+        key="se_compare",
+        help="Select multiple preset scenarios to view side-by-side impact on equities and commodities.",
+    )
+
+    if len(compare_selected) >= 2:
+        # Compute impact for each selected preset
+        compare_impacts: dict[str, dict[str, float]] = {}
+        for sc_name in compare_selected:
+            sc = _PRESETS[sc_name]
+            sc_raw: dict[str, float] = {}
+            if sc.get("oil_pct", 0)  != 0: sc_raw[_SHOCK_PROXY["oil"]]  = sc["oil_pct"]  / 100
+            if sc.get("gold_pct", 0) != 0: sc_raw[_SHOCK_PROXY["gold"]] = sc["gold_pct"] / 100
+            sc_imp = _propagate_shock(betas, sc_raw)
+            sc_fixed: dict[str, float] = {}
+            if sc.get("yield_bps",  0) != 0: sc_fixed["yield_bps"]  = float(sc["yield_bps"])
+            if sc.get("dxy_pct",    0) != 0: sc_fixed["dxy_pct"]    = sc["dxy_pct"]
+            if sc.get("credit_bps", 0) != 0: sc_fixed["credit_bps"] = float(sc["credit_bps"])
+            if sc.get("geo",        0) != 0: sc_fixed["geo"]         = sc["geo"]
+            sc_imp = _apply_fixed_sensitivity(sc_imp, sc_fixed)
+            compare_impacts[sc_name] = sc_imp
+
+        # Also include current custom scenario if active
+        if is_custom and not all_zero:
+            cust_label = st.session_state.get("se_custom_name", "Custom Scenario")
+            compare_impacts[cust_label] = impact
+
+        tab_cmp_eq, tab_cmp_cm = st.tabs(["Equities", "Commodities"])
+        with tab_cmp_eq:
+            _comparison_table(compare_impacts, _EQUITY_TARGETS)
+            _chart(_scenario_comparison_chart(compare_impacts, _EQUITY_TARGETS, height=400))
+        with tab_cmp_cm:
+            _comparison_table(compare_impacts, _COMMODITY_TARGETS)
+            _chart(_scenario_comparison_chart(compare_impacts, _COMMODITY_TARGETS, height=400))
+    elif len(compare_selected) == 1:
+        st.info("Select at least 2 scenarios to run the comparison.")
+    else:
+        st.info("Select 2–6 preset scenarios above to compare cross-asset impacts.")
+
     _page_footer()
