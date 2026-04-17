@@ -86,6 +86,140 @@ def _weight_table(rows: list[tuple[str, str, float, str]]) -> None:
         )
     st.markdown(header + rows_html + '</tbody></table>', unsafe_allow_html=True)
 
+def _signal_card(
+    key: str, name: str, weight: float, color: str,
+    tagline: str, formula_lines: str, note: str = "",
+) -> None:
+    """Compact signal card: weight badge + name + tagline + inline formula block."""
+    pct = f"{weight:.0%}"
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'border-top:2px solid {color};padding:.55rem .75rem;height:100%">'
+        # header row
+        f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:.35rem">'
+        f'<span style="{_M}font-size:9px;font-weight:700;color:#0a0a0a;'
+        f'background:{color};padding:1px 5px;flex-shrink:0">{pct}</span>'
+        f'<span style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed;'
+        f'letter-spacing:.08em;text-transform:uppercase">{name}</span>'
+        f'</div>'
+        # tagline
+        f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0 0 .35rem;line-height:1.5">'
+        f'{tagline}</p>'
+        # formula block
+        f'<div style="background:#040404;border-left:2px solid {color};'
+        f'padding:.3rem .5rem;margin:.2rem 0">'
+        f'<code style="{_M}font-size:8.5px;color:{color};white-space:pre-wrap;line-height:1.6">'
+        f'{formula_lines}</code></div>'
+        + (f'<p style="{_S}font-size:0.60rem;color:{_MUT};margin:.3rem 0 0;'
+           f'line-height:1.4;font-style:italic">{note}</p>' if note else "")
+        + '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _arch_flow() -> None:
+    """Visual 3-layer architecture flow for the composite risk score."""
+    _BG  = "#080808"
+    _BRD = "#1e1e1e"
+    layers = [
+        ("CIS", "40%", "#c0392b",  "Conflict Intensity",   "7 weighted dimensions · per-conflict · state multiplier · staleness cap"),
+        ("TPS", "35%", "#e67e22",  "Transmission Pressure","12 channel weights · supply chain · sanctions · chokepoint · FX"),
+        ("MCS", "25%", "#CFB991",  "Market Confirmation",  "6 orthogonalized price signals · EWM z-scores · live feed"),
+    ]
+    # build layer boxes
+    boxes_html = ""
+    for abbr, pct, col, full, detail in layers:
+        boxes_html += (
+            f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;'
+            f'border-top:3px solid {col};padding:.5rem .7rem;min-width:0">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+            f'<span style="{_M}font-size:13px;font-weight:700;color:{col}">{abbr}</span>'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{col};'
+            f'background:rgba(255,255,255,0.04);padding:1px 5px">{pct}</span></div>'
+            f'<div style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;'
+            f'letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">{full}</div>'
+            f'<div style="{_S}font-size:0.62rem;color:{_MUT};line-height:1.4">{detail}</div>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="margin:.6rem 0">'
+        # top row — 3 layer boxes
+        f'<div style="display:flex;gap:6px;margin-bottom:6px">{boxes_html}</div>'
+        # arrow row
+        f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
+        f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
+        f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ CIS-weighted avg → portfolio score</div>'
+        f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
+        f'</div>'
+        # middle row — assembly + freshness
+        f'<div style="display:flex;gap:6px;margin-bottom:6px">'
+        f'<div style="flex:2;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
+        f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">ASSEMBLY</span><br>'
+        f'<code style="{_M}font-size:9px;color:{_G}">GRS_raw = 0.40·CIS + 0.35·TPS + 0.25·MCS</code>'
+        f'</div>'
+        f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
+        f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">MARKET FRESHNESS</span><br>'
+        f'<code style="{_M}font-size:9px;color:#8E9AAA">rank by CIS × freshness ∈ [0.7, 1.5]</code>'
+        f'</div>'
+        f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
+        f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">SCENARIO MULT</span><br>'
+        f'<code style="{_M}font-size:9px;color:#8E9AAA">× geo_mult  (default 1.0)</code>'
+        f'</div>'
+        f'</div>'
+        # arrow row
+        f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
+        f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
+        f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ clip(·, 0, 100)</div>'
+        f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
+        f'</div>'
+        # output box
+        f'<div style="background:#0a0a0a;border:1px solid {_G};padding:.45rem 1rem;text-align:center">'
+        f'<span style="{_M}font-size:9px;font-weight:700;color:{_G};letter-spacing:.18em">GRS</span>'
+        f'<span style="{_M}font-size:8px;color:{_MUT};margin-left:10px">0 – 100 · Low / Moderate / Elevated / High</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _freshness_range() -> None:
+    """Visual [0.7 … 1.0 … 1.5] range bar for the market freshness multiplier."""
+    st.markdown(
+        f'<div style="margin:.5rem 0 .8rem;padding:.5rem .8rem;background:#080808;border:1px solid #1e1e1e">'
+        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.12em;margin-bottom:.4rem">MARKET FRESHNESS RANGE  ∈  [0.7, 1.5]</div>'
+        f'<div style="position:relative;height:6px;background:#1a1a1a;margin:.3rem 0">'
+        # colored gradient bar
+        f'<div style="position:absolute;left:0;top:0;width:100%;height:6px;'
+        f'background:linear-gradient(to right,#2e7d32,#8E9AAA 37.5%,#CFB991 62.5%,#c0392b)"></div>'
+        # tick marks + labels
+        f'</div>'
+        f'<div style="display:flex;justify-content:space-between;margin-top:.2rem">'
+        f'<span style="{_M}font-size:7.5px;color:#2e7d32">0.7× quiet market</span>'
+        f'<span style="{_M}font-size:7.5px;color:#8E9AAA">1.0× neutral</span>'
+        f'<span style="{_M}font-size:7.5px;color:#c0392b">1.5× crisis signal</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _confidence_component(label: str, weight: str, formula: str, note: str, color: str = _G) -> None:
+    st.markdown(
+        f'<div style="display:flex;gap:10px;align-items:flex-start;'
+        f'padding:.4rem .6rem;border-bottom:1px solid #111;background:#080808">'
+        f'<div style="flex-shrink:0;text-align:right;width:36px">'
+        f'<span style="{_M}font-size:10px;font-weight:700;color:{color}">{weight}</span></div>'
+        f'<div style="flex:1">'
+        f'<div style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed;letter-spacing:.07em;'
+        f'text-transform:uppercase;margin-bottom:2px">{label}</div>'
+        f'<code style="{_M}font-size:8.5px;color:{_DIM}">{formula}</code><br>'
+        f'<span style="{_S}font-size:0.62rem;color:{_MUT}">{note}</span>'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _assumption(text: str) -> None:
     st.markdown(
         f'<div style="display:flex;gap:8px;margin:.15rem 0">'
@@ -261,78 +395,90 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("4 · Market Confirmation Score (MCS)")
     _prose(
-        "The MCS is the market-observable layer of the risk score. It uses six signals extracted "
-        "from live price data to confirm or contradict the structural CIS/TPS signal. If CIS and TPS "
-        "are high but markets are calm, the MCS dampens the overall score. If markets are already "
-        "showing stress, MCS amplifies it. All six sub-signals are orthogonalized to reduce "
-        "multicollinearity."
+        "The MCS is the market-observable layer of the risk score — it uses six live price signals to "
+        "<em>confirm or contradict</em> the structural CIS/TPS verdict. High CIS with calm markets → MCS "
+        "dampens the score (markets have priced it in). Low CIS with spiking volatility → MCS amplifies. "
+        "All signals are orthogonalized to remove multicollinearity before weighting."
     )
-
-    _h3("Sub-signal Weights")
-    _weight_table([
-        ("safe_haven",  "Safe-Haven Bid",             0.22, "Gold 20d cumulative return EWM z-scored (span=60). TLT corroboration adds up to +10 pts when both Gold z>0.5 and TLT z>0.3 simultaneously."),
-        ("oil_gold",    "Oil-Gold Signal",             0.18, "Joint Oil+Gold geopolitical premium. Gold z>1 AND Oil z>1 → +5 flat bonus (regime-independent joint confirmation). Additive: 50 + g_z×14 + o_z×8 + bonus."),
-        ("eq_vol",      "Equity Vol (orthog.)",        0.15, "20d realized vol of S&P 500, Eurostoxx, Nikkei — EWM z-scored. Residualized of macro component. z=0→50, z=+2→74."),
-        ("rates_vol",   "Rates Vol (TLT proxy)",       0.15, "MOVE-proxy: 20d realized vol of TLT (long-duration Treasury ETF). More orthogonal to equity vol than VIX; captures rates-channel transmission."),
-        ("cmd_vol",     "Commodity Vol (residual)",    0.15, "Energy/metals 20d realized vol OLS-residualized on equity vol (trailing 252d). Extracts commodity-specific stress not explained by broad equity fear."),
-        ("corr_accel",  "Correlation Acceleration",   0.15, "2nd derivative of EWM-smoothed avg equity-commodity correlation (span=20). Percentile-ranked in history. Orthogonal to CIS geographic_diffusion (level-based) — eliminates double-counting."),
-    ])
 
     _formula(
         "MCS = 0.22·SafeHaven + 0.18·OilGold + 0.15·EqVol\n"
-        "    + 0.15·RatesVol + 0.15·CmdVol + 0.15·CorrAccel",
-        "All sub-signals normalised to [0, 100] before weighting. "
-        "CorrAccel replaced correlation-level percentile to avoid double-counting CIS geographic_diffusion."
+        "    + 0.15·RatesVol  + 0.15·CmdVol  + 0.15·CorrAccel",
+        "All six sub-signals normalised to [0, 100] via EWM z-scoring before weighting. "
+        "CorrAccel replaces correlation-level percentile to avoid double-counting CIS geographic_diffusion."
     )
 
-    _h3("Sub-signal Construction Detail")
-    col_ms1, col_ms2 = st.columns(2)
-    with col_ms1:
-        _prose("<b style='color:#CFB991'>Safe-Haven Bid</b> — Gold 20d cumulative log-return, EWM z-scored (span=60). "
-               "TLT corroboration: if Gold z > 0.5 and 20d TLT return z > 0.3, adds min(tlt_z × 4, 10) bonus pts. "
-               "Score = clip(50 + z×14 + tlt_boost, 0, 100). Gold is the primary geopolitical safe-haven; "
-               "TLT confirmation filters out USD-specific gold rallies.")
-        _formula(
-            "SafeHaven = clip(50 + g_z × 14 + tlt_boost, 0, 100)\n"
-            "g_z = EWM_zscore(Gold_20d_cumret, span=60)\n"
-            "tlt_boost = min(tlt_z × 4, 10)  if g_z>0.5 and tlt_z>0.3",
-            "tlt_z = 20d TLT return / (TLT daily std × √20)"
+    _h3("Signal Cards")
+    # Row 1
+    r1c1, r1c2, r1c3 = st.columns(3)
+    with r1c1:
+        _signal_card(
+            "safe_haven", "Safe-Haven Bid", 0.22, "#CFB991",
+            "Gold 20d cumulative return EWM z-scored (span=60). "
+            "TLT bond ETF adds corroboration: if Gold z > 0.5 and TLT return z > 0.3, "
+            "+min(tlt_z×4, 10) pts. Filters USD-specific gold rallies from genuine flight-to-safety.",
+            "SafeHaven = clip(50 + g_z×14 + tlt_boost, 0, 100)\n"
+            "tlt_boost = min(tlt_z×4, 10) if g_z>0.5 and tlt_z>0.3\n"
+            "          = 0  otherwise",
+            "tlt_z = 20d TLT return / (std × √20). Cached fetch, TTL=300."
         )
-        _prose("<b style='color:#CFB991'>Oil-Gold Signal</b> — Simultaneous EWM z-scores of 20d cumulative "
-               "log-returns for Gold and the front Oil contract (WTI or Brent, whichever is available). "
-               "The +5 flat bonus when both z > 1 provides a regime-invariant joint premium — "
-               "avoids the zero-collapse of multiplicative bonuses when one signal is near-neutral.")
-        _formula(
+    with r1c2:
+        _signal_card(
+            "oil_gold", "Oil-Gold Signal", 0.18, "#e67e22",
+            "Simultaneous EWM z-scores of 20d cumulative log-returns for Gold and front Oil contract. "
+            "Flat +5 bonus when both z > 1 — regime-invariant joint geopolitical premium. "
+            "Avoids multiplicative zero-collapse when one signal is near-neutral.",
             "OilGold = clip(50 + g_z×14 + o_z×8 + bonus, 0, 100)\n"
             "bonus   = 5.0  if g_z > 1.0 and o_z > 1.0\n"
             "        = 0.0  otherwise",
-            "g_z, o_z: EWM z-scores of 20d rolling sums × 100, span=60."
+            "WTI preferred; falls back to Brent. EWM span=60, clip g_z/o_z to [−4, +4]."
         )
-    with col_ms2:
-        _prose("<b style='color:#CFB991'>Commodity Vol Residual</b> — 20d annualized realized volatility "
-               "of energy/metals returns (WTI, Brent, NatGas, Gold, Silver, Copper), then OLS-residualized "
-               "on equity vol (trailing 252d): cmd_vol_resid = cmd_vol − β×eq_vol. This strips the equity-fear "
-               "component, isolating commodity-specific stress (e.g. supply disruptions not driven by broad risk-off).")
-        _formula(
-            "CmdVol = EWM_zscore(resid, span=60) → score\n"
+    with r1c3:
+        _signal_card(
+            "eq_vol", "Equity Vol", 0.15, "#8E9AAA",
+            "20d realized annualized volatility across S&P 500, Eurostoxx 50, and Nikkei 225 — "
+            "averaged, then EWM z-scored (span=60). Measures broad equity fear. "
+            "z = 0 → score 50; z = +2 → score ≈ 74.",
+            "rv     = eq_r.rolling(20).std() × √252 × 100\n"
+            "z      = EWM_zscore(rv.mean(axis=1), span=60)\n"
+            "EqVol  = clip(50 + z×12, 0, 100)",
+            "Falls back to first 3 columns if named indices unavailable."
+        )
+    # Row 2
+    r2c1, r2c2, r2c3 = st.columns(3)
+    with r2c1:
+        _signal_card(
+            "rates_vol", "Rates Vol", 0.15, "#8E9AAA",
+            "MOVE-proxy: 20d realized vol of TLT (iShares 20Y+ Treasury ETF) price returns. "
+            "More orthogonal to equity vol than VIX. Captures flight-to-safety and rates-channel "
+            "transmission of geopolitical shocks (yield compression = risk-off bid).",
+            "tlt_r     = TLT.pct_change()\n"
+            "rv_tlt    = tlt_r.rolling(20).std() × √252 × 100\n"
+            "RatesVol  = clip(50 + z×10, 0, 100)",
+            "Shared cached 200d TLT fetch (TTL=300). Scale=10 (less sensitive than equity)."
+        )
+    with r2c2:
+        _signal_card(
+            "cmd_vol", "Commodity Vol (residual)", 0.15, "#8E9AAA",
+            "Energy/metals 20d annualized vol (WTI, Brent, NatGas, Gold, Silver, Copper) "
+            "OLS-residualized on equity vol over trailing 252 days. "
+            "Strips equity-fear component — isolates commodity-specific supply-disruption stress.",
             "resid  = rv_cmd − β_OLS × rv_eq\n"
-            "rv_cmd = mean(20d ann. vol of energy/metals)\n"
-            "rv_eq  = mean(20d ann. vol of equity indices)",
-            "OLS over trailing 252 trading days. score = clip(50 + z×11, 0, 100)."
+            "β_OLS  = polyfit(rv_eq[-252:], rv_cmd[-252:], 1)[0]\n"
+            "CmdVol = clip(50 + EWM_zscore(resid)×11, 0, 100)",
+            "Falls back to raw rv_cmd if equity data unavailable or < 30 overlapping obs."
         )
-        _prose("<b style='color:#CFB991'>Correlation Acceleration</b> — Second derivative of the "
-               "EWM-smoothed (span=20) average equity-commodity rolling correlation. "
-               "The first derivative (velocity) measures how fast correlation is changing; "
-               "the second derivative (acceleration) measures whether that rate of change is itself increasing. "
-               "Percentile-ranked in the full history. Orthogonal to the CIS <em>geographic_diffusion</em> "
-               "dimension which already captures correlation <em>level</em> — using acceleration prevents "
-               "double-counting the same information twice in the composite score.")
-        _formula(
-            "smooth   = avg_corr.ewm(span=20).mean()\n"
-            "velocity = smooth.diff()\n"
-            "accel    = velocity.ewm(span=20).mean()\n"
+    with r2c3:
+        _signal_card(
+            "corr_accel", "Correlation Accel", 0.15, "#27ae60",
+            "Second derivative of the EWM-smoothed (span=20) average equity-commodity correlation. "
+            "Captures whether cross-asset coupling is accelerating, not just its level. "
+            "Orthogonal to CIS geographic_diffusion (level-based) — eliminates double-counting.",
+            "smooth    = avg_corr.ewm(span=20).mean()\n"
+            "velocity  = smooth.diff()\n"
+            "accel     = velocity.ewm(span=20).mean()\n"
             "CorrAccel = pct_rank(accel) × 100  ∈ [0, 100]",
-            "Returns 50 if fewer than 90 observations available (neutral fallback)."
+            "Fallback: 50 if < 90 observations. Replaced old correlation-percentile signal."
         )
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -340,167 +486,209 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("5 · Composite Geopolitical Risk Score")
     _prose(
-        "The composite score assembles three independent layers into a single 0–100 index. "
-        "CIS and TPS carry the largest weights because they are structurally grounded in "
-        "analyst assessment of active conflicts. MCS serves as real-time market confirmation. "
-        "A session-dynamic market freshness multiplier ensures the leading conflict "
-        "displayed on the command center reflects <em>today's</em> market moves, not just static intensity. "
-        "A scenario geo-multiplier is applied last for stress scenario analysis."
+        "The composite score assembles CIS, TPS, and MCS into a single 0–100 index. "
+        "A session-dynamic market freshness multiplier re-ranks conflicts by <em>today's</em> market moves "
+        "before aggregation — ensuring the command center reflects live crises, not just historical intensity. "
+        "A scenario geo-multiplier is applied after assembly for stress testing."
     )
 
-    _h3("Top-Level Assembly")
-    _formula(
-        "GRS_raw = 0.40 × CIS_portfolio\n"
-        "        + 0.35 × TPS_portfolio\n"
-        "        + 0.25 × MCS\n\n"
-        "GRS = clip( GRS_raw × geo_mult , 0, 100 )",
-        "geo_mult from active scenario (default 1.0). Hard clip prevents score runaway."
-    )
+    _h3("Architecture")
+    _arch_flow()
 
-    col_l, col_r = st.columns([1, 1])
-    with col_l:
-        _h3("Score Bands")
-        for band, lo, hi, col, interp in [
-            ("CRITICAL", 75, 100, "#c0392b", "Multiple active conflicts + market stress confirmed"),
-            ("ELEVATED", 50,  75, "#e67e22", "Active conflict with significant transmission pressure"),
-            ("MODERATE", 25,  50, _G,        "Latent conflict risk or mild market dislocations"),
-            ("LOW",       0,  25, "#27ae60", "No active conflicts; market signals calm"),
+    _h3("Layer Weights & Score Bands")
+    col_lw, col_sb = st.columns([1, 1])
+    with col_lw:
+        # Proportional weight bars
+        for abbr, full, pct, col, val, rationale in [
+            ("CIS", "Conflict Intensity",    "40%", "#c0392b", 40,
+             "Structural severity — direction and magnitude of active hostilities."),
+            ("TPS", "Transmission Pressure", "35%", "#e67e22", 35,
+             "Channel specificity — which commodities and markets are exposed."),
+            ("MCS", "Market Confirmation",   "25%", _G,        25,
+             "Live signal — confirms or dampens the structural signal."),
         ]:
             st.markdown(
-                f'<div style="display:flex;align-items:center;gap:8px;margin:.2rem 0">'
-                f'<span style="{_M}font-size:7px;font-weight:700;color:{col};width:65px">{band}</span>'
-                f'<span style="{_M}font-size:8px;color:{_DIM}">{lo}–{hi}</span>'
-                f'<span style="{_S}font-size:0.65rem;color:{_MUT};margin-left:4px">{interp}</span>'
+                f'<div style="margin:.35rem 0">'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
+                f'<span style="{_M}font-size:7px;font-weight:700;color:{col}">{abbr} · {full}</span>'
+                f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{pct}</span></div>'
+                f'<div style="background:#1a1a1a;height:4px;position:relative">'
+                f'<div style="background:{col};width:{val*2}px;height:4px;max-width:100%"></div></div>'
+                f'<div style="{_S}font-size:0.62rem;color:{_MUT};margin-top:2px">{rationale}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
-    with col_r:
-        _h3("Layer Rationale")
-        _prose(
-            "<b style='color:#CFB991'>40% CIS</b> — Structural conflict intensity is the primary "
-            "driver. Markets respond to actual conflict severity first.<br><br>"
-            "<b style='color:#CFB991'>35% TPS</b> — Transmission channel specificity ensures "
-            "commodity markets are connected to the right conflicts, not just the most intense ones.<br><br>"
-            "<b style='color:#CFB991'>25% MCS</b> — Market confirmation prevents false signals: "
-            "a high CIS with calm markets suggests pricing-in has already occurred."
+    with col_sb:
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;padding:.5rem .7rem">'
+            f'<p style="{_M}font-size:7px;color:{_MUT};letter-spacing:.12em;margin-bottom:.4rem">SCORE BANDS</p>'
+            + "".join(
+                f'<div style="display:flex;align-items:center;gap:8px;padding:.25rem 0;'
+                f'border-bottom:1px solid #111">'
+                f'<div style="width:4px;height:24px;background:{c};flex-shrink:0"></div>'
+                f'<div>'
+                f'<span style="{_M}font-size:7px;font-weight:700;color:{c}">{band} · {lo}–{hi}</span><br>'
+                f'<span style="{_S}font-size:0.62rem;color:{_MUT}">{interp}</span>'
+                f'</div></div>'
+                for band, lo, hi, c, interp in [
+                    ("HIGH/CRISIS", 75, 100, "#c0392b", "Active conflict + market stress confirmed"),
+                    ("ELEVATED",    50,  75, "#e67e22", "Significant transmission pressure building"),
+                    ("MODERATE",    25,  50, _G,        "Latent risk or mild market dislocations"),
+                    ("LOW",          0,  25, "#27ae60", "Calm — no active confirmed spillover"),
+                ]
+            )
+            + f'</div>',
+            unsafe_allow_html=True,
         )
 
     _h3("Portfolio Aggregation")
-    _prose(
-        "CIS_portfolio and TPS_portfolio are computed as CIS-intensity-weighted averages across all "
-        "active conflicts in the registry. This means high-CIS conflicts contribute proportionally more "
-        "to the portfolio score than low-intensity latent conflicts."
-    )
     _formula(
-        "CIS_portfolio = Σᵢ [ CIS(i) × w(i) ] / Σᵢ w(i)\n"
-        "TPS_portfolio = Σᵢ [ TPS(i) × w(i) ] / Σᵢ w(i)\n\n"
-        "where w(i) = CIS(i)   (intensity weighting)",
-        "Active conflicts only. Latent/frozen conflicts remain in registry but state_mult discounts their CIS/TPS."
+        "CIS_portfolio = Σᵢ [ CIS(i) × CIS(i) ] / Σᵢ CIS(i)   ← intensity-weighted avg\n"
+        "TPS_portfolio = Σᵢ [ TPS(i) × CIS(i) ] / Σᵢ CIS(i)   ← same weights\n\n"
+        "GRS_raw = 0.40 × CIS_portfolio + 0.35 × TPS_portfolio + 0.25 × MCS\n"
+        "GRS     = clip( GRS_raw × geo_mult , 0, 100 )",
+        "High-CIS conflicts dominate. Latent/frozen conflicts already discounted via state_mult in CIS computation."
     )
 
-    _h3("Market Freshness Multiplier — Session-Dynamic Conflict Ranking")
+    _h3("Market Freshness Multiplier")
     _prose(
-        "Static CIS scores rank conflicts by structural intensity alone. But which conflict is "
-        "<em>currently moving markets</em> may differ from which is most intense. The market freshness "
-        "layer assigns each conflict a multiplier in [0.7, 1.5] based on how actively its primary "
-        "transmission channels are moving in <em>today's</em> live prices. The lead conflict displayed "
-        "on the command center is ranked by <code>CIS × market_freshness</code>, not raw CIS."
+        "Which conflict is <em>currently moving markets</em> differs session-to-session. "
+        "The freshness layer maps each conflict's live transmission channel activity to a multiplier "
+        "∈ [0.7, 1.5]. The command center's Lead Conflict is ranked by "
+        "<code style='font-family:monospace;font-size:0.75em'>CIS × market_freshness</code>, "
+        "not raw CIS — so a quiet Russia day won't outrank an active Hormuz blockade."
     )
+    _freshness_range()
     _formula(
-        "market_freshness(c) = clip( 0.7 + avg_signal × 0.8,  0.7, 1.5 )\n\n"
-        "avg_signal = mean of active channel signals:\n"
-        "  oil_signal  = max(|brent_1d|/3, |wti_1d|/3, tanker_disruption) × oil_weight\n"
-        "  ng_signal   = (|natgas_1d|/5) × energy_infra_weight\n"
-        "  agri_signal = (|wheat_1d|/4)  × agriculture_weight\n"
-        "  eq_signal   = (|vix_1d|/5)    × equity_sector_weight\n\n"
-        "Channel signals only fired if their conflict transmission weight > 0.3",
-        "Signals fed from live price data (Brent, WTI, NatGas, Wheat 1d % changes + "
-        "PortWatch tanker disruption index). Updated every 5 min (TTL=300)."
+        "market_freshness(c) = clip( 0.7 + mean(signals) × 0.8 ,  0.7, 1.5 )\n\n"
+        "signals (fired only if conflict transmission weight > 0.3):\n"
+        "  oil_sig  = max(|brent_1d|/3, |wti_1d|/3, tanker_disruption) × oil_weight\n"
+        "  ng_sig   = (|natgas_1d| / 5)  × energy_infra_weight\n"
+        "  agri_sig = (|wheat_1d|  / 4)  × agriculture_weight\n"
+        "  eq_sig   = (|vix_1d|    / 5)  × equity_sector_weight",
+        "Live inputs: Brent/WTI/NatGas/Wheat 1d % changes + PortWatch tanker disruption index. TTL=300s."
     )
-    col_mf1, col_mf2 = st.columns(2)
-    with col_mf1:
-        _prose("<b style='color:#CFB991'>Example — Hormuz Blockade:</b> Iran/Hormuz has oil_gas=0.97, "
-               "chokepoint=0.97. If Brent spikes +4% intraday and PortWatch reports tanker count at "
-               "60% of baseline (disruption=0.40), oil_signal ≈ 0.97×max(1.33, 1.33, 0.40) = 1.29 → "
-               "market_freshness = 1.5 (capped). CIS×1.5 → Hormuz ranks #1 unambiguously.")
-    with col_mf2:
-        _prose("<b style='color:#CFB991'>Example — Russia-Ukraine (quiescent day):</b> If NatGas is "
-               "flat (+0.3%), Wheat is +1%, and no major oil move, Russia's "
-               "avg_signal ≈ 0.06×0.5 + 0.08×0.25 = 0.05 → market_freshness = 0.74. "
-               "CIS×0.74 → Russia drops in ranking even if its raw CIS is high.")
-
-    _h3("Staleness Enforcement")
-    _prose(
-        "Conflicts whose last_updated date is stale receive automatic penalties to prevent "
-        "unmaintained manual data from inflating rank. Two thresholds apply:"
-    )
+    # Example boxes
     st.markdown(
-        f'<div style="display:flex;gap:10px;margin:.4rem 0">'
-        + "".join(
-            f'<div style="background:#080808;border:1px solid #1e1e1e;padding:.4rem .7rem;flex:1">'
-            f'<span style="{_M}font-size:8px;font-weight:700;color:{c}">{s}</span><br>'
-            f'<span style="{_S}font-size:0.68rem;color:{_DIM};margin-top:3px;display:block">{d}</span></div>'
-            for s, c, d in [
-                ("WARN  · > 90 days stale",  "#e67e22",
-                 "Confidence score × 0.90 — soft reduction; data is ageing."),
-                ("CAP   · > 180 days stale", "#c0392b",
-                 "CIS capped at 65.0 AND confidence × 0.70 — stale data cannot drive the lead conflict rank."),
-            ]
-        )
-        + "</div>",
+        f'<div style="display:flex;gap:8px;margin:.4rem 0">'
+        f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid #c0392b;padding:.45rem .7rem">'
+        f'<p style="{_M}font-size:7px;font-weight:700;color:#c0392b;margin:0 0 4px;letter-spacing:.08em">'
+        f'EXAMPLE  ·  HORMUZ BLOCKADE  (high freshness)</p>'
+        f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0;line-height:1.5">'
+        f'Iran/Hormuz: oil_gas=0.97, chokepoint=0.97. Brent +4% intraday, PortWatch disruption=0.40.<br>'
+        f'oil_sig ≈ 0.97 × max(1.33, 1.33, 0.40) = 1.29 → mean([1.0]) = 1.0 →<br>'
+        f'<b style="color:#c0392b">market_freshness = 1.5 (capped) → Hormuz ranks #1</b></p>'
+        f'</div>'
+        f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid #27ae60;padding:.45rem .7rem">'
+        f'<p style="{_M}font-size:7px;font-weight:700;color:#27ae60;margin:0 0 4px;letter-spacing:.08em">'
+        f'EXAMPLE  ·  RUSSIA-UKRAINE  (quiescent day)</p>'
+        f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0;line-height:1.5">'
+        f'NatGas flat (+0.3%), Wheat +1%, no oil move. Both signals below 0.3 threshold → not fired.<br>'
+        f'No active signals → mean([]) = 0 →<br>'
+        f'<b style="color:#27ae60">market_freshness = 0.7 → Russia drops in ranking</b></p>'
+        f'</div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
-    _h3("Confidence Score & Intervals")
-    _prose(
-        "Each composite score is accompanied by a confidence value [0,1] and a ±uncertainty band. "
-        "Confidence blends conflict model data quality with market signal agreement and data availability. "
-        "The uncertainty band is computed via quadrature combination of per-layer errors, so layers with "
-        "lower confidence contribute wider intervals."
-    )
-    _formula(
-        "Confidence = 0.50 × conflict_conf\n"
-        "           + 0.30 × mcs_agreement\n"
-        "           + 0.20 × data_availability\n\n"
-        "conflict_conf  = CIS-weighted avg of per-conflict confidence scores\n"
-        "               = 0.30×source_cov + 0.25×data_conf + 0.25×freshness + 0.20×completeness\n"
-        "mcs_agreement  = 1 − std(MCS sub-signals) / 50\n"
-        "data_avail     = 1.0 if avg_corr non-empty, else 0.5",
-        "Per-conflict confidence also applies staleness multipliers (×0.90 at 90d, ×0.70 at 180d)."
-    )
-    _formula(
-        "σ_CIS  = (1 − conflict_conf) × CIS_portfolio  × 0.40\n"
-        "σ_TPS  = (1 − conflict_conf) × TPS_portfolio  × 0.35\n"
-        "σ_MCS  = (1 − mcs_agreement) × MCS            × 0.25\n\n"
-        "Uncertainty = √(σ_CIS² + σ_TPS² + σ_MCS²)\n"
-        "score_low  = max(0,   GRS − Uncertainty)\n"
-        "score_high = min(100, GRS + Uncertainty)",
-        "Quadrature combination (RSS) — assumes layer errors are independent. "
-        "At 100% confidence → Uncertainty = 0; at 0% → maximum layer-weighted error."
+    _h3("Staleness Enforcement")
+    _prose("Conflicts not updated within threshold windows receive automatic penalties — "
+           "preventing stale manual data from outranking freshly-confirmed crises.")
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;margin:.4rem 0">'
+        # timeline bar
+        f'<div style="display:flex;height:5px">'
+        f'<div style="flex:1;background:#27ae60"></div>'
+        f'<div style="flex:1;background:#e67e22"></div>'
+        f'<div style="flex:1;background:#c0392b"></div>'
+        f'</div>'
+        f'<div style="display:flex">'
+        + "".join(
+            f'<div style="flex:1;padding:.45rem .7rem;background:#080808;border-right:1px solid #111">'
+            f'<div style="{_M}font-size:7px;font-weight:700;color:{c};letter-spacing:.08em;margin-bottom:3px">{s}</div>'
+            f'<div style="{_M}font-size:8px;color:#e8e9ed;margin-bottom:2px">{threshold}</div>'
+            f'<div style="{_S}font-size:0.65rem;color:{_MUT}">{effect}</div>'
+            f'</div>'
+            for s, c, threshold, effect in [
+                ("FRESH",  "#27ae60", "≤ 90 days", "Full confidence. No penalty applied."),
+                ("WARN",   "#e67e22", "91 – 180 days", "Confidence score × 0.90. CIS unaffected; data is ageing."),
+                ("STALE",  "#c0392b", "> 180 days", "CIS hard-capped at 65.0 · confidence × 0.70. Cannot rank as lead conflict."),
+            ]
+        )
+        + f'</div></div>',
+        unsafe_allow_html=True,
     )
 
-    _h3("Historical Score (risk_score_history)")
+    _h3("Confidence Score & Uncertainty Intervals")
     _prose(
-        "The historical risk score chart plots a daily rolling index back to the selected date range. "
-        "Because structural CIS/TPS scores are not available at daily frequency historically "
-        "(they reflect analyst point-in-time assessments), the historical series uses market-observable "
-        "signals only. Weights are aligned to approximate the live model's top drivers:"
+        "Every GRS output includes a confidence value [0,1] and symmetric ±uncertainty band. "
+        "Confidence weights three independent quality signals. The uncertainty band uses "
+        "quadrature (RSS) combination of per-layer errors — wider when data is stale or market signals disagree."
+    )
+    # Confidence components
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;margin:.4rem 0 .2rem">'
+        f'<div style="background:#0a0a0a;padding:.35rem .7rem;border-bottom:1px solid #1e1e1e">'
+        f'<span style="{_M}font-size:7px;font-weight:700;color:{_G};letter-spacing:.12em">'
+        f'CONFIDENCE  =  0.50 × conflict_conf  +  0.30 × mcs_agreement  +  0.20 × data_availability</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    _confidence_component(
+        "Conflict Confidence", "50%",
+        "0.30×source_cov + 0.25×data_conf + 0.25×freshness + 0.20×completeness",
+        "CIS-intensity-weighted avg across active conflicts. Staleness multipliers applied (×0.90 at 90d, ×0.70 at 180d).",
+        "#c0392b",
+    )
+    _confidence_component(
+        "MCS Signal Agreement", "30%",
+        "1 − std(MCS sub-signals) / 50",
+        "High agreement (all 6 signals point same direction) → score near 1.0. Divergence → lower weight on MCS.",
+        "#e67e22",
+    )
+    _confidence_component(
+        "Data Availability", "20%",
+        "1.0 if avg_corr non-empty  ·  0.5 otherwise",
+        "Penalizes sessions where cross-asset correlation series is unavailable (data load failure).",
+        _G,
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    _formula(
+        "σ_CIS  = (1 − conflict_conf) × CIS_portfolio × 0.40\n"
+        "σ_TPS  = (1 − conflict_conf) × TPS_portfolio × 0.35\n"
+        "σ_MCS  = (1 − mcs_agreement) × MCS           × 0.25\n\n"
+        "Uncertainty = √( σ_CIS² + σ_TPS² + σ_MCS² )\n"
+        "score_low   = max(0,   GRS − Uncertainty)\n"
+        "score_high  = min(100, GRS + Uncertainty)",
+        "Quadrature (RSS) — assumes layer errors are independent. "
+        "At 100% confidence → Uncertainty = 0. At 0% → uncertainty = max layer-weighted error."
+    )
+
+    _h3("Historical Score  (risk_score_history)")
+    _prose(
+        "The historical chart plots a daily rolling index over the selected date range. "
+        "Structural CIS/TPS are not available at daily frequency (point-in-time analyst snapshots), "
+        "so the historical series uses market-observable signals only — weighted to approximate "
+        "the live model's dominant drivers."
     )
     _weight_table([
-        ("eq_vol",     "Equity Vol",            0.40, "Dominant driver in live model — replicated from 20d realized vol EWM z-score."),
-        ("oil_gold",   "Oil-Gold Signal",        0.35, "Second driver — same construction as live: g_z×14 + o_z×8 + flat bonus."),
-        ("cmd_vol",    "Commodity Vol",          0.13, "Residualized commodity vol — same construction as live."),
-        ("corr_accel", "Correlation Accel",      0.12, "2nd derivative of corr — same construction as live. Replaces old corr-pct (0.30 weight)."),
+        ("eq_vol",     "Equity Vol (hist.)",    0.40, "Dominant live driver — 20d realized vol EWM z-score. Matches live construction exactly."),
+        ("oil_gold",   "Oil-Gold (hist.)",       0.35, "Same construction as live: g_z×14 + o_z×8 + flat +5 bonus. Rolling EWM z-scores."),
+        ("cmd_vol",    "Commodity Vol (hist.)",  0.13, "Residualized commodity vol — same construction as live MCS sub-signal."),
+        ("corr_accel", "Corr. Accel (hist.)",   0.12, "2nd derivative of corr — same construction as live. Replaced old corr-pct (was 0.30 weight)."),
     ])
     _formula(
         "HistScore(t) = 0.40·EqVol(t) + 0.35·OilGold(t)\n"
         "             + 0.13·CmdVol(t) + 0.12·CorrAccel(t)",
-        "Rolling daily series. All signals use EWM z-scoring (span=60) clipped to [0,100]."
+        "Rolling daily. All signals EWM z-scored (span=60), clipped to [0, 100] before weighting."
     )
     _section_note(
-        "The historical series will not exactly match the live score on any given day because "
-        "the live score includes CIS/TPS (40%+35% structural layers) which are not backcasted. "
-        "The historical series is best interpreted as a market-stress proxy, not a reconstructed GRS."
+        "HistScore ≠ GRS on any given day. The live score includes 40%+35% structural layers (CIS/TPS) "
+        "which are not backcasted. Treat HistScore as a market-stress proxy — directionally aligned "
+        "with GRS but not numerically equivalent."
     )
 
     # ══════════════════════════════════════════════════════════════════════════
