@@ -270,35 +270,91 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
 
     _h3("Sub-signal Weights")
     _weight_table([
-        ("safe_haven",  "Safe-Haven Bid",             0.22, "Gold/USD upside relative to equity vol — clearest geopolitical signal in prices."),
-        ("oil_gold",    "Oil-Gold Signal",             0.18, "Simultaneous oil and gold spikes: joint move = geopolitical, not purely cyclical."),
-        ("eq_vol",      "Equity Vol (orthog.)",        0.15, "VIX proxy — residualized to remove cyclical component. Stress indicator."),
-        ("rates_vol",   "Rates Vol (TLT proxy)",       0.15, "Treasury price volatility. Flight-to-safety during geopolitical shocks raises bond prices."),
-        ("cmd_vol",     "Commodity Vol (residual)",    0.15, "Commodity return volatility after removing equity component. Pure commodity stress."),
-        ("spillover",   "Cross-Asset Spillover",       0.15, "Percentile of current 60d avg equity-commodity correlation in its historical distribution."),
+        ("safe_haven",  "Safe-Haven Bid",             0.22, "Gold 20d cumulative return EWM z-scored (span=60). TLT corroboration adds up to +10 pts when both Gold z>0.5 and TLT z>0.3 simultaneously."),
+        ("oil_gold",    "Oil-Gold Signal",             0.18, "Joint Oil+Gold geopolitical premium. Gold z>1 AND Oil z>1 → +5 flat bonus (regime-independent joint confirmation). Additive: 50 + g_z×14 + o_z×8 + bonus."),
+        ("eq_vol",      "Equity Vol (orthog.)",        0.15, "20d realized vol of S&P 500, Eurostoxx, Nikkei — EWM z-scored. Residualized of macro component. z=0→50, z=+2→74."),
+        ("rates_vol",   "Rates Vol (TLT proxy)",       0.15, "MOVE-proxy: 20d realized vol of TLT (long-duration Treasury ETF). More orthogonal to equity vol than VIX; captures rates-channel transmission."),
+        ("cmd_vol",     "Commodity Vol (residual)",    0.15, "Energy/metals 20d realized vol OLS-residualized on equity vol (trailing 252d). Extracts commodity-specific stress not explained by broad equity fear."),
+        ("corr_accel",  "Correlation Acceleration",   0.15, "2nd derivative of EWM-smoothed avg equity-commodity correlation (span=20). Percentile-ranked in history. Orthogonal to CIS geographic_diffusion (level-based) — eliminates double-counting."),
     ])
 
     _formula(
         "MCS = 0.22·SafeHaven + 0.18·OilGold + 0.15·EqVol\n"
-        "    + 0.15·RatesVol + 0.15·CmdVol + 0.15·Spillover",
-        "All sub-signals normalised to [0, 100] before weighting."
+        "    + 0.15·RatesVol + 0.15·CmdVol + 0.15·CorrAccel",
+        "All sub-signals normalised to [0, 100] before weighting. "
+        "CorrAccel replaced correlation-level percentile to avoid double-counting CIS geographic_diffusion."
     )
+
+    _h3("Sub-signal Construction Detail")
+    col_ms1, col_ms2 = st.columns(2)
+    with col_ms1:
+        _prose("<b style='color:#CFB991'>Safe-Haven Bid</b> — Gold 20d cumulative log-return, EWM z-scored (span=60). "
+               "TLT corroboration: if Gold z > 0.5 and 20d TLT return z > 0.3, adds min(tlt_z × 4, 10) bonus pts. "
+               "Score = clip(50 + z×14 + tlt_boost, 0, 100). Gold is the primary geopolitical safe-haven; "
+               "TLT confirmation filters out USD-specific gold rallies.")
+        _formula(
+            "SafeHaven = clip(50 + g_z × 14 + tlt_boost, 0, 100)\n"
+            "g_z = EWM_zscore(Gold_20d_cumret, span=60)\n"
+            "tlt_boost = min(tlt_z × 4, 10)  if g_z>0.5 and tlt_z>0.3",
+            "tlt_z = 20d TLT return / (TLT daily std × √20)"
+        )
+        _prose("<b style='color:#CFB991'>Oil-Gold Signal</b> — Simultaneous EWM z-scores of 20d cumulative "
+               "log-returns for Gold and the front Oil contract (WTI or Brent, whichever is available). "
+               "The +5 flat bonus when both z > 1 provides a regime-invariant joint premium — "
+               "avoids the zero-collapse of multiplicative bonuses when one signal is near-neutral.")
+        _formula(
+            "OilGold = clip(50 + g_z×14 + o_z×8 + bonus, 0, 100)\n"
+            "bonus   = 5.0  if g_z > 1.0 and o_z > 1.0\n"
+            "        = 0.0  otherwise",
+            "g_z, o_z: EWM z-scores of 20d rolling sums × 100, span=60."
+        )
+    with col_ms2:
+        _prose("<b style='color:#CFB991'>Commodity Vol Residual</b> — 20d annualized realized volatility "
+               "of energy/metals returns (WTI, Brent, NatGas, Gold, Silver, Copper), then OLS-residualized "
+               "on equity vol (trailing 252d): cmd_vol_resid = cmd_vol − β×eq_vol. This strips the equity-fear "
+               "component, isolating commodity-specific stress (e.g. supply disruptions not driven by broad risk-off).")
+        _formula(
+            "CmdVol = EWM_zscore(resid, span=60) → score\n"
+            "resid  = rv_cmd − β_OLS × rv_eq\n"
+            "rv_cmd = mean(20d ann. vol of energy/metals)\n"
+            "rv_eq  = mean(20d ann. vol of equity indices)",
+            "OLS over trailing 252 trading days. score = clip(50 + z×11, 0, 100)."
+        )
+        _prose("<b style='color:#CFB991'>Correlation Acceleration</b> — Second derivative of the "
+               "EWM-smoothed (span=20) average equity-commodity rolling correlation. "
+               "The first derivative (velocity) measures how fast correlation is changing; "
+               "the second derivative (acceleration) measures whether that rate of change is itself increasing. "
+               "Percentile-ranked in the full history. Orthogonal to the CIS <em>geographic_diffusion</em> "
+               "dimension which already captures correlation <em>level</em> — using acceleration prevents "
+               "double-counting the same information twice in the composite score.")
+        _formula(
+            "smooth   = avg_corr.ewm(span=20).mean()\n"
+            "velocity = smooth.diff()\n"
+            "accel    = velocity.ewm(span=20).mean()\n"
+            "CorrAccel = pct_rank(accel) × 100  ∈ [0, 100]",
+            "Returns 50 if fewer than 90 observations available (neutral fallback)."
+        )
 
     # ══════════════════════════════════════════════════════════════════════════
     # 5. COMPOSITE RISK SCORE
     # ══════════════════════════════════════════════════════════════════════════
     _h2("5 · Composite Geopolitical Risk Score")
     _prose(
-        "The composite score assembles the three layers into a single 0–100 index. "
+        "The composite score assembles three independent layers into a single 0–100 index. "
         "CIS and TPS carry the largest weights because they are structurally grounded in "
-        "analyst assessment of active conflicts. MCS serves as a real-time market confirmation "
-        "signal. A scenario geo-multiplier is applied last, allowing stress scenario analysis "
-        "to scale the score without altering the underlying layers."
+        "analyst assessment of active conflicts. MCS serves as real-time market confirmation. "
+        "A session-dynamic market freshness multiplier ensures the leading conflict "
+        "displayed on the command center reflects <em>today's</em> market moves, not just static intensity. "
+        "A scenario geo-multiplier is applied last for stress scenario analysis."
     )
 
+    _h3("Top-Level Assembly")
     _formula(
-        "GRS = clip( [0.40 × CIS_portfolio + 0.35 × TPS_portfolio + 0.25 × MCS] × geo_mult , 0, 100)",
-        "CIS_portfolio and TPS_portfolio are CIS-intensity-weighted averages across all active conflicts."
+        "GRS_raw = 0.40 × CIS_portfolio\n"
+        "        + 0.35 × TPS_portfolio\n"
+        "        + 0.25 × MCS\n\n"
+        "GRS = clip( GRS_raw × geo_mult , 0, 100 )",
+        "geo_mult from active scenario (default 1.0). Hard clip prevents score runaway."
     )
 
     col_l, col_r = st.columns([1, 1])
@@ -324,10 +380,128 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "<b style='color:#CFB991'>40% CIS</b> — Structural conflict intensity is the primary "
             "driver. Markets respond to actual conflict severity first.<br><br>"
             "<b style='color:#CFB991'>35% TPS</b> — Transmission channel specificity ensures "
-            "commodity markets are connected to the right conflicts.<br><br>"
+            "commodity markets are connected to the right conflicts, not just the most intense ones.<br><br>"
             "<b style='color:#CFB991'>25% MCS</b> — Market confirmation prevents false signals: "
             "a high CIS with calm markets suggests pricing-in has already occurred."
         )
+
+    _h3("Portfolio Aggregation")
+    _prose(
+        "CIS_portfolio and TPS_portfolio are computed as CIS-intensity-weighted averages across all "
+        "active conflicts in the registry. This means high-CIS conflicts contribute proportionally more "
+        "to the portfolio score than low-intensity latent conflicts."
+    )
+    _formula(
+        "CIS_portfolio = Σᵢ [ CIS(i) × w(i) ] / Σᵢ w(i)\n"
+        "TPS_portfolio = Σᵢ [ TPS(i) × w(i) ] / Σᵢ w(i)\n\n"
+        "where w(i) = CIS(i)   (intensity weighting)",
+        "Active conflicts only. Latent/frozen conflicts remain in registry but state_mult discounts their CIS/TPS."
+    )
+
+    _h3("Market Freshness Multiplier — Session-Dynamic Conflict Ranking")
+    _prose(
+        "Static CIS scores rank conflicts by structural intensity alone. But which conflict is "
+        "<em>currently moving markets</em> may differ from which is most intense. The market freshness "
+        "layer assigns each conflict a multiplier in [0.7, 1.5] based on how actively its primary "
+        "transmission channels are moving in <em>today's</em> live prices. The lead conflict displayed "
+        "on the command center is ranked by <code>CIS × market_freshness</code>, not raw CIS."
+    )
+    _formula(
+        "market_freshness(c) = clip( 0.7 + avg_signal × 0.8,  0.7, 1.5 )\n\n"
+        "avg_signal = mean of active channel signals:\n"
+        "  oil_signal  = max(|brent_1d|/3, |wti_1d|/3, tanker_disruption) × oil_weight\n"
+        "  ng_signal   = (|natgas_1d|/5) × energy_infra_weight\n"
+        "  agri_signal = (|wheat_1d|/4)  × agriculture_weight\n"
+        "  eq_signal   = (|vix_1d|/5)    × equity_sector_weight\n\n"
+        "Channel signals only fired if their conflict transmission weight > 0.3",
+        "Signals fed from live price data (Brent, WTI, NatGas, Wheat 1d % changes + "
+        "PortWatch tanker disruption index). Updated every 5 min (TTL=300)."
+    )
+    col_mf1, col_mf2 = st.columns(2)
+    with col_mf1:
+        _prose("<b style='color:#CFB991'>Example — Hormuz Blockade:</b> Iran/Hormuz has oil_gas=0.97, "
+               "chokepoint=0.97. If Brent spikes +4% intraday and PortWatch reports tanker count at "
+               "60% of baseline (disruption=0.40), oil_signal ≈ 0.97×max(1.33, 1.33, 0.40) = 1.29 → "
+               "market_freshness = 1.5 (capped). CIS×1.5 → Hormuz ranks #1 unambiguously.")
+    with col_mf2:
+        _prose("<b style='color:#CFB991'>Example — Russia-Ukraine (quiescent day):</b> If NatGas is "
+               "flat (+0.3%), Wheat is +1%, and no major oil move, Russia's "
+               "avg_signal ≈ 0.06×0.5 + 0.08×0.25 = 0.05 → market_freshness = 0.74. "
+               "CIS×0.74 → Russia drops in ranking even if its raw CIS is high.")
+
+    _h3("Staleness Enforcement")
+    _prose(
+        "Conflicts whose last_updated date is stale receive automatic penalties to prevent "
+        "unmaintained manual data from inflating rank. Two thresholds apply:"
+    )
+    st.markdown(
+        f'<div style="display:flex;gap:10px;margin:.4rem 0">'
+        + "".join(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;padding:.4rem .7rem;flex:1">'
+            f'<span style="{_M}font-size:8px;font-weight:700;color:{c}">{s}</span><br>'
+            f'<span style="{_S}font-size:0.68rem;color:{_DIM};margin-top:3px;display:block">{d}</span></div>'
+            for s, c, d in [
+                ("WARN  · > 90 days stale",  "#e67e22",
+                 "Confidence score × 0.90 — soft reduction; data is ageing."),
+                ("CAP   · > 180 days stale", "#c0392b",
+                 "CIS capped at 65.0 AND confidence × 0.70 — stale data cannot drive the lead conflict rank."),
+            ]
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    _h3("Confidence Score & Intervals")
+    _prose(
+        "Each composite score is accompanied by a confidence value [0,1] and a ±uncertainty band. "
+        "Confidence blends conflict model data quality with market signal agreement and data availability. "
+        "The uncertainty band is computed via quadrature combination of per-layer errors, so layers with "
+        "lower confidence contribute wider intervals."
+    )
+    _formula(
+        "Confidence = 0.50 × conflict_conf\n"
+        "           + 0.30 × mcs_agreement\n"
+        "           + 0.20 × data_availability\n\n"
+        "conflict_conf  = CIS-weighted avg of per-conflict confidence scores\n"
+        "               = 0.30×source_cov + 0.25×data_conf + 0.25×freshness + 0.20×completeness\n"
+        "mcs_agreement  = 1 − std(MCS sub-signals) / 50\n"
+        "data_avail     = 1.0 if avg_corr non-empty, else 0.5",
+        "Per-conflict confidence also applies staleness multipliers (×0.90 at 90d, ×0.70 at 180d)."
+    )
+    _formula(
+        "σ_CIS  = (1 − conflict_conf) × CIS_portfolio  × 0.40\n"
+        "σ_TPS  = (1 − conflict_conf) × TPS_portfolio  × 0.35\n"
+        "σ_MCS  = (1 − mcs_agreement) × MCS            × 0.25\n\n"
+        "Uncertainty = √(σ_CIS² + σ_TPS² + σ_MCS²)\n"
+        "score_low  = max(0,   GRS − Uncertainty)\n"
+        "score_high = min(100, GRS + Uncertainty)",
+        "Quadrature combination (RSS) — assumes layer errors are independent. "
+        "At 100% confidence → Uncertainty = 0; at 0% → maximum layer-weighted error."
+    )
+
+    _h3("Historical Score (risk_score_history)")
+    _prose(
+        "The historical risk score chart plots a daily rolling index back to the selected date range. "
+        "Because structural CIS/TPS scores are not available at daily frequency historically "
+        "(they reflect analyst point-in-time assessments), the historical series uses market-observable "
+        "signals only. Weights are aligned to approximate the live model's top drivers:"
+    )
+    _weight_table([
+        ("eq_vol",     "Equity Vol",            0.40, "Dominant driver in live model — replicated from 20d realized vol EWM z-score."),
+        ("oil_gold",   "Oil-Gold Signal",        0.35, "Second driver — same construction as live: g_z×14 + o_z×8 + flat bonus."),
+        ("cmd_vol",    "Commodity Vol",          0.13, "Residualized commodity vol — same construction as live."),
+        ("corr_accel", "Correlation Accel",      0.12, "2nd derivative of corr — same construction as live. Replaces old corr-pct (0.30 weight)."),
+    ])
+    _formula(
+        "HistScore(t) = 0.40·EqVol(t) + 0.35·OilGold(t)\n"
+        "             + 0.13·CmdVol(t) + 0.12·CorrAccel(t)",
+        "Rolling daily series. All signals use EWM z-scoring (span=60) clipped to [0,100]."
+    )
+    _section_note(
+        "The historical series will not exactly match the live score on any given day because "
+        "the live score includes CIS/TPS (40%+35% structural layers) which are not backcasted. "
+        "The historical series is best interpreted as a market-stress proxy, not a reconstructed GRS."
+    )
 
     # ══════════════════════════════════════════════════════════════════════════
     # 6. NEWS GPR LAYER
