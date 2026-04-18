@@ -245,3 +245,58 @@ When this dashboard is at its best, an analyst visiting the command center shoul
 ---
 
 *Update this file by changing `⬜ Open` → `✅ Fixed` and filling in `Fixed On` date whenever a gap is resolved.*
+
+---
+
+## Section 4 — Why 46,876 Lines Wasn't Enough
+
+> **The paradox: a near-50k line codebase that couldn't answer its own thesis question.**
+
+The project has 46,876 lines of Python across 85 files. A mid-scale production fintech application. And yet, before the audit pass, an analyst sitting at the command center could not answer: *"What percentage of DAX variance last week was driven by commodity shocks?"* — the literal thesis of the project.
+
+This is not a paradox. It is a pattern with a name.
+
+---
+
+### The Code Budget Breakdown
+
+| Layer | Lines | % of Total | Analytical Value |
+|-------|-------|-----------|-----------------|
+| UI rendering (Streamlit HTML/CSS) | ~22,000 | 47% | Zero — display only |
+| Data loading, wrangling, validation | ~6,000 | 13% | Infrastructure |
+| Agent orchestration, dialogue, benchmarks | ~2,700 | 6% | Meta-layer |
+| Configuration, hardcoded registries (CONFLICTS, WAR_DATA) | ~2,500 | 5% | Static, not live |
+| Actual quantitative analysis | ~9,700 | 21% | The core |
+| Reports, freshness, trace logging, misc | ~4,000 | 8% | Support |
+
+**The core analytical engine — spillover.py, correlations.py, risk_score.py, conflict_model.py — is ~9,700 lines. That is 21% of the codebase answering 100% of the thesis.**
+
+The other 79% is scaffolding that makes the 21% look impressive.
+
+---
+
+### The Four Root Causes
+
+**1. UI-first architecture.**
+The largest files are `home.py` (1,969 lines), `model_accuracy.py` (2,007 lines), `macro_dashboard.py` (1,663 lines). The most complex file in the project is a display page, not an analytical model. When code budget goes into rendering divs rather than computing FEVD decompositions, the analytical depth cannot keep up with the visual sophistication.
+
+**2. Hardcoded data masquerading as live analysis.**
+`CONFLICTS` dict, `WAR_DATA`, `COUNTRY_WAR_WEIGHTS`, strait traffic numbers, Lloyd's surcharge tiers — all static Python dicts that required manual human updates. The code was written as if these were live. The dashboard displayed freshness badges, trend arrows, and confidence scores built on data last touched weeks prior. Volume of code ≠ freshness of data.
+
+**3. Circular validation inflated apparent model quality.**
+The regime classifier was evaluated using VIX > 25 as ground truth. Equity volatility — a close proxy for VIX — was an input to the classifier. The model was predicting its own input and reporting 85%+ accuracy. This added thousands of lines of validation infrastructure that proved nothing. Methodological errors don't get smaller as the codebase grows.
+
+**4. The thesis was answered sideways.**
+Correlation regimes tell you *whether* markets move together. Granger p-values tell you *if* causality exists. But the core question — *how much* of equity variance is explained by commodity shocks, and in which direction — requires FEVD decomposition (Diebold-Yilmaz). That specific 437-line module (`spillover.py`) was underdeveloped while the surrounding display infrastructure was over-engineered.
+
+---
+
+### The Lesson
+
+**Code volume is a proxy for effort, not for analytical depth.**
+
+A 50-line implementation of Diebold-Yilmaz with correct FROM/TO/NET decomposition answers the thesis. A 2,000-line model accuracy page with circular ground truth does not.
+
+The gap between "looks rigorous" and "is rigorous" is exactly the gap the audit was designed to close. The audit wasn't fixing bugs — it was ensuring the 21% of analytical code was actually doing what the 79% of infrastructure claimed it was doing.
+
+> **The standard going forward:** every page must be able to answer a specific, falsifiable question derived from the core thesis. If it can't, the code doesn't belong there regardless of how many lines it takes.
