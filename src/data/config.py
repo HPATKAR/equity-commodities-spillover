@@ -68,6 +68,7 @@ CONFLICTS: list[dict] = [
         "hedge_assets":         ["Gold", "Silver"],
 
         "data_confidence": 0.88,
+        "acled_id":        "ukraine_russia",   # maps to src/data/acled.py _ACLED_CONFLICT_MAP
     },
 
     {
@@ -115,6 +116,7 @@ CONFLICTS: list[dict] = [
         "hedge_assets":         ["Gold"],
 
         "data_confidence": 0.80,
+        "acled_id":        "red_sea_houthi",
     },
 
     {
@@ -161,6 +163,7 @@ CONFLICTS: list[dict] = [
         "hedge_assets":         ["Gold", "US 20Y+ Treasury (TLT)"],
 
         "data_confidence": 0.87,
+        "acled_id":        "israel_hamas",
     },
 
     {

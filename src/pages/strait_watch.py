@@ -224,7 +224,7 @@ _TIMELINE = [
 def _section_label(txt: str) -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 8px 0">{txt}</p>',
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 8px 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -289,8 +289,8 @@ def page_strait_watch(start: str, end: str) -> None:
                     _disruption   = max(0.0, 1.0 - _live_oil / max(_baseline_oil, 1))
                     st.session_state["_hormuz_disruption"] = round(_disruption, 3)
                     break
-    except Exception:
-        pass  # silent fallback to hardcoded
+    except Exception as _pw_err:
+        st.caption(f"PortWatch vessel counts unavailable ({type(_pw_err).__name__}) — disruption scores derived from commodity signals only.")
 
     # ── Load price data ────────────────────────────────────────────────────────
     with st.spinner("Loading commodity price data…"):
@@ -313,6 +313,74 @@ def page_strait_watch(start: str, end: str) -> None:
     brent_30d  = float(brent.iloc[-22]) if len(brent) > 22  else None
     brent_chg  = ((brent_now / brent_30d) - 1) * 100 if brent_now and brent_30d else None
     spread_now = (brent_now - wti_now) if brent_now and wti_now else None
+
+    # ── Live disruption scoring — recomputed every session ────────────────────
+    # Disruption scores in _STRAITS are quarterly research estimates (static).
+    # Here we adjust them using live 20-day commodity z-scores so the displayed
+    # scores change with actual market signals each session, not quarterly.
+    #
+    # Signal mapping (mirrors war_country_scores multiplier logic):
+    #   Hormuz          → oil z primary, PortWatch vessel fraction secondary
+    #   Red Sea / BEM   → oil z primary (Houthi/tanker rerouting signal)
+    #   Turkish Straits → gas z primary (Ukraine/Black Sea channel)
+    #   Malacca         → oil z minor (low-disruption baseline)
+    #
+    # Multiplier range [0.88, 1.18]: commodity signals adjust ±12-18%.
+    # Base scores stay as structural anchor; signal confirms or tempers.
+
+    def _cmd_z(cols: list[str]) -> float:
+        """20-day rolling return z-score for given commodity columns."""
+        valid = [c for c in cols if not cmd_px.empty and c in cmd_px.columns]
+        if not valid or len(cmd_px) < 40:
+            return 0.0
+        ret = cmd_px[valid].pct_change().fillna(0)
+        cum = ret.rolling(20).sum().mean(axis=1) * 100
+        hist = cum.dropna()
+        if len(hist) < 40:
+            return 0.0
+        mu, sd = float(hist.iloc[:-1].mean()), float(hist.iloc[:-1].std())
+        if sd < 1e-6:
+            return 0.0
+        return float(np.clip((float(hist.iloc[-1]) - mu) / sd, -3.5, 3.5))
+
+    _oil_z = _cmd_z(["WTI Crude Oil", "Brent Crude"])
+    _gas_z = _cmd_z(["Natural Gas"])
+
+    # Per-strait multiplier from live signals
+    _oil_mult = float(np.clip(1.0 + _oil_z * 0.09, 0.88, 1.18))
+    _gas_mult = float(np.clip(1.0 + _gas_z * 0.09, 0.88, 1.18))
+
+    # PortWatch vessel-count disruption fraction for Hormuz (if available)
+    _pw_disruption = st.session_state.get("_hormuz_disruption", None)
+
+    def _score_to_status(score: int) -> str:
+        if score >= 65: return "critical"
+        if score >= 45: return "elevated"
+        if score >= 25: return "caution"
+        return "normal"
+
+    _score_source = "live · commodity signals"
+    for _s in _straits:
+        _base = _s["disruption_score"]  # quarterly structural estimate
+        _sid  = _s["id"]
+        if _sid == "hormuz":
+            _adj = _base * _oil_mult
+            if _pw_disruption is not None:
+                # PortWatch disruption fraction: 0 = no disruption, 1 = full blockade.
+                # Expected baseline disruption is ~0.28 (28% fewer than historical).
+                # Shift score by up to ±10 pts relative to that baseline.
+                _pw_delta = (_pw_disruption - 0.28) * 28.0
+                _adj = _adj + _pw_delta
+        elif _sid in ("red_sea", "bab_el_mandeb"):
+            _adj = _base * _oil_mult
+        elif _sid == "turkish":
+            _adj = _base * _gas_mult
+        else:  # malacca — minimal signal, near-static
+            _adj = _base * float(np.clip(1.0 + _oil_z * 0.03, 0.97, 1.05))
+
+        _s["disruption_score"] = int(np.clip(round(_adj), 0, 100))
+        _s["status"]           = _score_to_status(_s["disruption_score"])
+        _s["_score_source"]    = _score_source
 
     # ── Global KPI strip ──────────────────────────────────────────────────────
     active_straits  = [s for s in _straits if s["status"] in ("critical", "elevated")]
@@ -504,7 +572,8 @@ def page_strait_watch(start: str, end: str) -> None:
 
             # Footer meta
             f'<div style="{_F}font-size:0.46rem;color:#333;margin-top:7px">'
-            f'{s["global_oil_pct"]}% global oil · {s["lng_pct"]}% LNG · {s["as_of"]}</div>'
+            f'{s["global_oil_pct"]}% global oil · {s["lng_pct"]}% LNG · '
+            f'{s.get("_score_source", s["as_of"])}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -628,6 +697,118 @@ def page_strait_watch(start: str, end: str) -> None:
             _chart(_style_fig(fig_ng, height=180))
 
     # ── Crisis timeline ────────────────────────────────────────────────────────
+    # ── War-Risk Insurance Premium Panel (GAP 23) ─────────────────────────────
+    _divider("1.0rem", "0.5rem")
+    _section_label("War-Risk Insurance Premium — Lloyd's Surcharge Tiers")
+
+    # Lloyd's JWC (Joint War Committee) designated areas and surcharge ranges.
+    # These are updated manually based on Lloyd's published Additional Premium notices.
+    # Tanker stock proxy (FRO, DHT) provides a live market signal of shipping stress.
+    _WAR_RISK_TIERS: list[dict] = [
+        {
+            "strait":   "Strait of Hormuz",
+            "region":   "Persian Gulf",
+            "tier":     "HIGH RISK",
+            "surcharge_range": "4–8% of hull value",
+            "surcharge_mid":   6.0,
+            "color":    "#c0392b",
+            "notes":    "Lloyd's JWC Listed Area. Additional Premium (AP) applies to all "
+                        "vessels transiting. War-risk H&M (Hull & Machinery) and P&I cover "
+                        "must be separately endorsed. AP is negotiated per-voyage, per-vessel class.",
+            "as_of":    "Q1 2026",
+        },
+        {
+            "strait":   "Red Sea / Gulf of Aden",
+            "region":   "Yemen · Houthi AO",
+            "tier":     "HIGH RISK",
+            "surcharge_range": "0.5–2% of cargo value",
+            "surcharge_mid":   1.2,
+            "color":    "#e67e22",
+            "notes":    "Houthi anti-ship missile and drone threat. Most major P&I clubs now require "
+                        "24h pre-transit notice and enhanced crew clauses. AP rising from 0.5% in "
+                        "Jan 2024 to current 1.2% mid-range due to persistent attack cadence.",
+            "as_of":    "Q1 2026",
+        },
+        {
+            "strait":   "Black Sea",
+            "region":   "Ukraine–Russia",
+            "tier":     "EXCLUDED",
+            "surcharge_range": "Mostly excluded",
+            "surcharge_mid":   None,
+            "color":    "#555960",
+            "notes":    "Most standard war-risk policies exclude Black Sea entirely "
+                        "since Feb 2022. Ukrainian Grain Initiative corridor has partial "
+                        "coverage under temporary UN/Lloyd's scheme but remains prohibitively "
+                        "expensive for non-grain vessels.",
+            "as_of":    "Q1 2026",
+        },
+    ]
+
+    _wr_cols = st.columns(len(_WAR_RISK_TIERS))
+    for _wrcol, _wrt in zip(_wr_cols, _WAR_RISK_TIERS):
+        _wrc = _wrt["color"]
+        _mid_str = f"{_wrt['surcharge_mid']:.1f}% est." if _wrt["surcharge_mid"] else "Excluded"
+        _wrcol.markdown(
+            f'<div style="background:#0a0505;border:1px solid #1e1e1e;'
+            f'border-top:3px solid {_wrc};border-radius:4px;padding:0.65rem 0.8rem;">'
+            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+            f'text-transform:uppercase;color:{_wrc};margin-bottom:4px">{_wrt["tier"]}</div>'
+            f'<div style="{_F}font-size:0.72rem;font-weight:700;color:#e8e9ed;'
+            f'margin-bottom:2px">{_wrt["strait"]}</div>'
+            f'<div style="{_F}font-size:0.55rem;color:#8890a1;'
+            f'margin-bottom:6px">{_wrt["region"]} · as of {_wrt["as_of"]}</div>'
+            f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{_wrc};">'
+            f'{_mid_str}</div>'
+            f'<div style="{_M}font-size:0.55rem;color:#8890a1;margin-bottom:4px">'
+            f'Range: {_wrt["surcharge_range"]}</div>'
+            f'<div style="{_F}font-size:0.52rem;color:#555960;line-height:1.4">'
+            f'{_wrt["notes"][:140]}…</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # Live tanker market proxy: Frontline (FRO) and DHT Holdings as shipping stress indicators
+    try:
+        import yfinance as _yfwr
+        _tanker_tickers = {"FRO": "Frontline", "DHT": "DHT Holdings", "STNG": "Scorpio Tankers"}
+        _tanker_data = _yfwr.download(list(_tanker_tickers.keys()), period="5d",
+                                      auto_adjust=True, progress=False, show_errors=False)
+        if not _tanker_data.empty and "Close" in _tanker_data:
+            _tc = _tanker_data["Close"].dropna(how="all")
+            if len(_tc) >= 2:
+                _tc_1d_chg = (_tc.iloc[-1] / _tc.iloc[-2] - 1) * 100
+                _tc_cols = st.columns(len(_tanker_tickers) + 1)
+                _tc_cols[0].markdown(
+                    f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.1em;'
+                    f'text-transform:uppercase;color:#8E9AAA;padding-top:8px">'
+                    f'Tanker Stock Proxy<br>'
+                    f'<span style="color:#555960;font-size:7px">Live signal · war-risk demand</span></div>',
+                    unsafe_allow_html=True,
+                )
+                for _ti, (_ticker, _name) in enumerate(_tanker_tickers.items()):
+                    if _ticker not in _tc_1d_chg.index:
+                        continue
+                    _chg = float(_tc_1d_chg[_ticker])
+                    _chg_c = "#4ade80" if _chg > 0 else "#f87171" if _chg < 0 else "#8890a1"
+                    _price = float(_tc.iloc[-1][_ticker]) if _ticker in _tc.iloc[-1].index else 0
+                    _tc_cols[_ti + 1].markdown(
+                        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                        f'border-radius:4px;padding:6px 8px;text-align:center">'
+                        f'<div style="{_M}font-size:7px;color:#8E9AAA">{_ticker}</div>'
+                        f'<div style="{_M}font-size:13px;font-weight:700;color:#c8c8c8">'
+                        f'${_price:.2f}</div>'
+                        f'<div style="{_M}font-size:10px;color:{_chg_c}">'
+                        f'{_chg:+.2f}%</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                st.caption(
+                    "Tanker stocks rise when war-risk premiums increase demand for rerouting-capable "
+                    "vessels. Rising FRO/DHT on a high-disruption day corroborates escalating war-risk cost."
+                )
+    except Exception:
+        pass
+
     _divider("1.0rem", "0.5rem")
     _thread(
         "Disruption scores tell you where we stand today. "
@@ -802,7 +983,7 @@ def page_strait_watch(start: str, end: str) -> None:
     s_hormuz = next(s for s in _straits if s["id"] == "hormuz")
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px 0">'
         f'Strait of Hormuz - Vessel Traffic History</p>',
         unsafe_allow_html=True,
     )
@@ -815,7 +996,7 @@ def page_strait_watch(start: str, end: str) -> None:
         with col2:
             st.markdown(
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-                f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
+                f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px 0">'
                 f'{s2["name"]} - Vessel Traffic History</p>',
                 unsafe_allow_html=True,
             )
@@ -828,7 +1009,7 @@ def page_strait_watch(start: str, end: str) -> None:
         with col3:
             st.markdown(
                 f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-                f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">'
+                f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px 0">'
                 f'{s3["name"]} - Vessel Traffic History</p>',
                 unsafe_allow_html=True,
             )

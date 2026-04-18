@@ -25,10 +25,11 @@ import streamlit as st
 
 from src.analysis.agent_state import init_agents, AGENTS, pending_count, log_activity
 from src.analysis.scenario_state import (
-    SCENARIOS, SCENARIO_ORDER, init_scenario,
-    get_scenario, get_scenario_id, set_scenario,
+    SCENARIOS, SCENARIO_ORDER, SCENARIO_COMPOUNDS,
+    init_scenario, get_scenario, get_scenario_id,
+    set_scenario, set_compound_scenario,
 )
-from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores, transmission_lag_signal
 from src.analysis.freshness import freshness_badge_html, record_fetch
 from src.data.loader import load_returns
 from src.analysis.correlations import average_cross_corr_series
@@ -638,7 +639,7 @@ def _render_geo_risk_block(
             f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#DCE4F0">Geopolitical Risk Score</span>'
             f'<span style="background:{color};color:#000;{_M}font-size:11px;font-weight:700;'
-            f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.0f}</span>'
+            f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.1f}</span>'
             f'<span style="{_M}font-size:10px;color:#C8D4E0;margin-left:4px">'
             f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
             f'&nbsp;·&nbsp;{spark_html}</span>'
@@ -1085,8 +1086,14 @@ _IMPACT = {
 
 def _render_scenario_switch() -> None:
     current_sid = get_scenario_id()
-    current_def = SCENARIOS[current_sid]
-    impact      = _IMPACT.get(current_sid, "")
+    current_def = get_scenario()  # handles both single and compound
+    is_compound = "+" in current_sid
+    impact      = (_IMPACT.get(current_sid, "") if not is_compound
+                   else f"geo ×{current_def.get('geo_mult', 1):.2f} · vol ×{current_def.get('vol_mult', 1):.2f}")
+    _compound_badge = (
+        f'<span style="{_M}font-size:8px;color:#c0392b;letter-spacing:.1em">COMPOUND</span>'
+        if is_compound else ""
+    )
 
     st.markdown(
         f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
@@ -1097,6 +1104,7 @@ def _render_scenario_switch() -> None:
         f'<span style="background:{current_def["color"]};color:#000;'
         f'{_M}font-size:10px;font-weight:700;padding:1px 6px;letter-spacing:.10em">'
         f'{current_def["label"].upper()}</span>'
+        f'{_compound_badge}'
         f'<span style="{_F}font-size:12px;color:#D8E0EC">{current_def["desc"]}</span>'
         f'<span style="{_M}font-size:11px;color:#C8D4E0;margin-left:auto">{impact}</span>'
         f'</div>',
@@ -1106,7 +1114,7 @@ def _render_scenario_switch() -> None:
     cols = st.columns(len(SCENARIO_ORDER))
     for i, sid in enumerate(SCENARIO_ORDER):
         sdef   = SCENARIOS[sid]
-        active = (sid == current_sid)
+        active = (not is_compound and sid == current_sid)
         if cols[i].button(
             sdef["label"],
             key=f"scen_{sid}",
@@ -1115,6 +1123,32 @@ def _render_scenario_switch() -> None:
         ):
             set_scenario(sid)
             st.rerun()
+
+    # Compound scenario presets (GAP 14 fix)
+    with st.expander("Compound Scenarios — stack multiple shocks simultaneously", expanded=False):
+        st.markdown(
+            f'<p style="{_F}font-size:0.60rem;color:#8E9AAA;margin:0 0 6px">'
+            f'Compound scenarios multiply their multipliers (geo, vol, CIS, TPS) — '
+            f'enabling realistic combined shocks like Iran military escalation AND Hormuz blockade.</p>',
+            unsafe_allow_html=True,
+        )
+        _cmp_cols = st.columns(min(len(SCENARIO_COMPOUNDS), 2))
+        for _ci, _cmp in enumerate(SCENARIO_COMPOUNDS):
+            _col = _cmp_cols[_ci % 2]
+            _active_cmp = is_compound and set(current_sid.split("+")) == set(_cmp["scenarios"])
+            if _col.button(
+                _cmp["label"],
+                key=f"cmp_{'_'.join(_cmp['scenarios'])}",
+                type="primary" if _active_cmp else "secondary",
+                use_container_width=True,
+                help=_cmp["desc"],
+            ):
+                set_compound_scenario(_cmp["scenarios"])
+                st.rerun()
+        if is_compound:
+            if st.button("Clear compound → back to Base", key="cmp_clear", use_container_width=False):
+                set_scenario("base")
+                st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1814,6 +1848,15 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # RENDER SECTIONS
     # ══════════════════════════════════════════════════════════════════════
 
+    # § 0.5  Data Health Banner (GAP 16 — surface silent failures)
+    try:
+        from src.analysis.freshness import data_health_html
+        _dh_html = data_health_html()
+        if _dh_html:
+            st.markdown(_dh_html, unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # § 1  Masthead
     _render_masthead(conflict_agg)
 
@@ -1851,6 +1894,30 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                     f"Regime: {_al_regimes.iloc[-1] if not _al_regimes.empty else 1}/3. "
                     f"Lead conflict: {(conflict_agg.get('top_conflict') or 'none').replace('_',' ')}."
                 ))
+
+            # ── Transmission Lag Signal (GAP 12) ───────────────────────────
+            try:
+                _lag = transmission_lag_signal(_al_cmd_r, _al_eq_r)
+                if _lag["active"]:
+                    _lag_color = "#e8a838" if _lag["lag_signal"] == "In progress" else "#e74c3c"
+                    _lag_icon  = "⏳" if _lag["lag_signal"] == "In progress" else "⚡"
+                    st.markdown(
+                        f"""<div style="background:#0d0a04;border-left:3px solid {_lag_color};
+                        border-radius:4px;padding:10px 14px;margin:8px 0;">
+                        <span style="color:{_lag_color};font-family:'JetBrains Mono',monospace;
+                        font-size:11px;font-weight:700;letter-spacing:.08em;">
+                        {_lag_icon} TRANSMISSION LAG DETECTED — {_lag["lag_signal"].upper()}</span><br>
+                        <span style="color:#b0b0b0;font-family:'JetBrains Mono',monospace;font-size:11px;">
+                        {_lag["detail"]}</span><br>
+                        <span style="color:#777;font-family:'JetBrains Mono',monospace;font-size:10px;">
+                        Commodity z={_lag["commodity_z"]:+.2f} &nbsp;|&nbsp;
+                        Equity z (same day)={_lag["equity_z"]:+.2f} &nbsp;|&nbsp;
+                        Equity z (today)={_lag["equity_lag_z"]:+.2f} &nbsp;|&nbsp;
+                        Peak {_lag["peak_day_ago"]}d ago</span></div>""",
+                        unsafe_allow_html=True,
+                    )
+            except Exception:
+                pass
 
             # Morning Briefing Chain — runs synthetically (no API key needed for the
             # deliberation messages; API key only needed for the AI enrichment text).

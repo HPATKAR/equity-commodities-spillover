@@ -454,6 +454,26 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         "INTELLIGENCE / CONFLICT SCORECARD",
     )
 
+    # ── ACLED Live Data Status Banner ──────────────────────────────────────
+    try:
+        from src.data.acled import acled_configured, acled_setup_instructions
+        if acled_configured():
+            st.markdown(
+                '<div style="background:#050a05;border-left:3px solid #27ae60;'
+                'border-radius:4px;padding:8px 14px;margin:4px 0;">'
+                '<span style="color:#27ae60;font-family:\'JetBrains Mono\',monospace;'
+                'font-size:10px;font-weight:700">● ACLED LIVE</span>'
+                '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
+                'font-size:10px"> · CIS scores augmented with live conflict event counts '
+                '(ACLED API, 30-day window). Escalation trends updated every 6h.</span></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            with st.expander("Enable live conflict data (ACLED API — free for academic use)", expanded=False):
+                st.markdown(acled_setup_instructions())
+    except Exception:
+        pass
+
     # ── Load scores ────────────────────────────────────────────────────────
     try:
         results = score_all_conflicts()
@@ -470,7 +490,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     # ── Scorecard grid ─────────────────────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin-bottom:6px">CONFLICT SCORECARDS</p>',
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">CONFLICT SCORECARDS</p>',
         unsafe_allow_html=True,
     )
     selected_id = _render_scorecard_grid(results)
@@ -482,7 +502,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     # ── Heatmap ────────────────────────────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'TRANSMISSION PRESSURE — CONFLICTS × CHANNELS</p>',
         unsafe_allow_html=True,
     )
@@ -511,7 +531,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     with col_l:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px">INTENSITY DIMENSIONS</p>',
+            'color:#8E9AAA;letter-spacing:.16em">INTENSITY DIMENSIONS</p>',
             unsafe_allow_html=True,
         )
         _render_intensity_breakdown(selected_id, selected)
@@ -519,7 +539,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     with col_r:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px">TRANSMISSION CHANNELS</p>',
+            'color:#8E9AAA;letter-spacing:.16em">TRANSMISSION CHANNELS</p>',
             unsafe_allow_html=True,
         )
         _render_tps_channels(selected_id)
@@ -530,7 +550,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     with col_a:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px;margin-bottom:6px">'
+            'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'TOP AFFECTED ASSETS</p>',
             unsafe_allow_html=True,
         )
@@ -539,7 +559,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     with col_n:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px;margin-bottom:6px">'
+            'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'LIVE INTELLIGENCE FEED</p>',
             unsafe_allow_html=True,
         )
@@ -548,7 +568,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     # ── AI Analyst Deliberation ────────────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'AI ANALYST TEAM — CONFLICT ASSESSMENT</p>',
         unsafe_allow_html=True,
     )

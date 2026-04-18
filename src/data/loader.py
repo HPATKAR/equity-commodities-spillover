@@ -333,12 +333,14 @@ def load_returns(
     # Schema validation at the system boundary — non-destructive
     eq_r  = _validate_returns(eq_r,  "equity_returns")
     cmd_r = _validate_returns(cmd_r, "commodity_returns")
-    if not eq_r.empty:
-        try:
-            from src.analysis.freshness import record_fetch
+    try:
+        from src.analysis.freshness import record_fetch, record_failure
+        if not eq_r.empty:
             record_fetch("yfinance_prices")
-        except Exception:
-            pass
+        else:
+            record_failure("yfinance_prices", "Empty equity returns — yfinance may be down or tickers unavailable")
+    except Exception:
+        pass
     return eq_r, cmd_r
 
 

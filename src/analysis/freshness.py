@@ -47,12 +47,78 @@ _SOURCE_LABELS: dict[str, str] = {
 }
 
 # ── Internal store (module-level dict, survives within a Streamlit process) ──
-_FETCH_TIMES: dict[str, datetime.datetime] = {}
+_FETCH_TIMES:   dict[str, datetime.datetime] = {}
+_FAIL_REGISTRY: dict[str, dict] = {}   # source → {ts, message, count}
+
+# Critical sources — if any fail, show a visible warning banner
+_CRITICAL_SOURCES = {"yfinance_prices", "yfinance_vix"}
 
 
 def record_fetch(source: str, ts: Optional[datetime.datetime] = None) -> None:
-    """Record a successful fetch for a named source."""
+    """Record a successful fetch for a named source. Also clears any failure record."""
     _FETCH_TIMES[source] = ts or datetime.datetime.now()
+    _FAIL_REGISTRY.pop(source, None)  # clear failure on successful fetch
+
+
+def record_failure(source: str, message: str = "") -> None:
+    """
+    Record a data fetch failure for a named source.
+
+    Call this in except blocks where data is absent or fetch failed.
+    Replaces the silent `except: pass` pattern — failures become visible
+    on the dashboard via get_failures() / data_health_html().
+    """
+    existing = _FAIL_REGISTRY.get(source, {})
+    _FAIL_REGISTRY[source] = {
+        "ts":      datetime.datetime.now(),
+        "message": message or f"{source} unavailable",
+        "count":   existing.get("count", 0) + 1,
+    }
+
+
+def get_failures() -> dict[str, dict]:
+    """Return all currently tracked data failures."""
+    return dict(_FAIL_REGISTRY)
+
+
+def clear_failure(source: str) -> None:
+    """Manually clear a failure (e.g., after manual retry)."""
+    _FAIL_REGISTRY.pop(source, None)
+
+
+def data_health_html() -> str:
+    """
+    Return an HTML warning block if any critical data sources are failing.
+    Returns empty string if all critical sources are healthy.
+    """
+    critical_failures = {s: v for s, v in _FAIL_REGISTRY.items() if s in _CRITICAL_SOURCES}
+    all_failures      = _FAIL_REGISTRY
+
+    if not all_failures:
+        return ""
+
+    lines = []
+    for src, info in all_failures.items():
+        severity = "critical" if src in _CRITICAL_SOURCES else "warn"
+        color    = "#e74c3c" if severity == "critical" else "#e67e22"
+        label    = _SOURCE_LABELS.get(src, src)
+        msg      = info["message"][:80]
+        cnt      = info["count"]
+        lines.append(
+            f'<span style="color:{color};font-size:10px;font-family:\'JetBrains Mono\',monospace;">'
+            f'✗ {label}: {msg} (×{cnt})</span>'
+        )
+
+    severity_color = "#e74c3c" if critical_failures else "#e67e22"
+    severity_label = "DATA UNAVAILABLE" if critical_failures else "DATA DEGRADED"
+    items_html = "<br>".join(lines)
+    return (
+        f'<div style="background:#0d0505;border-left:3px solid {severity_color};'
+        f'border-radius:4px;padding:10px 14px;margin:8px 0;">'
+        f'<span style="color:{severity_color};font-family:\'JetBrains Mono\',monospace;'
+        f'font-size:11px;font-weight:700;letter-spacing:.08em;">⚠ {severity_label}</span><br>'
+        f'{items_html}</div>'
+    )
 
 
 def get_status(source: str) -> dict:

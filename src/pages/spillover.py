@@ -15,6 +15,7 @@ from src.data.loader import load_returns, load_fixed_income_returns, load_fx_ret
 from src.data.config import PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.analysis.spillover import (
     granger_grid, transfer_entropy_matrix, net_flow_matrix, diebold_yilmaz,
+    rolling_diebold_yilmaz, regime_conditional_spillover,
 )
 from src.analysis.network import (
     build_dy_graph, build_granger_graph,
@@ -36,7 +37,7 @@ _DEFAULT_ALL = _DEFAULT_EQ + _DEFAULT_CMD
 def _label(txt: str) -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">{txt}</p>',
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -301,53 +302,131 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
     dy_valid = [c for c in sel_all if c in all_r.columns]
     dy_result, dy_table, total_sp, G_dy = None, pd.DataFrame(), 0.0, None
+    dy_from = dy_to = dy_net = pd.Series(dtype=float)
+    dy_top_tx = dy_top_rx = dy_dir = ""
 
     if len(dy_valid) >= 3:
         combined = all_r[dy_valid].dropna()
         with st.spinner("Fitting VAR (Diebold-Yilmaz)…"):
             dy_result = diebold_yilmaz(combined, top_n=len(dy_valid))
-        dy_table = dy_result["spillover_table"]
-        total_sp = dy_result["total_spillover"]
+        dy_table  = dy_result["spillover_table"]
+        total_sp  = dy_result["total_spillover"]
+        dy_from   = dy_result["from_spillover"]
+        dy_to     = dy_result["to_spillover"]
+        dy_net    = dy_result["net_spillover"]
+        dy_top_tx = dy_result["top_transmitter"]
+        dy_top_rx = dy_result["top_receiver"]
+        dy_dir    = dy_result["direction_label"]
         if not dy_table.empty:
             G_dy = build_dy_graph(dy_table, threshold=dy_thresh)
 
-    # ── Panel 3: Diebold-Yilmaz FEVD ──────────────────────────────────────
+    # ── DY Headline banner (full-width, above panels) ─────────────────────
+    if not dy_table.empty and np.isfinite(total_sp):
+        _sp_level = "HIGH" if total_sp >= 55 else ("MODERATE" if total_sp >= 35 else "LOW")
+        _sp_color = "#c0392b" if total_sp >= 55 else ("#e67e22" if total_sp >= 35 else "#27ae60")
+        _dir_icon = "→" if "Commodity" in dy_dir else ("←" if "Equity" in dy_dir else "↔")
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:4px solid {_sp_color};padding:.55rem 1rem;margin-bottom:.6rem;'
+            f'display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">'
+            f'<div>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#8E9AAA">'
+            f'TOTAL SPILLOVER INDEX</span><br>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
+            f'font-weight:700;color:{_sp_color};line-height:1.1">{total_sp:.1f}%</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'font-weight:700;color:{_sp_color};margin-left:6px">{_sp_level}</span>'
+            f'</div>'
+            f'<div style="border-left:1px solid #2a2a2a;padding-left:1.2rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">DIRECTION</span><br>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+            f'font-weight:700;color:#CFB991">{_dir_icon} {dy_dir}</span>'
+            f'</div>'
+            f'<div style="border-left:1px solid #2a2a2a;padding-left:1.2rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">TOP TRANSMITTER</span><br>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+            f'font-weight:700;color:#27ae60">{dy_top_tx} '
+            f'<span style="font-size:9px;color:#8E9AAA">'
+            f'(+{dy_net.get(dy_top_tx, 0):.1f}%)</span></span>'
+            f'</div>'
+            f'<div style="border-left:1px solid #2a2a2a;padding-left:1.2rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">TOP RECEIVER</span><br>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+            f'font-weight:700;color:#c0392b">{dy_top_rx} '
+            f'<span style="font-size:9px;color:#8E9AAA">'
+            f'({dy_net.get(dy_top_rx, 0):.1f}%)</span></span>'
+            f'</div>'
+            f'<div style="margin-left:auto;font-family:\'DM Sans\',sans-serif;'
+            f'font-size:9px;color:#555960;text-align:right">'
+            f'Diebold-Yilmaz (2012) FEVD<br>VAR({4}) · H={10} · {len(dy_valid)} assets</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Panel 3: Diebold-Yilmaz FEVD + FROM/TO/NET ────────────────────────
     with col_dy:
         _label("Diebold-Yilmaz: Forecast Error Variance Decomposition")
         if dy_table.empty:
             st.warning("Select ≥ 3 VAR assets.")
         else:
-            st.metric("Total Spillover Index", f"{total_sp:.1f}%",
-                      help="% of FEVD from cross-asset shocks. >50% = high interconnectedness.")
-            fig_dy = go.Figure(go.Heatmap(
-                z=dy_table.values,
-                x=dy_table.columns.tolist(),
-                y=dy_table.index.tolist(),
-                colorscale="YlOrRd", zmin=0,
-                text=dy_table.values,
-                texttemplate="%{text:.1f}%",
-                textfont=dict(size=8, family="JetBrains Mono, monospace"),
-                colorbar=dict(title="% FEVD", thickness=10),
-            ))
-            fig_dy.update_layout(
-                template="purdue", height=340,
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
-                font=dict(color="#e8e9ed"),
-                xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
-                yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
-                margin=dict(l=100, r=40, t=20, b=90),
-            )
-            _chart(fig_dy)
+            # FROM / TO / NET compact bar chart
+            if not dy_net.empty:
+                _colors = ["#27ae60" if v >= 0 else "#c0392b" for v in dy_net.values]
+                fig_net_bar = go.Figure(go.Bar(
+                    x=dy_net.index.tolist(),
+                    y=dy_net.values.tolist(),
+                    marker_color=_colors,
+                    text=[f"{v:+.1f}%" for v in dy_net.values],
+                    textposition="outside",
+                    textfont=dict(size=8, color="#e8e9ed", family="JetBrains Mono, monospace"),
+                ))
+                fig_net_bar.update_layout(
+                    template="purdue", height=180,
+                    paper_bgcolor="#080808", plot_bgcolor="#080808",
+                    font=dict(color="#e8e9ed"),
+                    xaxis=dict(tickfont=dict(size=8, color="#8890a1"), tickangle=-25),
+                    yaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                               title=dict(text="NET (TO−FROM %)", font=dict(size=8))),
+                    margin=dict(l=55, r=20, t=10, b=60),
+                    showlegend=False,
+                )
+                _chart(fig_net_bar)
+                _panel_note(
+                    "Green = net transmitter (exports shocks). Red = net receiver (absorbs shocks). "
+                    f"Current leader: <b>{dy_top_tx}</b>."
+                )
+
+            # Raw FEVD heatmap in expander to keep page clean
+            with st.expander("View raw FEVD table"):
+                fig_dy = go.Figure(go.Heatmap(
+                    z=dy_table.values,
+                    x=dy_table.columns.tolist(),
+                    y=dy_table.index.tolist(),
+                    colorscale="YlOrRd", zmin=0,
+                    text=dy_table.values,
+                    texttemplate="%{text:.1f}%",
+                    textfont=dict(size=8, family="JetBrains Mono, monospace"),
+                    colorbar=dict(title="% FEVD", thickness=10),
+                ))
+                fig_dy.update_layout(
+                    template="purdue", height=340,
+                    paper_bgcolor="#111111", plot_bgcolor="#111111",
+                    font=dict(color="#e8e9ed"),
+                    xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"),
+                               rangeslider=dict(visible=False)),
+                    yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
+                    margin=dict(l=100, r=40, t=20, b=90),
+                )
+                _chart(fig_dy)
             _insight_note(
                 "Each cell shows what percentage of one asset's price uncertainty (forecast error) "
                 "is caused by shocks originating in another asset. The diagonal is self-driven. "
-                "A high total spillover index (above 50%) means markets are deeply interconnected - "
+                "A high total spillover index (above 50%) means markets are deeply interconnected — "
                 "a shock anywhere in the system propagates everywhere quickly."
-            )
-            _panel_note(
-                f"Total spillover: <b>{total_sp:.1f}%</b> · "
-                "Off-diagonal = cross-asset variance explained. "
-                "High values = systemic transmission risk."
             )
 
     # ── Panel 4: Spillover Network ─────────────────────────────────────────
@@ -386,6 +465,237 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     G_gr = build_granger_graph(granger_df)
                     _chart(plot_granger_network(G_gr,
                         title="Granger Causality Network (p < 0.05)", layout=layout))
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SECTION: Rolling Spillover + Regime-Conditional
+    # ══════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        'color:#CFB991;margin-bottom:0.1rem">Spillover Over Time &amp; Regime Context</h2>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
+        'Rolling 200-day DY spillover index shows how interconnectedness evolves. '
+        'Regime-conditional table answers: <em>in the current regime, what is the expected spillover?</em></p>',
+        unsafe_allow_html=True,
+    )
+
+    col_roll, col_regime = st.columns([1.4, 1], gap="medium")
+
+    with col_roll:
+        _label("Rolling Diebold-Yilmaz Spillover Index (200-day window)")
+        if len(dy_valid) >= 3:
+            with st.spinner("Computing rolling DY spillover…"):
+                roll_dy = rolling_diebold_yilmaz(
+                    all_r[dy_valid].dropna(), window=200, step=5,
+                    lag_order=2, horizon=10,
+                )
+            if not roll_dy.empty and "total_spillover" in roll_dy.columns:
+                fig_roll = go.Figure()
+                fig_roll.add_trace(go.Scatter(
+                    x=roll_dy.index, y=roll_dy["total_spillover"],
+                    mode="lines", line=dict(color="#CFB991", width=1.5),
+                    fill="tozeroy", fillcolor="rgba(207,185,145,0.08)",
+                    name="Total Spillover %",
+                ))
+                # Threshold lines
+                fig_roll.add_hline(y=55, line_dash="dot", line_color="#c0392b",
+                                   annotation_text="High (55%)", annotation_font_size=8)
+                fig_roll.add_hline(y=35, line_dash="dot", line_color="#e67e22",
+                                   annotation_text="Moderate (35%)", annotation_font_size=8)
+                fig_roll.update_layout(
+                    template="purdue", height=280,
+                    paper_bgcolor="#080808", plot_bgcolor="#080808",
+                    font=dict(color="#e8e9ed"),
+                    xaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                               rangeslider=dict(visible=False)),
+                    yaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                               title=dict(text="Spillover %", font=dict(size=8))),
+                    margin=dict(l=55, r=20, t=15, b=40),
+                    showlegend=False,
+                )
+                _chart(fig_roll)
+                _panel_note(
+                    "Peaks correspond to known systemic events (GFC 2008, COVID 2020, Ukraine 2022). "
+                    "High spillover = shock propagates everywhere; low = markets are segmented."
+                )
+            else:
+                st.info("Insufficient data for rolling DY computation.")
+        else:
+            st.info("Select ≥ 3 VAR assets to compute rolling spillover.")
+
+    with col_regime:
+        _label("Regime-Conditional Spillover")
+        if len(dy_valid) >= 3:
+            try:
+                from src.analysis.correlations import (
+                    average_cross_corr_series, detect_correlation_regime,
+                )
+                _rc_eq  = [c for c in dy_valid if c in eq_r.columns]
+                _rc_cmd = [c for c in dy_valid if c in cmd_r.columns]
+                if _rc_eq and _rc_cmd:
+                    with st.spinner("Computing regime-conditional spillover…"):
+                        _avg_c = average_cross_corr_series(
+                            eq_r[_rc_eq], cmd_r[_rc_cmd], window=60,
+                        )
+                        _regimes = detect_correlation_regime(_avg_c)
+                        _rc_result = regime_conditional_spillover(
+                            all_r[dy_valid].dropna(), _regimes,
+                            lag_order=3, horizon=10,
+                        )
+                    _cur_regime = int(_regimes.dropna().iloc[-1]) if not _regimes.dropna().empty else 1
+                    _RNAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+                    _RCOLORS = {0: "#27ae60", 1: "#CFB991", 2: "#e67e22", 3: "#c0392b"}
+
+                    for _rid in range(4):
+                        _rdata  = _rc_result.get(_rid, {})
+                        _rsp    = _rdata.get("total_spillover", np.nan)
+                        _rn     = _rdata.get("n_obs", 0)
+                        _rtx    = _rdata.get("top_transmitter", "—")
+                        _rcolor = _RCOLORS[_rid]
+                        _is_cur = _rid == _cur_regime
+                        _border = f"border-left:3px solid {_rcolor}" if _is_cur else f"border-left:1px solid #2a2a2a"
+                        _bg     = "#0d0d0d" if _is_cur else "#080808"
+                        _label_sfx = " ◀ CURRENT" if _is_cur else ""
+                        st.markdown(
+                            f'<div style="background:{_bg};{_border};'
+                            f'padding:.4rem .7rem;margin-bottom:.3rem">'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                            f'font-weight:700;letter-spacing:.14em;text-transform:uppercase;'
+                            f'color:{_rcolor}">{_RNAMES[_rid]}{_label_sfx}</span>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
+                            f'font-weight:700;color:{_rcolor if _is_cur else "#c8c8c8"};'
+                            f'display:block;line-height:1.2">'
+                            f'{"—" if not np.isfinite(_rsp) else f"{_rsp:.1f}%"}</span>'
+                            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+                            f'color:#8E9AAA">top tx: {_rtx} · {_rn} obs</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                    _panel_note(
+                        "Expected spillover in each historical regime. Current regime highlighted. "
+                        "Crisis regime spillover substantially exceeds normal — use to set hedge sizing."
+                    )
+                else:
+                    st.info("Need equity + commodity assets selected for regime detection.")
+            except Exception as _rc_e:
+                st.caption(f"Regime-conditional computation unavailable: {type(_rc_e).__name__}")
+        else:
+            st.info("Select ≥ 3 VAR assets.")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SECTION: Granger Causality Network (GAP 24)
+    # ══════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        'color:#CFB991;margin-bottom:0.1rem">Granger Causality Network — Full Pair Analysis</h2>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
+        'Directed network across all equity-commodity pairs (p &lt; 0.05). '
+        'Node size = number of significant outgoing Granger links. '
+        'Hub commodities (many significant outlinks into equities) are the dominant price-setters.</p>',
+        unsafe_allow_html=True,
+    )
+
+    if granger_df.empty:
+        st.info("Run the Granger analysis (select assets above) to see the causality network.")
+    else:
+        _sig = granger_df[granger_df["significant"] == True]
+        _n_sig = len(_sig)
+        _n_cmd_to_eq = len(_sig[_sig["direction"] == "Commodity → Equity"])
+        _n_eq_to_cmd = len(_sig[_sig["direction"] == "Equity → Commodity"])
+
+        # Hub commodity: most significant outgoing Granger links toward equities
+        if _n_cmd_to_eq > 0:
+            _hub_counts = _sig[_sig["direction"] == "Commodity → Equity"]["cause"].value_counts()
+            _hub_cmd = _hub_counts.index[0] if len(_hub_counts) > 0 else "—"
+            _hub_n   = int(_hub_counts.iloc[0]) if len(_hub_counts) > 0 else 0
+            _hub_eq_counts = _sig[_sig["direction"] == "Equity → Commodity"]["cause"].value_counts()
+            _hub_eq  = _hub_eq_counts.index[0] if len(_hub_eq_counts) > 0 else "—"
+            _hub_eq_n = int(_hub_eq_counts.iloc[0]) if len(_hub_eq_counts) > 0 else 0
+
+            # Hub summary banner
+            st.markdown(
+                f'<div style="background:#080808;border-left:3px solid #CFB991;'
+                f'border-radius:4px;padding:8px 14px;margin:6px 0;display:flex;gap:40px;">'
+                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;text-transform:uppercase">'
+                f'Hub Commodity</span><br>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:16px;'
+                f'font-weight:700;color:#CFB991">{_hub_cmd}</span>'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+                f' → {_hub_n} equity markets</span></div>'
+                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;text-transform:uppercase">'
+                f'Hub Equity</span><br>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:16px;'
+                f'font-weight:700;color:#e67e22">{_hub_eq}</span>'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+                f' → {_hub_eq_n} commodities</span></div>'
+                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;text-transform:uppercase">'
+                f'Significant Links</span><br>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:16px;'
+                f'font-weight:700;color:#c8c8c8">{_n_sig}</span>'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+                f' · cmd→eq {_n_cmd_to_eq} · eq→cmd {_n_eq_to_cmd}</span></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Full Granger network graph (promoted from expander)
+        _col_gr_net, _col_gr_hub = st.columns([1.8, 1], gap="medium")
+        with _col_gr_net:
+            try:
+                G_gr_full = build_granger_graph(granger_df)
+                if G_gr_full.number_of_nodes() > 0:
+                    _chart(plot_granger_network(
+                        G_gr_full,
+                        title=f"Granger Causality Network · {_n_sig} significant pairs (p < 0.05)",
+                        layout=layout,
+                    ))
+                    _panel_note(
+                        "Red arrows = commodity Granger-causes equity. "
+                        "Blue arrows = equity Granger-causes commodity. "
+                        "Node size ∝ number of significant outgoing links (hub = large node)."
+                    )
+            except Exception as _gr_err:
+                st.caption(f"Network render unavailable: {type(_gr_err).__name__}")
+
+        with _col_gr_hub:
+            _label("Top Granger Transmitters")
+            if not granger_df.empty:
+                _cause_counts = (
+                    granger_df[granger_df["significant"] == True]
+                    .groupby("cause").size()
+                    .sort_values(ascending=False)
+                    .head(10)
+                )
+                if not _cause_counts.empty:
+                    _hub_fig = go.Figure(go.Bar(
+                        x=_cause_counts.values,
+                        y=_cause_counts.index.tolist(),
+                        orientation="h",
+                        marker=dict(
+                            color=["#d35400" if c in cmd_r.columns else "#2980b9"
+                                   for c in _cause_counts.index],
+                        ),
+                        text=_cause_counts.values,
+                        textfont=dict(size=8, color="#e8e9ed",
+                                      family="JetBrains Mono, monospace"),
+                    ))
+                    _hub_fig.update_layout(
+                        template="purdue", height=280,
+                        paper_bgcolor="#111111", plot_bgcolor="#111111",
+                        font=dict(color="#e8e9ed"),
+                        xaxis=dict(title="# significant Granger links",
+                                   tickfont=dict(size=8, color="#8890a1")),
+                        yaxis=dict(tickfont=dict(size=8, color="#c8c8c8")),
+                        margin=dict(l=110, r=20, t=10, b=30),
+                    )
+                    _chart(_hub_fig)
+                    _panel_note("Orange = commodity. Blue = equity. Bar length = number of Granger-causal pairs.")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Cross-Asset Spillover: Rates & FX
@@ -541,6 +851,166 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     except Exception as _e:
         st.warning(f"Cross-asset spillover section unavailable: {_e}")
 
+    # ══════════════════════════════════════════════════════════════════════
+    # SECTION: Commodity Futures Curve — Backwardation / Contango (GAP 3/25)
+    # ══════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        'color:#CFB991;margin-bottom:0.1rem">Commodity Futures Curve — Backwardation / Contango</h2>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
+        'Front-month vs 6-month deferred contracts. '
+        'Backwardation (spot &gt; futures) signals near-term supply tightness — corroborates geopolitical risk. '
+        'Contango (spot &lt; futures) signals oversupply or weak demand — contradicts a high GRS.</p>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        from src.analysis.futures_curve import (
+            fetch_curve_snapshot, geopolitical_corroboration, fetch_rolling_basis,
+        )
+
+        with st.spinner("Fetching futures curve data…"):
+            _curve_df = fetch_curve_snapshot()
+
+        if _curve_df.empty:
+            st.info(
+                "Futures curve data unavailable. Deferred contract tickers (e.g., CLQ25.NYM) "
+                "may not be available on yfinance for the current date. "
+                "Spot prices are used for all other analyses."
+            )
+        else:
+            # GRS corroboration check
+            try:
+                _grs_val = float(st.session_state.get("_stored_geo_score", 50.0))
+            except Exception:
+                _grs_val = 50.0
+
+            _corr = geopolitical_corroboration(_curve_df, _grs_val)
+            _corr_colors = {
+                "Corroborated": "#27ae60",
+                "Contradicted": "#e74c3c",
+                "Inconclusive": "#CFB991",
+            }
+            _corr_color = _corr_colors.get(_corr["overall_signal"], "#8890a1")
+            st.markdown(
+                f'<div style="background:#080808;border-left:3px solid {_corr_color};'
+                f'border-radius:4px;padding:10px 14px;margin:6px 0;">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+                f'font-weight:700;color:{_corr_color};letter-spacing:.08em;">'
+                f'MARKET STRUCTURE: {_corr["overall_signal"].upper()} · GRS={_grs_val:.0f}</span><br>'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#b0b0b0;">'
+                f'{_corr["detail"]}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Curve snapshot cards
+            _n_cols = min(len(_curve_df), 3)
+            _curve_cols = st.columns(_n_cols)
+            for _ci, (_crow_idx, _crow) in enumerate(_curve_df.iterrows()):
+                if _ci >= _n_cols:
+                    break
+                with _curve_cols[_ci]:
+                    _bp = float(_crow["basis_pct"])
+                    _sc = _crow["structure_color"]
+                    _struct = _crow["structure"]
+                    _arrow = "▼" if _bp < 0 else "▲"
+                    st.markdown(
+                        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                        f'border-top:2px solid {_sc};border-radius:4px;padding:10px 12px;">'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                        f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;'
+                        f'text-transform:uppercase">{_crow["name"]}</span><br>'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
+                        f'font-weight:700;color:{_sc}">{_struct}</span><br>'
+                        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+                        f'color:#8E9AAA">Basis {_arrow} {abs(_bp):.2f}%'
+                        f'<br>Front: {_crow["front_price"]} {_crow["unit"]}'
+                        f'<br>6M: {_crow["deferred_price"]} {_crow["unit"]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+            # Second row of cards
+            if len(_curve_df) > 3:
+                _curve_cols2 = st.columns(min(len(_curve_df) - 3, 3))
+                for _ci2, (_crow_idx, _crow) in enumerate(_curve_df.iloc[3:].iterrows()):
+                    if _ci2 >= 3:
+                        break
+                    with _curve_cols2[_ci2]:
+                        _bp = float(_crow["basis_pct"])
+                        _sc = _crow["structure_color"]
+                        _struct = _crow["structure"]
+                        _arrow = "▼" if _bp < 0 else "▲"
+                        st.markdown(
+                            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                            f'border-top:2px solid {_sc};border-radius:4px;padding:10px 12px;">'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                            f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;'
+                            f'text-transform:uppercase">{_crow["name"]}</span><br>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
+                            f'font-weight:700;color:{_sc}">{_struct}</span><br>'
+                            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+                            f'color:#8E9AAA">Basis {_arrow} {abs(_bp):.2f}%'
+                            f'<br>Front: {_crow["front_price"]} {_crow["unit"]}'
+                            f'<br>6M: {_crow["deferred_price"]} {_crow["unit"]}</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+            _panel_note(
+                "Basis = (6M deferred − front-month) / front-month × 100%. "
+                "Backwardation means market pays a premium for near-term delivery — "
+                "supply tightness or demand spike. Contango means storage cost is priced in — "
+                "supply is adequate. Source: yfinance (CME/ICE futures)."
+            )
+
+            # Optional: rolling basis chart for selected commodity
+            _fc_cmd = st.selectbox(
+                "View rolling basis for",
+                options=_curve_df["name"].tolist(),
+                index=0,
+                key="sp_futures_curve_sel",
+            )
+            if _fc_cmd:
+                with st.spinner(f"Fetching 6-month rolling basis for {_fc_cmd}…"):
+                    _rb = fetch_rolling_basis(_fc_cmd, period="6mo")
+                if not _rb.empty and "basis_pct" in _rb.columns:
+                    _fc_color = _curve_df[_curve_df["name"] == _fc_cmd]["color"].values[0] if len(
+                        _curve_df[_curve_df["name"] == _fc_cmd]) > 0 else "#CFB991"
+                    _fc_fig = go.Figure()
+                    _fc_fig.add_trace(go.Scatter(
+                        x=_rb.index, y=_rb["basis_pct"],
+                        mode="lines", line=dict(color=_fc_color, width=1.5),
+                        fill="tozeroy",
+                        fillcolor=f"rgba(207,185,145,0.08)",
+                        name="Basis %",
+                    ))
+                    _fc_fig.add_hline(y=0, line_dash="solid", line_color="#555",
+                                      annotation_text="Flat", annotation_font_size=8)
+                    _fc_fig.update_layout(
+                        template="purdue", height=200,
+                        paper_bgcolor="#111111", plot_bgcolor="#111111",
+                        font=dict(color="#e8e9ed"),
+                        xaxis=dict(tickfont=dict(size=8, color="#8890a1")),
+                        yaxis=dict(title="Basis %", tickfont=dict(size=8, color="#8890a1"),
+                                   zeroline=True, zerolinecolor="#555"),
+                        margin=dict(l=50, r=20, t=10, b=30),
+                    )
+                    _chart(_fc_fig)
+                    _panel_note(
+                        "Above zero = contango (futures > spot). Below zero = backwardation. "
+                        "Geopolitical supply shock events typically push energy curves into backwardation."
+                    )
+                else:
+                    st.caption(
+                        f"Rolling basis data for {_fc_cmd} unavailable "
+                        f"(deferred contract ticker may not be liquid on this date)."
+                    )
+    except Exception as _fc_err:
+        st.caption(f"Futures curve section unavailable: {type(_fc_err).__name__}: {_fc_err}")
+
     _page_conclusion(
         "Transmission Map",
         "Assets identified as strong transmitters across all three methods - Granger, Transfer "
@@ -553,7 +1023,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         f'<div style="margin:1rem 0 0.4rem;border-top:1px solid #1e1e1e;padding-top:0.8rem">'
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 4px">Conflict Transmission Layer</p>'
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 4px">Conflict Transmission Layer</p>'
         f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0 0 8px;line-height:1.5">'
         f'Active conflicts driving current spillover pressure. '
         f'CIS × TPS per-conflict contribution to cross-asset transmission.</p>'

@@ -27,7 +27,7 @@ _GOLD  = "#CFB991"
 _RED   = "#c0392b"
 _GREEN = "#2e7d32"
 _MUTED = "#8890a1"
-_BG    = "#1c1c1c"
+_BG    = "#080808"
 _RULE  = "#2a2a2a"
 
 # ── Shock factor proxies in the combined returns DataFrame ─────────────────
@@ -52,6 +52,68 @@ _COMMODITY_TARGETS = [
 
 
 # ── Beta computation ──────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _compute_regime_betas(start: str, end: str) -> dict[int, dict[str, dict[str, float]]]:
+    """
+    Regime-conditional OLS betas: separate beta estimates for each correlation regime.
+
+    Returns {regime_id: {proxy_name: {target_name: beta}}}
+    where regime_id in {0=Decorrelated, 1=Normal, 2=Elevated, 3=Crisis}.
+
+    Key insight (GAP 19): beta(oil→S&P) in a supply-shock regime is materially
+    different from the full-sample unconditional beta.
+    - In Elevated/Crisis regime: commodity shocks transmit harder into equities
+      (forced liquidations, risk-off amplification, correlated margin calls).
+    - In Decorrelated/Normal regime: commodity shocks are absorbed by rotation,
+      not amplified across asset classes.
+    Using regime-appropriate betas gives materially different shock impacts.
+    """
+    from src.analysis.correlations import average_cross_corr_series, detect_correlation_regime
+    try:
+        eq_r, cmd_r = load_returns(start, end)
+        combined = load_combined_returns(start, end)
+        if combined.empty or eq_r.empty or cmd_r.empty:
+            return {}
+
+        avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
+        regimes  = detect_correlation_regime(avg_corr)
+
+        result: dict[int, dict[str, dict[str, float]]] = {}
+        targets = _EQUITY_TARGETS + _COMMODITY_TARGETS
+
+        for regime_id in range(4):
+            regime_dates = regimes[regimes == regime_id].index
+            subset = combined.loc[combined.index.intersection(regime_dates)]
+            if len(subset) < 30:
+                continue
+
+            regime_betas: dict[str, dict[str, float]] = {}
+            for factor_key, proxy_name in _SHOCK_PROXY.items():
+                if proxy_name not in subset.columns:
+                    continue
+                proxy_r = subset[proxy_name].dropna()
+                factor_betas: dict[str, float] = {}
+                for t in targets:
+                    if t not in subset.columns or t == proxy_name:
+                        continue
+                    aligned = pd.concat([proxy_r, subset[t]], axis=1).dropna()
+                    if len(aligned) < 20:
+                        continue
+                    x = aligned.iloc[:, 0].values
+                    y = aligned.iloc[:, 1].values
+                    var_x = np.var(x, ddof=1)
+                    if var_x < 1e-12:
+                        continue
+                    cov_xy = np.cov(x, y, ddof=1)[0, 1]
+                    factor_betas[t] = float(cov_xy / var_x)
+                regime_betas[proxy_name] = factor_betas
+            result[regime_id] = regime_betas
+
+        return result
+    except Exception:
+        return {}
+
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _compute_betas(start: str, end: str) -> dict[str, dict[str, float]]:
@@ -463,7 +525,7 @@ def _tail_risk_chart(
 def _section_label(text: str) -> None:
     st.markdown(
         f"""<div style="display:flex;align-items:center;gap:0.6rem;margin:1.6rem 0 0.6rem">
-        <div style="width:3px;height:14px;background:{_GOLD};border-radius:2px;flex-shrink:0"></div>
+        <div style="width:3px;height:14px;background:{_GOLD};;flex-shrink:0"></div>
         <span style="font-family:'DM Sans',sans-serif;font-size:0.6rem;font-weight:700;
         letter-spacing:0.15em;text-transform:uppercase;color:{_MUTED}">{text}</span>
         <div style="flex:1;height:1px;background:{_RULE}"></div></div>""",
@@ -477,7 +539,7 @@ def _metric_card(label: str, value: str, delta: str = "", color: str = _GOLD) ->
         if delta else ""
     )
     st.markdown(
-        f"""<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;
+        f"""<div style="background:#080808;border:1px solid #2a2a2a;border-radius:0;
         padding:0.7rem 0.9rem;margin-bottom:0.5rem">
         <div style="font-family:'DM Sans',sans-serif;font-size:0.55rem;font-weight:700;
         letter-spacing:0.14em;text-transform:uppercase;color:{_MUTED};margin-bottom:3px">{label}</div>
@@ -505,7 +567,7 @@ def _impact_table(impact: dict[str, float]) -> None:
         )
     st.markdown(
         f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
-        <table style="width:100%;border-collapse:collapse;background:#1c1c1c">
+        <table style="width:100%;border-collapse:collapse;background:#080808">
         <thead><tr style="border-bottom:1px solid #2a2a2a">
           <th style="padding:0.35rem 0.7rem;font-size:0.55rem;letter-spacing:0.12em;
           text-transform:uppercase;color:{_MUTED};text-align:left;font-weight:600">Asset</th>
@@ -536,7 +598,7 @@ def _var_table(var_es: dict[str, dict[str, float]], assets: list[str]) -> None:
         )
     st.markdown(
         f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
-        <table style="width:100%;border-collapse:collapse;background:#1c1c1c">
+        <table style="width:100%;border-collapse:collapse;background:#080808">
         <thead><tr style="border-bottom:1px solid #2a2a2a">
           <th style="padding:0.35rem 0.7rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:{_MUTED};text-align:left;font-weight:600">Asset</th>
           <th style="padding:0.35rem 0.7rem;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:{_RED};text-align:right;font-weight:600">VaR 95%</th>
@@ -621,7 +683,7 @@ def _comparison_table(impacts: dict[str, dict[str, float]], assets: list[str]) -
 
     st.markdown(
         f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
-        <table style="width:100%;border-collapse:collapse;background:#1c1c1c">
+        <table style="width:100%;border-collapse:collapse;background:#080808">
         <thead><tr style="border-bottom:1px solid #2a2a2a">{header_cells}</tr></thead>
         <tbody>{rows_html}</tbody>
         </table></div>""",
@@ -632,7 +694,7 @@ def _comparison_table(impacts: dict[str, dict[str, float]], assets: list[str]) -
 def _shock_badge(label: str, value: str, active: bool) -> str:
     color  = _GOLD if active else _MUTED
     border = f"1px solid {_GOLD}" if active else f"1px solid #2a2a2a"
-    bg     = "#1e1a12" if active else "#1c1c1c"
+    bg     = "#1e1a12" if active else "#080808"
     return (
         f'<span style="display:inline-block;background:{bg};border:{border};'
         f'border-radius:0;padding:2px 8px;font-family:\'JetBrains Mono\',monospace;'
@@ -700,13 +762,26 @@ def page_scenario_engine(
 
     # ── Load data ─────────────────────────────────────────────────────────
     with st.spinner("Computing betas and historical tail risk…"):
-        betas   = _compute_betas(start, end)
-        var_es  = _compute_var_es(start, end)
+        betas        = _compute_betas(start, end)
+        regime_betas = _compute_regime_betas(start, end)
+        var_es       = _compute_var_es(start, end)
 
     data_ok = bool(betas) and bool(var_es)
     if not data_ok:
         st.warning("Insufficient return data to compute betas. Expand the date range.")
         return
+
+    # Detect current correlation regime and pick regime-conditional betas
+    _current_regime = st.session_state.get("current_regime", 1)
+    try:
+        _current_regime = int(_current_regime)
+    except (TypeError, ValueError):
+        _current_regime = 1
+
+    _REGIME_NAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+    _regime_label = _REGIME_NAMES.get(_current_regime, "Normal")
+    _active_betas = regime_betas.get(_current_regime, betas)  # fall back to unconditional
+    _using_regime_betas = _current_regime in regime_betas and bool(_active_betas)
 
     # ── Scenario selector + controls ──────────────────────────────────────
     _section_label("Scenario Configuration")
@@ -902,7 +977,24 @@ def page_scenario_engine(
     if natgas_pct != 0: raw_shocks[_SHOCK_PROXY["natgas"]] = natgas_pct / 100
     if copper_pct != 0: raw_shocks[_SHOCK_PROXY["copper"]] = copper_pct / 100
 
-    impact = _propagate_shock(betas, raw_shocks)
+    # GAP 19: use regime-conditional betas instead of unconditional OLS
+    # In Elevated/Crisis regimes, betas are empirically higher (amplified transmission)
+    impact = _propagate_shock(_active_betas, raw_shocks)
+
+    # Show which beta set is being applied
+    if _using_regime_betas:
+        _beta_note_color = {"Decorrelated": "#27ae60", "Normal": "#CFB991",
+                            "Elevated": "#e67e22", "Crisis": "#e74c3c"}.get(_regime_label, "#CFB991")
+        st.markdown(
+            f'<div style="background:#0a0a0a;border-left:2px solid {_beta_note_color};'
+            f'border-radius:3px;padding:6px 10px;margin:4px 0;">'
+            f'<span style="color:{_beta_note_color};font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:10px;font-weight:700;">REGIME BETAS ACTIVE — {_regime_label.upper()}</span>'
+            f'<span style="color:#777;font-family:\'JetBrains Mono\',monospace;font-size:10px;"> · '
+            f'Betas estimated on {_regime_label} regime periods only (not full-sample OLS). '
+            f'Unconditional betas are available in tail risk tab.</span></div>',
+            unsafe_allow_html=True,
+        )
 
     # Add yield, DXY, credit, geo, and macro via fixed sensitivity tables
     fixed_shocks: dict[str, float] = {}
@@ -1011,7 +1103,7 @@ def page_scenario_engine(
     st.markdown(
         f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem">
         {"".join([
-            f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;'
+            f'<div style="background:#080808;border:1px solid #2a2a2a;border-radius:0;'
             f'padding:0.6rem 0.85rem">'
             f'<div style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;'
             f'text-transform:uppercase;color:{_MUTED};margin-bottom:4px">{title}</div>'
@@ -1136,5 +1228,126 @@ def page_scenario_engine(
         st.info("Select at least 2 scenarios to run the comparison.")
     else:
         st.info("Select 2–6 preset scenarios above to compare cross-asset impacts.")
+
+    # ── GAP 4: Sector-Level Equity Decomposition via SPDR ETFs ───────────────
+    _section_label("Sector Exposure — Which Equity Sectors Are Most Vulnerable to This Shock?")
+    st.markdown(
+        f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.7rem;line-height:1.55">'
+        f'SPDR sector ETFs mapped to commodity shock channels. '
+        f'Commodity shocks do not hit all equity sectors equally: energy shock → XLE up, XAL down. '
+        f'Betas estimated via OLS on {_regime_label} regime data.</p>',
+        unsafe_allow_html=True,
+    )
+
+    _SECTOR_ETFS: dict[str, str] = {
+        "XLE": "Energy",
+        "XLB": "Materials",
+        "XLI": "Industrials",
+        "XLF": "Financials",
+        "XLK": "Technology",
+        "XLU": "Utilities",
+        "XLP": "Consumer Staples",
+        "XLY": "Consumer Discretionary",
+        "XLV": "Health Care",
+        "XLC": "Communication Svcs",
+    }
+
+    try:
+        import yfinance as _yfsec
+        _sec_data = _yfsec.download(
+            list(_SECTOR_ETFS.keys()), period="2y",
+            auto_adjust=True, progress=False, show_errors=False,
+        )["Close"].pct_change().dropna()
+
+        if not _sec_data.empty and len(raw_shocks) > 0:
+            # Compute sector betas to the active commodity shocks
+            _combined_for_sec = load_combined_returns(start, end)
+            _sec_betas: dict[str, dict[str, float]] = {}
+
+            for _proxy_name, _shock_val in raw_shocks.items():
+                if _proxy_name not in _combined_for_sec.columns:
+                    continue
+                _proxy_r = _combined_for_sec[_proxy_name].dropna()
+                _sb_row: dict[str, float] = {}
+                for _etf, _sec_name in _SECTOR_ETFS.items():
+                    if _etf not in _sec_data.columns:
+                        continue
+                    _aligned = pd.concat([_proxy_r, _sec_data[_etf]], axis=1).dropna()
+                    if len(_aligned) < 60:
+                        continue
+                    _x = _aligned.iloc[:, 0].values
+                    _y = _aligned.iloc[:, 1].values
+                    _var_x = np.var(_x, ddof=1)
+                    if _var_x < 1e-12:
+                        continue
+                    _sb_row[_etf] = float(np.cov(_x, _y, ddof=1)[0, 1] / _var_x)
+                if _sb_row:
+                    _sec_betas[_proxy_name] = _sb_row
+
+            if _sec_betas:
+                # Compute estimated sector impact from current shocks
+                _sec_impact: dict[str, float] = {etf: 0.0 for etf in _SECTOR_ETFS}
+                for _proxy_name, _shock_val in raw_shocks.items():
+                    if _proxy_name not in _sec_betas:
+                        continue
+                    for _etf in _SECTOR_ETFS:
+                        _beta = _sec_betas[_proxy_name].get(_etf, 0.0)
+                        _sec_impact[_etf] += _beta * _shock_val
+
+                # Sort sectors by impact
+                _sec_sorted = sorted(
+                    [(etf, _SECTOR_ETFS[etf], imp * 100)
+                     for etf, imp in _sec_impact.items() if etf in _SECTOR_ETFS],
+                    key=lambda x: x[2],
+                )
+                _sec_names   = [f"{x[1]} ({x[0]})" for x in _sec_sorted]
+                _sec_impacts = [x[2] for x in _sec_sorted]
+                _sec_colors  = ["#4ade80" if v > 0 else "#f87171" for v in _sec_impacts]
+
+                _sec_fig = go.Figure(go.Bar(
+                    x=_sec_impacts,
+                    y=_sec_names,
+                    orientation="h",
+                    marker=dict(color=_sec_colors),
+                    text=[f"{v:+.2f}%" for v in _sec_impacts],
+                    textfont=dict(size=9, family="JetBrains Mono, monospace"),
+                ))
+                _sec_fig.update_layout(
+                    template="purdue", height=350,
+                    paper_bgcolor="#111111", plot_bgcolor="#111111",
+                    font=dict(color="#e8e9ed"),
+                    xaxis=dict(title="Estimated 1-day return %",
+                               zeroline=True, zerolinecolor="#555",
+                               tickfont=dict(size=9, color="#8890a1")),
+                    yaxis=dict(tickfont=dict(size=9, color="#c8c8c8")),
+                    margin=dict(l=160, r=60, t=20, b=40),
+                )
+                _chart(_sec_fig)
+
+                # Trade idea: most positive vs most negative sector
+                _top_sec  = _sec_sorted[-1]
+                _bot_sec  = _sec_sorted[0]
+                if abs(_top_sec[2]) > 0.05 or abs(_bot_sec[2]) > 0.05:
+                    st.markdown(
+                        f'<div style="background:#080808;border-left:3px solid #CFB991;'
+                        f'border-radius:4px;padding:8px 14px;margin:6px 0">'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                        f'font-weight:700;color:#CFB991;letter-spacing:.1em">SECTOR TRADE IMPLICATION</span><br>'
+                        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#b0b0b0">'
+                        f'Long <b style="color:#4ade80">{_top_sec[1]} ({_top_sec[0]})</b> '
+                        f'({_top_sec[2]:+.2f}% est.) vs '
+                        f'Short <b style="color:#f87171">{_bot_sec[1]} ({_bot_sec[0]})</b> '
+                        f'({_bot_sec[2]:+.2f}% est.) under this shock configuration. '
+                        f'Regime: {_regime_label}.</span></div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.info("Insufficient data to compute sector betas.")
+        elif len(raw_shocks) == 0:
+            st.info("Configure a commodity shock above to see sector impact decomposition.")
+        else:
+            st.info("Sector ETF data unavailable. Check internet connectivity.")
+    except Exception as _sec_err:
+        st.caption(f"Sector decomposition unavailable: {type(_sec_err).__name__}")
 
     _page_footer()

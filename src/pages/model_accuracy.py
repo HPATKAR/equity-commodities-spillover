@@ -98,6 +98,123 @@ def _event_onset_mask(index: pd.DatetimeIndex, events: list[dict],
     return mask
 
 
+def _independent_ground_truth(index: pd.DatetimeIndex, events: list[dict]) -> pd.Series:
+    """
+    Independent ground truth built entirely from externally-defined event dates.
+    NOT derived from market data — avoids the circularity of using VIX (which
+    correlates with equity_vol, an input to the regime detector) as ground truth.
+
+    Covers the full event window (start → end) for Financial, Geopolitical, and
+    Pandemic events where severity was systemic. This is a conservative definition:
+    only periods where a human analyst independently documented market stress.
+
+    Returns binary Series: 1 = crisis/stress period, 0 = normal.
+    """
+    mask = pd.Series(0.0, index=index)
+    # Only use events that represent externally verifiable market crises
+    # (Financial, Pandemic, major Geopolitical) — not all trade disputes
+    crisis_cats = {"Financial", "Pandemic"}
+    geo_crisis_keywords = {
+        "War", "Invasion", "Crisis", "Attack", "Crash", "Collapse", "Squeeze",
+        "Shock", "Failure", "Default", "Pandemic",
+    }
+    for ev in events:
+        is_crisis = ev["category"] in crisis_cats
+        if not is_crisis and ev["category"] == "Geopolitical":
+            # Only include geopolitical events that were clearly market-disruptive
+            is_crisis = any(kw.lower() in ev["name"].lower() for kw in geo_crisis_keywords)
+        if is_crisis:
+            s = pd.Timestamp(ev["start"])
+            e = pd.Timestamp(ev.get("end", ev["start"])) + pd.Timedelta(days=30)
+            mask.loc[str(s.date()): str(e.date())] = 1.0
+    return mask.clip(0, 1)
+
+
+def _holdout_validation(
+    features_df: pd.DataFrame,
+    ground_truth: pd.Series,
+    holdout_start: str = "2023-01-01",
+) -> dict:
+    """
+    Strict train/holdout split — fixes the out-of-sample validation gap.
+
+    Trains logistic regression on all data BEFORE holdout_start.
+    Tests on all data FROM holdout_start onwards.
+    Ground truth is the independent event-based mask (not VIX).
+
+    Returns metrics for both periods for comparison.
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import balanced_accuracy_score, roc_auc_score, f1_score
+
+    gt = ground_truth.rename("target")
+    aligned = features_df.join(gt, how="inner").dropna()
+
+    cutoff = pd.Timestamp(holdout_start)
+    train = aligned[aligned.index < cutoff]
+    test  = aligned[aligned.index >= cutoff]
+
+    if len(train) < 100 or len(test) < 20:
+        return {"error": f"Insufficient data: train={len(train)}, test={len(test)}"}
+    if train["target"].sum() < 5 or test["target"].sum() < 2:
+        return {"error": "Too few positive labels in train or test split."}
+
+    feat_cols = [c for c in features_df.columns if c in aligned.columns]
+    X_tr = train[feat_cols].values
+    y_tr = train["target"].astype(int).values
+    X_te = test[feat_cols].values
+    y_te = test["target"].astype(int).values
+
+    scaler = StandardScaler()
+    X_tr_s = scaler.fit_transform(X_tr)
+    X_te_s = scaler.transform(X_te)
+
+    try:
+        lr = LogisticRegression(
+            C=0.5, max_iter=500, class_weight="balanced",
+            solver="lbfgs", random_state=42,
+        )
+        lr.fit(X_tr_s, y_tr)
+        y_prob_te = lr.predict_proba(X_te_s)[:, 1]
+        y_pred_te = (y_prob_te >= 0.40).astype(int)
+
+        # Train-set metrics (expected to be better — for comparison)
+        y_prob_tr = lr.predict_proba(X_tr_s)[:, 1]
+        y_pred_tr = (y_prob_tr >= 0.40).astype(int)
+
+        def _safe_auc(y_t, y_p):
+            try:
+                return roc_auc_score(y_t, y_p)
+            except Exception:
+                return np.nan
+
+        return {
+            "train_n":       len(train),
+            "test_n":        len(test),
+            "holdout_start": holdout_start,
+            "train": {
+                "balanced_acc": round(balanced_accuracy_score(y_tr, y_pred_tr) * 100, 1),
+                "auc":          round((_safe_auc(y_tr, y_prob_tr) or np.nan) * 100, 1),
+                "f1":           round(f1_score(y_tr, y_pred_tr, zero_division=0) * 100, 1),
+                "recall":       round(float((y_pred_tr == 1) & (y_tr == 1)).sum() / max((y_tr==1).sum(),1) * 100, 1),
+                "pos_rate":     round(y_tr.mean() * 100, 1),
+            },
+            "holdout": {
+                "balanced_acc": round(balanced_accuracy_score(y_te, y_pred_te) * 100, 1),
+                "auc":          round((_safe_auc(y_te, y_prob_te) or np.nan) * 100, 1),
+                "f1":           round(f1_score(y_te, y_pred_te, zero_division=0) * 100, 1),
+                "recall":       round(float(((y_pred_te == 1) & (y_te == 1)).sum()) / max((y_te==1).sum(),1) * 100, 1),
+                "pos_rate":     round(y_te.mean() * 100, 1),
+            },
+            "probs_test":  pd.Series(y_prob_te, index=test.index, name="holdout_prob"),
+            "preds_test":  pd.Series(y_pred_te, index=test.index, name="holdout_pred"),
+            "gt_test":     pd.Series(y_te,       index=test.index, name="holdout_gt"),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Classification metrics ─────────────────────────────────────────────────
 
 def _regime_classification_stats(
@@ -999,7 +1116,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     # ── Signal scorecards ───────────────────────────────────────────────────
     st.markdown(
         f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0.6rem 0 0.5rem 0">Signal Scorecard</p>',
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0.6rem 0 0.5rem 0">Signal Scorecard</p>',
         unsafe_allow_html=True,
     )
     recall_str = f"{stats['recall']:.0f}" if stats["recall"] else "?"
@@ -1047,7 +1164,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     with col_reg:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">Regime Detection: Rule-Based vs VIX</p>',
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">Regime Detection: Rule-Based vs VIX</p>',
             unsafe_allow_html=True,
         )
 
@@ -1144,7 +1261,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         # ML Classifier section
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:#8E6F3E;margin:0.8rem 0 0.4rem">Walk-Forward ML Classifier (Optional)</p>',
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0.8rem 0 0.4rem">Walk-Forward ML Classifier (Optional)</p>',
             unsafe_allow_html=True,
         )
         with st.spinner("Running walk-forward logistic regression…"):
@@ -1235,7 +1352,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     with col_rs:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">Risk Score vs VIX Calibration</p>',
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">Risk Score vs VIX Calibration</p>',
             unsafe_allow_html=True,
         )
 
@@ -1313,6 +1430,128 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
+    # ══════════════════════════════════════════════════════════════════════
+    # INDEPENDENT GROUND TRUTH + HOLDOUT VALIDATION
+    # Fixes GAP 15 (circular VIX ground truth) + GAP 18 (no out-of-sample)
+    # ══════════════════════════════════════════════════════════════════════
+    st.markdown(
+        f'<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        f'color:#CFB991;margin:0.6rem 0 0.1rem">Independent Validation — No Market Data Circularity</h2>'
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
+        f'The VIX-based ground truth above shares a data source with the model (equity vol ≈ VIX). '
+        f'Below: independent event-calendar ground truth + strict train/holdout split — '
+        f'the only academically valid test of out-of-sample generalization.</p>',
+        unsafe_allow_html=True,
+    )
+
+    # Build independent ground truth from event calendar
+    indep_gt = _independent_ground_truth(feat_df.index, GEOPOLITICAL_EVENTS)
+    indep_stats = _regime_classification_stats(regimes.reindex(feat_df.index).ffill().fillna(1), indep_gt)
+
+    col_indep, col_hold = st.columns([1, 1.1], gap="medium")
+
+    with col_indep:
+        st.markdown(
+            f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px">Event-Calendar Ground Truth</p>'
+            f'<p style="{_F}font-size:0.62rem;color:#555960;margin:0 0 8px;line-height:1.5">'
+            f'Stress periods defined by externally-dated crisis events (not market data). '
+            f'Independent of equity vol — no circularity.</p>',
+            unsafe_allow_html=True,
+        )
+        ci1, ci2, ci3 = st.columns(3)
+        ci1.metric("Balanced Acc", f"{indep_stats['balanced_acc']:.1f}%",
+                   help="vs event calendar — independent ground truth")
+        ci2.metric("Recall", f"{indep_stats['recall']:.1f}%",
+                   help="% of actual crisis periods caught by regime detector")
+        ci3.metric("AUC", f"{indep_stats['auc']:.1f}%" if indep_stats['auc'] else "–")
+
+        _pos_rate = indep_gt.mean() * 100
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid {"#27ae60" if indep_stats["balanced_acc"]>=60 else "#e67e22"};'
+            f'padding:.4rem .7rem;margin-top:.4rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#8E9AAA">'
+            f'Event-calendar positive rate: {_pos_rate:.0f}% of days · '
+            f'Crisis events: Financial + Pandemic + systemic Geopolitical · '
+            f'Source: GEOPOLITICAL_EVENTS registry (not derived from prices)</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Compare VIX vs independent GT side by side
+        _vix_ba   = stats["balanced_acc"]
+        _event_ba = indep_stats["balanced_acc"]
+        _delta    = _event_ba - _vix_ba
+        _d_color  = "#27ae60" if _delta >= 0 else "#c0392b"
+        st.markdown(
+            f'<div style="margin-top:.5rem;font-family:\'DM Sans\',sans-serif;'
+            f'font-size:0.62rem;color:#8890a1">'
+            f'VIX-based balanced acc: <b style="color:#e8e9ed">{_vix_ba:.1f}%</b> · '
+            f'Event-based balanced acc: <b style="color:#e8e9ed">{_event_ba:.1f}%</b> · '
+            f'Delta: <b style="color:{_d_color}">{_delta:+.1f}pp</b><br>'
+            f'<i>If delta is large (+/-), the VIX benchmark is inflated by circularity. '
+            f'Event-based is the conservative, valid figure.</i></div>',
+            unsafe_allow_html=True,
+        )
+
+    with col_hold:
+        st.markdown(
+            f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px">Strict Holdout Validation (2023–Present)</p>'
+            f'<p style="{_F}font-size:0.62rem;color:#555960;margin:0 0 8px;line-height:1.5">'
+            f'Train on 2008–2022, test on 2023–present. '
+            f'No data leakage — the model has never seen holdout data.</p>',
+            unsafe_allow_html=True,
+        )
+        with st.spinner("Running holdout validation…"):
+            hv = _holdout_validation(feat_df, indep_gt, holdout_start="2023-01-01")
+
+        if "error" in hv:
+            st.info(f"Holdout: {hv['error']}")
+        else:
+            _tr  = hv["train"]
+            _ho  = hv["holdout"]
+            _gap = _ho["balanced_acc"] - _tr["balanced_acc"]
+            _gap_color = "#27ae60" if _gap >= -10 else "#e67e22" if _gap >= -20 else "#c0392b"
+
+            hk1, hk2, hk3 = st.columns(3)
+            hk1.metric("Holdout Balanced Acc", f"{_ho['balanced_acc']:.1f}%",
+                       delta=f"{_gap:+.1f}pp vs train",
+                       help="Positive delta = model generalises well")
+            hk2.metric("Holdout AUC",     f"{_ho['auc']:.1f}%" if np.isfinite(_ho['auc']) else "—")
+            hk3.metric("Holdout Recall",  f"{_ho['recall']:.1f}%")
+
+            # Train vs holdout comparison strip
+            for _period, _met, _col in [("Train (2008–2022)", _tr, "#8E9AAA"),
+                                        ("Holdout (2023–now)", _ho, "#CFB991")]:
+                st.markdown(
+                    f'<div style="display:flex;gap:1rem;background:#0d0d0d;'
+                    f'border:1px solid #1e1e1e;border-left:2px solid {_col};'
+                    f'padding:.35rem .7rem;margin-bottom:.25rem;align-items:center">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
+                    f'color:{_col};font-weight:700;min-width:120px">{_period}</span>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#8E9AAA">'
+                    f'Bal.Acc {_met["balanced_acc"]:.0f}% &nbsp;·&nbsp; '
+                    f'AUC {_met["auc"]:.0f}% &nbsp;·&nbsp; '
+                    f'Recall {_met["recall"]:.0f}% &nbsp;·&nbsp; '
+                    f'F1 {_met["f1"]:.0f}% &nbsp;·&nbsp; '
+                    f'n={_met.get("pos_rate",0):.0f}% pos</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown(
+                f'<div style="margin-top:.4rem;font-family:\'DM Sans\',sans-serif;'
+                f'font-size:0.62rem;color:{_gap_color}">'
+                f'Generalization gap: <b>{_gap:+.1f}pp</b> '
+                f'{"✓ model generalises well" if _gap >= -10 else "⚠ some overfitting on train set"}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
+                unsafe_allow_html=True)
+
     _thread(
         "Regime detection identifies the market state. Granger causality below tests whether knowing "
         "commodity prices actually improves the prediction of equity returns - a much higher bar than "
@@ -1329,7 +1568,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     with col_gr:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">Granger Lead-Lag: Directional Hit Rate</p>',
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">Granger Lead-Lag: Directional Hit Rate</p>',
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -1470,7 +1709,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     with col_cot:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">COT Contrarian: Price Reversal Accuracy</p>',
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">COT Contrarian: Price Reversal Accuracy</p>',
             unsafe_allow_html=True,
         )
         st.markdown(

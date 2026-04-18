@@ -24,6 +24,7 @@ import math
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 import streamlit as st
 
 from src.data.config import CONFLICTS
@@ -158,12 +159,55 @@ def _check_conflict_freshness(conflict: dict) -> tuple[bool, bool]:
 
 # ── Per-conflict scorers ──────────────────────────────────────────────────────
 
+def _acled_cis_nudge(conflict: dict) -> tuple[float, str]:
+    """
+    Fetch ACLED live event data and return a CIS nudge factor and escalation override.
+
+    Returns (nudge_factor, escalation_override) where:
+    - nudge_factor: multiplier applied to base CIS (e.g., 1.15 = 15% uplift if escalating)
+    - escalation_override: "escalating"/"stable"/"de-escalating" if ACLED data is available,
+      else "" (no override)
+
+    Only applied when ACLED API is configured and returns data_available=True.
+    """
+    try:
+        from src.data.acled import fetch_acled_intensity, acled_configured
+        if not acled_configured():
+            return 1.0, ""
+
+        acled_id = conflict.get("acled_id", "")
+        if not acled_id:
+            return 1.0, ""
+
+        result = fetch_acled_intensity(acled_id, days=30)
+        if not result.get("data_available"):
+            return 1.0, ""
+
+        trend = float(result.get("events_trend", 0.0))
+        escalation = str(result.get("escalation_signal", "stable"))
+
+        # Map trend magnitude to a multiplicative nudge: ±25% max
+        nudge = float(np.clip(1.0 + trend * 0.5, 0.75, 1.25))
+        return nudge, escalation
+    except Exception:
+        return 1.0, ""
+
+
 def compute_cis(conflict: dict) -> float:
     """
     Conflict Intensity Score for a single conflict.
     Returns value in [0, 100].
+
+    When ACLED API is configured, live event counts (last 30 days) are used to
+    nudge the score: escalating event trend → CIS × up to 1.25, de-escalating → × 0.75.
+    This replaces the purely static deadliness/escalation_trend dimensions with
+    live-verified data for registered conflicts.
     """
     state_mult = _STATE_MULT.get(conflict.get("state", "active"), 1.0)
+
+    # ACLED live nudge (no-op if API not configured)
+    acled_nudge, acled_escalation = _acled_cis_nudge(conflict)
+    effective_escalation = acled_escalation or conflict.get("escalation_trend", "stable")
 
     # Dimension values
     dims = {
@@ -171,14 +215,13 @@ def compute_cis(conflict: dict) -> float:
         "civilian_danger":      float(conflict.get("civilian_danger",      0.5)),
         "geographic_diffusion": float(conflict.get("geographic_diffusion", 0.3)),
         "fragmentation":        float(conflict.get("fragmentation",        0.2)),
-        "escalation_trend":     _ESCALATION_MAP.get(
-                                    conflict.get("escalation_trend", "stable"), 0.5),
+        "escalation_trend":     _ESCALATION_MAP.get(effective_escalation, 0.5),
         "recency":              _recency_score(conflict),
         "source_coverage":      float(conflict.get("source_coverage",      0.7)),
     }
 
     raw = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
-    cis = float(np.clip(raw * state_mult * 100, 0, 100))
+    cis = float(np.clip(raw * state_mult * acled_nudge * 100, 0, 100))
 
     # Staleness cap: prevent stale manual data from outranking fresh, market-
     # confirmed conflicts. Cap only kicks in after staleness_cap_days (180d).
@@ -354,9 +397,42 @@ def score_all_conflicts() -> dict[str, dict]:
             "hedge_assets":         c.get("hedge_assets",         []),
             "last_updated":         str(c.get("last_updated", "")),
         }
+    # GAP 17 fix: freshness of conflict_manual should reflect when the CONFLICTS dict
+    # was last edited, not when this function ran. We check the most recent
+    # last_updated field across all conflicts rather than calling record_fetch()
+    # unconditionally (which would always show "Live" even on months-old data).
     try:
-        from src.analysis.freshness import record_fetch
-        record_fetch("conflict_manual")
+        from src.analysis.freshness import record_fetch, record_failure
+        today = datetime.date.today()
+        most_recent = None
+        for c in CONFLICTS:
+            lu = c.get("last_updated")
+            if isinstance(lu, datetime.date):
+                d = lu
+            elif isinstance(lu, str):
+                try:
+                    d = datetime.date.fromisoformat(lu)
+                except ValueError:
+                    continue
+            else:
+                continue
+            if most_recent is None or d > most_recent:
+                most_recent = d
+
+        if most_recent is not None:
+            # Record freshness as of the conflict's own last_updated date
+            record_fetch(
+                "conflict_manual",
+                ts=datetime.datetime.combine(most_recent, datetime.time(0, 0)),
+            )
+            days_since = (today - most_recent).days
+            if days_since > 90:
+                record_failure(
+                    "conflict_manual",
+                    f"Conflict data last updated {days_since}d ago ({most_recent}) — manual refresh needed",
+                )
+        else:
+            record_failure("conflict_manual", "No last_updated dates found in CONFLICTS registry")
     except Exception:
         pass
     return results
@@ -560,3 +636,142 @@ def top_affected_assets(conflict_id: str, n: int = 5) -> list[dict]:
             ranked.append({"asset": asset, "exposure": score})
     ranked.sort(key=lambda x: x["exposure"], reverse=True)
     return ranked[:n]
+
+
+# ── Transmission lag signal ───────────────────────────────────────────────────
+
+def transmission_lag_signal(
+    cmd_r: "pd.DataFrame",
+    equity_r: "pd.DataFrame",
+    lookback: int = 5,
+    z_threshold: float = 1.5,
+) -> dict:
+    """
+    Detect commodity→equity transmission lag: when commodity stress spiked
+    N days ago but equities have not yet fully responded.
+
+    Geopolitical shocks transmit to equities with a 1-5 day lag (sanctions
+    announcements, supply route confirmations, refinery pass-through).
+    This function surfaces those windows so analysts can anticipate delayed
+    equity moves.
+
+    Parameters
+    ----------
+    cmd_r       : daily commodity log-return DataFrame
+    equity_r    : daily equity log-return DataFrame
+    lookback    : max lag to check (default 5 trading days)
+    z_threshold : minimum commodity z-score to flag as a stress event (1.5σ)
+
+    Returns
+    -------
+    dict with keys:
+        active          : bool — True if a pending transmission is detected
+        peak_day_ago    : int  — days since peak commodity stress (1=yesterday)
+        commodity_z     : float — commodity stress z-score at the peak day
+        equity_z        : float — equity z-score on the SAME peak day
+        equity_lag_z    : float — equity z-score TODAY (lagged response expected)
+        lag_signal      : str  — "Pending" / "In progress" / "Absorbed" / "No stress"
+        dominant_cmd    : str  — commodity with strongest stress at peak day
+        detail          : str  — human-readable summary for display
+    """
+    _empty = {
+        "active": False,
+        "peak_day_ago": 0,
+        "commodity_z": 0.0,
+        "equity_z": 0.0,
+        "equity_lag_z": 0.0,
+        "lag_signal": "No stress",
+        "dominant_cmd": "",
+        "detail": "Insufficient data",
+    }
+
+    try:
+        if cmd_r is None or cmd_r.empty or equity_r is None or equity_r.empty:
+            return _empty
+        if len(cmd_r) < 30 or len(equity_r) < 30:
+            return _empty
+
+        # Align on common index, last 60 days for z-score context
+        common_idx = cmd_r.index.intersection(equity_r.index)
+        if len(common_idx) < 30:
+            return _empty
+
+        cmd_aligned = cmd_r.loc[common_idx].tail(60)
+        eq_aligned  = equity_r.loc[common_idx].tail(60)
+
+        # Commodity stress composite: mean of |daily returns| × 100 across all cols
+        cmd_composite = cmd_aligned.mean(axis=1) * 100.0  # daily avg return %
+        eq_composite  = eq_aligned.mean(axis=1)  * 100.0
+
+        # Rolling z-score using first 30 observations as baseline
+        baseline_cmd = cmd_composite.iloc[:30]
+        baseline_eq  = eq_composite.iloc[:30]
+        mu_cmd, sd_cmd = float(baseline_cmd.mean()), float(baseline_cmd.std())
+        mu_eq,  sd_eq  = float(baseline_eq.mean()),  float(baseline_eq.std())
+
+        if sd_cmd < 1e-8 or sd_eq < 1e-8:
+            return _empty
+
+        cmd_z = (cmd_composite - mu_cmd) / sd_cmd
+        eq_z  = (eq_composite  - mu_eq)  / sd_eq
+
+        # Look at the last `lookback` days for a commodity stress spike
+        recent_cmd_z = cmd_z.iloc[-(lookback + 1):-1]  # exclude today
+        today_eq_z   = float(eq_z.iloc[-1])
+
+        if len(recent_cmd_z) == 0:
+            return _empty
+
+        # Find peak commodity stress day in the lookback window
+        peak_idx  = int(recent_cmd_z.abs().argmax())
+        peak_z    = float(recent_cmd_z.iloc[peak_idx])
+        peak_date = recent_cmd_z.index[peak_idx]
+        days_ago  = len(recent_cmd_z) - peak_idx  # 1 = yesterday
+
+        if abs(peak_z) < z_threshold:
+            return {**_empty, "lag_signal": "No stress",
+                    "detail": f"No significant commodity stress in past {lookback} days (peak z={peak_z:.2f})"}
+
+        # Equity response on the same peak day
+        eq_z_at_peak = float(eq_z.loc[peak_date]) if peak_date in eq_z.index else 0.0
+
+        # Determine dominant commodity at peak day
+        cmd_daily = cmd_aligned.loc[peak_date] if peak_date in cmd_aligned.index else pd.Series()
+        dominant_cmd = str(cmd_daily.abs().idxmax()) if not cmd_daily.empty else "—"
+
+        # Classify lag signal
+        same_sign  = (peak_z * today_eq_z) > 0
+        equity_absorbed = abs(today_eq_z) >= abs(eq_z_at_peak) * 0.7
+
+        if days_ago == 1 and not same_sign:
+            lag_signal = "Pending"
+            detail = (f"Commodity stress spiked yesterday (z={peak_z:+.2f}, {dominant_cmd}). "
+                      f"Equity has NOT yet responded (eq z={today_eq_z:+.2f}). "
+                      f"Watch for delayed equity transmission today.")
+        elif days_ago <= 3 and not equity_absorbed:
+            lag_signal = "In progress"
+            detail = (f"{dominant_cmd} stress peaked {days_ago}d ago (z={peak_z:+.2f}). "
+                      f"Equity absorption partial (eq today z={today_eq_z:+.2f}). "
+                      f"Transmission still propagating — expect continued equity move.")
+        elif days_ago <= lookback and equity_absorbed:
+            lag_signal = "Absorbed"
+            detail = (f"{dominant_cmd} stress peaked {days_ago}d ago (z={peak_z:+.2f}). "
+                      f"Equity has absorbed the shock (eq today z={today_eq_z:+.2f}). "
+                      f"Transmission complete.")
+        else:
+            lag_signal = "No stress"
+            detail = f"No significant commodity→equity lag detected in past {lookback} days."
+
+        return {
+            "active":        lag_signal in ("Pending", "In progress"),
+            "peak_day_ago":  days_ago,
+            "commodity_z":   round(peak_z, 2),
+            "equity_z":      round(eq_z_at_peak, 2),
+            "equity_lag_z":  round(today_eq_z, 2),
+            "lag_signal":    lag_signal,
+            "dominant_cmd":  dominant_cmd,
+            "detail":        detail,
+        }
+
+    except Exception:
+        return _empty

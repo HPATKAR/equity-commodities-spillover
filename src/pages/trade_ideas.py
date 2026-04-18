@@ -228,6 +228,90 @@ _CATEGORY_COLORS = {
 }
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def _backtest_trade(
+    _all_r: pd.DataFrame,
+    _regimes: pd.Series,
+    trade_name: str,
+    trigger_regimes: list[int],
+    assets: list[str],
+    directions: list[str],
+    holding_days: int = 30,
+) -> dict:
+    """
+    Historical backtest for a single trade idea.
+
+    Signal: every time the regime enters one of `trigger_regimes`
+    (first day of that regime), enter the trade.
+    Hold for `holding_days` business days.
+    Portfolio P&L = equal-weight of directional returns.
+
+    Returns:
+      n_signals, win_rate (%), avg_return (%), sharpe, max_drawdown (%),
+      available_assets (list of matched assets)
+    """
+    # Only backtest assets available in the returns DataFrame
+    avail = [(a, d) for a, d in zip(assets, directions) if a in _all_r.columns]
+    if not avail or _all_r.empty or _regimes.empty:
+        return {"n_signals": 0, "error": "Insufficient data"}
+
+    # Align regime to returns index
+    reg = _regimes.reindex(_all_r.index, method="ffill").fillna(1).astype(int)
+
+    # Entry signal: first day of a qualifying regime
+    in_regime = reg.isin(trigger_regimes).astype(int)
+    entry_signal = (in_regime.diff() == 1)       # rising edge = regime just entered
+    entry_dates  = _all_r.index[entry_signal].tolist()
+
+    if not entry_dates:
+        return {"n_signals": 0, "error": "No entry signals in history"}
+
+    trade_returns = []
+    for entry in entry_dates:
+        try:
+            i_start = _all_r.index.get_loc(entry)
+        except KeyError:
+            continue
+        i_end = min(i_start + holding_days, len(_all_r) - 1)
+        if i_end <= i_start:
+            continue
+        window = _all_r.iloc[i_start: i_end]
+        # Compute equal-weight portfolio return
+        leg_rets = []
+        for asset, direction in avail:
+            leg_ret = (1 + window[asset]).prod() - 1  # compound return over window
+            signed  = leg_ret if direction.lower() == "long" else -leg_ret
+            leg_rets.append(signed)
+        if leg_rets:
+            trade_returns.append(np.mean(leg_rets) * 100)  # in %
+
+    if len(trade_returns) < 3:
+        return {"n_signals": len(trade_returns), "error": "Too few signals to backtest"}
+
+    tr = np.array(trade_returns)
+    wins     = (tr > 0).sum()
+    win_rate = wins / len(tr) * 100
+    avg_ret  = float(tr.mean())
+    std_ret  = float(tr.std()) if len(tr) > 1 else 1.0
+    sharpe   = avg_ret / (std_ret + 1e-8) * np.sqrt(252 / holding_days)
+
+    # Max drawdown: waterfall of cumulative returns
+    cum = np.cumprod(1 + tr / 100)
+    peak = np.maximum.accumulate(cum)
+    dd   = (cum - peak) / (peak + 1e-8) * 100
+    max_dd = float(dd.min())
+
+    return {
+        "n_signals":         len(tr),
+        "win_rate":          round(win_rate, 1),
+        "avg_return":        round(avg_ret, 2),
+        "sharpe":            round(sharpe, 2),
+        "max_drawdown":      round(max_dd, 2),
+        "available_assets":  [a for a, _ in avail],
+        "missing_assets":    [a for a, _ in zip(assets, directions) if a not in _all_r.columns],
+    }
+
+
 def _render_trade_card(
     col,
     trade: dict,
@@ -235,6 +319,7 @@ def _render_trade_card(
     current: int,
     trade_idx: int,
     asset_exposure: dict | None = None,
+    regimes: "pd.Series | None" = None,
 ) -> None:
     """Render a single trade card with QC grade, confidence, payoff table, and debate thread."""
     cat_col = _CATEGORY_COLORS.get(trade["category"], "#CFB991")
@@ -258,15 +343,15 @@ def _render_trade_card(
     conflict_id  = trade.get("conflict_id")
     source_badge = (
         '<span style="background:#1a1a2e;color:#CFB991;padding:1px 5px;'
-        'font-size:0.52rem;font-weight:700;letter-spacing:0.10em;border-radius:2px">'
+        'font-size:0.52rem;font-weight:700;letter-spacing:0.10em;">'
         'LIVE GEO</span>'
         if is_generated else
         '<span style="background:#2a2a2a;color:#8890a1;padding:1px 5px;'
-        'font-size:0.52rem;letter-spacing:0.08em;border-radius:2px">STATIC</span>'
+        'font-size:0.52rem;letter-spacing:0.08em;">STATIC</span>'
     )
     conflict_badge = (
         f'<span style="background:#3d1a00;color:#e67e22;padding:1px 5px;'
-        f'font-size:0.52rem;font-weight:700;letter-spacing:0.08em;border-radius:2px">'
+        f'font-size:0.52rem;font-weight:700;letter-spacing:0.08em;">'
         f'{conflict_id.upper().replace("_"," ")}</span>'
         if conflict_id else ""
     )
@@ -277,7 +362,7 @@ def _render_trade_card(
     )
     regime_pills = " ".join(
         f'<span style="background:{_REGIME_COLORS[r]};color:#fff;padding:1px 5px;'
-        f'border-radius:2px;font-size:0.56rem">{_REGIME_NAMES[r]}</span>'
+        f';font-size:0.56rem">{_REGIME_NAMES[r]}</span>'
         for r in trade.get("regime", [])
     )
 
@@ -307,7 +392,7 @@ def _render_trade_card(
             f'<span style="font-size:0.60rem;color:#8890a1;text-transform:uppercase;'
             f'letter-spacing:0.10em;margin-left:8px">QC</span>'
             f'<span style="background:{grade_color};color:#fff;font-weight:700;'
-            f'padding:1px 6px;border-radius:2px;font-size:0.65rem">{grade} ({qc_score})</span>'
+            f'padding:1px 6px;;font-size:0.65rem">{grade} ({qc_score})</span>'
             f'</div>'
             # Rationale
             f'<p style="font-size:0.70rem;color:#cccccc;line-height:1.65;margin-bottom:8px">'
@@ -388,12 +473,56 @@ def _render_trade_card(
         except Exception:
             pass
 
+        # ── Historical backtest strip ──────────────────────────────────────
+        try:
+            if regimes is not None and not all_r_concat.empty:
+                _bt = _backtest_trade(
+                    all_r_concat,
+                    regimes,
+                    trade_name=trade["name"],
+                    trigger_regimes=trade.get("regime", [2, 3]),
+                    assets=trade.get("assets", []),
+                    directions=trade.get("direction", []),
+                    holding_days=30,
+                )
+                if "error" not in _bt and _bt.get("n_signals", 0) >= 3:
+                    _bt_wr   = _bt["win_rate"]
+                    _bt_ar   = _bt["avg_return"]
+                    _bt_sh   = _bt["sharpe"]
+                    _bt_dd   = _bt["max_drawdown"]
+                    _bt_n    = _bt["n_signals"]
+                    _wr_col  = "#27ae60" if _bt_wr >= 55 else "#e67e22" if _bt_wr >= 45 else "#c0392b"
+                    _ar_col  = "#27ae60" if _bt_ar >= 0 else "#c0392b"
+                    _sh_col  = "#27ae60" if _bt_sh >= 0.5 else "#e67e22" if _bt_sh >= 0 else "#c0392b"
+                    with col:
+                        st.markdown(
+                            f'<div style="display:flex;gap:16px;background:#050a05;'
+                            f'border:1px solid #1a2a1a;padding:4px 10px;'
+                            f'align-items:center;flex-wrap:wrap">'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                            f'color:#27ae60;letter-spacing:.12em;font-weight:700">BACKTEST</span>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                            f'font-weight:700;color:{_wr_col}">Win&nbsp;{_bt_wr:.0f}%</span>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                            f'font-weight:700;color:{_ar_col}">Avg&nbsp;{_bt_ar:+.1f}%</span>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                            f'color:{_sh_col}">Sharpe&nbsp;{_bt_sh:.2f}</span>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                            f'color:#c0392b">MaxDD&nbsp;{_bt_dd:.1f}%</span>'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                            f'color:#555960;margin-left:auto">{_bt_n} signals · 30d hold · regime trigger</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+        except Exception:
+            pass
+
         # QC flags
         if qc["flags"]:
             st.markdown(
                 " ".join(
                     f'<span style="background:#1a0e00;color:#e67e22;padding:1px 6px;'
-                    f'font-size:0.55rem;border-radius:2px;margin-right:3px">⚠ {f}</span>'
+                    f'font-size:0.55rem;;margin-right:3px">⚠ {f}</span>'
                     for f in qc["flags"]
                 ),
                 unsafe_allow_html=True,
@@ -830,7 +959,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         pair = active_trades[row_start:row_start + 2]
         card_cols = st.columns(len(pair), gap="medium")
         for col, (trade, idx) in zip(card_cols, [(t, row_start + i) for i, t in enumerate(pair)]):
-            _render_trade_card(col, trade, all_r_concat, current, idx, asset_exposure or None)
+            _render_trade_card(col, trade, all_r_concat, current, idx, asset_exposure or None, regimes=regimes)
 
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown(
