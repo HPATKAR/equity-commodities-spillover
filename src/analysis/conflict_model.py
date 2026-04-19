@@ -189,6 +189,8 @@ def compute_cis(conflict: dict) -> float:
     #   deadliness, geographic_diffusion, escalation_trend
     # The remaining keys (civilian_danger, fragmentation) stay structural.
     acled_nudge = 1.0
+    acled_escalation: str = ""
+    gdelt_escalation: str = ""
     try:
         from src.data.acled import fetch_acled_intensity, acled_to_cis_dimensions, acled_configured
         if acled_configured():
@@ -196,16 +198,40 @@ def compute_cis(conflict: dict) -> float:
             if acled_id:
                 result = fetch_acled_intensity(acled_id, days=30)
                 live_dims = acled_to_cis_dimensions(result, conflict)
-                # Replace hardcoded values with live ACLED measurements
                 if "deadliness" in live_dims:
                     dims["deadliness"] = live_dims["deadliness"]
                 if "geographic_diffusion" in live_dims:
                     dims["geographic_diffusion"] = live_dims["geographic_diffusion"]
                 if "escalation_trend" in live_dims:
-                    dims["escalation_trend"] = _ESCALATION_MAP.get(
-                        live_dims["escalation_trend"], 0.5)
+                    acled_escalation = str(live_dims["escalation_trend"])
     except Exception:
-        pass  # fall through to hardcoded baseline
+        pass
+
+    # ── GDELT corroboration for escalation_trend (no API key required) ────────
+    # GDELT provides an independent media-based escalation signal. When GDELT
+    # agrees with ACLED → high confidence, use it. When they disagree →
+    # conservative fallback. When ACLED is unconfigured, GDELT acts as sole source.
+    try:
+        from src.data.gdelt import fetch_gdelt_escalation, gdelt_corroboration
+        gdelt_id = conflict.get("acled_id", "")  # same conflict IDs
+        if gdelt_id:
+            gd = fetch_gdelt_escalation(gdelt_id, timespan="7d")
+            if gd.get("data_available"):
+                gdelt_escalation = str(gd["escalation_signal"])
+
+        if acled_escalation and gdelt_escalation:
+            # Both sources available: corroborate
+            corr = gdelt_corroboration(acled_escalation, gdelt_escalation)
+            dims["escalation_trend"] = _ESCALATION_MAP.get(corr["final_signal"], 0.5)
+        elif gdelt_escalation:
+            # GDELT only (ACLED not configured): use GDELT directly
+            dims["escalation_trend"] = _ESCALATION_MAP.get(gdelt_escalation, 0.5)
+        elif acled_escalation:
+            # ACLED only: use ACLED directly
+            dims["escalation_trend"] = _ESCALATION_MAP.get(acled_escalation, 0.5)
+        # else: both unavailable → hardcoded registry value stays
+    except Exception:
+        pass  # fall through to hardcoded or ACLED-only baseline
 
     raw = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
     cis = float(np.clip(raw * state_mult * acled_nudge * 100, 0, 100))

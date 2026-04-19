@@ -454,23 +454,82 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         "INTELLIGENCE / CONFLICT SCORECARD",
     )
 
-    # ── ACLED Live Data Status Banner ──────────────────────────────────────
+    # ── Live Data Status Banner (ACLED + GDELT) ────────────────────────────
     try:
         from src.data.acled import acled_configured, acled_setup_instructions
-        if acled_configured():
+        from src.data.gdelt import fetch_all_gdelt_signals
+
+        acled_live = acled_configured()
+
+        # GDELT runs regardless — no key needed; just check it responded
+        gdelt_signals = {}
+        try:
+            gdelt_signals = fetch_all_gdelt_signals(timespan="7d")
+        except Exception:
+            pass
+        gdelt_live = any(v.get("data_available") for v in gdelt_signals.values())
+
+        if acled_live and gdelt_live:
+            st.markdown(
+                '<div style="background:#050a05;border-left:3px solid #27ae60;'
+                'border-radius:4px;padding:8px 14px;margin:4px 0;">'
+                '<span style="color:#27ae60;font-family:\'JetBrains Mono\',monospace;'
+                'font-size:10px;font-weight:700">● ACLED + GDELT LIVE</span>'
+                '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
+                'font-size:10px"> · CIS escalation_trend cross-validated by two independent '
+                'live sources. ACLED: event/fatality counts (6h cache). '
+                'GDELT: media volume signals (3h cache).</span></div>',
+                unsafe_allow_html=True,
+            )
+        elif gdelt_live:
+            st.markdown(
+                '<div style="background:#050a0f;border-left:3px solid #2980b9;'
+                'border-radius:4px;padding:8px 14px;margin:4px 0;">'
+                '<span style="color:#2980b9;font-family:\'JetBrains Mono\',monospace;'
+                'font-size:10px;font-weight:700">● GDELT LIVE</span>'
+                '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
+                'font-size:10px"> · CIS escalation_trend driven by GDELT media-volume signals '
+                '(no API key). Add ACLED API key for event-count corroboration.</span></div>',
+                unsafe_allow_html=True,
+            )
+            with st.expander("Enable ACLED for full corroboration (free, academic)", expanded=False):
+                st.markdown(acled_setup_instructions())
+        elif acled_live:
             st.markdown(
                 '<div style="background:#050a05;border-left:3px solid #27ae60;'
                 'border-radius:4px;padding:8px 14px;margin:4px 0;">'
                 '<span style="color:#27ae60;font-family:\'JetBrains Mono\',monospace;'
                 'font-size:10px;font-weight:700">● ACLED LIVE</span>'
                 '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px"> · CIS scores augmented with live conflict event counts '
-                '(ACLED API, 30-day window). Escalation trends updated every 6h.</span></div>',
+                'font-size:10px"> · CIS scores augmented with ACLED event counts '
+                '(30-day window). GDELT media signals unavailable.</span></div>',
                 unsafe_allow_html=True,
             )
         else:
             with st.expander("Enable live conflict data (ACLED API — free for academic use)", expanded=False):
                 st.markdown(acled_setup_instructions())
+
+        # ── GDELT signal summary table (when available) ────────────────────
+        if gdelt_live and gdelt_signals:
+            with st.expander("GDELT live conflict signals (media volume escalation)", expanded=False):
+                rows = []
+                for cid, gd in gdelt_signals.items():
+                    if not gd.get("data_available"):
+                        continue
+                    rows.append({
+                        "Conflict":     cid.replace("_", " ").title(),
+                        "Signal":       gd["escalation_signal"].capitalize(),
+                        "Vol Trend":    f"{gd['volume_trend']:+.0%}",
+                        "Recent Vol":   gd["volume_recent"],
+                        "Tone":         f"{gd['tone_recent']:+.1f}",
+                        "Source":       gd["source"],
+                        "As Of":        gd["as_of"],
+                    })
+                if rows:
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                else:
+                    st.caption("No GDELT data rows to display.")
+
     except Exception:
         pass
 
