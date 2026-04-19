@@ -101,7 +101,7 @@ def _event_onset_mask(index: pd.DatetimeIndex, events: list[dict],
 def _independent_ground_truth(index: pd.DatetimeIndex, events: list[dict]) -> pd.Series:
     """
     Independent ground truth built entirely from externally-defined event dates.
-    NOT derived from market data — avoids the circularity of using VIX (which
+    NOT derived from market data - avoids the circularity of using VIX (which
     correlates with equity_vol, an input to the regime detector) as ground truth.
 
     Covers the full event window (start → end) for Financial, Geopolitical, and
@@ -112,7 +112,7 @@ def _independent_ground_truth(index: pd.DatetimeIndex, events: list[dict]) -> pd
     """
     mask = pd.Series(0.0, index=index)
     # Only use events that represent externally verifiable market crises
-    # (Financial, Pandemic, major Geopolitical) — not all trade disputes
+    # (Financial, Pandemic, major Geopolitical) - not all trade disputes
     crisis_cats = {"Financial", "Pandemic"}
     geo_crisis_keywords = {
         "War", "Invasion", "Crisis", "Attack", "Crash", "Collapse", "Squeeze",
@@ -136,7 +136,7 @@ def _holdout_validation(
     holdout_start: str = "2023-01-01",
 ) -> dict:
     """
-    Strict train/holdout split — fixes the out-of-sample validation gap.
+    Strict train/holdout split - fixes the out-of-sample validation gap.
 
     Trains logistic regression on all data BEFORE holdout_start.
     Tests on all data FROM holdout_start onwards.
@@ -179,7 +179,7 @@ def _holdout_validation(
         y_prob_te = lr.predict_proba(X_te_s)[:, 1]
         y_pred_te = (y_prob_te >= 0.40).astype(int)
 
-        # Train-set metrics (expected to be better — for comparison)
+        # Train-set metrics (expected to be better - for comparison)
         y_prob_tr = lr.predict_proba(X_tr_s)[:, 1]
         y_pred_tr = (y_prob_tr >= 0.40).astype(int)
 
@@ -608,7 +608,7 @@ def _render_system_reliability(
         checks["CIS Data"] = "bad"
         check_notes["CIS Data"] = str(e)[:60]
 
-    # TPS — check if conflict_model can score
+    # TPS - check if conflict_model can score
     try:
         from src.analysis.conflict_model import score_all_conflicts
         _cr = score_all_conflicts()
@@ -619,7 +619,7 @@ def _render_system_reliability(
         checks["TPS Model"] = "bad"
         check_notes["TPS Model"] = "import failed"
 
-    # MCS components — use actually loaded data stats
+    # MCS components - use actually loaded data stats
     if n_eq_cols > 0 and n_cmd_cols > 0:
         checks["MCS / Market Data"] = "ok"
         check_notes["MCS / Market Data"] = f"{n_eq_cols} equity · {n_cmd_cols} commodity · {n_obs} obs"
@@ -654,7 +654,7 @@ def _render_system_reliability(
     checks["VIX Ground Truth"] = "ok" if vix_available else "warn"
     check_notes["VIX Ground Truth"] = (
         "Fetched from yfinance" if vix_available
-        else "VIX unavailable — using event-onset fallback"
+        else "VIX unavailable - using event-onset fallback"
     )
 
     # GPR / News feed
@@ -669,7 +669,7 @@ def _render_system_reliability(
             checks["News / GPR Feed"] = "unknown"
         check_notes["News / GPR Feed"] = (
             _rss["label"] if _rss["status"] != "unknown"
-            else "RSS not fetched — keyword GPR not active"
+            else "RSS not fetched - keyword GPR not active"
         )
     except Exception:
         checks["News / GPR Feed"] = "unknown"
@@ -683,7 +683,7 @@ def _render_system_reliability(
             check_notes["LSEG Premium"] = "Eikon session active"
         elif lseg_ok is False:
             checks["LSEG Premium"] = "warn"
-            check_notes["LSEG Premium"] = "Not connected — yfinance fallback"
+            check_notes["LSEG Premium"] = "Not connected - yfinance fallback"
         else:
             checks["LSEG Premium"] = "unknown"
             check_notes["LSEG Premium"] = "Not attempted this session"
@@ -696,8 +696,8 @@ def _render_system_reliability(
     n_ok    = sum(1 for s in checks.values() if s == "ok")
     overall = "bad" if n_bad > 0 else "warn" if n_warn > 0 else "ok"
     overall_labels = {"ok": ("ALL SYSTEMS NOMINAL", "#27ae60"),
-                      "warn": ("PARTIAL — WARNINGS ACTIVE", "#e67e22"),
-                      "bad": ("DEGRADED — FAILURES DETECTED", "#c0392b")}
+                      "warn": ("PARTIAL - WARNINGS ACTIVE", "#e67e22"),
+                      "bad": ("DEGRADED - FAILURES DETECTED", "#c0392b")}
     ov_label, ov_color = overall_labels[overall]
 
     # ── 2. Freshness status ────────────────────────────────────────────────
@@ -761,7 +761,7 @@ def _render_system_reliability(
 
     r1, r2, r3, r4, r5 = st.columns(5)
 
-    # Geo risk confidence — from risk_score module
+    # Geo risk confidence - from risk_score module
     try:
         from src.analysis.risk_score import compute_risk_score
         from src.data.loader import load_returns as _lr_rel
@@ -945,13 +945,14 @@ def _render_system_reliability(
 
     # ── Honest limitations ─────────────────────────────────────────────────
     _LIMITATIONS = [
-        ("Conflict intensity scores", "Manually set parameters — not ML-calibrated or back-tested"),
+        ("Conflict intensity scores", "Manually set parameters - not ML-calibrated or back-tested"),
         ("Market Confirmation Score", "EWM z-scores only; no tick-level or options flow data"),
         ("COT positioning", "Reported weekly with ~3d lag; current session may not have fetched"),
         ("News/GPR feed", "RSS keyword matching, not semantic NLP or LLM sentiment"),
-        ("Confidence overlay", "Heuristic blend of component agreement — not probabilistically calibrated"),
+        ("Confidence overlay", "Heuristic blend of component agreement - not probabilistically calibrated"),
         ("Regime detection", "Rule-based threshold on composite stress index; walk-forward ML is optional"),
-        ("LSEG premium data", "Requires local Eikon/Workspace — defaults to yfinance if unavailable"),
+        ("Risk score history (VIX panel)", "Uses market signals only (MCS layer, 25% of live GRS). CIS (40%) and TPS (35%) cannot be reconstructed at daily frequency - full 3-layer back-test is not possible."),
+        ("LSEG premium data", "Requires local Eikon/Workspace - defaults to yfinance if unavailable"),
         ("Exposure betas", "Structural exposure is analyst-assigned; no empirical regression to conflict events"),
     ]
     with st.expander("Known Limitations & Honest Gaps", expanded=False):
@@ -1064,7 +1065,9 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         "Regime detection is tested against VIX-based ground truth - does the composite stress index "
         "actually identify the periods when equity-commodity correlation was highest? "
         "Granger causality signals are checked for directional hit rate after a significant test fires. "
-        "The geopolitical risk score is correlated against realised VIX to verify it leads actual market stress. "
+        "The market confirmation layer (MCS - 25% of GRS) is back-tested against realised VIX; note that "
+        "CIS (40%) and TPS (35%) are structurally-set inputs that cannot be reconstructed at daily frequency, "
+        "so the full 3-layer live score cannot be back-tested historically. "
         "COT contrarian signals are scored by win rate. A signal that fails here should not drive trade decisions."
     )
 
@@ -1105,7 +1108,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     _, r2   = _risk_score_vs_vix(score_hist, cmd_r)
     r2_pct  = round((r2 or 0.0) * 100, 1)
 
-    # Render live system health NOW — freshness registry has real data
+    # Render live system health NOW - freshness registry has real data
     _render_system_reliability(
         n_eq_cols=len(eq_r.columns),
         n_cmd_cols=len(cmd_r.columns),
@@ -1137,13 +1140,14 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         51, 50, "run below to score",
     )
     _signal_card(sc3,
-        "Risk Score vs VIX",
+        "Market Signals vs VIX",
         f"{r2_pct:.0f}%" if r2 and not np.isnan(r2) else "–",
-        "Variance in VIX explained by risk score",
-        (f"R²={r2_pct:.0f}% - risk score accounts for <b>{r2_pct:.0f}%</b> of variance in VIX"
+        "VIX variance explained by MCS proxy (market layer only)",
+        (f"R²={r2_pct:.0f}% - market confirmation layer accounts for <b>{r2_pct:.0f}%</b> of VIX variance. "
+         f"Full GRS (40% CIS + 35% TPS) cannot be back-tested at daily frequency."
          if r2 and not np.isnan(r2) else
-         "Combines cross-asset correlation, commodity vol, and equity vol"),
-        r2_pct, 40, "target ≥ 40%",
+         "Market confirmation layer: equity vol, oil-gold signal, commodity vol, corr acceleration"),
+        r2_pct, 40, "target ≥ 40% (MCS layer only)",
     )
     _signal_card(sc4,
         "COT Contrarian",
@@ -1352,7 +1356,23 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     with col_rs:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">Risk Score vs VIX Calibration</p>',
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">'
+            f'Market Confirmation Layer vs VIX</p>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid #e67e22;padding:.3rem .75rem;margin-bottom:.55rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#e67e22;'
+            f'letter-spacing:.1em;font-weight:700">SCOPE NOTE</span>'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;color:#8890a1;'
+            f'margin-left:8px">'
+            f'The historical series uses <b>market-only signals</b> (equity vol 40%, oil-gold 35%, '
+            f'commodity vol 13%, corr acceleration 12%) - equivalent to the 25% MCS layer of the live model. '
+            f'CIS (40%) and TPS (35%) require manually-updated conflict parameters and cannot be '
+            f'reconstructed at daily frequency. R\u00b2 and lead-lag figures measure the market '
+            f'confirmation layer only, not the full 3-layer GRS.'
+            f'</span></div>',
             unsafe_allow_html=True,
         )
 
@@ -1393,9 +1413,11 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             )
             _chart(fig_ll)
             _insight_note(
-                "Tests whether the risk score <b>predicts VIX moves before they happen</b>. "
-                "A peak correlation at a <b>positive lag</b> means the score was already "
-                "elevated before market fear (VIX) confirmed it - a genuine <b>early warning</b>."
+                "Tests whether the <b>market confirmation layer</b> leads VIX moves. "
+                "A peak correlation at a <b>positive lag</b> means the MCS signals were already "
+                "elevated before VIX confirmed stress. Because MCS and VIX share common inputs "
+                "(equity vol, oil), same-day correlation is expected; leading correlation is "
+                "the meaningful signal."
             )
 
             fig_ts = go.Figure()
@@ -1412,7 +1434,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             ))
             fig_ts.update_layout(
                 template="purdue", height=240,
-                title=dict(text=f"Risk Score vs VIX  (R²={rs_r2:.3f})", font=dict(size=10)),
+                title=dict(text=f"MCS Proxy vs VIX  (R²={rs_r2:.3f}, market layer only)", font=dict(size=10)),
                 yaxis=dict(title="Risk Score (0–100)", range=[0, 105]),
                 yaxis2=dict(title="VIX", overlaying="y", side="right", showgrid=False),
                 xaxis=dict(type="date"),
@@ -1421,10 +1443,11 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             )
             _chart(fig_ts)
             _insight_note(
-                "Both series plotted together. When the <b>red line (risk score)</b> rises "
-                "before the <b>blue dotted line (VIX)</b>, the dashboard is detecting stress "
-                "before the options market prices it in - the core value of a multi-asset "
-                "early warning system."
+                "Market confirmation layer (red) vs VIX (blue). Because both use equity vol "
+                "and commodity price signals as inputs, co-movement is structurally expected. "
+                "The value added is the <b>multi-asset breadth</b> (oil-gold spread, corr acceleration) "
+                "which captures stress that VIX alone misses - and the CIS/TPS layers "
+                "on top in the live model that are invisible in this historical series."
             )
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
@@ -1436,10 +1459,10 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════
     st.markdown(
         f'<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
-        f'color:#CFB991;margin:0.6rem 0 0.1rem">Independent Validation — No Market Data Circularity</h2>'
+        f'color:#CFB991;margin:0.6rem 0 0.1rem">Independent Validation - No Market Data Circularity</h2>'
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
         f'The VIX-based ground truth above shares a data source with the model (equity vol ≈ VIX). '
-        f'Below: independent event-calendar ground truth + strict train/holdout split — '
+        f'Below: independent event-calendar ground truth + strict train/holdout split - '
         f'the only academically valid test of out-of-sample generalization.</p>',
         unsafe_allow_html=True,
     )
@@ -1456,12 +1479,12 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px">Event-Calendar Ground Truth</p>'
             f'<p style="{_F}font-size:0.62rem;color:#555960;margin:0 0 8px;line-height:1.5">'
             f'Stress periods defined by externally-dated crisis events (not market data). '
-            f'Independent of equity vol — no circularity.</p>',
+            f'Independent of equity vol - no circularity.</p>',
             unsafe_allow_html=True,
         )
         ci1, ci2, ci3 = st.columns(3)
         ci1.metric("Balanced Acc", f"{indep_stats['balanced_acc']:.1f}%",
-                   help="vs event calendar — independent ground truth")
+                   help="vs event calendar - independent ground truth")
         ci2.metric("Recall", f"{indep_stats['recall']:.1f}%",
                    help="% of actual crisis periods caught by regime detector")
         ci3.metric("AUC", f"{indep_stats['auc']:.1f}%" if indep_stats['auc'] else "–")
@@ -1501,7 +1524,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px">Strict Holdout Validation (2023–Present)</p>'
             f'<p style="{_F}font-size:0.62rem;color:#555960;margin:0 0 8px;line-height:1.5">'
             f'Train on 2008–2022, test on 2023–present. '
-            f'No data leakage — the model has never seen holdout data.</p>',
+            f'No data leakage - the model has never seen holdout data.</p>',
             unsafe_allow_html=True,
         )
         with st.spinner("Running holdout validation…"):
@@ -1519,7 +1542,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             hk1.metric("Holdout Balanced Acc", f"{_ho['balanced_acc']:.1f}%",
                        delta=f"{_gap:+.1f}pp vs train",
                        help="Positive delta = model generalises well")
-            hk2.metric("Holdout AUC",     f"{_ho['auc']:.1f}%" if np.isfinite(_ho['auc']) else "—")
+            hk2.metric("Holdout AUC",     f"{_ho['auc']:.1f}%" if np.isfinite(_ho['auc']) else "-")
             hk3.metric("Holdout Recall",  f"{_ho['recall']:.1f}%")
 
             # Train vs holdout comparison strip
@@ -1947,7 +1970,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 "Agent":            _ag.get("short", _aid),
                 "Snapshots tested": _res.get("total", 0),
                 "Passed":           _res.get("passed", 0),
-                "Hit Rate (actual)":f"{_hr:.0%}" if _hr is not None else "—",
+                "Hit Rate (actual)":f"{_hr:.0%}" if _hr is not None else "-",
                 "Posterior (dynamic)": f"{_post_dynamic:.0%}" if _post_dynamic else f"{_post_static:.0%} (static)",
                 "Used in conf?":    "✓ dynamic" if (_hr is not None and _res.get("total", 0) >= 3) else "static prior",
             })
@@ -1994,7 +2017,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     "Date":         _s["date"],
                     "Event":        _s["label"],
                     "Regime GT":    {1: "Normal", 2: "Elevated", 3: "Crisis"}.get(_s["regime"], "?"),
-                    "VIX (approx)": _s.get("vix_approx", "—"),
+                    "VIX (approx)": _s.get("vix_approx", "-"),
                     "Assertions":   _n_assert,
                     "Agents":       ", ".join(_s.get("assertions", {}).keys()),
                 })
