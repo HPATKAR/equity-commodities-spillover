@@ -1058,7 +1058,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     _F = "font-family:'DM Sans',sans-serif;"
 
     _page_header("Model Signal Audit",
-                 "Regime Detection · Granger Lead-Lag · Risk Score vs VIX · COT Contrarian")
+                 "Regime Detection · Granger Lead-Lag · Market Signals vs VIX · COT Contrarian")
     _page_intro(
         "The spillover and correlation signals in this dashboard are only credible if they hold up "
         "out-of-sample. <strong>This page provides that validation.</strong> "
@@ -1406,7 +1406,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                              annotation_font_size=9, annotation_font_color="#c0392b")
             fig_ll.update_layout(
                 template="purdue", height=240,
-                title=dict(text="Risk Score Lead/Lag vs VIX", font=dict(size=10)),
+                title=dict(text="MCS Proxy Lead/Lag vs VIX (market layer only)", font=dict(size=10)),
                 xaxis=dict(title="Lag (days), positive = score leads"),
                 yaxis=dict(title="Pearson correlation"),
                 margin=dict(l=50, r=30, t=40, b=50),
@@ -1423,7 +1423,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             fig_ts = go.Figure()
             fig_ts.add_trace(go.Scatter(
                 x=rs_aligned.index, y=rs_aligned["score"],
-                name="Risk Score", yaxis="y",
+                name="MCS Proxy", yaxis="y",
                 line=dict(color="#c0392b", width=1.5),
                 fill="tozeroy", fillcolor="rgba(192,57,43,0.06)",
             ))
@@ -1435,7 +1435,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             fig_ts.update_layout(
                 template="purdue", height=240,
                 title=dict(text=f"MCS Proxy vs VIX  (R²={rs_r2:.3f}, market layer only)", font=dict(size=10)),
-                yaxis=dict(title="Risk Score (0–100)", range=[0, 105]),
+                yaxis=dict(title="MCS Proxy (0-100)", range=[0, 105]),
                 yaxis2=dict(title="VIX", overlaying="y", side="right", showgrid=False),
                 xaxis=dict(type="date"),
                 legend=dict(orientation="h", y=1.08),
@@ -1859,8 +1859,10 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         "The walk-forward ML classifier (logistic regression, strictly out-of-sample) adds further "
         "predictive lift. Granger z-score signals carry a <b>3–8 percentage-point directional edge</b> "
         "for energy→equity pairs during supply shocks. "
-        "The risk score's <b>R² against VIX</b> confirms the composite approach tracks market fear "
-        "better than any single-signal proxy.",
+        "The market confirmation layer's <b>R² against VIX</b> confirms the multi-asset signal "
+        "(oil-gold spread, cross-asset vol, correlation acceleration) tracks market fear "
+        "better than any single-signal proxy. The full live GRS adds 40% CIS and 35% TPS on top - "
+        "structural layers that are regime-stable by design and not captured in this back-test.",
     )
 
     # ── AI Signal Auditor ──────────────────────────────────────────────────
