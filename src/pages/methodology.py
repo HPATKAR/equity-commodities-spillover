@@ -450,12 +450,12 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "home page aggregates freshness across all sources."
     )
     freshness_rows = [
-        ("YFinance",      "1 h",  "8 h"),
-        ("FRED",          "24 h", "72 h"),
-        ("GDELT",         "4 h",  "12 h"),
-        ("EIA Inventory", "24 h", "168 h"),
-        ("PortWatch",     "6 h",  "30 h"),
-        ("ACLED",         "8 h",  "48 h"),
+        ("YFinance",      "4 h",  "26 h"),   # src/analysis/freshness.py yfinance_prices
+        ("FRED",          "48 h", "168 h"),  # fred_macro: 2d warn, 7d stale
+        ("GDELT",         "4 h",  "12 h"),   # 3h cache cadence
+        ("EIA Inventory", "24 h", "168 h"),  # weekly Wednesday update
+        ("PortWatch",     "6 h",  "30 h"),   # IMF ArcGIS daily cadence
+        ("ACLED",         "8 h",  "48 h"),   # 6h cache, conflict events
     ]
     header_html = (
         f'<table style="width:100%;border-collapse:collapse;{_S}font-size:0.70rem;margin:.3rem 0">'

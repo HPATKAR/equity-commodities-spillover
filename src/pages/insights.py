@@ -1291,7 +1291,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Intelligence Briefing",
                  "Plain-language verdicts · Click any insight for the full reasoning")
     _page_intro(
-        "No jargon. No charts you have to decode. Just the <strong>6 things you need to know "
+        "No jargon. No charts you have to decode. Just the <strong>key signals you need to know "
         "right now</strong> about equity-commodity markets - and what to do about each one. "
         "Click any card to see the data and reasoning behind it."
     )
