@@ -141,8 +141,8 @@ def _check_conflict_freshness(conflict: dict) -> tuple[bool, bool]:
     """
     Returns (is_stale_warn, is_stale_cap).
 
-    is_stale_warn — last_updated > staleness_warn_days (90d): yellow flag.
-    is_stale_cap  — last_updated > staleness_cap_days (180d): hard cap on CIS.
+    is_stale_warn - last_updated > staleness_warn_days (90d): yellow flag.
+    is_stale_cap  - last_updated > staleness_cap_days (180d): hard cap on CIS.
 
     Used by compute_cis() and compute_confidence() to prevent stale manual
     data from inflating a conflict's rank above fresher, market-confirmed ones.
@@ -160,10 +160,14 @@ def _check_conflict_freshness(conflict: dict) -> tuple[bool, bool]:
 # ── Per-conflict scorers ──────────────────────────────────────────────────────
 
 
-def compute_cis(conflict: dict) -> float:
+def compute_cis(conflict: dict) -> tuple[float, str]:
     """
     Conflict Intensity Score for a single conflict.
-    Returns value in [0, 100].
+    Returns (cis, cis_source) where cis is in [0, 100] and cis_source is one of:
+        "acled+gdelt" - ACLED dims replaced + GDELT corroboration applied
+        "acled"       - ACLED dims replaced, GDELT unavailable
+        "gdelt"       - GDELT escalation_trend applied, ACLED not configured/failed
+        "static"      - all hardcoded registry values (ACLED not configured or failed)
 
     When ACLED API is configured, live event counts (last 30 days) REPLACE the
     hardcoded deadliness, geographic_diffusion, and escalation_trend dimensions
@@ -191,6 +195,8 @@ def compute_cis(conflict: dict) -> float:
     acled_nudge = 1.0
     acled_escalation: str = ""
     gdelt_escalation: str = ""
+    _acled_applied = False
+    _gdelt_applied = False
     try:
         from src.data.acled import fetch_acled_intensity, acled_to_cis_dimensions, acled_configured
         if acled_configured():
@@ -200,12 +206,18 @@ def compute_cis(conflict: dict) -> float:
                 live_dims = acled_to_cis_dimensions(result, conflict)
                 if "deadliness" in live_dims:
                     dims["deadliness"] = live_dims["deadliness"]
+                    _acled_applied = True
                 if "geographic_diffusion" in live_dims:
                     dims["geographic_diffusion"] = live_dims["geographic_diffusion"]
+                    _acled_applied = True
                 if "escalation_trend" in live_dims:
                     acled_escalation = str(live_dims["escalation_trend"])
-    except Exception:
-        pass
+    except Exception as _acled_e:
+        try:
+            from src.analysis.freshness import record_failure as _rf_acled
+            _rf_acled("acled", f"{conflict.get('id', '?')}: {type(_acled_e).__name__} - using static registry")
+        except Exception:
+            pass
 
     # ── GDELT corroboration for escalation_trend (no API key required) ────────
     # GDELT provides an independent media-based escalation signal. When GDELT
@@ -218,6 +230,7 @@ def compute_cis(conflict: dict) -> float:
             gd = fetch_gdelt_escalation(gdelt_id, timespan="7d")
             if gd.get("data_available"):
                 gdelt_escalation = str(gd["escalation_signal"])
+                _gdelt_applied = True
 
         if acled_escalation and gdelt_escalation:
             # Both sources available: corroborate
@@ -229,9 +242,13 @@ def compute_cis(conflict: dict) -> float:
         elif acled_escalation:
             # ACLED only: use ACLED directly
             dims["escalation_trend"] = _ESCALATION_MAP.get(acled_escalation, 0.5)
-        # else: both unavailable → hardcoded registry value stays
-    except Exception:
-        pass  # fall through to hardcoded or ACLED-only baseline
+        # else: both unavailable - hardcoded registry value stays
+    except Exception as _gdelt_e:
+        try:
+            from src.analysis.freshness import record_failure as _rf_gdelt
+            _rf_gdelt("gdelt", f"{conflict.get('id', '?')}: {type(_gdelt_e).__name__} - using static escalation")
+        except Exception:
+            pass
 
     raw = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
     cis = float(np.clip(raw * state_mult * acled_nudge * 100, 0, 100))
@@ -242,7 +259,16 @@ def compute_cis(conflict: dict) -> float:
     if is_cap:
         cis = min(cis, _CM_CONFIG["staleness_cis_cap"])
 
-    return cis
+    if _acled_applied and _gdelt_applied:
+        cis_source = "acled+gdelt"
+    elif _acled_applied:
+        cis_source = "acled"
+    elif _gdelt_applied:
+        cis_source = "gdelt"
+    else:
+        cis_source = "static"
+
+    return cis, cis_source
 
 
 def compute_tps(conflict: dict) -> float:
@@ -270,7 +296,7 @@ def compute_confidence(conflict: dict) -> float:
     data_conf     = float(conflict.get("data_confidence",   0.70))
     freshness     = _freshness_score(conflict)
 
-    # Dimension completeness — penalize if key dimensions are at exact defaults
+    # Dimension completeness - penalize if key dimensions are at exact defaults
     _defaults = {"deadliness": 0.5, "civilian_danger": 0.5,
                  "geographic_diffusion": 0.3, "fragmentation": 0.2}
     missing = sum(1 for k, v in _defaults.items()
@@ -310,12 +336,12 @@ def compute_market_freshness(conflict: dict, market_data: dict) -> float:
     a boost; conflicts whose channels are quiet get a mild discount.
 
     market_data keys (all optional, float):
-        brent_pct_1d    — Brent crude 1-day % change
-        wti_pct_1d      — WTI crude 1-day % change
-        natgas_pct_1d   — Natural gas 1-day % change
-        wheat_pct_1d    — Wheat 1-day % change
-        tanker_disruption — 0–1 (1 = complete blockade, from PortWatch)
-        vix_1d          — VIX 1-day point change
+        brent_pct_1d    - Brent crude 1-day % change
+        wti_pct_1d      - WTI crude 1-day % change
+        natgas_pct_1d   - Natural gas 1-day % change
+        wheat_pct_1d    - Wheat 1-day % change
+        tanker_disruption - 0–1 (1 = complete blockade, from PortWatch)
+        vix_1d          - VIX 1-day point change
 
     Channel-to-signal mapping (per conflict's transmission weights):
         oil_gas / chokepoint  → brent, wti, tanker_disruption
@@ -331,7 +357,7 @@ def compute_market_freshness(conflict: dict, market_data: dict) -> float:
     # Collect signal magnitudes, weighted by this conflict's transmission strength
     signals: list[float] = []
 
-    # Oil / chokepoint — dominant channel for Hormuz/Iran
+    # Oil / chokepoint - dominant channel for Hormuz/Iran
     oil_weight = max(float(tx.get("oil_gas", 0)), float(tx.get("chokepoint", 0)))
     if oil_weight > 0.3:
         brent_abs = abs(float(market_data.get("brent_pct_1d", 0.0)))
@@ -340,21 +366,21 @@ def compute_market_freshness(conflict: dict, market_data: dict) -> float:
         oil_sig   = max(brent_abs / 3.0, wti_abs / 3.0, tanker) * oil_weight
         signals.append(min(oil_sig, 1.0))
 
-    # Natural gas / energy infra — dominant for Russia-Ukraine
+    # Natural gas / energy infra - dominant for Russia-Ukraine
     eg_weight = max(float(tx.get("energy_infra", 0)), float(tx.get("oil_gas", 0)) * 0.5)
     if eg_weight > 0.3:
         ng_abs  = abs(float(market_data.get("natgas_pct_1d", 0.0)))
         ng_sig  = (ng_abs / 5.0) * eg_weight
         signals.append(min(ng_sig, 1.0))
 
-    # Agriculture — Ukraine/Russia primary
+    # Agriculture - Ukraine/Russia primary
     ag_weight = float(tx.get("agriculture", 0))
     if ag_weight > 0.3:
         wheat_abs = abs(float(market_data.get("wheat_pct_1d", 0.0)))
         ag_sig    = (wheat_abs / 4.0) * ag_weight
         signals.append(min(ag_sig, 1.0))
 
-    # Equity volatility — broad signal
+    # Equity volatility - broad signal
     eq_weight = float(tx.get("equity_sector", 0))
     if eq_weight > 0.3:
         vix_abs = abs(float(market_data.get("vix_1d", 0.0)))
@@ -377,7 +403,7 @@ def score_all_conflicts() -> dict[str, dict]:
     Compute CIS, TPS, and confidence for every conflict in CONFLICTS.
     Returns dict keyed by conflict["id"].
 
-    Cached for 30 minutes — structural data changes slowly; news GPR
+    Cached for 30 minutes - structural data changes slowly; news GPR
     layer is separate and not cached here.
 
     market_freshness is initialised to 1.0 here; callers with live market
@@ -386,7 +412,7 @@ def score_all_conflicts() -> dict[str, dict]:
     results: dict[str, dict] = {}
     for c in CONFLICTS:
         cid = c["id"]
-        cis  = compute_cis(c)
+        cis, cis_source = compute_cis(c)
         tps  = compute_tps(c)
         conf = compute_confidence(c)
         results[cid] = {
@@ -397,6 +423,7 @@ def score_all_conflicts() -> dict[str, dict]:
             "color":        c.get("color", "#CFB991"),
             "state":        c.get("state", "active"),
             "cis":          round(cis,  1),
+            "cis_source":   cis_source,
             "tps":          round(tps,  1),
             "confidence":   round(conf, 3),
             "trend":        compute_trend(c),
@@ -442,7 +469,7 @@ def score_all_conflicts() -> dict[str, dict]:
             if days_since > 90:
                 record_failure(
                     "conflict_manual",
-                    f"Conflict data last updated {days_since}d ago ({most_recent}) — manual refresh needed",
+                    f"Conflict data last updated {days_since}d ago ({most_recent}) - manual refresh needed",
                 )
         else:
             record_failure("conflict_manual", "No last_updated dates found in CONFLICTS registry")
@@ -482,7 +509,7 @@ def build_market_signals(cmd_r: "pd.DataFrame") -> dict:
     Extract live market-freshness signals from a commodity log-returns DataFrame.
 
     Returns a dict compatible with compute_market_freshness() and
-    apply_market_freshness(). Safe to call with None or empty DataFrame —
+    apply_market_freshness(). Safe to call with None or empty DataFrame -
     returns {} which leaves all market_freshness values at 1.0.
 
     Signal keys (all floats, approximate 1-day % move):
@@ -509,7 +536,7 @@ def build_market_signals(cmd_r: "pd.DataFrame") -> dict:
     except Exception:
         pass
 
-    # Hormuz tanker disruption — set by strait_watch.py from live PortWatch data
+    # Hormuz tanker disruption - set by strait_watch.py from live PortWatch data
     # tanker_disruption = 1 − (live_ships / baseline_ships), clamped [0, 1]
     try:
         disruption = st.session_state.get("_hormuz_disruption")
@@ -556,7 +583,7 @@ def aggregate_portfolio_scores(
     # Apply live market-freshness multipliers from session_state.
     # Signals are injected by compute_risk_score() (risk_score.py) and by
     # home.py, both of which have access to live commodity returns.
-    # Falls back silently — all market_freshness values remain 1.0 (no ranking change).
+    # Falls back silently - all market_freshness values remain 1.0 (no ranking change).
     try:
         mf_signals = st.session_state.get("_mf_signals", {})
         if mf_signals:
@@ -568,7 +595,7 @@ def aggregate_portfolio_scores(
     # portfolio_cis = intensity-weighted mean of per-conflict CIS values (0–100)
     # portfolio_tps = intensity-weighted mean of per-conflict TPS values (0–100)
     # The * len(conflict_results) factor was a bug: it inflated scores to 100 for
-    # any multi-conflict portfolio. Removed — weighted mean is the correct formula.
+    # any multi-conflict portfolio. Removed - weighted mean is the correct formula.
     cis_vals = {cid: r["cis"] for cid, r in conflict_results.items()}
     total_cis = sum(cis_vals.values()) + 1e-9
 
@@ -598,7 +625,7 @@ def aggregate_portfolio_scores(
     return {
         "cis":              round(portfolio_cis, 1),
         "tps":              round(portfolio_tps, 1),
-        # Aliases — many pages use the "portfolio_cis"/"portfolio_tps" key names
+        # Aliases - many pages use the "portfolio_cis"/"portfolio_tps" key names
         "portfolio_cis":    round(portfolio_cis, 1),
         "portfolio_tps":    round(portfolio_tps, 1),
         "confidence":       round(avg_conf, 3),
@@ -683,14 +710,14 @@ def transmission_lag_signal(
     Returns
     -------
     dict with keys:
-        active          : bool — True if a pending transmission is detected
-        peak_day_ago    : int  — days since peak commodity stress (1=yesterday)
-        commodity_z     : float — commodity stress z-score at the peak day
-        equity_z        : float — equity z-score on the SAME peak day
-        equity_lag_z    : float — equity z-score TODAY (lagged response expected)
-        lag_signal      : str  — "Pending" / "In progress" / "Absorbed" / "No stress"
-        dominant_cmd    : str  — commodity with strongest stress at peak day
-        detail          : str  — human-readable summary for display
+        active          : bool - True if a pending transmission is detected
+        peak_day_ago    : int  - days since peak commodity stress (1=yesterday)
+        commodity_z     : float - commodity stress z-score at the peak day
+        equity_z        : float - equity z-score on the SAME peak day
+        equity_lag_z    : float - equity z-score TODAY (lagged response expected)
+        lag_signal      : str  - "Pending" / "In progress" / "Absorbed" / "No stress"
+        dominant_cmd    : str  - commodity with strongest stress at peak day
+        detail          : str  - human-readable summary for display
     """
     _empty = {
         "active": False,
@@ -755,7 +782,7 @@ def transmission_lag_signal(
 
         # Determine dominant commodity at peak day
         cmd_daily = cmd_aligned.loc[peak_date] if peak_date in cmd_aligned.index else pd.Series()
-        dominant_cmd = str(cmd_daily.abs().idxmax()) if not cmd_daily.empty else "—"
+        dominant_cmd = str(cmd_daily.abs().idxmax()) if not cmd_daily.empty else "-"
 
         # Classify lag signal
         same_sign  = (peak_z * today_eq_z) > 0
@@ -770,7 +797,7 @@ def transmission_lag_signal(
             lag_signal = "In progress"
             detail = (f"{dominant_cmd} stress peaked {days_ago}d ago (z={peak_z:+.2f}). "
                       f"Equity absorption partial (eq today z={today_eq_z:+.2f}). "
-                      f"Transmission still propagating — expect continued equity move.")
+                      f"Transmission still propagating - expect continued equity move.")
         elif days_ago <= lookback and equity_absorbed:
             lag_signal = "Absorbed"
             detail = (f"{dominant_cmd} stress peaked {days_ago}d ago (z={peak_z:+.2f}). "

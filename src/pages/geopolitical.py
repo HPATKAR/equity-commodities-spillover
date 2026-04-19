@@ -297,10 +297,13 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
         _csc_cols = st.columns(min(len(_conf_ranked), 6))
         _cis_col = lambda v: "#c0392b" if v>=70 else "#e67e22" if v>=45 else "#CFB991" if v>=25 else "#8E9AAA"
         _fresh_col = lambda f: {"live":"#27ae60","recent":"#CFB991","aging":"#e67e22","stale":"#c0392b"}.get(f,"#555960")
+        _src_label = {"acled+gdelt": ("ACLED+GDELT", "#27ae60"), "acled": ("ACLED", "#27ae60"),
+                      "gdelt": ("GDELT", "#CFB991"), "static": ("REGISTRY", "#555960")}
         for _ci, _cr in enumerate(_conf_ranked[:6]):
             with _csc_cols[_ci]:
                 _cc = _cr.get("color", "#8E9AAA")
                 _tr = {"rising":"▲","stable":"■","falling":"▼"}.get(_cr.get("trend","stable"),"■")
+                _src_txt, _src_col = _src_label.get(_cr.get("cis_source", "static"), ("REGISTRY", "#555960"))
                 st.markdown(
                     f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                     f'border-top:2px solid {_cc};padding:6px 8px">'
@@ -309,6 +312,8 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
                     f'color:{_fresh_col(_cr.get("freshness","aging"))};float:right">'
                     f'{_cr.get("freshness","?").upper()}</span>'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:6.5px;'
+                    f'color:{_src_col};margin-top:1px">CIS SRC: {_src_txt}</div>'
                     f'<div style="display:flex;gap:10px;margin-top:4px">'
                     f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
                     f'color:#555960">CIS</span>'
