@@ -34,7 +34,7 @@ _DIM = "#8E9AAA"
 
 
 def _sh(txt: str) -> None:
-    """Styled terminal section header — replaces st.subheader()."""
+    """Styled terminal section header - replaces st.subheader()."""
     st.markdown(
         f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
         f'color:{_G};text-transform:uppercase;border-bottom:1px solid #1e1e1e;'
@@ -53,6 +53,8 @@ def _portfolio_path(prices: pd.DataFrame, weights: dict[str, float]) -> pd.Serie
     w = np.array([weights[a] for a in assets])
     w = w / w.sum()
     p = prices[assets].dropna(how="all").ffill()
+    if p.empty:
+        return pd.Series(dtype=float)
     p_norm = p / p.iloc[0]
     return (p_norm * w).sum(axis=1) * 100
 
@@ -140,9 +142,9 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         _st_active = [r for r in _st_cr.values() if r.get("state") == "active"]
         _st_col = "#c0392b" if _st_cis >= 65 else "#e67e22" if _st_cis >= 45 else "#CFB991"
         _st_note = (
-            "Elevated active-war CIS — stress test against current conflicts is high-priority."
+            "Elevated active-war CIS - stress test against current conflicts is high-priority."
             if _st_cis >= 60 else
-            "Moderate conflict intensity — watch oil/gold channels in event stress windows."
+            "Moderate conflict intensity - watch oil/gold channels in event stress windows."
         )
         _st_tags = "".join(
             f'<span style="background:#0a0a1a;color:#8E9AAA;'
@@ -172,7 +174,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     # ── Portfolio Import ───────────────────────────────────────────────────────
     _existing_portfolio = get_portfolio()
     with st.expander(
-        "📂  Import Portfolio  —  CSV / Excel upload · dollar amounts · auto FX conversion · auto weights",
+        "📂  Import Portfolio  -  CSV / Excel upload · dollar amounts · auto FX conversion · auto weights",
         expanded=(_existing_portfolio is None),
     ):
         _M = "font-family:'JetBrains Mono',monospace;"
@@ -183,9 +185,9 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             'Upload your portfolio as a CSV or Excel file. Required columns: '
             '<b style="color:#CFB991">ticker</b>, '
             '<b style="color:#CFB991">dollar_amount</b>. '
-            'Optional: <b>currency</b> (ISO 4217 — non-USD converted at live spot rate), '
+            'Optional: <b>currency</b> (ISO 4217 - non-USD converted at live spot rate), '
             '<b>cusip</b>, <b>isin</b>, <b>name</b>, <b>sector</b>. '
-            'Weights are computed automatically from dollar amounts — no manual percentage entry needed.'
+            'Weights are computed automatically from dollar amounts - no manual percentage entry needed.'
             '</p>',
             unsafe_allow_html=True,
         )
@@ -223,7 +225,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                     set_portfolio(_pf)
                     _existing_portfolio = _pf
                     st.success(
-                        f"Portfolio loaded — {_pf['n']} positions · "
+                        f"Portfolio loaded - {_pf['n']} positions · "
                         f"Total NAV: ${_pf['total_usd']:,.0f}"
                     )
                     for w in _pf.get("warnings", []):
@@ -261,9 +263,9 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 f'<tr style="border-bottom:1px solid #1a1a1a">'
                 f'<td style="{_M}font-size:9px;color:#CFB991;padding:3px 8px">{p["ticker"]}</td>'
                 f'<td style="{_M}font-size:9px;color:#8E9AAA;padding:3px 8px">'
-                f'{p["name"][:28] if p["name"] else "—"}</td>'
+                f'{p["name"][:28] if p["name"] else "-"}</td>'
                 f'<td style="{_M}font-size:9px;color:#e8e9ed;padding:3px 8px">'
-                f'{p["sector"][:18] if p["sector"] else "—"}</td>'
+                f'{p["sector"][:18] if p["sector"] else "-"}</td>'
                 f'<td style="{_M}font-size:9px;color:#e8e9ed;text-align:right;padding:3px 8px">'
                 f'${p["dollar_amount_usd"]:,.0f}</td>'
                 f'<td style="{_M}font-size:9px;color:#e8e9ed;text-align:right;padding:3px 8px">'
@@ -780,7 +782,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     k4.metric("Avg During Return",  f"{np.mean(valid_during):+.1f}%" if valid_during else "N/A")
 
     # ── Event returns heatmap (pre / during / post) ───────────────────────────
-    _sh("Event Returns — Pre / During / Post")
+    _sh("Event Returns - Pre / During / Post")
     _section_note(
         f"Return (%) across three windows: {pre_days}d before, event period, "
         f"{post_days}d after. Green = gain, red = loss."
@@ -849,7 +851,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     )
     _chart(fig_dd)
 
-    # ── Geo Risk Beta — CAPM-style geopolitical amplification (Benjamin) ──────
+    # ── Geo Risk Beta - CAPM-style geopolitical amplification (Benjamin) ──────
     try:
         from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
 
@@ -895,10 +897,10 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
         if _geo_rows_html:
             st.markdown("---")
-            _sh("Geo Risk Beta — Geopolitically Adjusted Drawdowns")
+            _sh("Geo Risk Beta - Geopolitically Adjusted Drawdowns")
             _section_note(
                 f"Current CIS of {_geo_cis:.0f}/100 implies a geo-risk beta of {_geo_beta:.2f}. "
-                "Scenario drawdowns amplified accordingly — consistent with Benjamin's CAPM-style "
+                "Scenario drawdowns amplified accordingly - consistent with Benjamin's CAPM-style "
                 "geo risk factor approach: countries/portfolios with higher observed geopolitical risk "
                 "experience 100% of the stress × (Geopolitical Risk Factor)."
             )
@@ -944,7 +946,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         pass
 
     # ── Portfolio path (relative days from event start) ───────────────────────
-    _sh("Portfolio Value Path — Days from Event Start (Base = 100)")
+    _sh("Portfolio Value Path - Days from Event Start (Base = 100)")
     _section_note(
         "Each line is indexed to 100 at event start (day 0), making events "
         "directly comparable regardless of calendar date. "
@@ -1102,7 +1104,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 from src.analysis.risk_score import compute_risk_score as _crs_se
                 _avg_se = _acs_se(eq_r, cmd_r, window=60)
                 _rlab_se = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
-                _se_ctx["regime_name"] = _rlab_se.get(int(_dcr_se(_avg_se).iloc[-1]), "Normal")
+                _dcr_out = _dcr_se(_avg_se)
+                _se_ctx["regime_name"] = (
+                    _rlab_se.get(int(_dcr_out.iloc[-1]), "Normal")
+                    if not _dcr_out.empty else "Unknown"
+                )
                 _rs_se = _crs_se(_avg_se, cmd_r, eq_r)
                 _se_ctx["risk_score"] = float(_rs_se.get("score", 0))
             except Exception:

@@ -1271,14 +1271,18 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         with st.spinner("Running walk-forward logistic regression…"):
             cache_key = f"{feat_df.shape}_{feat_df.index[0]}_{feat_df.index[-1]}_{vix_threshold}"
             gt_ml = _vix_ground_truth(feat_df.index, threshold=float(vix_threshold))
-            if gt_ml is None:
+            if gt_ml is not None:
+                _gt_ml_source = f"VIX > {vix_threshold}"
+            else:
                 gt_ml = _event_onset_mask(feat_df.index, GEOPOLITICAL_EVENTS)
+                _gt_ml_source = "geopolitical event onsets (VIX unavailable)"
             ml_result = _ml_regime_classifier(cache_key, feat_df, gt_ml)
 
         if not ml_result or "error" in ml_result:
             msg = ml_result.get("error", "Insufficient data.") if ml_result else "Insufficient data."
             st.warning(f"ML: {msg} Extend date range to at least 1 year.")
         else:
+            st.caption(f"Ground truth: {_gt_ml_source}")
             ml1, ml2, ml3, ml4 = st.columns(4)
             ml1.metric("ML Balanced Acc",  f"{ml_result['balanced_acc']:.1f}%",
                        delta=f"{ml_result['balanced_acc'] - s['balanced_acc']:+.1f}pp vs rule")
