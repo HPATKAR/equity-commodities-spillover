@@ -185,7 +185,16 @@ def load_cot_data(years: int = 3) -> pd.DataFrame:
     out = out.sort_values("date").reset_index(drop=True)
     try:
         from src.analysis.freshness import record_fetch
-        record_fetch("cot_positioning")
+        import datetime as _dt
+        # Record actual data date, not fetch time -- COT lags by ~3 days
+        _last_data_date = out["date"].max()
+        if pd.notna(_last_data_date):
+            record_fetch(
+                "cot_positioning",
+                ts=_dt.datetime.combine(_last_data_date.date(), _dt.time(0, 0)),
+            )
+        else:
+            record_fetch("cot_positioning")
     except Exception:
         pass
     return out

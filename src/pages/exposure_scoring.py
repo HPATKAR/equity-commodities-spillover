@@ -43,7 +43,7 @@ def _dir_badge(direction: str) -> tuple[str, str]:
         "long_geo_risk": ("GEO-LONG",   "#e67e22"),
         "safe_haven":    ("SAFE HAVEN", "#27ae60"),
         "neutral":       ("NEUTRAL",    "#8E9AAA"),
-    }.get(direction, ("—", "#555960"))
+    }.get(direction, ("-", "#555960"))
 
 
 # ── KPI header row ────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ def _render_kpi_row(stats: dict, scenario: dict) -> None:
         ("Peak Exposure",     f'{stats.get("max_sas", 0):.1f}',       _sas_color(stats.get("max_sas", 0))),
         ("High Exp Assets",   str(stats.get("high_exp", 0)),          "#c0392b"),
         ("Scenario Mult",     f'×{geo_mult:.2f}',                     mult_color),
-        ("Top Hedge",         stats.get("top_hedge", "—") or "—",    "#27ae60"),
+        ("Top Hedge",         stats.get("top_hedge", "-") or "-",    "#27ae60"),
     ]
 
     cols = st.columns(len(items))
@@ -96,7 +96,7 @@ def _render_exposure_table(items: list[dict], title: str = "RANKED EXPOSURE") ->
         dir_text, dir_col = _dir_badge(a["direction"])
         top_c    = a.get("top_conflict", "") or ""
         top_c_label = top_c.replace("_", " ").upper()
-        # sector tags — first two
+        # sector tags - first two
         sectors  = " · ".join(
             s.replace("_", " ").title() for s in a.get("sector_tags", [])[:2]
         )
@@ -345,7 +345,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
             sector=filters["sector"],
             conflict_id=filters["conflict"],
         )
-        _render_exposure_table(ranked, title="RANKED EXPOSURE — SCENARIO ADJUSTED SCORE")
+        _render_exposure_table(ranked, title="RANKED EXPOSURE - SCENARIO ADJUSTED SCORE")
 
     with col_side:
         st.markdown(
@@ -386,7 +386,8 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
             f'<span style="margin-left:10px;font-family:\'JetBrains Mono\',monospace;'
             f'font-size:8px;color:#8E9AAA">'
             f'SES {a["ses"]:.2f} · TAE {a["tae"]:.2f} · SAS {a["sas"]:.0f}'
-            f'</span>'
+            + (f' (raw {a["sas_raw"]:.0f} - capped at 100 by scenario mult)' if a.get("sas_capped") else "")
+            + f'</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -425,7 +426,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
             # convert to same format as exposure table uses
             _render_exposure_table(
                 affected[:20],
-                title=f"FULL AFFECTED UNIVERSE — {conf['label'].upper()}",
+                title=f"FULL AFFECTED UNIVERSE - {conf['label'].upper()}",
             )
 
     # ── Methodology footnote ───────────────────────────────────────────────
@@ -438,7 +439,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
         'color:#8E9AAA;line-height:1.6;margin:0">'
         'SES (Structural Exposure Score): CIS-weighted average of per-conflict structural '
         'exposure values from SECURITY_EXPOSURE registry. '
-        'TAE (Transmission-Adjusted Exposure): SES scaled by each conflict\'s TPS — '
+        'TAE (Transmission-Adjusted Exposure): SES scaled by each conflict\'s TPS - '
         'reflects how much structural exposure is being transmitted through markets. '
         'SAS (Scenario-Adjusted Score): TAE × scenario geo_mult × 100. '
         'Conflict Beta: structural[asset][conflict] × TPS[conflict] / 100. '

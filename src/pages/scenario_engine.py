@@ -800,7 +800,7 @@ def page_scenario_engine(
             "Custom scenario name",
             value=st.session_state.get("se_custom_name", "My Custom Scenario"),
             key="se_custom_name",
-            help="Label for your custom scenario — shown in comparison views.",
+            help="Label for your custom scenario - shown in comparison views.",
         )
 
     col1, col2 = st.columns(2)
@@ -936,7 +936,7 @@ def page_scenario_engine(
     if cpi_pct    != 0: badges += _shock_badge("CPI",       f"{cpi_pct:+.1f}%",    True)
     if unemp_pct  != 0: badges += _shock_badge("Unemp",     f"{unemp_pct:+.1f}pp", True)
     if not badges:
-        badges = f'<span style="color:{_MUTED};font-size:0.70rem">No active shocks — adjust sliders above.</span>'
+        badges = f'<span style="color:{_MUTED};font-size:0.70rem">No active shocks - adjust sliders above.</span>'
 
     st.markdown(
         f'<div style="margin:0.6rem 0 1.2rem;line-height:2">{badges}</div>',
@@ -982,17 +982,30 @@ def page_scenario_engine(
     impact = _propagate_shock(_active_betas, raw_shocks)
 
     # Show which beta set is being applied
+    _beta_note_color = {"Decorrelated": "#27ae60", "Normal": "#CFB991",
+                        "Elevated": "#e67e22", "Crisis": "#e74c3c"}.get(_regime_label, "#CFB991")
     if _using_regime_betas:
-        _beta_note_color = {"Decorrelated": "#27ae60", "Normal": "#CFB991",
-                            "Elevated": "#e67e22", "Crisis": "#e74c3c"}.get(_regime_label, "#CFB991")
         st.markdown(
             f'<div style="background:#0a0a0a;border-left:2px solid {_beta_note_color};'
             f'border-radius:3px;padding:6px 10px;margin:4px 0;">'
             f'<span style="color:{_beta_note_color};font-family:\'JetBrains Mono\',monospace;'
-            f'font-size:10px;font-weight:700;">REGIME BETAS ACTIVE — {_regime_label.upper()}</span>'
+            f'font-size:10px;font-weight:700;">REGIME BETAS ACTIVE - {_regime_label.upper()}</span>'
             f'<span style="color:#777;font-family:\'JetBrains Mono\',monospace;font-size:10px;"> · '
             f'Betas estimated on {_regime_label} regime periods only (not full-sample OLS). '
             f'Unconditional betas are available in tail risk tab.</span></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div style="background:#0a0a0a;border-left:2px solid #e67e22;'
+            f'border-radius:3px;padding:6px 10px;margin:4px 0;">'
+            f'<span style="color:#e67e22;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:10px;font-weight:700;">UNCONDITIONAL BETAS</span>'
+            f'<span style="color:#777;font-family:\'JetBrains Mono\',monospace;font-size:10px;"> · '
+            f'Current regime is <b style="color:{_beta_note_color}">{_regime_label}</b> but '
+            f'insufficient observations (&lt;30 days) for this regime in the selected date range. '
+            f'Using full-sample OLS betas - shock impacts may be understated in a '
+            f'{_regime_label.lower()} environment.</span></div>',
             unsafe_allow_html=True,
         )
 
@@ -1230,7 +1243,7 @@ def page_scenario_engine(
         st.info("Select 2–6 preset scenarios above to compare cross-asset impacts.")
 
     # ── GAP 4: Sector-Level Equity Decomposition via SPDR ETFs ───────────────
-    _section_label("Sector Exposure — Which Equity Sectors Are Most Vulnerable to This Shock?")
+    _section_label("Sector Exposure - Which Equity Sectors Are Most Vulnerable to This Shock?")
     st.markdown(
         f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.7rem;line-height:1.55">'
         f'SPDR sector ETFs mapped to commodity shock channels. '

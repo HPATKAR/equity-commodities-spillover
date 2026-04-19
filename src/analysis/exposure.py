@@ -14,7 +14,7 @@ Three complementary scores per asset:
       SES(a) = Σ_c [ (CIS_c / Σ CIS) × structural[a][c] ]
 
   Transmission-Adjusted Exposure (TAE)  0–1
-    Structural exposure further scaled by each conflict's TPS — reflects how
+    Structural exposure further scaled by each conflict's TPS - reflects how
     much of the structural link is currently being transmitted through markets.
       TAE(a) = Σ_c [ (CIS_c / Σ CIS) × structural[a][c] × (TPS_c / 100) ]
 
@@ -196,9 +196,11 @@ def score_all_assets(
 
     results: dict[str, dict] = {}
     for asset in SECURITY_EXPOSURE:
-        ses   = _structural_exposure_score(asset, conflict_weights)
-        tae   = _transmission_adjusted_exposure(asset, conflict_weights, conflict_tps)
-        sas   = float(np.clip(tae * geo_mult * 100, 0.0, 100.0))
+        ses     = _structural_exposure_score(asset, conflict_weights)
+        tae     = _transmission_adjusted_exposure(asset, conflict_weights, conflict_tps)
+        sas_raw = round(tae * geo_mult * 100, 1)
+        sas     = float(np.clip(sas_raw, 0.0, 100.0))
+        sas_capped = sas_raw > 100.0  # scenario multiplier pushed score above ceiling
         beta  = _conflict_beta(asset, conflict_tps)
         hs    = _hedge_score(asset, conflict_weights)
         top_c = _top_conflict(asset, conflict_tps)
@@ -219,7 +221,9 @@ def score_all_assets(
             "asset":       asset,
             "ses":         round(ses,  3),    # 0–1 structural
             "tae":         round(tae,  3),    # 0–1 transmission-adjusted
-            "sas":         round(sas,  1),    # 0–100 scenario-adjusted
+            "sas":         round(sas,  1),    # 0-100 scenario-adjusted (clipped)
+            "sas_raw":     sas_raw,           # pre-clip value; >100 means scenario cap was hit
+            "sas_capped":  sas_capped,        # True when geo_mult pushed score above 100
             "beta":        beta,              # {conflict_id: 0–1}
             "hedge_score": round(hs,   1),    # 0–100
             "top_conflict": top_c,
