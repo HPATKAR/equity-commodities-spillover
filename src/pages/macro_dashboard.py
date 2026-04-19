@@ -463,8 +463,8 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
         _mc_cr  = score_all_conflicts()
         _mc_agg = aggregate_portfolio_scores(_mc_cr)
-        _mc_cis = _mc_agg.get("portfolio_cis", 50.0)
-        _mc_tps = _mc_agg.get("portfolio_tps", 50.0)
+        _mc_cis = _mc_agg.get("portfolio_cis", _mc_agg.get("cis", 50.0))
+        _mc_tps = _mc_agg.get("portfolio_tps", _mc_agg.get("tps", 50.0))
 
         # Conflicts with energy or inflation transmission channels
         _inflation_drivers = [

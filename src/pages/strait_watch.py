@@ -1358,7 +1358,7 @@ def page_strait_watch(start: str, end: str) -> None:
     )
 
     try:
-        from src.data.eia import eia_snapshot, _SERIES
+        from src.data.eia import eia_snapshot
 
         with st.spinner("Fetching EIA weekly inventory data…"):
             _eia_snap = eia_snapshot(weeks=260)

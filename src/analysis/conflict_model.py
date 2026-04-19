@@ -596,6 +596,9 @@ def aggregate_portfolio_scores(
     return {
         "cis":              round(portfolio_cis, 1),
         "tps":              round(portfolio_tps, 1),
+        # Aliases — many pages use the "portfolio_cis"/"portfolio_tps" key names
+        "portfolio_cis":    round(portfolio_cis, 1),
+        "portfolio_tps":    round(portfolio_tps, 1),
         "confidence":       round(avg_conf, 3),
         "conflict_weights": {cid: round(w, 3) for cid, w in weights.items()},
         "top_conflict":     top[1]["name"] if top else None,
