@@ -565,20 +565,22 @@ def aggregate_portfolio_scores(
         pass
 
     # Weight by CIS (higher-intensity conflicts get more weight in TPS aggregate)
+    # portfolio_cis = intensity-weighted mean of per-conflict CIS values (0–100)
+    # portfolio_tps = intensity-weighted mean of per-conflict TPS values (0–100)
+    # The * len(conflict_results) factor was a bug: it inflated scores to 100 for
+    # any multi-conflict portfolio. Removed — weighted mean is the correct formula.
     cis_vals = {cid: r["cis"] for cid, r in conflict_results.items()}
     total_cis = sum(cis_vals.values()) + 1e-9
 
     weights = {cid: v / total_cis for cid, v in cis_vals.items()}
 
     portfolio_cis = float(np.clip(
-        sum(cis_vals[cid] * weights[cid] * len(conflict_results)
-            for cid in conflict_results),
+        sum(cis_vals[cid] * weights[cid] for cid in conflict_results),
         0, 100
     ))
 
     portfolio_tps = float(np.clip(
-        sum(conflict_results[cid]["tps"] * weights[cid] * len(conflict_results)
-            for cid in conflict_results),
+        sum(conflict_results[cid]["tps"] * weights[cid] for cid in conflict_results),
         0, 100
     ))
 
