@@ -1348,4 +1348,71 @@ def page_strait_watch(start: str, end: str) -> None:
     except Exception:
         pass
 
+    # ── EIA Weekly Energy Inventories ─────────────────────────────────────────
+    _divider("1.2rem", "0.5rem")
+    _section_label("EIA Weekly Energy Inventories — Physical Supply Signal")
+    _thread(
+        "Disruption risk is only half the picture. The physical supply buffer determines how fast "
+        "a chokepoint disruption translates to a price spike. US crude stocks below the seasonal "
+        "5-year average = tight buffer = price amplification. Above average = market absorbs shock."
+    )
+
+    try:
+        from src.data.eia import eia_snapshot, _SERIES
+
+        with st.spinner("Fetching EIA weekly inventory data…"):
+            _eia_snap = eia_snapshot(weeks=260)
+
+        _sig_color = {"draw": "#c0392b", "build": "#27ae60", "neutral": "#8E9AAA"}
+        _sig_label = {"draw": "DRAW — BULLISH", "build": "BUILD — BEARISH", "neutral": "NEUTRAL"}
+
+        _eia_avail = {k: v for k, v in _eia_snap.items() if v.get("data_available")}
+
+        if not _eia_avail:
+            st.caption("EIA inventory data unavailable — DEMO_KEY rate limit or network error.")
+        else:
+            eia_cols = st.columns(len(_eia_avail), gap="small")
+            for col, (key, snap) in zip(eia_cols, _eia_avail.items()):
+                sc    = _sig_color[snap["signal"]]
+                sl    = _sig_label[snap["signal"]]
+                wow   = snap["wow_change"]
+                wow_s = f"{'▲' if wow > 0 else '▼' if wow < 0 else '—'}{abs(wow):,}"
+                wow_c = "#27ae60" if wow > 0 else "#c0392b" if wow < 0 else "#8E9AAA"
+                p5yr  = snap.get("vs_5yr_pct")
+                p5yr_str = f"{p5yr:+.1f}% vs 5yr avg" if p5yr is not None else "—"
+                p5yr_c   = "#c0392b" if p5yr and p5yr < 0 else "#27ae60" if p5yr and p5yr > 0 else "#8E9AAA"
+                col.markdown(
+                    f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+                    f'border-top:2px solid {sc};border-radius:0 0 4px 4px;'
+                    f'padding:0.65rem 0.75rem">'
+                    f'<div style="{_F}font-size:0.60rem;font-weight:700;color:#c8c8c8;'
+                    f'margin-bottom:4px">{snap["label"]}</div>'
+                    f'<div style="{_M}font-size:1.6rem;font-weight:700;color:#e8e9ed;line-height:1">'
+                    f'{snap["level"]:,}'
+                    f'<span style="{_F}font-size:0.44rem;color:#555960;margin-left:3px">'
+                    f'{snap["units"]}</span></div>'
+                    f'<div style="{_M}font-size:0.68rem;font-weight:700;color:{wow_c};margin:4px 0 2px">'
+                    f'{wow_s} WoW</div>'
+                    f'<div style="{_M}font-size:0.62rem;color:{p5yr_c};margin-bottom:6px">'
+                    f'{p5yr_str}</div>'
+                    f'<div style="display:inline-flex;padding:1px 5px;'
+                    f'background:{sc}18;border:1px solid {sc}55;border-radius:2px">'
+                    f'<span style="{_F}font-size:0.42rem;font-weight:700;color:{sc}">{sl}</span></div>'
+                    f'<div style="{_F}font-size:0.44rem;color:#333;margin-top:6px">'
+                    f'as of {snap["as_of"]}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            _insight_note(
+                "EIA inventories update every Wednesday (US morning). "
+                "DRAW = stocks below 5-year seasonal average = tight physical supply, "
+                "price-positive for crude/gas. "
+                "BUILD = stocks above average = buffer available, price-negative. "
+                "Cross-reference with PortWatch vessel disruption above: "
+                "low stocks + high disruption = maximum price shock risk."
+            )
+    except Exception as _eia_err:
+        st.caption(f"EIA data unavailable ({type(_eia_err).__name__}) — DEMO_KEY may be rate-limited.")
+
     _page_footer()

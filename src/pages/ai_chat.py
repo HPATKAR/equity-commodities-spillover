@@ -93,6 +93,85 @@ def _build_market_context(start: str, end: str) -> str:
 
     comp_str = "\n".join(f"  {k}: {v:.0f}/100" for k, v in risk_comps.items()) if risk_comps else "  N/A"
 
+    # ── GDELT live conflict escalation signals ─────────────────────────────
+    gdelt_str = "  Unavailable (GDELT fetch failed)"
+    try:
+        from src.data.gdelt import fetch_all_gdelt_signals
+        _gd_all = fetch_all_gdelt_signals(timespan="7d")
+        gdelt_rows = []
+        for cid, gd in _gd_all.items():
+            if gd.get("data_available"):
+                sig    = gd["escalation_signal"].upper()
+                trend  = f"{gd['volume_trend']:+.0%}"
+                tone   = f"{gd['tone_recent']:+.1f}"
+                gdelt_rows.append(
+                    f"  {cid.replace('_', ' ').title():<30} {sig:<14} vol trend {trend:<8} tone {tone}"
+                )
+        gdelt_str = "\n".join(gdelt_rows) if gdelt_rows else "  No data available"
+    except Exception:
+        pass
+
+    # ── CIS/TPS live conflict scores ───────────────────────────────────────
+    cis_str = "  Unavailable"
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _cscores = score_all_conflicts()
+        _port    = aggregate_portfolio_scores(_cscores)
+        cis_rows = [
+            f"  Portfolio CIS: {_port['cis']:.0f}/100  ·  TPS: {_port['tps']:.0f}/100  "
+            f"·  Top conflict: {_port.get('top_conflict', 'N/A')}"
+        ]
+        for cid, cr in sorted(_cscores.items(), key=lambda x: x[1]["cis"], reverse=True)[:5]:
+            cis_rows.append(
+                f"  {cr['name']:<40} CIS {cr['cis']:.0f}  TPS {cr['tps']:.0f}  "
+                f"{cr['escalation'].upper():<14} {cr['state'].upper()}"
+            )
+        cis_str = "\n".join(cis_rows)
+    except Exception:
+        pass
+
+    # ── PortWatch live strait data ─────────────────────────────────────────
+    portwatch_str = "  Unavailable"
+    try:
+        from src.data.portwatch import load_all_straits_live
+        _pw = load_all_straits_live(days_lookback=7)
+        pw_rows = []
+        for sid, live in _pw.items():
+            if live.get("source") == "PortWatch live" and live.get("ships_current") is not None:
+                delta = live["ships_24h_change"] or 0
+                pw_rows.append(
+                    f"  {sid.replace('_', ' ').title():<25} "
+                    f"{live['ships_current']} ships/day  "
+                    f"({'+' if delta >= 0 else ''}{delta} 24h)  "
+                    f"7d avg {live['ships_7d_avg']}  as of {live['as_of']}"
+                )
+        portwatch_str = "\n".join(pw_rows) if pw_rows else "  No live data"
+    except Exception:
+        pass
+
+    # ── EIA weekly energy inventory snapshot ──────────────────────────────
+    eia_str = "  Unavailable"
+    try:
+        from src.data.eia import eia_snapshot
+        _eia = eia_snapshot(weeks=260)
+        eia_rows = []
+        for key, snap in _eia.items():
+            if not snap.get("data_available"):
+                continue
+            sig = {"draw": "BULLISH (draw)", "build": "BEARISH (build)", "neutral": "NEUTRAL"}.get(
+                snap["signal"], "NEUTRAL"
+            )
+            wow = snap["wow_change"]
+            pct5yr = snap.get("vs_5yr_pct")
+            eia_rows.append(
+                f"  {snap['label']:<25} {snap['level']:>10,} {snap['units']:<25}"
+                f"  WoW {'+' if wow >= 0 else ''}{wow:,}  "
+                f"vs 5yr avg {f'{pct5yr:+.1f}%' if pct5yr is not None else 'N/A':<8}  {sig}"
+            )
+        eia_str = "\n".join(eia_rows) if eia_rows else "  No EIA data available"
+    except Exception:
+        pass
+
     return (
         f"DATE: {today.strftime('%d %B %Y')}\n"
         f"WINDOW: {start} to {end}\n\n"
@@ -116,6 +195,14 @@ def _build_market_context(start: str, end: str) -> str:
         f"  {vol_str}\n\n"
         f"ACTIVE GEOPOLITICAL EVENTS\n"
         f"{active_str}\n\n"
+        f"LIVE CONFLICT SCORES (CIS/TPS)\n"
+        f"{cis_str}\n\n"
+        f"GDELT CONFLICT ESCALATION SIGNALS (7-day media volume)\n"
+        f"{gdelt_str}\n\n"
+        f"PORTWATCH LIVE STRAIT TRAFFIC\n"
+        f"{portwatch_str}\n\n"
+        f"EIA WEEKLY ENERGY INVENTORIES (vs 5yr seasonal average)\n"
+        f"{eia_str}\n\n"
         f"UNIVERSE\n"
         f"  Equities ({len(eq_r.columns)}): {', '.join(eq_r.columns.tolist())}\n"
         f"  Commodities ({len(cmd_r.columns)}): {', '.join(cmd_r.columns.tolist())}"
@@ -195,6 +282,13 @@ INDIA / RUPEE MACRO FRAMEWORK
   Trade ideas        Long Gold / Short INR on geopolitical stress (India's gold safe-haven demand + INR weakness)
                      Long Brent / Short Nifty on oil supply shock (India's 85% crude import dependency)
                      Long Nifty / Short USDINR on dollar weakness cycle (EM relief + India tech export boost)
+
+LIVE DATA SOURCES IN CONTEXT BELOW
+  Market prices       yfinance (equities, commodities, FI, FX)
+  Conflict scores     CIS/TPS computed live from conflict_model.py
+  GDELT signals       Media volume escalation — 7-day trend, article tone (no API key)
+  PortWatch           IMF ArcGIS chokepoint tanker counts — live daily snapshots
+  ACLED               Armed conflict event/fatality counts (if API key configured)
 
 LIVE MARKET CONTEXT
 {context}
