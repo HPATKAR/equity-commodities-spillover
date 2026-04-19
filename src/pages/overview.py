@@ -43,7 +43,7 @@ from src.ui.alert_banner import render_alert_banner
 
 _F = "font-family:'DM Sans',sans-serif;"
 
-# ── Market Snapshot — Bloomberg-style strip (Benjamin feedback) ────────────
+# ── Market Snapshot - Bloomberg-style strip (Benjamin feedback) ────────────
 _SNAPSHOT_TICKERS = {
     # Equities
     "SPY":  ("S&P 500",        "equity"),
@@ -80,18 +80,21 @@ def _fetch_snapshot_prices() -> dict[str, dict]:
             return {}
         close = raw["Close"] if "Close" in raw.columns else raw
         result = {}
+        _max_date = None
         for tk in tickers:
             try:
                 if isinstance(close, __import__("pandas").Series):
                     s = close.dropna()
-                    col = tk
                 else:
                     if tk not in close.columns:
                         continue
                     s = close[tk].dropna()
                 if len(s) >= 2:
-                    price = float(s.iloc[-1])
-                    prev  = float(s.iloc[-2])
+                    price   = float(s.iloc[-1])
+                    prev    = float(s.iloc[-2])
+                    tk_date = s.index[-1]
+                    if _max_date is None or tk_date > _max_date:
+                        _max_date = tk_date
                     result[tk] = {
                         "price":   price,
                         "chg_pct": (price - prev) / prev * 100,
@@ -99,6 +102,8 @@ def _fetch_snapshot_prices() -> dict[str, dict]:
                     }
             except Exception:
                 continue
+        if _max_date is not None:
+            result["_as_of"] = _max_date.strftime("%d %b %Y")
         return result
     except Exception:
         return {}
@@ -120,9 +125,15 @@ def _render_market_snapshot(snap: dict) -> None:
         ("Fixed Inc / Macro", ["TLT", "HYG", "UUP", "^VIX"],      "#27ae60"),
     ]
 
+    _as_of_str = snap.get("_as_of", "")
+    _as_of_label = (
+        f' <span style="font-weight:400;color:#555960;letter-spacing:0">as of {_as_of_str}</span>'
+        if _as_of_str else ""
+    )
     st.markdown(
         f'<p style="{_M}font-size:0.52rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.16em;color:#8E9AAA;margin:0.75rem 0 0.35rem">Market Snapshot</p>',
+        f'letter-spacing:0.16em;color:#8E9AAA;margin:0.75rem 0 0.35rem">'
+        f'Market Snapshot{_as_of_label}</p>',
         unsafe_allow_html=True,
     )
 
@@ -217,7 +228,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         # Build holdings rows
         _rows = ""
         for p in _top10:
-            _px  = f'${p["live_price"]:,.2f}' if p.get("live_price") else "—"
+            _px  = f'${p["live_price"]:,.2f}' if p.get("live_price") else "-"
             _name = (p.get("name") or p["ticker"])[:22]
             _rows += (
                 f'<div style="display:flex;align-items:center;gap:0;'
@@ -334,7 +345,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     # Inject geo risk into the freshness bar
     _geo_cis, _geo_tps, _geo_score = None, None, None
-    _geo_top, _geo_n_active, _geo_sc_label, _geo_sc_color = "—", 0, "Base", "#CFB991"
+    _geo_top, _geo_n_active, _geo_sc_label, _geo_sc_color = "-", 0, "Base", "#CFB991"
     _geo_conflict_rows: list[dict] = []
     try:
         from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
@@ -344,7 +355,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _geo_sc  = get_scenario()
         _geo_cis = _geo_agg.get("portfolio_cis", _geo_agg.get("cis", 50.0))
         _geo_tps = _geo_agg.get("portfolio_tps", _geo_agg.get("tps", 50.0))
-        _geo_top = (_geo_agg.get("top_conflict") or "—").replace("_", " ").title()
+        _geo_top = (_geo_agg.get("top_conflict") or "-").replace("_", " ").title()
         _geo_n_active = sum(1 for r in _geo_cr.values() if r.get("state") == "active")
         _geo_sc_label = _geo_sc.get("label", "Base")
         _geo_sc_color = _geo_sc.get("color", "#CFB991")
@@ -353,7 +364,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _active.sort(key=lambda x: x[1]["cis"], reverse=True)
         for _cid, _r in _active[:5]:
             _tx = _r.get("transmission", {})
-            _top_ch = max(_tx, key=_tx.get) if _tx else "—"
+            _top_ch = max(_tx, key=_tx.get) if _tx else "-"
             _geo_conflict_rows.append({
                 "label":   _r.get("label", _cid),
                 "color":   _r.get("color", "#CFB991"),
@@ -380,12 +391,12 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _F_ov = "font-family:'DM Sans',sans-serif;"
 
         # Build per-conflict mini-rows
-        _trend_icon = {"rising": "▲", "stable": "—", "falling": "▼"}
+        _trend_icon = {"rising": "▲", "stable": "-", "falling": "▼"}
         _trend_col  = {"rising": "#c0392b", "stable": "#555960", "falling": "#27ae60"}
         _conf_rows_html = ""
         for _row in _geo_conflict_rows:
             _tc = "#c0392b" if _row["cis"] >= 65 else "#e67e22" if _row["cis"] >= 45 else "#8E9AAA"
-            _ti = _trend_icon.get(_row["trend"], "—")
+            _ti = _trend_icon.get(_row["trend"], "-")
             _tcolor = _trend_col.get(_row["trend"], "#555960")
             _conf_rows_html += (
                 f'<span style="{_M_ov}font-size:9px;color:{_row["color"]};font-weight:700">'
@@ -433,7 +444,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
 
-    # ── Market Snapshot — daily spot-check strip (Benjamin feedback) ──────────
+    # ── Market Snapshot - daily spot-check strip (Benjamin feedback) ──────────
     _snap = _fetch_snapshot_prices()
     _render_market_snapshot(_snap)
 
@@ -634,7 +645,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     render_alert_banner(_alerts, market_context=_ctx_brief)
 
     # ── Morning Briefing Agent Chain ───────────────────────────────────────
-    # Auto-expands when risk score is Elevated or above — visible deliberation.
+    # Auto-expands when risk score is Elevated or above - visible deliberation.
     _briefing_risk = float(risk_result["score"])
     _briefing_expanded = _briefing_risk >= 50
     try:
@@ -642,9 +653,9 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _top_alert_texts = [getattr(a, "title", "") for a in _alerts[:3] if getattr(a, "title", "")]
         _top_conflict    = risk_result.get("top_conflict")
         _briefing_label = (
-            f"⚡ AI Analyst Team — Morning Briefing (Risk {_briefing_risk:.0f}/100)"
+            f"⚡ AI Analyst Team - Morning Briefing (Risk {_briefing_risk:.0f}/100)"
             if _briefing_expanded
-            else f"AI Analyst Team — Morning Briefing (Risk {_briefing_risk:.0f}/100)"
+            else f"AI Analyst Team - Morning Briefing (Risk {_briefing_risk:.0f}/100)"
         )
         with st.expander(_briefing_label, expanded=_briefing_expanded):
             render_morning_briefing_panel(
@@ -972,7 +983,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                         )
                         st.session_state[_narrative_key] = _resp.choices[0].message.content
             except Exception as _e:
-                # Do NOT cache the error — let it retry on next render.
+                # Do NOT cache the error - let it retry on next render.
                 st.warning(f"Narrative generation failed: {_e}", icon="⚠️")
 
     _narrative_val = st.session_state.get(_narrative_key, "")
