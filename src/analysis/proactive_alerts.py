@@ -322,6 +322,103 @@ def _check_country_exposure(cmd_r: pd.DataFrame) -> list[Alert]:
 
 # ── Main entry point ─────────────────────────────────────────────────────────
 
+def _check_gdelt_escalation() -> list[Alert]:
+    """Alert when GDELT detects a sharp conflict media volume spike (≥30% WoW)."""
+    alerts = []
+    try:
+        from src.data.gdelt import fetch_all_gdelt_signals
+        signals = fetch_all_gdelt_signals(timespan="7d")
+        for cid, gd in signals.items():
+            if not gd.get("data_available"):
+                continue
+            trend = float(gd.get("volume_trend", 0.0))
+            esc   = gd.get("escalation_signal", "stable")
+            tone  = float(gd.get("tone_recent", 0.0))
+            label = cid.replace("_", " ").title()
+
+            if esc == "escalating" and trend >= 0.40:
+                alerts.append(Alert(
+                    severity="critical", category="conflict",
+                    title=f"GDELT: {label} media surge +{trend:.0%}",
+                    body=(
+                        f"News coverage of {label} surged {trend:+.0%} in the past 7 days vs prior period. "
+                        f"Tone score: {tone:+.1f} (negative = alarming). "
+                        "Sharp media surges often precede market repricing by 1–3 days — "
+                        "watch energy and safe-haven assets."
+                    ),
+                    page_hint="conflict_intelligence",
+                    data={"conflict": cid, "volume_trend": trend, "tone": tone},
+                ))
+            elif esc == "escalating" and trend >= 0.20:
+                alerts.append(Alert(
+                    severity="warning", category="conflict",
+                    title=f"GDELT: {label} escalating coverage +{trend:.0%}",
+                    body=(
+                        f"{label} media volume up {trend:+.0%} this week. "
+                        f"GDELT tone: {tone:+.1f}. Monitor for further escalation — "
+                        "coverage spikes above +40% historically precede conflict-driven commodity moves."
+                    ),
+                    page_hint="conflict_intelligence",
+                    data={"conflict": cid, "volume_trend": trend, "tone": tone},
+                ))
+    except Exception:
+        pass
+    return alerts
+
+
+def _check_eia_inventory() -> list[Alert]:
+    """Alert when EIA crude or gas stocks are significantly below the 5yr seasonal average."""
+    alerts = []
+    try:
+        from src.data.eia import eia_snapshot
+        snap = eia_snapshot(weeks=260)
+
+        crude = snap.get("crude_stocks", {})
+        natgas = snap.get("natgas_storage", {})
+
+        for key, s, commodity in [
+            ("crude_stocks", crude, "Crude Oil"),
+            ("natgas_storage", natgas, "Natural Gas"),
+        ]:
+            if not s.get("data_available"):
+                continue
+            p5yr = s.get("vs_5yr_pct")
+            if p5yr is None:
+                continue
+            wow = s.get("wow_change", 0)
+            level = s.get("level", 0)
+            units = s.get("units", "")
+
+            if p5yr <= -10:
+                alerts.append(Alert(
+                    severity="critical", category="supply",
+                    title=f"EIA {commodity} stocks critically low ({p5yr:+.1f}% vs 5yr avg)",
+                    body=(
+                        f"US {commodity} stocks at {level:,} {units} — {abs(p5yr):.1f}% below the "
+                        f"5-year seasonal average. WoW change: {'+' if wow>=0 else ''}{wow:,}. "
+                        "Stocks this far below seasonal norms historically precede acute price spikes. "
+                        "Any supply disruption (chokepoint, weather, pipeline) could amplify sharply."
+                    ),
+                    page_hint="strait_watch",
+                    data={"commodity": commodity, "vs_5yr_pct": p5yr, "wow_change": wow},
+                ))
+            elif p5yr <= -5:
+                alerts.append(Alert(
+                    severity="warning", category="supply",
+                    title=f"EIA {commodity} below seasonal average ({p5yr:+.1f}%)",
+                    body=(
+                        f"US {commodity} stocks at {level:,} {units} — {abs(p5yr):.1f}% below "
+                        f"5-year seasonal average. WoW: {'+' if wow>=0 else ''}{wow:,} {units}. "
+                        "Tighter-than-normal inventory levels reduce the market's shock-absorption buffer."
+                    ),
+                    page_hint="strait_watch",
+                    data={"commodity": commodity, "vs_5yr_pct": p5yr, "wow_change": wow},
+                ))
+    except Exception:
+        pass
+    return alerts
+
+
 def compute_alerts(
     eq_r: pd.DataFrame,
     cmd_r: pd.DataFrame,
@@ -342,6 +439,8 @@ def compute_alerts(
     all_alerts += _check_volatility(cmd_r)
     all_alerts += _check_early_warnings(eq_r, cmd_r, avg_corr)
     all_alerts += _check_country_exposure(cmd_r)
+    all_alerts += _check_gdelt_escalation()
+    all_alerts += _check_eia_inventory()
 
     if cot_df is not None and not cot_df.empty:
         all_alerts += _check_cot(cot_df)
