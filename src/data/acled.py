@@ -63,6 +63,18 @@ _ACLED_CONFLICT_MAP: dict[str, dict] = {
         "event_types": ["Battles", "Explosions/Remote violence"],
         "description": "Russia border violence",
     },
+    "india_pakistan": {
+        "country": "Pakistan",   # Cross-border events trackable from Pakistan side
+        "actor_filter": None,
+        "event_types": ["Battles", "Explosions/Remote violence", "Violence against civilians"],
+        "description": "India-Pakistan Military Escalation",
+    },
+    "taiwan_strait": {
+        "country": "Taiwan",
+        "actor_filter": None,
+        "event_types": ["Battles", "Protests", "Strategic developments"],
+        "description": "Taiwan Strait / PLA Activity",
+    },
 }
 
 # Base URL for ACLED API

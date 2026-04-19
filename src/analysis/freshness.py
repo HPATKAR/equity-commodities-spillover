@@ -32,6 +32,11 @@ _THRESHOLDS: dict[str, dict] = {
     "fred_spreads":       {"warn_h": 4,    "stale_h": 26},   # yfinance proxy — same cadence as prices
     "risk_score":         {"warn_h": 4,    "stale_h": 26},
     "conflict_model":     {"warn_h": 24,   "stale_h": 72},
+    # Live API sources added 2026-04-19
+    "portwatch":          {"warn_h": 6,    "stale_h": 30},    # IMF ArcGIS — daily cadence
+    "gdelt":              {"warn_h": 4,    "stale_h": 12},    # 3h cache, media volume
+    "acled":              {"warn_h": 8,    "stale_h": 48},    # 6h cache, conflict events
+    "eia_inventory":      {"warn_h": 24,   "stale_h": 168},   # weekly Wednesday update
 }
 
 _SOURCE_LABELS: dict[str, str] = {
@@ -44,6 +49,10 @@ _SOURCE_LABELS: dict[str, str] = {
     "fred_spreads":      "YF/HYG·LQD",
     "risk_score":        "Computed",
     "conflict_model":    "Model",
+    "portwatch":         "PortWatch",
+    "gdelt":             "GDELT",
+    "acled":             "ACLED",
+    "eia_inventory":     "EIA",
 }
 
 # ── Internal store (module-level dict, survives within a Streamlit process) ──

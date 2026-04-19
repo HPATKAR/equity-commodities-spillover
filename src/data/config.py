@@ -216,6 +216,7 @@ CONFLICTS: list[dict] = [
         "affected_fx":          ["USD/JPY", "USD/INR", "USD/KRW"],
         "hedge_assets":         ["Gold", "Silver"],
 
+        "acled_id":        "iran_regional",    # maps to src/data/acled.py + gdelt.py
         "data_confidence": 0.88,
     },
 
@@ -262,6 +263,7 @@ CONFLICTS: list[dict] = [
         "affected_fx":          ["USD/INR"],
         "hedge_assets":         ["Gold", "US 20Y+ Treasury (TLT)"],
 
+        "acled_id":        "india_pakistan",    # maps to src/data/acled.py + gdelt.py
         "data_confidence": 0.75,
     },
 
@@ -310,6 +312,7 @@ CONFLICTS: list[dict] = [
         "affected_fx":          ["USD/CNY", "USD/JPY"],
         "hedge_assets":         ["Gold", "US 20Y+ Treasury (TLT)"],
 
+        "acled_id":        "taiwan_strait",     # maps to src/data/acled.py + gdelt.py
         "data_confidence": 0.72,
     },
 ]

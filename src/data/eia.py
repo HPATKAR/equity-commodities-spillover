@@ -126,9 +126,20 @@ def fetch_eia_series(series_key: str, weeks: int = 260) -> pd.DataFrame:
         df["units"]       = cfg["units"]
         df["series_name"] = cfg["name"]
 
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("eia_inventory")
+        except Exception:
+            pass
+
         return df[["date", "value", "units", "series_name"]]
 
-    except Exception:
+    except Exception as e:
+        try:
+            from src.analysis.freshness import record_failure
+            record_failure("eia_inventory", f"EIA fetch failed for {series_key}: {type(e).__name__}")
+        except Exception:
+            pass
         return pd.DataFrame()
 
 

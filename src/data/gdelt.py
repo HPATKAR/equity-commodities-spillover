@@ -65,6 +65,16 @@ _GDELT_CONFLICT_QUERIES: dict[str, dict] = {
         "theme":       "CRISISLEX_T03",
         "description": "Red Sea Houthi Operations",
     },
+    "india_pakistan": {
+        "query":       '"India Pakistan" OR "Pahalgam" OR "Operation Sindoor" OR "Line of Control" OR "Kashmir attack"',
+        "theme":       "CRISISLEX_T03",
+        "description": "India-Pakistan Military Escalation",
+    },
+    "taiwan_strait": {
+        "query":       '"Taiwan" OR "PLA" OR "Taiwan Strait" OR "TSMC" OR "China Taiwan military"',
+        "theme":       "CRISISLEX_T03",
+        "description": "Taiwan Strait / China Military Activity",
+    },
 }
 
 
@@ -193,6 +203,12 @@ def fetch_gdelt_escalation(
         except Exception:
             pass
 
+        try:
+            from src.analysis.freshness import record_fetch
+            record_fetch("gdelt")
+        except Exception:
+            pass
+
         return {
             "volume_recent":     vol_recent,
             "volume_prior":      vol_prior,
@@ -206,6 +222,11 @@ def fetch_gdelt_escalation(
         }
 
     except Exception as e:
+        try:
+            from src.analysis.freshness import record_failure
+            record_failure("gdelt", f"GDELT fetch error: {type(e).__name__}")
+        except Exception:
+            pass
         return {**_empty, "source": f"GDELT error: {type(e).__name__}"}
 
 
