@@ -1,16 +1,16 @@
 """
-Home — Geopolitical & Cross-Asset Intelligence Terminal
+Home - Geopolitical & Cross-Asset Intelligence Terminal
 Command Center for the Equity-Commodities Spillover Dashboard.
 
 Page hierarchy:
-  1.  Masthead         — terminal identity, date, situation state
-  2.  Geo Risk Score   — dominant block: score, decomposition, drivers, freshness
-  3.  Context Narrative — data-driven plain-language interpretation
-  4.  Intel Panel      — conflict table (left) + transmission channels (right)
-  5.  Scenario Switch  — compact, integrated lens selector
-  6.  Where To Go Now  — live-data-driven recommendations
-  7.  Navigate Terminal — grouped quick-jump shortcuts
-  8.  Live Signals     — strait snapshot + what-changed delta strip
+  1.  Masthead         - terminal identity, date, situation state
+  2.  Geo Risk Score   - dominant block: score, decomposition, drivers, freshness
+  3.  Context Narrative - data-driven plain-language interpretation
+  4.  Intel Panel      - conflict table (left) + transmission channels (right)
+  5.  Scenario Switch  - compact, integrated lens selector
+  6.  Where To Go Now  - live-data-driven recommendations
+  7.  Navigate Terminal - grouped quick-jump shortcuts
+  8.  Live Signals     - strait snapshot + what-changed delta strip
 """
 
 from __future__ import annotations
@@ -42,26 +42,26 @@ _GOLD = "#CFB991"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CSS — one block, loaded once
+# CSS - one block, loaded once
 # ─────────────────────────────────────────────────────────────────────────────
 
 _STYLE = """<style>
 /*
-  Typography system — Command Center
+  Typography system - Command Center
   T1  Section header  Mono 10px 700 uppercase .18em  #DCE4F0
   T2  Panel label     Mono 10px 600 uppercase .12em  #C8D4E0
-  T3  Body text       Sans 12px 400            —     #C8D4E0
-  T4  Data value      Mono 12px 700            —     (state-colored)
-  T5  Caption / meta  Mono 10px 400            —     #A8B8C8
+  T3  Body text       Sans 12px 400            -     #C8D4E0
+  T4  Data value      Mono 12px 700            -     (state-colored)
+  T5  Caption / meta  Mono 10px 400            -     #A8B8C8
 */
-/* T1 — section header */
+/* T1 - section header */
 .hm-label{font-family:'JetBrains Mono',monospace!important;font-size:10px!important;
   font-weight:700!important;text-transform:uppercase;letter-spacing:.18em;
   color:#DCE4F0!important;display:block}
-/* T3 — body text */
+/* T3 - body text */
 .hm-sub{font-family:'DM Sans',sans-serif!important;font-size:12px!important;
   color:#C8D4E0!important;display:block;line-height:1.6}
-/* T4 — delta values */
+/* T4 - delta values */
 .hm-up{font-family:'JetBrains Mono',monospace!important;font-size:12px!important;
   font-weight:700!important;color:#c0392b!important}
 .hm-dn{font-family:'JetBrains Mono',monospace!important;font-size:12px!important;
@@ -122,7 +122,7 @@ _STYLE = """<style>
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Score history loader (cached — market data only fetched once per TTL)
+# Score history loader (cached - market data only fetched once per TTL)
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -249,7 +249,7 @@ def _render_masthead(conflict_agg: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 2  GEOPOLITICAL RISK SCORE — dominant block
+# § 2  GEOPOLITICAL RISK SCORE - dominant block
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _sparkline_svg(
@@ -272,7 +272,7 @@ def _sparkline_svg(
     velocity = values[-1] - values[0]
     if velocity > 1.5:   v_col, v_lbl = "#c0392b", "▲ RISING"
     elif velocity < -1.5: v_col, v_lbl = "#27ae60", "▼ FALLING"
-    else:                v_col, v_lbl = "#8E9AAA", "— STABLE"
+    else:                v_col, v_lbl = "#8E9AAA", "- STABLE"
     return (
         f'<svg width="{width}" height="{height}" style="overflow:visible;vertical-align:middle;margin-left:8px">'
         f'<path d="{path} L{_x(n-1):.1f},{height} L{_x(0):.1f},{height} Z" '
@@ -314,7 +314,7 @@ def _build_speedometer_svg(
 ) -> str:
     """
     Complete recomposition. Hub lives in the upper third (cy=148).
-    Score readout is a fully separate zone starting 60px below hub bottom —
+    Score readout is a fully separate zone starting 60px below hub bottom -
     zero overlap is geometrically impossible given the layout.
 
     Geometry:
@@ -323,7 +323,7 @@ def _build_speedometer_svg(
       viewBox  → 400 × 315
     """
     # ── Layout constants ──────────────────────────────────────────────────
-    cx, cy   = 200, 148   # pivot — upper portion of canvas
+    cx, cy   = 200, 148   # pivot - upper portion of canvas
     R        = 118        # arc centerline radius
     SW       = 32         # arc band stroke-width
     R_IN     = R - SW // 2   # inner edge  = 102
@@ -331,7 +331,7 @@ def _build_speedometer_svg(
     # outer decorative rim sits 6px beyond the arc band
     R_RIM    = R_OUT + 6
 
-    # Readout panel — anchored to absolute y, NOT relative to cy
+    # Readout panel - anchored to absolute y, NOT relative to cy
     PANEL_Y  = 218        # top of readout rectangle
     PANEL_H  = 88         # height of readout rectangle
     TY_SCORE = 268        # score number baseline  (cy=148 + hub_r=16 + 104 gap → no collision)
@@ -386,12 +386,12 @@ def _build_speedometer_svg(
     # ── Defs ─────────────────────────────────────────────────────────────
     S.append(
         '<defs>'
-        # Broad glow — for needle + score
+        # Broad glow - for needle + score
         '<filter id="gB" x="-80%" y="-80%" width="260%" height="260%">'
         '<feGaussianBlur stdDeviation="7" result="b"/>'
         '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'
         '</filter>'
-        # Tight glow — for inner detail
+        # Tight glow - for inner detail
         '<filter id="gT" x="-50%" y="-50%" width="200%" height="200%">'
         '<feGaussianBlur stdDeviation="3" result="b"/>'
         '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'
@@ -429,7 +429,7 @@ def _build_speedometer_svg(
         f'stroke-width="{SW}" stroke-linecap="butt"/>'
     )
 
-    # Zone arcs — rich dark fill body + bright inner accent line
+    # Zone arcs - rich dark fill body + bright inner accent line
     for d1, d2, fill, bright, mid, lbl in zones:
         S.append(
             f'<path d="{arc(d1,d2)}" fill="none" stroke="{fill}" '
@@ -450,7 +450,7 @@ def _build_speedometer_svg(
             f'stroke="#0d0d0d" stroke-width="4.5"/>'
         )
 
-    # Zone labels — inside band at arc centerline
+    # Zone labels - inside band at arc centerline
     for d1, d2, fill, bright, mid, lbl in zones:
         tx, ty = pt(R, mid)
         S.append(
@@ -459,7 +459,7 @@ def _build_speedometer_svg(
             f'font-size="9" font-weight="700" fill="{bright}" opacity="0.88">{lbl}</text>'
         )
 
-    # Score progress trail — thin glowing arc from 0 → current
+    # Score progress trail - thin glowing arc from 0 → current
     if score > 1:
         S.append(
             f'<path d="{arc(180, sdeg, R_IN+4)}" fill="none" stroke="{color}" '
@@ -470,7 +470,7 @@ def _build_speedometer_svg(
             f'stroke-width="2" stroke-linecap="round" opacity="0.78"/>'
         )
 
-    # Needle — glow bloom + solid triangle + bright spine
+    # Needle - glow bloom + solid triangle + bright spine
     S.append(
         f'<polygon points="{npts}" fill="{color}" opacity="0.18" filter="url(#gB)"/>'
     )
@@ -482,7 +482,7 @@ def _build_speedometer_svg(
     # Needle tip glow
     S.append(f'<circle cx="{nx:.2f}" cy="{ny:.2f}" r="6" fill="{color}" opacity="0.18"/>')
 
-    # Hub — three-ring instrument pivot
+    # Hub - three-ring instrument pivot
     S.append(f'<circle cx="{cx}" cy="{cy}" r="26" fill="url(#hg)" opacity="0.35"/>')
     S.append(f'<circle cx="{cx}" cy="{cy}" r="16" fill="#0a0a0a" stroke="{color}" stroke-width="2"/>')
     S.append(f'<circle cx="{cx}" cy="{cy}" r="9"  fill="{color}" opacity="0.9"/>')
@@ -505,7 +505,7 @@ def _build_speedometer_svg(
         f'stroke="{color}" stroke-opacity="0.3" stroke-width="1"/>'
     )
 
-    # SCORE — hero number
+    # SCORE - hero number
     S.append(
         f'<text x="{cx}" y="{TY_SCORE}" text-anchor="middle" '
         f'font-family="JetBrains Mono,monospace" font-size="56" font-weight="700" '
@@ -556,7 +556,7 @@ def _render_geo_risk_block(
     tps       = risk["tps"]
     mcs       = risk.get("mcs", 50.0)
     conf      = risk.get("confidence", 0.5)
-    top_c     = risk.get("top_conflict") or conflict_agg.get("top_conflict") or "—"
+    top_c     = risk.get("top_conflict") or conflict_agg.get("top_conflict") or "-"
     scenario  = get_scenario()
     geo_mult  = scenario.get("geo_mult", 1.0)
     sc_label  = scenario.get("label", "Base")
@@ -575,13 +575,13 @@ def _render_geo_risk_block(
     rs_status = get_status("risk_score")
     if is_fallback:
         freshness_color = "#e67e22"
-        freshness_text  = f"CONFLICT MODEL ONLY · No market data · {computed_at[11:16] if computed_at else '—'}"
+        freshness_text  = f"CONFLICT MODEL ONLY · No market data · {computed_at[11:16] if computed_at else '-'}"
     elif is_eod:
         freshness_color = "#CFB991"
-        freshness_text  = f"EOD Close · {data_date} · computed {computed_at[11:16] if computed_at else '—'}"
+        freshness_text  = f"EOD Close · {data_date} · computed {computed_at[11:16] if computed_at else '-'}"
     else:
         freshness_color = rs_status["color"]
-        freshness_text  = f"{'LIVE' if rs_status['status']=='live' else rs_status['label']} · {computed_at[11:16] if computed_at else '—'}"
+        freshness_text  = f"{'LIVE' if rs_status['status']=='live' else rs_status['label']} · {computed_at[11:16] if computed_at else '-'}"
 
     freshness = (
         f'<span style="{_M}font-size:9px;color:{freshness_color};letter-spacing:.06em">'
@@ -608,7 +608,7 @@ def _render_geo_risk_block(
         w = r["cis"] / 100
         for ch, v in r.get("transmission", {}).items():
             ch_scores[ch] = ch_scores.get(ch, 0.0) + v * w
-    top_ch     = max(ch_scores, key=ch_scores.get) if ch_scores else "—"
+    top_ch     = max(ch_scores, key=ch_scores.get) if ch_scores else "-"
     top_ch_val = ch_scores.get(top_ch, 0.0)
 
     # MCS dominant signal note
@@ -624,12 +624,12 @@ def _render_geo_risk_block(
     mcs_color = "#c0392b" if mcs >= 65 else "#e67e22" if mcs >= 45 else "#8E9AAA"
     conf_color = "#27ae60" if conf >= 0.7 else "#e67e22" if conf >= 0.5 else "#c0392b"
 
-    top_c_disp  = top_c.replace("_", " ").title() if top_c and top_c != "—" else "—"
-    top_ch_disp = top_ch.replace("_", " ").upper() if top_ch != "—" else "—"
-    news_gpr_val = f'{news_gpr:.0f}' if news_gpr is not None else '—'
+    top_c_disp  = top_c.replace("_", " ").title() if top_c and top_c != "-" else "-"
+    top_ch_disp = top_ch.replace("_", " ").upper() if top_ch != "-" else "-"
+    news_gpr_val = f'{news_gpr:.0f}' if news_gpr is not None else '-'
     news_gpr_sub = f'{n_threat}T / {n_act_hl}A' if news_gpr is not None else 'awaiting'
 
-    # ── Panel header — full-width, sits above the two columns ─────────────
+    # ── Panel header - full-width, sits above the two columns ─────────────
     _hdr_col, _btn_col = st.columns([10, 1], gap="small")
     with _hdr_col:
         st.markdown(
@@ -655,12 +655,12 @@ def _render_geo_risk_block(
             _lap.clear()
             st.rerun()
 
-    # ── Fallback warning — shown only when market data was unavailable ──────
+    # ── Fallback warning - shown only when market data was unavailable ──────
     if is_fallback:
         st.markdown(
             f'<div style="background:#1a0a00;border:1px solid #e67e22;border-left:3px solid #e67e22;'
             f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:#e67e22">'
-            f'⚠ MARKET DATA UNAVAILABLE — score is Conflict Model estimate only '
+            f'⚠ MARKET DATA UNAVAILABLE - score is Conflict Model estimate only '
             f'(40% CIS + 35% TPS). MCS layer set to neutral 50. '
             f'Hit ↻ to retry.</div>',
             unsafe_allow_html=True,
@@ -741,11 +741,11 @@ def _render_geo_risk_block(
             st.markdown(
                 f'<div style="{_F}font-size:12px;color:#A8B8C8;padding:4rem 0;'
                 f'text-align:center;border:1px solid #1a1a1a;margin-top:4px">'
-                f'No market data available — check connection or date range.</div>',
+                f'No market data available - check connection or date range.</div>',
                 unsafe_allow_html=True,
             )
 
-    # ── Score decomposition — pure CSS grid (no st.columns) ───────────────
+    # ── Score decomposition - pure CSS grid (no st.columns) ───────────────
     comp = risk.get("components", {})
     dw   = risk.get("weights", {})
 
@@ -819,7 +819,49 @@ def _render_geo_risk_block(
         unsafe_allow_html=True,
     )
 
-    # ── KPI strip — CSS grid guarantees equal-width tiles ─────────────────
+    # ── Score interpretation note ─────────────────────────────────────────
+    # Shown when GRS is materially below the lead conflict's CIS - i.e., when
+    # a user might reasonably ask "why is the score low with active wars?"
+    # Explains the market-corroboration design without cluttering the main view.
+    _max_conflict_cis = max(
+        (r["cis"] for r in conflict_results.values()), default=cis
+    )
+    _n_active = sum(1 for r in conflict_results.values() if r.get("state") == "active")
+    if score < _max_conflict_cis - 6 and cis >= 45:
+        # Build dynamic explanation based on current values
+        _mcs_phrase = (
+            "markets have partially priced in these conflicts - equity vol and commodity "
+            "moves are elevated vs 2019 but are no longer at acute-crisis z-scores"
+            if mcs < 55 else
+            "market stress signals are rising - equity vol and safe-haven demand "
+            "are beginning to confirm the geopolitical signal"
+        )
+        _top_cis_conflict = max(conflict_results.items(), key=lambda x: x[1]["cis"])
+        _lead_name  = _top_cis_conflict[1]["name"]
+        _lead_cis   = _top_cis_conflict[1]["cis"]
+        _gap        = _lead_cis - score
+        st.markdown(
+            f'<div style="background:#080808;border-left:3px solid rgba(207,185,145,.28);'
+            f'padding:.35rem .8rem .35rem;margin:.35rem 0 0">'
+            f'<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">'
+            f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:rgba(207,185,145,.45);flex-shrink:0">'
+            f'SCORING NOTE</span>'
+            f'<span style="{_F}font-size:11px;color:#6E7A8A;line-height:1.58">'
+            f'GRS is <b style="color:#8E9AAA">{score:.0f}</b> vs. '
+            f'{_lead_name}\'s CIS of <b style="color:#8E9AAA">{_lead_cis:.0f}</b> '
+            f'({_gap:.0f}-pt gap) because the score is market-corroborated: '
+            f'the MCS layer ({mcs:.0f}/100, 25% weight) anchors to <em>relative</em> '
+            f'volatility via EWM z-scores - {_mcs_phrase}. '
+            f'Portfolio CIS is also a weighted mean across all {_n_active} active conflicts, '
+            f'not the worst-case actor alone. '
+            f'The live signal that will push this score higher is PortWatch tanker disruption '
+            f'and commodity vol z-scores breaking above 1σ - those feed MCS directly.'
+            f'</span></div></div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── KPI strip - CSS grid guarantees equal-width tiles ─────────────────
     def _kt(lbl: str, val: str, vc: str, sub: str = "") -> str:
         return (
             f'<div style="padding:.4rem .65rem;background:#080808;'
@@ -852,7 +894,7 @@ def _render_geo_risk_block(
 def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
     """
     2-sentence data-driven plain-language interpretation of the current score.
-    Generated from live CIS/TPS/MCS values — not templated filler.
+    Generated from live CIS/TPS/MCS values - not templated filler.
     """
     score    = risk["score"]
     cis      = risk["cis"]
@@ -878,7 +920,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
     if cis >= 70 and tps >= 60:
         s1 = (
             f"<b style='color:{risk['color']}'>{top_c}</b> is the dominant driver "
-            f"with CIS {cis:.0f}/100 — critical conflict intensity — and an open "
+            f"with CIS {cis:.0f}/100 - critical conflict intensity - and an open "
             f"<b>{top_ch_disp}</b> transmission channel carrying that risk into asset prices at TPS {tps:.0f}."
         )
     elif cis >= 50 and tps >= 50:
@@ -890,7 +932,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
         )
     elif cis >= 50 and tps < 40:
         s1 = (
-            f"Conflict intensity is elevated (CIS {cis:.0f} — <b>{top_c}</b> is the "
+            f"Conflict intensity is elevated (CIS {cis:.0f} - <b>{top_c}</b> is the "
             f"primary driver), but the transmission channel to asset markets "
             f"is currently suppressed (TPS {tps:.0f}). "
             f"Risk exists but is not yet flowing into prices."
@@ -898,7 +940,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
     elif cis < 40 and mcs >= 60:
         s1 = (
             f"Fundamental conflict intensity is moderate (CIS {cis:.0f}), but the "
-            f"market confirmation layer (MCS {mcs:.0f}) is registering elevated signals — "
+            f"market confirmation layer (MCS {mcs:.0f}) is registering elevated signals - "
             f"markets are pricing more risk than the conflict scorecard reflects."
         )
     else:
@@ -912,7 +954,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
     if sc_id != "base":
         s2 = (
             f"The <b style='color:{scenario['color']}'>{scenario['label']}</b> scenario is active "
-            f"(geo multiplier ×{scenario['geo_mult']:.2f}), amplifying all scores — "
+            f"(geo multiplier ×{scenario['geo_mult']:.2f}), amplifying all scores - "
             f"refer to Trade Ideas and Scenario Engine for forward risk under this lens."
         )
     elif score >= 65:
@@ -923,7 +965,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
         )
     elif score >= 45:
         s2 = (
-            f"Score sits in the Elevated band — consistent with past pre-escalation windows. "
+            f"Score sits in the Elevated band - consistent with past pre-escalation windows. "
             f"Monitor Threat vs Act and Conflict Intel for early signals before scores move further."
         )
     else:
@@ -949,7 +991,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 4  INTEL PANEL — conflict table (left) + channels (right)
+# § 4  INTEL PANEL - conflict table (left) + channels (right)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_intel_panel(conflict_results: dict) -> None:
@@ -969,7 +1011,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
 
     # ── Left: Conflict table ───────────────────────────────────────────────
     with col_left:
-        _TREND_I = {"rising": "▲", "stable": "—", "falling": "▼"}
+        _TREND_I = {"rising": "▲", "stable": "-", "falling": "▼"}
         _TREND_C = {"rising": "#c0392b", "stable": "#8E9AAA", "falling": "#27ae60"}
 
         _TH = f'{_M}font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#A8B8C8'
@@ -987,8 +1029,8 @@ def _render_intel_panel(conflict_results: dict) -> None:
         rows = ""
         for cid, r in sorted(conflict_results.items(), key=lambda x: x[1]["cis"], reverse=True):
             tx      = r.get("transmission", {})
-            top_ch  = max(tx, key=tx.get) if tx else "—"
-            t_icon  = _TREND_I.get(r.get("trend", "stable"), "—")
+            top_ch  = max(tx, key=tx.get) if tx else "-"
+            t_icon  = _TREND_I.get(r.get("trend", "stable"), "-")
             t_color = _TREND_C.get(r.get("trend", "stable"), "#8E9AAA")
             cis_col = "#c0392b" if r["cis"] >= 65 else "#e67e22" if r["cis"] >= 45 else "#8E9AAA"
             tps_val = r.get("tps", r.get("transmission_pressure", 50))
@@ -1125,10 +1167,10 @@ def _render_scenario_switch() -> None:
             st.rerun()
 
     # Compound scenario presets (GAP 14 fix)
-    with st.expander("Compound Scenarios — stack multiple shocks simultaneously", expanded=False):
+    with st.expander("Compound Scenarios - stack multiple shocks simultaneously", expanded=False):
         st.markdown(
             f'<p style="{_F}font-size:0.60rem;color:#8E9AAA;margin:0 0 6px">'
-            f'Compound scenarios multiply their multipliers (geo, vol, CIS, TPS) — '
+            f'Compound scenarios multiply their multipliers (geo, vol, CIS, TPS) - '
             f'enabling realistic combined shocks like Iran military escalation AND Hormuz blockade.</p>',
             unsafe_allow_html=True,
         )
@@ -1154,7 +1196,7 @@ def _render_scenario_switch() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 6  WHERE TO GO NOW — live-data-driven recommendations
+# § 6  WHERE TO GO NOW - live-data-driven recommendations
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_next_action(conflict_agg: dict, conflict_results: dict) -> None:
@@ -1211,7 +1253,7 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict) -> None:
             "color": "#2980b9", "tag": "▶ START HERE",
             "label": "Overview", "page_id": "overview",
             "text": (
-                "Risk environment is contained. Start with <b>Overview</b> — "
+                "Risk environment is contained. Start with <b>Overview</b> - "
                 "regime classification, correlation heatmap, and the AI analyst morning briefing."
             ),
         })
@@ -1223,7 +1265,7 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict) -> None:
         f'text-transform:uppercase;color:#DCE4F0;margin:.35rem 0 .2rem">'
         f'Where To Go Now</div>'
         f'<div style="{_F}font-size:12px;color:#C8D4E0;margin-bottom:.3rem">'
-        f'Live recommendations based on current scores — updates every refresh</div>',
+        f'Live recommendations based on current scores - updates every refresh</div>',
         unsafe_allow_html=True,
     )
 
@@ -1241,7 +1283,7 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 7  NAVIGATE TERMINAL — grouped quick-jump
+# § 7  NAVIGATE TERMINAL - grouped quick-jump
 # ─────────────────────────────────────────────────────────────────────────────
 
 _JUMP_GROUPS = [
@@ -1342,7 +1384,7 @@ def _render_quickjump() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 8  LIVE SIGNALS — strait snapshot + what-changed delta
+# § 8  LIVE SIGNALS - strait snapshot + what-changed delta
 # ─────────────────────────────────────────────────────────────────────────────
 
 _STRAITS = [
@@ -1356,16 +1398,16 @@ _STRAITS = [
 
 def _delta_html(delta, unit: str = "") -> str:
     if delta is None:
-        return f'<span style="{_M}font-size:11px;color:#A8B8C8">— first run</span>'
+        return f'<span style="{_M}font-size:11px;color:#A8B8C8">- first run</span>'
     if abs(delta) < 0.3:
-        return f'<span class="hm-fl">— flat</span>'
+        return f'<span class="hm-fl">- flat</span>'
     if delta > 0:
         return f'<span class="hm-up">▲ +{delta:.1f}{unit}</span>'
     return f'<span class="hm-dn">▼ {delta:.1f}{unit}</span>'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 1.5  MARKET PULSE — macro KPI strip
+# § 1.5  MARKET PULSE - macro KPI strip
 # ─────────────────────────────────────────────────────────────────────────────
 
 _PULSE_TICKERS = [
@@ -1421,7 +1463,7 @@ def _render_market_pulse() -> None:
         # For VIX specifically, invert: rising VIX = red
         is_vix = d["sym"] == "^VIX"
         if abs(pct) < 0.05:
-            c, arrow = "#555960", "—"
+            c, arrow = "#555960", "-"
         elif pct > 0:
             c, arrow = ("#c0392b" if is_vix else "#27ae60"), "▲"
         else:
@@ -1451,7 +1493,7 @@ def _render_market_pulse() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 1.6  PORTFOLIO PULSE — NAV + 1-day P&L + top movers (conditional)
+# § 1.6  PORTFOLIO PULSE - NAV + 1-day P&L + top movers (conditional)
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -1493,7 +1535,7 @@ def _render_portfolio_pulse() -> None:
     positions  = port.get("positions", [])
     total_usd  = port.get("total_usd", 0.0)
     n          = port.get("n", 0)
-    loaded_at  = port.get("loaded_at", "—")[:10]
+    loaded_at  = port.get("loaded_at", "-")[:10]
 
     if not positions or total_usd <= 0:
         return
@@ -1645,7 +1687,7 @@ def _render_live_signals() -> None:
             st.markdown(
                 f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                 f'padding:.5rem .7rem;{_F}font-size:12px;color:#C8D4E0">'
-                f'Establishing baseline — deltas appear from the second visit onward.</div>',
+                f'Establishing baseline - deltas appear from the second visit onward.</div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -1708,7 +1750,7 @@ def _render_live_signals() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § 9  AI AGENT ACTIVITY — compact strip (shown only when active)
+# § 9  AI AGENT ACTIVITY - compact strip (shown only when active)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_agent_strip() -> None:
@@ -1727,7 +1769,7 @@ def _render_agent_strip() -> None:
     for entry in feed:
         ag     = AGENTS.get(entry["agent_id"], {})
         color  = ag.get("color", "#8E9AAA")
-        ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "—"
+        ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
         rows += (
             f'<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;'
             f'border-bottom:1px solid #111">'
@@ -1789,7 +1831,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         risk, _score_hist = _load_market_risk(start, end, get_scenario_id())
         if risk.get("_market_fallback") or not risk.get("score"):
             # Fallback: conflict-model-only estimate when market data unavailable.
-            # Clearly labeled — never silently substituted.
+            # Clearly labeled - never silently substituted.
             cis_f = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
             tps_f = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
             raw   = round(0.40 * cis_f + 0.35 * tps_f + 0.25 * 50, 1)
@@ -1806,7 +1848,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 "news_gpr": None, "n_threat": 0, "n_act": 0,
                 "mcs_components": {}, "components": {}, "weights": {},
                 "conflict_detail": {},
-                # Fallback markers — rendered as warning in geo risk block
+                # Fallback markers - rendered as warning in geo risk block
                 "_market_fallback": True,
                 "_computed_at": _fallback_at,
                 "_is_eod": None,
@@ -1848,7 +1890,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # RENDER SECTIONS
     # ══════════════════════════════════════════════════════════════════════
 
-    # § 0.5  Data Health Banner (GAP 16 — surface silent failures)
+    # § 0.5  Data Health Banner (GAP 16 - surface silent failures)
     try:
         from src.analysis.freshness import data_health_html
         _dh_html = data_health_html()
@@ -1860,13 +1902,13 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # § 1  Masthead
     _render_masthead(conflict_agg)
 
-    # § 1.5  Market Pulse — macro KPI strip
+    # § 1.5  Market Pulse - macro KPI strip
     _render_market_pulse()
 
-    # § 1.6  Portfolio Pulse — NAV + 1-day P&L (conditional on upload)
+    # § 1.6  Portfolio Pulse - NAV + 1-day P&L (conditional on upload)
     _render_portfolio_pulse()
 
-    # § 2  Geopolitical Risk Score — DOMINANT ELEMENT
+    # § 2  Geopolitical Risk Score - DOMINANT ELEMENT
     _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
 
     # § 2.5  Proactive Alerts + Morning Briefing Chain
@@ -1874,7 +1916,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         from src.analysis.proactive_alerts import compute_alerts
         from src.analysis.correlations import detect_correlation_regime
         from src.ui.alert_banner import render_alert_banner
-        _al_eq_r, _al_cmd_r = load_returns(start, end)  # cache hit — already computed above
+        _al_eq_r, _al_cmd_r = load_returns(start, end)  # cache hit - already computed above
         if not _al_eq_r.empty and not _al_cmd_r.empty:
             _al_corr    = average_cross_corr_series(_al_eq_r, _al_cmd_r, window=60)
             _al_regimes = detect_correlation_regime(_al_corr)
@@ -1906,7 +1948,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                         border-radius:4px;padding:10px 14px;margin:8px 0;">
                         <span style="color:{_lag_color};font-family:'JetBrains Mono',monospace;
                         font-size:11px;font-weight:700;letter-spacing:.08em;">
-                        {_lag_icon} TRANSMISSION LAG DETECTED — {_lag["lag_signal"].upper()}</span><br>
+                        {_lag_icon} TRANSMISSION LAG DETECTED - {_lag["lag_signal"].upper()}</span><br>
                         <span style="color:#b0b0b0;font-family:'JetBrains Mono',monospace;font-size:11px;">
                         {_lag["detail"]}</span><br>
                         <span style="color:#777;font-family:'JetBrains Mono',monospace;font-size:10px;">
@@ -1919,7 +1961,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             except Exception:
                 pass
 
-            # Morning Briefing Chain — runs synthetically (no API key needed for the
+            # Morning Briefing Chain - runs synthetically (no API key needed for the
             # deliberation messages; API key only needed for the AI enrichment text).
             from src.ui.agent_panel import render_morning_briefing_panel
             _top_texts   = [getattr(a, "title", "") for a in _alerts[:3] if getattr(a, "title", "")]
@@ -1927,9 +1969,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _risk_val     = float(risk["score"])
             _expanded     = _risk_val >= 50
             _panel_label  = (
-                f"⚡ AI Analyst Team — Morning Briefing (Risk {_risk_val:.0f}/100)"
+                f"⚡ AI Analyst Team - Morning Briefing (Risk {_risk_val:.0f}/100)"
                 if _expanded else
-                f"AI Analyst Team — Morning Briefing (Risk {_risk_val:.0f}/100)"
+                f"AI Analyst Team - Morning Briefing (Risk {_risk_val:.0f}/100)"
             )
             with st.expander(_panel_label, expanded=_expanded):
                 render_morning_briefing_panel(

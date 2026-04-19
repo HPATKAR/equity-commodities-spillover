@@ -7,7 +7,7 @@ from datetime import date
 
 # ── Conflict registry ───────────────────────────────────────────────────────
 # CONFLICTS: rich per-conflict metadata used by conflict_model.py for CIS/TPS.
-# Separate from GEOPOLITICAL_EVENTS (event-window analysis) — this is the live
+# Separate from GEOPOLITICAL_EVENTS (event-window analysis) - this is the live
 # conflict tracking layer for the scoring architecture.
 #
 # Transmission channel values: 0–1 (how much this conflict affects this channel).
@@ -29,14 +29,14 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "War",
         "color":   "#c0392b",
-        "last_updated": date(2026, 4, 1),
+        "last_updated": date(2026, 4, 19),
 
         # Intensity dimensions (0–1)
         "deadliness":           0.90,
         "civilian_danger":      0.80,
-        "geographic_diffusion": 0.55,
+        "geographic_diffusion": 0.60,   # widened front lines, cross-border drone campaigns
         "fragmentation":        0.35,
-        "escalation_trend":     "stable",
+        "escalation_trend":     "escalating",  # 2026: continued missile/drone escalation
         "source_coverage":      0.95,
 
         # Transmission channels (0–1 relevance per market)
@@ -81,7 +81,7 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "Conflict",
         "color":   "#e67e22",
-        "last_updated": date(2026, 4, 1),
+        "last_updated": date(2026, 4, 19),
 
         "deadliness":           0.45,
         "civilian_danger":      0.30,
@@ -129,7 +129,7 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "War",
         "color":   "#f39c12",
-        "last_updated": date(2026, 4, 1),
+        "last_updated": date(2026, 4, 19),
 
         "deadliness":           0.75,
         "civilian_danger":      0.90,
@@ -180,7 +180,7 @@ CONFLICTS: list[dict] = [
         # 2026-04-14: Active Hormuz blockade confirmed (PortWatch: 2–3 oil
         # tankers/day vs 71 pre-crisis). US carrier confrontation escalating.
         # ~20% of global oil supply disrupted. Updated from "stable" to reflect
-        # live market conditions — this is the primary geopolitical risk driver.
+        # live market conditions - this is the primary geopolitical risk driver.
         "deadliness":           0.82,   # active military blockade, US carrier confrontation
         "civilian_danger":      0.72,   # global oil supply crisis, humanitarian downstream
         "geographic_diffusion": 0.68,   # Persian Gulf + global supply chain disruption
@@ -194,7 +194,7 @@ CONFLICTS: list[dict] = [
             "metals":        0.15,
             "agriculture":   0.10,
             "shipping":      0.90,   # near-complete tanker halt
-            "chokepoint":    0.97,   # Strait of Hormuz — live PortWatch: 2–3 tankers/day
+            "chokepoint":    0.97,   # Strait of Hormuz - live PortWatch: 2–3 tankers/day
             "sanctions":     0.90,
             "equity_sector": 0.65,   # energy, defense, refining
             "fx":            0.45,   # USD strengthens on safe-haven; EM oil importers hit
@@ -230,14 +230,14 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "Conflict",
         "color":   "#f39c12",
-        "last_updated": date(2026, 4, 1),
+        "last_updated": date(2026, 4, 19),
 
-        "deadliness":           0.55,
-        "civilian_danger":      0.50,
-        "geographic_diffusion": 0.30,
+        "deadliness":           0.62,   # elevated post-Op Sindoor, cross-border fire ongoing
+        "civilian_danger":      0.55,
+        "geographic_diffusion": 0.38,   # LoC + airspace violations
         "fragmentation":        0.20,
-        "escalation_trend":     "stable",
-        "source_coverage":      0.80,
+        "escalation_trend":     "escalating",  # Op Sindoor (May 2025) standoff not resolved
+        "source_coverage":      0.82,
 
         "transmission": {
             "oil_gas":       0.15,
@@ -277,7 +277,7 @@ CONFLICTS: list[dict] = [
         "state":   "latent",           # Latent but persistent structural risk
         "category": "Geopolitical",
         "color":   "#2980b9",
-        "last_updated": date(2026, 4, 1),
+        "last_updated": date(2026, 4, 19),
 
         "deadliness":           0.10,   # No active hostilities
         "civilian_danger":      0.10,

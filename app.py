@@ -683,7 +683,7 @@ def _validate_api_keys() -> None:
                 err = str(e)
                 if "authentication" in err.lower() or "api_key" in err.lower() or "401" in err:
                     st.error(
-                        "Anthropic API key appears invalid — agents will not run. "
+                        "Anthropic API key appears invalid - agents will not run. "
                         "Check `secrets.toml` → `[keys]` → `anthropic_api_key`.",
                         icon="🔑",
                     )
@@ -695,13 +695,13 @@ def _validate_api_keys() -> None:
                 err = str(e)
                 if "authentication" in err.lower() or "api_key" in err.lower() or "401" in err:
                     st.error(
-                        "OpenAI API key appears invalid — agents will not run. "
+                        "OpenAI API key appears invalid - agents will not run. "
                         "Check `secrets.toml` → `[keys]` → `openai_api_key`.",
                         icon="🔑",
                     )
         else:
             st.warning(
-                "No AI provider key found in secrets — agents will run in monitoring mode. "
+                "No AI provider key found in secrets - agents will run in monitoring mode. "
                 "Add `anthropic_api_key` or `openai_api_key` under `[keys]` in `.streamlit/secrets.toml`.",
                 icon="🔑",
             )
@@ -783,6 +783,18 @@ _fred_dot = "●" if _FRED_KEY else "○"
 _fred_col = "#CFB991" if _FRED_KEY else "rgba(255,255,255,0.22)"
 _fd_dot   = "●" if _FD_KEY   else "○"
 _fd_col   = "#CFB991" if _FD_KEY   else "rgba(255,255,255,0.22)"
+# New live sources - always-on (no key required for GDELT, EIA, PortWatch)
+_gdelt_dot = "●"; _gdelt_col = "#27ae60"   # GDELT - free, always live
+_eia_dot   = "●"; _eia_col   = "#27ae60"   # EIA - free, always live
+_pw_dot    = "●"; _pw_col    = "#27ae60"   # IMF PortWatch - free, always live
+# ACLED - requires key; dim if unconfigured
+try:
+    from src.data.acled import acled_configured as _acled_ok
+    _acled_live = _acled_ok()
+except Exception:
+    _acled_live = False
+_acled_dot = "●" if _acled_live else "○"
+_acled_col = "#CFB991" if _acled_live else "rgba(255,255,255,0.22)"
 
 _NAVBAR = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -1487,9 +1499,12 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
   </ul>
 
   <div class="ds">
-    <div class="dsi"><span class="dot" style="color:#CFB991">&#9679;</span><span style="color:rgba(255,255,255,.40)">Yahoo Finance</span></div>
+    <div class="dsi"><span class="dot" style="color:#27ae60">&#9679;</span><span style="color:rgba(255,255,255,.40)">YFinance</span></div>
     <div class="dsi"><span class="dot" style="color:{_fred_col}">{_fred_dot}</span><span style="color:{_fred_col}">FRED</span></div>
-    <div class="dsi"><span class="dot" style="color:{_fd_col}">{_fd_dot}</span><span style="color:{_fd_col}">FinancialDatasets</span></div>
+    <div class="dsi"><span class="dot" style="color:{_gdelt_col}">{_gdelt_dot}</span><span style="color:{_gdelt_col}">GDELT</span></div>
+    <div class="dsi"><span class="dot" style="color:{_eia_col}">{_eia_dot}</span><span style="color:{_eia_col}">EIA</span></div>
+    <div class="dsi"><span class="dot" style="color:{_pw_col}">{_pw_dot}</span><span style="color:{_pw_col}">PortWatch</span></div>
+    <div class="dsi"><span class="dot" style="color:{_acled_col}">{_acled_dot}</span><span style="color:{_acled_col}">ACLED</span></div>
     <a id="dm-btn" class="dm-toggle" href="#" onclick="ecToggleDark();return false;" title="Toggle dark mode">&#x2600;</a>
   </div>
 </div>
@@ -1523,7 +1538,7 @@ _raw_widget_end = st.session_state.get("g_end_txt", "")
 try:
     _widget_date = date.fromisoformat(_raw_widget_end)
     if _widget_date < _today:
-        # Stale widget — reset both the widget state and the stored g_end
+        # Stale widget - reset both the widget state and the stored g_end
         st.session_state["g_end_txt"] = str(_today)
         st.session_state.pop("g_end", None)
 except (ValueError, TypeError):
@@ -1564,7 +1579,7 @@ from src.pages.about_ilian        import page_about_ilian
 from src.pages.about_ai_workforce import page_about_ai_workforce
 from src.pages.methodology        import page_methodology
 
-# Intelligence pages (lazy import — stubs until full implementation)
+# Intelligence pages (lazy import - stubs until full implementation)
 try:
     from src.pages.conflict_intelligence import page_conflict_intelligence
 except ImportError:
@@ -1600,19 +1615,19 @@ if not st.session_state.get("_startup_warmed"):
         _load_market_risk(_start, _end, get_scenario_id())
     except Exception:
         pass
-    # Credit spreads proxy (HYG/LQD via yfinance) — records fred_spreads freshness
+    # Credit spreads proxy (HYG/LQD via yfinance) - records fred_spreads freshness
     try:
         from src.data.loader import load_fixed_income_prices
         load_fixed_income_prices(_start, _end)
     except Exception:
         pass
-    # RSS headlines — records rss_headlines freshness (public feeds, no API key)
+    # RSS headlines - records rss_headlines freshness (public feeds, no API key)
     try:
         from src.ingestion.geo_rss import ingest_headlines
         ingest_headlines()
     except Exception:
         pass
-    # COT positioning — records cot_positioning freshness (CFTC public data)
+    # COT positioning - records cot_positioning freshness (CFTC public data)
     try:
         from src.analysis.cot import load_cot_data
         load_cot_data(years=2)
@@ -1624,7 +1639,7 @@ if not st.session_state.get("_startup_warmed"):
 def _stub_page(name: str):
     st.markdown(
         f'<h1 style="color:#CFB991">{name}</h1>'
-        f'<p style="color:#8E9AAA;font-size:0.8rem">Page under construction — coming next.</p>',
+        f'<p style="color:#8E9AAA;font-size:0.8rem">Page under construction - coming next.</p>',
         unsafe_allow_html=True,
     )
 

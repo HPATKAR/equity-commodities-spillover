@@ -3,7 +3,7 @@ Model Methodology & Documentation Page.
 
 Comprehensive technical documentation for all analytical modules in the
 Cross-Asset Spillover Monitor. Covers data sources, formulae, assumptions,
-implementation choices, and limitations — following industry model-documentation
+implementation choices, and limitations - following industry model-documentation
 standards (SR 11-7 / OCC 2011-12 model risk management guidance).
 """
 
@@ -144,7 +144,7 @@ def _arch_flow() -> None:
 
     st.markdown(
         f'<div style="margin:.6rem 0">'
-        # top row — 3 layer boxes
+        # top row - 3 layer boxes
         f'<div style="display:flex;gap:6px;margin-bottom:6px">{boxes_html}</div>'
         # arrow row
         f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
@@ -152,7 +152,7 @@ def _arch_flow() -> None:
         f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ CIS-weighted avg → portfolio score</div>'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
         f'</div>'
-        # middle row — assembly + freshness
+        # middle row - assembly + freshness
         f'<div style="display:flex;gap:6px;margin-bottom:6px">'
         f'<div style="flex:2;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
         f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">ASSEMBLY</span><br>'
@@ -264,7 +264,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "in the Cross-Asset Spillover Monitor. It follows the structure recommended by "
         "<strong>SR 11-7 / OCC 2011-12</strong> model risk management guidance: "
         "purpose, design logic, implementation, assumptions, limitations, and ongoing monitoring. "
-        "Each section covers one analytical module — from raw data ingestion through to "
+        "Each section covers one analytical module - from raw data ingestion through to "
         "the composite risk score, trade signal generation, and portfolio stress testing."
     )
 
@@ -276,7 +276,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<span style="{_M}font-size:8px;color:{_DIM};margin-right:16px">'
             f'<span style="color:{_G}">{i+1}.</span> {s}</span>'
             for i, s in enumerate([
-                "Data Architecture", "Conflict Intensity Score (CIS)",
+                "Data Architecture", "Live Intelligence Layer",
+                "Conflict Intensity Score (CIS)",
                 "Transmission Pressure Score (TPS)", "Market Confirmation Score (MCS)",
                 "Composite Risk Score", "News GPR Layer",
                 "Correlation Regime Engine", "Spillover Network",
@@ -293,12 +294,12 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("1 · Data Architecture")
     _prose(
-        "All market data is sourced from publicly available APIs — no proprietary feeds. "
+        "All market data is sourced from publicly available APIs - no proprietary feeds. "
         "Every layer caches aggressively to minimise latency and API rate-limit exposure. "
         "Stale-data badges appear on charts when the last fetch exceeds the TTL."
     )
 
-    # Source grid — 3 columns
+    # Source grid - 3 columns
     _h3("Data Sources")
     sources = [
         ("#c0392b", "MARKET DATA",   "Yahoo Finance",
@@ -308,16 +309,16 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
          "10Y/2Y Treasury yields · yield spread · Fed Funds Rate · CPI · PCE · payrolls · GDP",
          "Monthly / Daily", "1–30 days", "24 h"),
         ("#8E9AAA", "POSITIONING",   "CFTC COT Reports",
-         "Large speculator net longs for commodity futures — contrarian sentiment signal",
+         "Large speculator net longs for commodity futures - contrarian sentiment signal",
          "Weekly", "3 days", "24 h"),
         ("#CFB991", "NEWS & INTEL",  "RSS Feeds",
-         "Reuters · AP · BBC · NYT · WSJ · FT — keyword-tagged, severity-scored, conflict-routed",
+         "Reuters · AP · BBC · NYT · WSJ · FT - keyword-tagged, severity-scored, conflict-routed",
          "Near-real-time", "~15 min", "15 min"),
         ("#27ae60", "REGISTRY",      "Manual Conflict Registry",
          "CONFLICTS config: intensity dimensions · transmission weights · state · last_updated",
          "Manual", "Varies", "on change"),
         ("#8E9AAA", "FX CONVERSION", "Yahoo Finance (FX Spot)",
-         "Live spot rates for portfolio conversion — GBPUSD=X, EURUSD=X. 5-day lookback",
+         "Live spot rates for portfolio conversion - GBPUSD=X, EURUSD=X. 5-day lookback",
          "Daily", "1 day", "1 h"),
     ]
     row1, row2 = sources[:3], sources[3:]
@@ -352,7 +353,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="{_S}font-size:0.62rem;color:{_MUT}">{desc}</div>'
             f'</div>'
             for step, desc, c in [
-                ("FETCH",    "yfinance / FRED / RSS / PortWatch API calls",            _G),
+                ("FETCH",    "yfinance · FRED · GDELT · EIA · PortWatch · ACLED · RSS",  _G),
                 ("CACHE",    "TTL-keyed @st.cache_data per layer",                     _G),
                 ("VALIDATE", "Empty-frame guards · fallback to 50 (neutral)",          _G),
                 ("TRANSFORM","Log returns · EWM z-scores · rolling windows",           _G),
@@ -365,9 +366,119 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 2. CIS
+    # 2. LIVE INTELLIGENCE LAYER
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("2 · Conflict Intensity Score (CIS)")
+    _h2("2 · Live Intelligence Layer")
+    _prose(
+        "Four real-time intelligence feeds extend the static conflict registry with event-driven, "
+        "media-corroborated, and physical-market signals. All feeds are free-tier or open APIs, "
+        "update on independent TTL schedules, and feed directly into CIS dimension replacement, "
+        "proactive alerts, and the AI analyst context."
+    )
+    _h3("Live Sources")
+
+    live_sources = [
+        ("#27ae60", "CONFLICT MEDIA",  "GDELT 2.0 DOC API",
+         "7-day article volume time-series per conflict · average tone · WoW volume trend · "
+         "escalation signal (escalating / stable / de-escalating). No API key required.",
+         "Hourly", "~15 min", "3 h"),
+        ("#27ae60", "PHYSICAL STOCKS", "EIA Open Data",
+         "U.S. crude oil · gasoline · distillate stocks · crude imports · natural gas storage. "
+         "WoW, YoY, and vs-5-year seasonal average. Signal: draw (bullish) / build (bearish). "
+         "DEMO_KEY accepted - production key unlocks higher rate limits.",
+         "Weekly", "3 days", "24 h"),
+        ("#27ae60", "CHOKEPOINT TRAFFIC", "IMF PortWatch",
+         "Daily vessel transit counts for Strait of Hormuz · Bab el-Mandeb · Malacca · "
+         "Suez · Taiwan Strait · Bosphorus · Panama · Cape of Good Hope. "
+         "24h delta and 7-day moving average per strait. No API key required.",
+         "Daily", "~1 day", "6 h"),
+        ("#CFB991", "CONFLICT EVENTS", "ACLED",
+         "Armed Conflict Location & Event Database - fatality counts · event type distribution · "
+         "subnational geographic spread · escalation trend. Replaces static CIS dimensions "
+         "(deadliness · geographic diffusion · escalation trend) when configured. "
+         "Free academic API key required.",
+         "Weekly", "~1 week", "8 h"),
+    ]
+    _live_cols = st.columns(4)
+    for (col, cat, name, desc, freq, lag, ttl), c in zip(live_sources, _live_cols):
+        with c:
+            st.markdown(
+                f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                f'border-top:2px solid {col};padding:.5rem .65rem;margin-bottom:6px">'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+                f'<span style="{_M}font-size:6.5px;font-weight:700;color:{col};letter-spacing:.12em">{cat}</span>'
+                f'<span style="{_M}font-size:6.5px;color:{_MUT};background:#111;padding:1px 4px">'
+                f'TTL {ttl}</span></div>'
+                f'<div style="{_M}font-size:8px;font-weight:700;color:#e8e9ed;margin-bottom:3px">{name}</div>'
+                f'<div style="{_S}font-size:0.64rem;color:{_DIM};line-height:1.45;margin-bottom:4px">{desc}</div>'
+                f'<div style="display:flex;gap:8px">'
+                f'<span style="{_M}font-size:6.5px;color:{_MUT}">freq: {freq}</span>'
+                f'<span style="{_M}font-size:6.5px;color:{_MUT}">lag: {lag}</span>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+    _h3("Signal Integration")
+    _prose(
+        "GDELT and ACLED signals are fused via a corroboration function: when both sources "
+        "agree on direction, confidence is <em>high</em>; when one is neutral and one signals "
+        "escalation, confidence is <em>medium</em>; contradictory signals default to "
+        "<em>stable</em>. The final consensus signal replaces the static "
+        "<code>escalation_trend</code> CIS dimension. EIA inventory draws/builds feed the "
+        "Proactive Alerts engine as supply-side commodity pressure signals. PortWatch transit "
+        "counts feed the Strait Watch page and the AI analyst context window."
+    )
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid #27ae60;padding:.5rem .9rem;margin:.3rem 0">'
+        f'<code style="{_M}font-size:9px;color:#27ae60;white-space:pre-wrap">'
+        f'GDELT escalation + ACLED escalation  → corroboration()\n'
+        f'  both escalating     → final = "escalating"  · confidence = high\n'
+        f'  one escalating      → final = "escalating"  · confidence = medium\n'
+        f'  contradictory       → final = "stable"       · confidence = low\n'
+        f'  neither configured  → static registry value used as fallback'
+        f'</code></div>',
+        unsafe_allow_html=True,
+    )
+
+    _h3("Freshness Registry")
+    _prose(
+        "All six live sources are tracked by a central freshness registry "
+        "(<code>src/analysis/freshness.py</code>). Each source has two thresholds: "
+        "<em>warn</em> (amber badge) and <em>stale</em> (red badge). "
+        "Badges appear on any page that uses that data. The data health banner on the "
+        "home page aggregates freshness across all sources."
+    )
+    freshness_rows = [
+        ("YFinance",      "1 h",  "8 h"),
+        ("FRED",          "24 h", "72 h"),
+        ("GDELT",         "4 h",  "12 h"),
+        ("EIA Inventory", "24 h", "168 h"),
+        ("PortWatch",     "6 h",  "30 h"),
+        ("ACLED",         "8 h",  "48 h"),
+    ]
+    header_html = (
+        f'<table style="width:100%;border-collapse:collapse;{_S}font-size:0.70rem;margin:.3rem 0">'
+        f'<thead><tr>'
+        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">SOURCE</th>'
+        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:center;border-bottom:1px solid #2a2a2a;padding:3px 8px">WARN AFTER</th>'
+        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:center;border-bottom:1px solid #2a2a2a;padding:3px 8px">STALE AFTER</th>'
+        f'</tr></thead><tbody>'
+    )
+    rows_html = "".join(
+        f'<tr style="border-bottom:1px solid #111">'
+        f'<td style="{_M}font-size:8px;color:#e8e9ed;padding:4px 8px">{src}</td>'
+        f'<td style="{_M}font-size:8px;color:#e67e22;text-align:center;padding:4px 8px">{warn}</td>'
+        f'<td style="{_M}font-size:8px;color:#c0392b;text-align:center;padding:4px 8px">{stale}</td>'
+        f'</tr>'
+        for src, warn, stale in freshness_rows
+    )
+    st.markdown(header_html + rows_html + '</tbody></table>', unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 3. CIS
+    # ══════════════════════════════════════════════════════════════════════════
+    _h2("3 · Conflict Intensity Score (CIS)")
     _prose(
         "The CIS is a per-conflict composite score (0–100) quantifying how intense and "
         "market-relevant a conflict is <em>right now</em>. Seven orthogonalized dimensions "
@@ -377,16 +488,16 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
 
     _formula(
         "CIS(conflict) = [ Σᵢ wᵢ × dᵢ ] × state_mult × 100\n\n"
-        "dᵢ ∈ [0,1]   — normalized dimension value\n"
-        "wᵢ           — dimension weight (Σwᵢ = 1.0)\n"
-        "state_mult   — active=1.00 · latent=0.35 · frozen=0.15",
+        "dᵢ ∈ [0,1]   - normalized dimension value\n"
+        "wᵢ           - dimension weight (Σwᵢ = 1.0)\n"
+        "state_mult   - active=1.00 · latent=0.35 · frozen=0.15",
         "Staleness cap: CIS hard-capped at 65.0 when last_updated > 180 days."
     )
 
     _h3("Seven Dimensions")
     dims = [
         ("Deadliness",           0.22, "#c0392b",
-         "Direct casualty count, normalised 0–1. Highest weight — most reliably observable, most directly priced by markets."),
+         "Direct casualty count, normalised 0–1. Highest weight - most reliably observable, most directly priced by markets."),
         ("Escalation Trend",     0.20, "#e67e22",
          "escalating = 1.0 · stable = 0.50 · de-escalating = 0.0. Direction drives forward-looking risk, not just current level."),
         ("Civilian Danger",      0.15, "#e67e22",
@@ -436,8 +547,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="{_S}font-size:0.64rem;color:{_DIM}">{d}</div>'
             f'</div>'
             for s, m, c, d in [
-                ("ACTIVE",  "1.00", "#c0392b", "Full score — hostilities actively ongoing. No discount."),
-                ("LATENT",  "0.35", "#e67e22", "No active fighting but structural risk persists — sanctions, troops massed, unresolved territorial disputes."),
+                ("ACTIVE",  "1.00", "#c0392b", "Full score - hostilities actively ongoing. No discount."),
+                ("LATENT",  "0.35", "#e67e22", "No active fighting but structural risk persists - sanctions, troops massed, unresolved territorial disputes."),
                 ("FROZEN",  "0.15", _DIM,      "Formal ceasefire or prolonged stalemate. Low near-term risk; tail event potential retained."),
             ]
         )
@@ -448,10 +559,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 3. TPS
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("3 · Transmission Pressure Score (TPS)")
+    _h2("4 · Transmission Pressure Score (TPS)")
     _prose(
         "The TPS measures how strongly a conflict's geography and nature transmit into "
-        "commodity and financial markets — independent of CIS intensity. A conflict can be "
+        "commodity and financial markets - independent of CIS intensity. A conflict can be "
         "intense (high CIS) but geographically isolated (low TPS). Both layers are required. "
         "<code style='font-family:monospace;font-size:0.75em'>tx_ch ∈ [0,1]</code> is the "
         "analyst-assigned per-channel transmission strength; <code style='font-family:monospace;"
@@ -460,24 +571,24 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
 
     _formula(
         "TPS(conflict) = [ Σ_ch w_ch × tx_ch ] × state_mult × 100\n\n"
-        "tx_ch ∈ [0, 1]  — analyst-coded transmission strength per channel\n"
-        "w_ch            — structural market importance weight (Σw = 1.0)\n"
-        "state_mult      — same multiplier as CIS (active/latent/frozen)",
+        "tx_ch ∈ [0, 1]  - analyst-coded transmission strength per channel\n"
+        "w_ch            - structural market importance weight (Σw = 1.0)\n"
+        "state_mult      - same multiplier as CIS (active/latent/frozen)",
         "12 transmission channels. Higher tx_ch = conflict directly disrupts that channel."
     )
 
-    _h3("12 Channels — Grouped by Category")
+    _h3("12 Channels - Grouped by Category")
     tps_groups = [
         ("#c0392b", "ENERGY", [
-            ("Oil / Gas",     0.18, "Primary geopolitical shock mechanism — energy supply disruption raises input costs globally."),
+            ("Oil / Gas",     0.18, "Primary geopolitical shock mechanism - energy supply disruption raises input costs globally."),
             ("Energy Infra",  0.02, "Pipeline and grid attacks. Narrow but catastrophic when triggered."),
         ]),
         ("#e67e22", "PHYSICAL FLOWS", [
             ("Shipping",      0.12, "Rerouting costs, war-risk insurance premia. Critical when straits threatened."),
-            ("Chokepoint",    0.10, "Hormuz · Suez · Bosphorus — ~51% of seaborne oil transit. Binary risk."),
+            ("Chokepoint",    0.10, "Hormuz · Suez · Bosphorus - ~51% of seaborne oil transit. Binary risk."),
             ("Agriculture",   0.08, "Black Sea corridor, wheat/corn supply. Russia/Ukraine primary driver."),
             ("Supply Chain",  0.05, "Input shortages, factory closures, logistics re-routing. Slow-moving."),
-            ("Metals",        0.10, "Nickel, aluminium, copper — defence, construction, EV inputs."),
+            ("Metals",        0.10, "Nickel, aluminium, copper - defence, construction, EV inputs."),
         ]),
         ("#CFB991", "FINANCIAL", [
             ("Sanctions",     0.12, "Financial sanctions → market dislocation. Commodity sanctions amplify."),
@@ -520,9 +631,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 4. MCS
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("4 · Market Confirmation Score (MCS)")
+    _h2("5 · Market Confirmation Score (MCS)")
     _prose(
-        "The MCS is the market-observable layer of the risk score — it uses six live price signals to "
+        "The MCS is the market-observable layer of the risk score - it uses six live price signals to "
         "<em>confirm or contradict</em> the structural CIS/TPS verdict. High CIS with calm markets → MCS "
         "dampens the score (markets have priced it in). Low CIS with spiking volatility → MCS amplifies. "
         "All signals are orthogonalized to remove multicollinearity before weighting."
@@ -553,7 +664,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         _signal_card(
             "oil_gold", "Oil-Gold Signal", 0.18, "#e67e22",
             "Simultaneous EWM z-scores of 20d cumulative log-returns for Gold and front Oil contract. "
-            "Flat +5 bonus when both z > 1 — regime-invariant joint geopolitical premium. "
+            "Flat +5 bonus when both z > 1 - regime-invariant joint geopolitical premium. "
             "Avoids multiplicative zero-collapse when one signal is near-neutral.",
             "OilGold = clip(50 + g_z×14 + o_z×8 + bonus, 0, 100)\n"
             "bonus   = 5.0  if g_z > 1.0 and o_z > 1.0\n"
@@ -563,7 +674,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     with r1c3:
         _signal_card(
             "eq_vol", "Equity Vol", 0.15, "#8E9AAA",
-            "20d realized annualized volatility across S&P 500, Eurostoxx 50, and Nikkei 225 — "
+            "20d realized annualized volatility across S&P 500, Eurostoxx 50, and Nikkei 225 - "
             "averaged, then EWM z-scored (span=60). Measures broad equity fear. "
             "z = 0 → score 50; z = +2 → score ≈ 74.",
             "rv     = eq_r.rolling(20).std() × √252 × 100\n"
@@ -589,7 +700,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "cmd_vol", "Commodity Vol (residual)", 0.15, "#8E9AAA",
             "Energy/metals 20d annualized vol (WTI, Brent, NatGas, Gold, Silver, Copper) "
             "OLS-residualized on equity vol over trailing 252 days. "
-            "Strips equity-fear component — isolates commodity-specific supply-disruption stress.",
+            "Strips equity-fear component - isolates commodity-specific supply-disruption stress.",
             "resid  = rv_cmd − β_OLS × rv_eq\n"
             "β_OLS  = polyfit(rv_eq[-252:], rv_cmd[-252:], 1)[0]\n"
             "CmdVol = clip(50 + EWM_zscore(resid)×11, 0, 100)",
@@ -600,7 +711,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "corr_accel", "Correlation Accel", 0.15, "#27ae60",
             "Second derivative of the EWM-smoothed (span=20) average equity-commodity correlation. "
             "Captures whether cross-asset coupling is accelerating, not just its level. "
-            "Orthogonal to CIS geographic_diffusion (level-based) — eliminates double-counting.",
+            "Orthogonal to CIS geographic_diffusion (level-based) - eliminates double-counting.",
             "smooth    = avg_corr.ewm(span=20).mean()\n"
             "velocity  = smooth.diff()\n"
             "accel     = velocity.ewm(span=20).mean()\n"
@@ -611,11 +722,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 5. COMPOSITE RISK SCORE
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("5 · Composite Geopolitical Risk Score")
+    _h2("6 · Composite Geopolitical Risk Score")
     _prose(
         "The composite score assembles CIS, TPS, and MCS into a single 0–100 index. "
         "A session-dynamic market freshness multiplier re-ranks conflicts by <em>today's</em> market moves "
-        "before aggregation — ensuring the command center reflects live crises, not just historical intensity. "
+        "before aggregation - ensuring the command center reflects live crises, not just historical intensity. "
         "A scenario geo-multiplier is applied after assembly for stress testing."
     )
 
@@ -628,11 +739,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         # Proportional weight bars
         for abbr, full, pct, col, val, rationale in [
             ("CIS", "Conflict Intensity",    "40%", "#c0392b", 40,
-             "Structural severity — direction and magnitude of active hostilities."),
+             "Structural severity - direction and magnitude of active hostilities."),
             ("TPS", "Transmission Pressure", "35%", "#e67e22", 35,
-             "Channel specificity — which commodities and markets are exposed."),
+             "Channel specificity - which commodities and markets are exposed."),
             ("MCS", "Market Confirmation",   "25%", _G,        25,
-             "Live signal — confirms or dampens the structural signal."),
+             "Live signal - confirms or dampens the structural signal."),
         ]:
             st.markdown(
                 f'<div style="margin:.35rem 0">'
@@ -661,7 +772,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                     ("HIGH/CRISIS", 75, 100, "#c0392b", "Active conflict + market stress confirmed"),
                     ("ELEVATED",    50,  75, "#e67e22", "Significant transmission pressure building"),
                     ("MODERATE",    25,  50, _G,        "Latent risk or mild market dislocations"),
-                    ("LOW",          0,  25, "#27ae60", "Calm — no active confirmed spillover"),
+                    ("LOW",          0,  25, "#27ae60", "Calm - no active confirmed spillover"),
                 ]
             )
             + f'</div>',
@@ -683,7 +794,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "The freshness layer maps each conflict's live transmission channel activity to a multiplier "
         "∈ [0.7, 1.5]. The command center's Lead Conflict is ranked by "
         "<code style='font-family:monospace;font-size:0.75em'>CIS × market_freshness</code>, "
-        "not raw CIS — so a quiet Russia day won't outrank an active Hormuz blockade."
+        "not raw CIS - so a quiet Russia day won't outrank an active Hormuz blockade."
     )
     _freshness_range()
     _formula(
@@ -721,7 +832,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     )
 
     _h3("Staleness Enforcement")
-    _prose("Conflicts not updated within threshold windows receive automatic penalties — "
+    _prose("Conflicts not updated within threshold windows receive automatic penalties - "
            "preventing stale manual data from outranking freshly-confirmed crises.")
     st.markdown(
         f'<div style="border:1px solid #1e1e1e;margin:.4rem 0">'
@@ -752,7 +863,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _prose(
         "Every GRS output includes a confidence value [0,1] and symmetric ±uncertainty band. "
         "Confidence weights three independent quality signals. The uncertainty band uses "
-        "quadrature (RSS) combination of per-layer errors — wider when data is stale or market signals disagree."
+        "quadrature (RSS) combination of per-layer errors - wider when data is stale or market signals disagree."
     )
     # Confidence components
     st.markdown(
@@ -790,7 +901,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "Uncertainty = √( σ_CIS² + σ_TPS² + σ_MCS² )\n"
         "score_low   = max(0,   GRS − Uncertainty)\n"
         "score_high  = min(100, GRS + Uncertainty)",
-        "Quadrature (RSS) — assumes layer errors are independent. "
+        "Quadrature (RSS) - assumes layer errors are independent. "
         "At 100% confidence → Uncertainty = 0. At 0% → uncertainty = max layer-weighted error."
     )
 
@@ -798,14 +909,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _prose(
         "The historical chart plots a daily rolling index over the selected date range. "
         "Structural CIS/TPS are not available at daily frequency (point-in-time analyst snapshots), "
-        "so the historical series uses market-observable signals only — weighted to approximate "
+        "so the historical series uses market-observable signals only - weighted to approximate "
         "the live model's dominant drivers."
     )
     _weight_table([
-        ("eq_vol",     "Equity Vol (hist.)",    0.40, "Dominant live driver — 20d realized vol EWM z-score. Matches live construction exactly."),
+        ("eq_vol",     "Equity Vol (hist.)",    0.40, "Dominant live driver - 20d realized vol EWM z-score. Matches live construction exactly."),
         ("oil_gold",   "Oil-Gold (hist.)",       0.35, "Same construction as live: g_z×14 + o_z×8 + flat +5 bonus. Rolling EWM z-scores."),
-        ("cmd_vol",    "Commodity Vol (hist.)",  0.13, "Residualized commodity vol — same construction as live MCS sub-signal."),
-        ("corr_accel", "Corr. Accel (hist.)",   0.12, "2nd derivative of corr — same construction as live. Replaced old corr-pct (was 0.30 weight)."),
+        ("cmd_vol",    "Commodity Vol (hist.)",  0.13, "Residualized commodity vol - same construction as live MCS sub-signal."),
+        ("corr_accel", "Corr. Accel (hist.)",   0.12, "2nd derivative of corr - same construction as live. Replaced old corr-pct (was 0.30 weight)."),
     ])
     _formula(
         "HistScore(t) = 0.40·EqVol(t) + 0.35·OilGold(t)\n"
@@ -814,11 +925,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     )
     _section_note(
         "HistScore ≠ GRS on any given day. The live score includes 40%+35% structural layers (CIS/TPS) "
-        "which are not backcasted. Treat HistScore as a market-stress proxy — directionally aligned "
+        "which are not backcasted. Treat HistScore as a market-stress proxy - directionally aligned "
         "with GRS but not numerically equivalent."
     )
 
-    _h3("GRS vs Global Conflict Risk Map — Separate Pipelines")
+    _h3("GRS vs Global Conflict Risk Map - Separate Pipelines")
     _prose(
         "The top-level <b>Geopolitical Risk Score (GRS)</b> and the <b>Global Conflict Risk Map</b> "
         "are <em>independent pipelines</em> tracking the same underlying conflicts through different models."
@@ -856,12 +967,12 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 6. NEWS GPR LAYER
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("6 · News GPR Layer — Threat / Act Classification")
+    _h2("7 · News GPR Layer - Threat / Act Classification")
     _prose(
         "The News GPR layer extends the structural CIS/TPS signal with a real-time headline feed. "
         "Headlines are classified as <b>Threat</b> (leading: rhetoric, military signalling, diplomatic breakdown) "
         "or <b>Act</b> (contemporaneous: strikes, sanctions imposed, vessels seized). "
-        "This distinction is critical — markets react differently to escalation rhetoric vs realized events. "
+        "This distinction is critical - markets react differently to escalation rhetoric vs realized events. "
         "The News GPR is <em>diagnostic</em>: it does not enter the composite GRS formula."
     )
 
@@ -911,10 +1022,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                 f'</div>'
                 for label, c, timing, kws in [
                     ("THREAT",  "#e67e22",
-                     "Leading indicator — precedes market reaction",
+                     "Leading indicator - precedes market reaction",
                      "warned · mobilize · ultimatum · sanctions threatened · diplomatic breakdown"),
                     ("ACT",     "#c0392b",
-                     "Contemporaneous — market already reacting",
+                     "Contemporaneous - market already reacting",
                      "attack · seized · explosion · sanctions imposed · vessel boarded · airstrike"),
                 ]
             )
@@ -933,28 +1044,28 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "α = clip( [n_act / (n_act + n_threat + ε)] × 2,  0.2, 0.8 )\n\n"
         "α → 0.8  when acts dominate  (realized-event-heavy cycle)\n"
         "α → 0.2  when threats dominate (rhetoric-heavy cycle)",
-        "ε = 1e-6 to avoid division by zero. α is bounded to [0.2, 0.8] — "
+        "ε = 1e-6 to avoid division by zero. α is bounded to [0.2, 0.8] - "
         "Threat signal always retained even in a pure-act cycle."
     )
 
     # ══════════════════════════════════════════════════════════════════════════
     # 7. CORRELATION REGIME ENGINE
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("7 · Correlation Regime Engine")
+    _h2("8 · Correlation Regime Engine")
     _prose(
         "The regime engine classifies the current equity-commodity relationship into one of four states "
         "using rolling Pearson correlation and DCC-GARCH. Rolling correlation provides a fast, "
-        "interpretable regime signal; DCC-GARCH captures time-varying dynamics that spike during stress — "
+        "interpretable regime signal; DCC-GARCH captures time-varying dynamics that spike during stress - "
         "a hallmark of genuine spillover rather than stable co-movement."
     )
 
-    # Regime ladder — full width
+    # Regime ladder - full width
     _h3("Four-State Regime Ladder")
     regimes = [
-        ("0 · DECORRELATED", "#2e7d32", "avg_corr < P₂₅",       "Diversification intact. Equity and commodity shocks are not co-moving — safe to hold cross-asset portfolios."),
+        ("0 · DECORRELATED", "#2e7d32", "avg_corr < P₂₅",       "Diversification intact. Equity and commodity shocks are not co-moving - safe to hold cross-asset portfolios."),
         ("1 · NORMAL",       _DIM,      "P₂₅ ≤ avg_corr < P₅₀", "Baseline co-movement consistent with macro linkages. No action signal."),
-        ("2 · ELEVATED",     "#e67e22", "P₅₀ ≤ avg_corr < P₇₅", "Stress building. Correlation rising — monitor for regime shift. Consider partial hedges."),
-        ("3 · CRISIS",       "#c0392b", "avg_corr ≥ P₇₅",        "Full spillover regime. Diversification fails. Geopolitical shock likely active — activate hedges."),
+        ("2 · ELEVATED",     "#e67e22", "P₅₀ ≤ avg_corr < P₇₅", "Stress building. Correlation rising - monitor for regime shift. Consider partial hedges."),
+        ("3 · CRISIS",       "#c0392b", "avg_corr ≥ P₇₅",        "Full spillover regime. Diversification fails. Geopolitical shock likely active - activate hedges."),
     ]
     # gradient bar
     st.markdown(
@@ -979,7 +1090,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Methods — 2 columns
+    # Methods - 2 columns
     col_a, col_b = st.columns(2)
     with col_a:
         _h3("Rolling Pearson Correlation")
@@ -1001,7 +1112,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         _prose(
             "Two-step DCC: (1) fit GARCH(1,1) to each return series to extract standardised residuals; "
             "(2) apply DCC to the residuals to obtain time-varying conditional correlation R_t. "
-            "DCC correlations spike during stress events — a signature of genuine spillover."
+            "DCC correlations spike during stress events - a signature of genuine spillover."
         )
         _formula(
             "Step 1  GARCH(1,1):  σ²_t = ω + α·ε²_{t-1} + β·σ²_{t-1}\n"
@@ -1048,7 +1159,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 8. SPILLOVER NETWORK
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("8 · Spillover Network")
+    _h2("9 · Spillover Network")
     _prose(
         "Three complementary measures quantify cross-asset shock transmission. "
         "Each captures a distinct aspect: Granger tests linear predictability, "
@@ -1063,11 +1174,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'<span style="{_M}font-size:7px;color:{_MUT};letter-spacing:.12em">METHOD TYPE ▸</span>'
         f'<span style="{_M}font-size:7px;background:#1a1a1a;border:1px solid #c0392b;'
         f'color:#c0392b;padding:1px 7px">DIRECTIONAL</span>'
-        f'<span style="{_M}font-size:7px;color:{_MUT};margin:0 4px">—</span>'
+        f'<span style="{_M}font-size:7px;color:{_MUT};margin:0 4px">-</span>'
         f'<span style="{_S}font-size:0.67rem;color:{_DIM}">identifies which asset leads / lags</span>'
         f'<span style="{_M}font-size:7px;background:#1a1a1a;border:1px solid {_G};'
         f'color:{_G};padding:1px 7px;margin-left:12px">AGGREGATE</span>'
-        f'<span style="{_M}font-size:7px;color:{_MUT};margin:0 4px">—</span>'
+        f'<span style="{_M}font-size:7px;color:{_MUT};margin:0 4px">-</span>'
         f'<span style="{_S}font-size:0.67rem;color:{_DIM}">portfolio-level total spillover index</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -1166,7 +1277,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 9. MARKOV REGIME CHAIN
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("9 · Markov Regime Chain")
+    _h2("10 · Markov Regime Chain")
     _prose(
         "The four-state regime series (Decorrelated / Normal / Elevated / Crisis) is modelled "
         "as a first-order Markov chain. The empirical transition matrix P is estimated from "
@@ -1276,7 +1387,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 10. PORTFOLIO EXPOSURE ENGINE
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("10 · Portfolio Exposure Engine")
+    _h2("11 · Portfolio Exposure Engine")
     _prose(
         "The exposure engine maps each asset against every active conflict across four "
         "compounding dimensions: structural linkage, CIS-weighted total exposure, "
@@ -1319,7 +1430,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "  = structural[asset][conflict]  ∈ [0, 1]\n\n"
             "TAE(asset)\n"
             "  = Σ_c  SES(asset, c) × CIS(c) / 100",
-            "SES coded in config.SECURITY_EXPOSURE — reflects supply-chain, revenue, or "
+            "SES coded in config.SECURITY_EXPOSURE - reflects supply-chain, revenue, or "
             "regulatory linkage. TAE: higher CIS conflicts contribute proportionally more."
         )
     with col_p2:
@@ -1329,15 +1440,15 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "β(asset, conflict)\n"
             "  = SES(asset, conflict) × TPS(conflict) / 100",
             "SAS scales up in stressed scenarios via geo_mult > 1.0. "
-            "β measures asset sensitivity per unit of TPS — primary hedge ranking input."
+            "β measures asset sensitivity per unit of TPS - primary hedge ranking input."
         )
 
     # ══════════════════════════════════════════════════════════════════════════
     # 11. SCENARIO ENGINE
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("11 · Scenario Engine")
+    _h2("12 · Scenario Engine")
     _prose(
-        "The Scenario Engine applies a named stress lens across the entire dashboard — "
+        "The Scenario Engine applies a named stress lens across the entire dashboard - "
         "modifying composite risk scores, asset exposure, and trade signals without "
         "altering underlying data. Enables side-by-side comparison of scenario assumptions."
     )
@@ -1413,7 +1524,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     # 12. ASSUMPTIONS & LIMITATIONS
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("12 · Assumptions, Limitations & Ongoing Maintenance")
+    _h2("13 · Assumptions, Limitations & Ongoing Maintenance")
 
     def _badge_html(level: str) -> str:
         _bc = {"HIGH": "#c0392b", "MED": "#e67e22", "LOW": _DIM}.get(level, _DIM)
@@ -1446,30 +1557,30 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     with col_a2:
         _h3("Key Assumptions")
         _assumption_b("Conflict intensity dimensions are observable and monotonically related to market risk.", "MED")
-        _assumption_b("Transmission channel weights are stable across conflict types — not conflict-specific.", "HIGH")
-        _assumption_b("Four-state Markov chain adequately captures the regime space — higher granularity not supported by sample size.", "MED")
+        _assumption_b("Transmission channel weights are stable across conflict types - not conflict-specific.", "HIGH")
+        _assumption_b("Four-state Markov chain adequately captures the regime space - higher granularity not supported by sample size.", "MED")
         _assumption_b("Rolling Pearson correlation is a sufficient proxy for time-varying dependence at daily frequency.", "MED")
         _assumption_b("Yahoo Finance daily close prices are unbiased proxies for commodity spot prices (front-month futures).", "LOW")
-        _assumption_b("DCC-GARCH parameters (a=0.05, b=0.92) are calibrated globally — not conflict-specific.", "HIGH")
+        _assumption_b("DCC-GARCH parameters (a=0.05, b=0.92) are calibrated globally - not conflict-specific.", "HIGH")
         _assumption_b("SECURITY_EXPOSURE structural weights are point-in-time estimates and subject to drift.", "HIGH")
-        _assumption_b("RSS feed headlines are a representative sample of geopolitical events — coverage gaps exist.", "MED")
+        _assumption_b("RSS feed headlines are a representative sample of geopolitical events - coverage gaps exist.", "MED")
     with col_l2:
         _h3("Known Limitations")
-        _limitation_b("CIS and TPS dimensions are manually scored — subject to analyst judgment and update lag.", "HIGH")
+        _limitation_b("CIS and TPS dimensions are manually scored - subject to analyst judgment and update lag.", "HIGH")
         _limitation_b("Model uses public equity indices and commodity futures; direct exposure data (loan books, supply contracts) unavailable.", "HIGH")
-        _limitation_b("Granger and DY tests assume linear VAR dynamics — nonlinear regime-switching relationships not fully captured.", "MED")
-        _limitation_b("News GPR uses keyword matching, not semantic NLP — 'no attack' style negations may be misclassified.", "HIGH")
+        _limitation_b("Granger and DY tests assume linear VAR dynamics - nonlinear regime-switching relationships not fully captured.", "MED")
+        _limitation_b("News GPR uses keyword matching, not semantic NLP - 'no attack' style negations may be misclassified.", "HIGH")
         _limitation_b("Conflict registry requires manual maintenance; stale data degrades CIS/TPS accuracy.", "HIGH")
-        _limitation_b("Scenario multipliers applied uniformly — no differentiation by asset class or geography.", "MED")
-        _limitation_b("COT positioning data has a 3-day publication lag — contrarian signal reflects week-old positioning.", "LOW")
-        _limitation_b("Transfer entropy estimation is sensitive to bin-width and sample size — small samples produce noise.", "MED")
+        _limitation_b("Scenario multipliers applied uniformly - no differentiation by asset class or geography.", "MED")
+        _limitation_b("COT positioning data has a 3-day publication lag - contrarian signal reflects week-old positioning.", "LOW")
+        _limitation_b("Transfer entropy estimation is sensitive to bin-width and sample size - small samples produce noise.", "MED")
 
     _h3("Model Maintenance Protocol  ·  SR 11-7")
     _maint_rows = [
         ("WEEKLY",    _G,        "Review conflict registry for state changes (active → latent). Update last_updated fields. Check freshness cap violations."),
         ("MONTHLY",   "#e67e22", "Recalibrate regime thresholds as new data accumulates. Validate DCC-GARCH stationarity. Review MCS z-score distributions."),
         ("QUARTERLY", "#c0392b", "Re-examine CIS dimension weights against realized commodity price responses to recent conflicts. Backtest risk score vs. VIX spikes."),
-        ("ANNUALLY",  _DIM,     "Full model review — reassess 4-regime Markov structure; re-estimate TPS channel weights; refresh SECURITY_EXPOSURE structural weights."),
+        ("ANNUALLY",  _DIM,     "Full model review - reassess 4-regime Markov structure; re-estimate TPS channel weights; refresh SECURITY_EXPOSURE structural weights."),
     ]
     _maint_html = '<div style="border:1px solid #1e1e1e;overflow:hidden;margin:.3rem 0">'
     for _ml, _mc, _md in _maint_rows:
@@ -1491,7 +1602,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "academic spillover literature (Diebold-Yilmaz 2009/2012, Engle DCC 2002) and "
         "practitioner scenario design conventions (SR 11-7, CCAR). All formulae, weights, "
         "and assumptions are fully transparent and documented above. The model is designed "
-        "to be challenged, stress-tested, and improved — contributions to the conflict registry "
+        "to be challenged, stress-tested, and improved - contributions to the conflict registry "
         "and channel weight calibration are the highest-leverage points of intervention."
     )
 
