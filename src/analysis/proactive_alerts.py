@@ -256,6 +256,70 @@ def _check_early_warnings(eq_r: pd.DataFrame, cmd_r: pd.DataFrame,
     return alerts
 
 
+# ── Country-level equity index exposure check ─────────────────────────────────
+# Scoring data and multiplier math live in war_country_scores.py (single source of truth).
+# compute_country_scores() returns {iso: composite_score} for the 8 equity-indexed countries.
+
+from src.analysis.war_country_scores import (
+    compute_country_scores,
+    COUNTRY_INDICES as _COUNTRY_INDICES,
+    war_multipliers as _war_multipliers_ref,
+)
+
+
+def _check_country_exposure(cmd_r: pd.DataFrame) -> list[Alert]:
+    """
+    Fire a warning when any tracked country's equity-index composite score ≥ 65.
+    Delegates all scoring math to war_country_scores.compute_country_scores().
+    """
+    alerts: list[Alert] = []
+    if cmd_r.empty or len(cmd_r) < 40:
+        return alerts
+
+    country_scores = compute_country_scores(cmd_r)
+    mults = _war_multipliers_ref(cmd_r)
+    signals = mults.get("signals", {})
+    oil_z  = signals.get("Crude Oil z",   0.0)
+    gas_z  = signals.get("Natural Gas z", 0.0)
+    gold_z = signals.get("Gold z",        0.0)
+
+    # Build (iso, primary_index_name, score) for countries ≥ 65
+    elevated: list[tuple[str, str, int]] = []
+    for iso, score in country_scores.items():
+        if score >= 65:
+            idx_name = _COUNTRY_INDICES[iso][0]  # primary index (first listed)
+            elevated.append((iso, idx_name, score))
+
+    if not elevated:
+        return alerts
+
+    elevated.sort(key=lambda x: x[2], reverse=True)
+    lead_iso, lead_idx, lead_score = elevated[0]
+    detail = ", ".join(f"{idx} ({score}/100)" for _, idx, score in elevated)
+
+    alerts.append(Alert(
+        severity="warning",
+        category="country_exposure",
+        title=f"Country equity exposure elevated — {lead_idx} {lead_score}/100",
+        body=(
+            f"{len(elevated)} equity index/indices have country-level geopolitical exposure ≥ 65: "
+            f"{detail}. "
+            f"Live signals driving scores: Oil z={oil_z:+.2f}, Gas z={gas_z:+.2f}, Gold z={gold_z:+.2f}. "
+            f"Scores combine static structural conflict exposure with live commodity market intensity. "
+            f"Open War Impact Map for full country breakdown."
+        ),
+        page_hint="war_impact_map",
+        data={
+            "elevated_countries": {iso: score for iso, _, score in elevated},
+            "oil_z": round(oil_z, 2),
+            "gas_z": round(gas_z, 2),
+            "gold_z": round(gold_z, 2),
+            "multipliers": {k: mults[k] for k in ("ukraine", "hamas", "iran")},
+        },
+    ))
+    return alerts
+
+
 # ── Main entry point ─────────────────────────────────────────────────────────
 
 def compute_alerts(
@@ -277,6 +341,7 @@ def compute_alerts(
     all_alerts += _check_regime(regimes, avg_corr)
     all_alerts += _check_volatility(cmd_r)
     all_alerts += _check_early_warnings(eq_r, cmd_r, avg_corr)
+    all_alerts += _check_country_exposure(cmd_r)
 
     if cot_df is not None and not cot_df.empty:
         all_alerts += _check_cot(cot_df)

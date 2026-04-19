@@ -122,7 +122,7 @@ def _render_market_snapshot(snap: dict) -> None:
 
     st.markdown(
         f'<p style="{_M}font-size:0.52rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.16em;color:#8E6F3E;margin:0.75rem 0 0.35rem">Market Snapshot</p>',
+        f'letter-spacing:0.16em;color:#8E9AAA;margin:0.75rem 0 0.35rem">Market Snapshot</p>',
         unsafe_allow_html=True,
     )
 
@@ -160,7 +160,7 @@ def _render_market_snapshot(snap: dict) -> None:
 def _label(txt: str) -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px 0">{txt}</p>',
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -493,7 +493,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     # ── FI / FX KPI strip ────────────────────────────────────────────────
     st.markdown(
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.14em;color:#8E6F3E;margin:0.7rem 0 0.3rem">'
+        f'text-transform:uppercase;letter-spacing:0.14em;color:#8E9AAA;margin:0.7rem 0 0.3rem">'
         f'Fixed Income & FX Context</p>',
         unsafe_allow_html=True,
     )
@@ -978,7 +978,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _narrative_val = st.session_state.get(_narrative_key, "")
     st.markdown(
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.14em;color:#8E6F3E;margin:0.5rem 0 0.3rem">AI Market Narrative</p>',
+        f'text-transform:uppercase;letter-spacing:0.14em;color:#8E9AAA;margin:0.5rem 0 0.3rem">AI Market Narrative</p>',
         unsafe_allow_html=True,
     )
     if not _narrative_val:

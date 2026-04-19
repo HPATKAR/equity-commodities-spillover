@@ -23,12 +23,15 @@ from src.ui.shared import (
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
+_M = "font-family:'JetBrains Mono',monospace;"
+_G = "#CFB991"
 
 
 def _label(txt: str) -> None:
     st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">{txt}</p>',
+        f'<p style="{_M}font-size:7.5px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:.16em;color:{_G};border-bottom:1px solid #1e1e1e;'
+        f'padding-bottom:4px;margin:.8rem 0 .4rem">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -283,7 +286,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     # ── Conflict Scorecard Strip ──────────────────────────────────────────
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:1.4rem 0 0.4rem">'
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:1.4rem 0 0.4rem">'
         f'Active Conflict Scores (CIS / TPS)</p>',
         unsafe_allow_html=True,
     )
@@ -327,7 +330,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     # ── Live Intelligence Feed (Threat/Act classified) ────────────────────
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:1.2rem 0 0.4rem">Live Intelligence Feed</p>',
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:1.2rem 0 0.4rem">Live Intelligence Feed</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -342,7 +345,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                     f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                     f'padding:8px 12px">'
                     f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-                    f'color:#555960;letter-spacing:2px;margin:0 0 6px">NEWS GPR</p>'
+                    f'color:#555960;letter-spacing:.16em;margin:0 0 6px">NEWS GPR</p>'
                     f'<div style="display:flex;gap:16px">'
                     f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
                     f'color:#555960">COMPOSITE</div>'

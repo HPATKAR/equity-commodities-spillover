@@ -50,53 +50,49 @@ def _insight_card(
 
     geo_tag_html = (
         f'<span style="background:#1a0a00;color:#e67e22;padding:1px 6px;'
-        f'font-size:0.52rem;font-weight:700;letter-spacing:0.10em;border-radius:2px;'
-        f'margin-left:6px;white-space:nowrap">GEO:{geo_driver}</span>'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;font-weight:700;'
+        f'letter-spacing:0.10em;margin-left:6px;white-space:nowrap">GEO:{geo_driver}</span>'
         if geo_driver else ""
     )
     delta_html = (
-        f'<span style="font-size:0.58rem;font-weight:700;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
         f'color:{"#27ae60" if delta.startswith("+") else "#c0392b" if delta.startswith("-") else "#8890a1"};'
         f'margin-left:8px">{delta}</span>'
         if delta else ""
     )
 
     st.markdown(
-        f'<div style="{_F}border:1px solid #2a2a2a;'
-        f'border-radius:0;padding:0.85rem 1.1rem 0.85rem;'
-        f'background:#1c1c1c;margin-bottom:0">'
+        f'<div style="{_F}border:1px solid #1e1e1e;border-top:2px solid {color};'
+        f'padding:0.75rem 1rem;background:#080808;margin-bottom:0">'
 
-        # Row 1: status indicator + headline + geo tag
-        f'<div style="display:flex;align-items:flex-start;gap:0.6rem;margin-bottom:0.5rem">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;'
-        f'line-height:1.8;flex-shrink:0;color:{color};letter-spacing:0.04em">{emoji}</span>'
-        f'<span style="font-size:0.82rem;font-weight:700;color:#e8e9ed;line-height:1.35">'
+        # Row 1: headline + geo tag
+        f'<div style="display:flex;align-items:flex-start;gap:0.6rem;margin-bottom:0.45rem">'
+        f'<span style="font-size:0.80rem;font-weight:700;color:#e8e9ed;line-height:1.35;flex:1">'
         f'{headline}</span>'
         f'{geo_tag_html}{delta_html}</div>'
 
-        # Row 2: action
-        f'<div style="display:flex;align-items:flex-start;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.12em;color:{color};white-space:nowrap;margin-top:3px">'
+        # Row 2: signal label + action
+        f'<div style="display:flex;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.14em;color:{color};white-space:nowrap;margin-top:3px">'
         f'SIGNAL</span>'
-        f'<span style="font-size:0.74rem;font-weight:500;color:#c8c8c8;line-height:1.5">'
+        f'<span style="font-size:0.73rem;font-weight:500;color:#c8c8c8;line-height:1.5">'
         f'{action}</span></div>'
 
-        # Row 3: reasoning snippet (first sentence of detail_html, stripped of tags)
-        f'<div style="font-size:0.72rem;color:#8890a1;line-height:1.6;'
-        f'border-top:1px solid #2a2a2a;padding-top:0.5rem;margin-bottom:0.55rem">'
+        # Row 3: reasoning
+        f'<div style="font-size:0.70rem;color:#8890a1;line-height:1.65;'
+        f'border-top:1px solid #1e1e1e;padding-top:0.45rem;margin-bottom:0.5rem">'
         f'{detail_html}</div>'
 
         # Row 4: confidence bar
-        f'<div style="display:flex;align-items:center;gap:0.6rem">'
-        f'<span style="font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.12em;color:{conf_color};white-space:nowrap">'
-        f'Confidence {confidence}%</span>'
-        f'<div style="flex:1;max-width:120px;height:3px;background:#2a2a2a;border-radius:2px">'
-        f'<div style="height:3px;width:{confidence}%;background:{conf_color};'
-        f'border-radius:2px"></div></div>'
-        f'<span style="font-size:0.57rem;color:#6b7280;font-style:italic">'
-        f'{confidence_label}</span>'
+        f'<div style="display:flex;align-items:center;gap:0.5rem">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.12em;color:{conf_color};white-space:nowrap">'
+        f'CONFIDENCE  {confidence}%</span>'
+        f'<div style="flex:1;max-width:100px;height:2px;background:#1a1a1a">'
+        f'<div style="height:2px;width:{confidence}%;background:{conf_color}"></div></div>'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;color:#555960;'
+        f'font-style:italic">{confidence_label}</span>'
         f'</div>'
 
         f'</div>',

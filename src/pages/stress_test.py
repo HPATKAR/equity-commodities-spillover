@@ -28,6 +28,21 @@ from src.ui.shared import (
 )
 
 
+_M = "font-family:'JetBrains Mono',monospace;"
+_G = "#CFB991"
+_DIM = "#8E9AAA"
+
+
+def _sh(txt: str) -> None:
+    """Styled terminal section header — replaces st.subheader()."""
+    st.markdown(
+        f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'color:{_G};text-transform:uppercase;border-bottom:1px solid #1e1e1e;'
+        f'padding-bottom:5px;margin:1.4rem 0 .6rem">{txt}</p>',
+        unsafe_allow_html=True,
+    )
+
+
 # ── Portfolio maths ────────────────────────────────────────────────────────
 
 def _portfolio_path(prices: pd.DataFrame, weights: dict[str, float]) -> pd.Series:
@@ -298,7 +313,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         fi_prices = pd.DataFrame()
 
     # ── Section A: Indices & Commodities ────────────────────────────────────
-    st.subheader("Section A - Global Indices & Commodities")
+    _sh("A · Global Indices & Commodities")
     _definition_block(
         "Indices & Commodity Weights",
         "Select indices and commodity futures. Enter weights (%) for each. "
@@ -369,7 +384,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         t for t in custom_tickers_raw if t in eq_p.columns and t not in selected_assets
     ]
     if all_selected_a:
-        st.markdown("**Weights (%)**")
+        st.markdown(
+            f'<p style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.14em;'
+            f'color:{_DIM};text-transform:uppercase;margin:.6rem 0 .3rem">Weights (%)</p>',
+            unsafe_allow_html=True,
+        )
         default_weights = presets.get(preset_name, {})
         weight_cols = st.columns(min(len(all_selected_a), 5))
         for i, asset in enumerate(all_selected_a):
@@ -381,7 +400,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             weights_a[asset] = w
 
     # ── Section C: Fixed Income ──────────────────────────────────────────────
-    st.subheader("Section C - Fixed Income")
+    _sh("C · Fixed Income")
     _definition_block(
         "Fixed Income Weights",
         "Treasuries, IG/HY Credit, TIPS, EM Bonds. "
@@ -405,7 +424,11 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
     weights_c: dict[str, float] = {}
     if _fi_selected and not fi_prices.empty:
-        st.markdown("**Fixed Income Weights (%)**")
+        st.markdown(
+            f'<p style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.14em;'
+            f'color:{_DIM};text-transform:uppercase;margin:.6rem 0 .3rem">Fixed Income Weights (%)</p>',
+            unsafe_allow_html=True,
+        )
         _fi_weight_cols = st.columns(min(len(_fi_selected), 5))
         for i, asset in enumerate(_fi_selected):
             if asset in fi_prices.columns:
@@ -419,7 +442,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         st.warning("Fixed income price data unavailable. Check connectivity.")
 
     # ── Section B: S&P 500 Individual Stocks ────────────────────────────────
-    st.subheader("Section B - S&P 500 Individual Stocks")
+    _sh("B · S&P 500 Individual Stocks")
     _definition_block(
         "Stock Selection & Weight Editor",
         "Search and select any S&P 500 constituent. "
@@ -619,7 +642,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "by a pre-shock window, an acute stress period, and a post-event recovery window - matching the "
         "same event definitions used in the Geopolitical Triggers page."
     )
-    st.subheader("Event Selection & Run")
+    _sh("Event Selection & Run")
 
     c3, c4 = st.columns(2)
     pre_days  = c3.slider("Pre-event window (days)",  10, 60, 30, key="st_pre")
@@ -685,7 +708,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "column first - that is the peak stress you would have experienced. Then check the 'Post' column "
         "to understand how quickly (or slowly) your specific allocation would have recovered."
     )
-    st.subheader("Stress Test Results")
+    _sh("Stress Test Results")
 
     summary = pd.DataFrame([{
         "Event":      r["event"],
@@ -757,7 +780,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     k4.metric("Avg During Return",  f"{np.mean(valid_during):+.1f}%" if valid_during else "N/A")
 
     # ── Event returns heatmap (pre / during / post) ───────────────────────────
-    st.subheader("Event Returns: Pre / During / Post")
+    _sh("Event Returns — Pre / During / Post")
     _section_note(
         f"Return (%) across three windows: {pre_days}d before, event period, "
         f"{post_days}d after. Green = gain, red = loss."
@@ -802,7 +825,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     _chart(fig_hm)
 
     # ── Max drawdown comparison ───────────────────────────────────────────────
-    st.subheader("Max Drawdown by Event")
+    _sh("Max Drawdown by Event")
 
     fig_dd = go.Figure(go.Bar(
         y=[r["event"] for r in results],
@@ -872,7 +895,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
         if _geo_rows_html:
             st.markdown("---")
-            st.subheader("Geo Risk Beta — Geopolitically Adjusted Drawdowns")
+            _sh("Geo Risk Beta — Geopolitically Adjusted Drawdowns")
             _section_note(
                 f"Current CIS of {_geo_cis:.0f}/100 implies a geo-risk beta of {_geo_beta:.2f}. "
                 "Scenario drawdowns amplified accordingly — consistent with Benjamin's CAPM-style "
@@ -921,7 +944,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         pass
 
     # ── Portfolio path (relative days from event start) ───────────────────────
-    st.subheader("Portfolio Value Path: Days from Event Start (Base = 100)")
+    _sh("Portfolio Value Path — Days from Event Start (Base = 100)")
     _section_note(
         "Each line is indexed to 100 at event start (day 0), making events "
         "directly comparable regardless of calendar date. "
@@ -969,7 +992,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     # ── Individual stock contribution (if stocks selected) ────────────────────
     if weights_b and not stock_prices.empty:
         st.markdown("---")
-        st.subheader("Individual Stock Weight Summary")
+        _sh("Individual Stock Weight Summary")
         _section_note(
             "Stocks selected in Section B. Weights are normalised across the full portfolio."
         )

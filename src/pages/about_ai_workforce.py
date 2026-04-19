@@ -16,6 +16,25 @@ _GOLD = "#CFB991"
 _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
 
+_STYLE = """<style>
+.aiw-label{
+    font-family:'JetBrains Mono',monospace!important;
+    font-size:8px!important;font-weight:700!important;
+    text-transform:uppercase;letter-spacing:.20em;
+    color:#CFB991!important;display:block;
+    border-bottom:1px solid #1e1e1e;
+    padding-bottom:5px;margin-bottom:10px;
+}
+.aiw-section-hdr{
+    font-family:'JetBrains Mono',monospace!important;
+    font-size:8px!important;font-weight:700!important;
+    text-transform:uppercase;letter-spacing:.18em;
+    color:#CFB991!important;display:block;
+    border-bottom:1px solid #1e1e1e;
+    padding-bottom:5px;margin:1rem 0 0.6rem;
+}
+</style>"""
+
 # Pipeline round metadata
 _ROUNDS = [
     {
@@ -28,7 +47,7 @@ _ROUNDS = [
         "n": 2, "label": "Round 2 - Synthesisers",
         "desc": "Consume Round 1 outputs. Cross-signal synthesis.",
         "agents": ["risk_officer", "commodities_specialist"],
-        "color": "#8E6F3E",
+        "color": "#8E9AAA",
     },
     {
         "n": 3, "label": "Round 3 - Action Layer",
@@ -110,8 +129,9 @@ def _pipeline_diagram() -> None:
 
     html_parts = [
         '<div style="overflow-x:auto;padding-bottom:0.5rem">',
-        f'<div style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.16em;'
-        f'text-transform:uppercase;color:#555960;margin-bottom:0.9rem">'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
+        f'letter-spacing:0.20em;text-transform:uppercase;color:#CFB991;'
+        f'border-bottom:1px solid #1e1e1e;padding-bottom:5px;margin-bottom:0.9rem">'
         f'Agent Pipeline Architecture</div>',
     ]
 
@@ -473,6 +493,7 @@ def _run_pipeline(force: bool = False) -> None:
 
 def page_about_ai_workforce() -> None:
     _about_page_styles()
+    st.markdown(_STYLE, unsafe_allow_html=True)
     init_agents()
 
     # Page header
@@ -494,7 +515,8 @@ def page_about_ai_workforce() -> None:
     status_color = "#27ae60" if n_stale == 0 else ("#e67e22" if n_stale <= 3 else "#c0392b")
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:1rem;'
-        f'background:#0d0d0d;border:1px solid #1e1e1e;'
+        f'background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid {status_color};'
         f'padding:0.55rem 0.9rem;margin-bottom:0.8rem">'
         f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.12em;'
         f'text-transform:uppercase;color:{status_color}">'
@@ -567,8 +589,10 @@ def page_about_ai_workforce() -> None:
         for rnd in _ROUNDS:
             color = rnd["color"]
             st.markdown(
-                f'<div style="border-top:2px solid {color};margin:1.2rem 0 0.6rem;'
-                f'padding-top:0.4rem;display:flex;align-items:baseline;gap:0.6rem">'
+                f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                f'border-left:3px solid {color};'
+                f'padding:0.5rem 0.8rem;margin:1.2rem 0 0.6rem;'
+                f'display:flex;align-items:baseline;gap:0.6rem">'
                 f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.14em;'
                 f'text-transform:uppercase;color:{color}">Round {rnd["n"]}</span>'
                 f'<span style="{_F}font-size:0.60rem;font-weight:700;color:#c8c8c8">'
@@ -594,17 +618,13 @@ def page_about_ai_workforce() -> None:
         cqo_output = cqo_state.get("last_output", "")
         if cqo_output:
             st.markdown(
-                f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.14em;'
-                f'text-transform:uppercase;color:#c0392b;margin-bottom:0.4rem">'
-                f'Latest CQO Audit</div>',
+                "<span class='aiw-section-hdr'>Latest CQO Audit</span>",
                 unsafe_allow_html=True,
             )
             _render_agent_full("quality_officer")
 
         st.markdown(
-            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#c0392b;margin:1rem 0 0.4rem">'
-            f'Active Corrections by Page</div>',
+            "<span class='aiw-section-hdr'>Active Corrections by Page</span>",
             unsafe_allow_html=True,
         )
         _render_cqo_remediations()

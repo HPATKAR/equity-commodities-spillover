@@ -19,13 +19,16 @@ from src.ui.shared import (
 )
 
 _F = "font-family:'DM Sans',sans-serif;"
+_M = "font-family:'JetBrains Mono',monospace;"
+_G = "#CFB991"
 
 
 def _label(txt: str) -> None:
     import streamlit as _st
     _st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">{txt}</p>',
+        f'<p style="{_M}font-size:7.5px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:.16em;color:{_G};border-bottom:1px solid #1e1e1e;'
+        f'padding-bottom:4px;margin:.8rem 0 .4rem">{txt}</p>',
         unsafe_allow_html=True,
     )
 from src.data.config import PALETTE
@@ -214,7 +217,7 @@ def _kpi(col, label: str, value: str, delta: str = "", delta_up: bool | None = N
         f'<div style="background:#fafaf8;border:1px solid #E8E5E0;border-radius:0;'
         f'padding:10px 14px;margin-bottom:8px">'
         f'<div style="{_F}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.12em;color:#8E6F3E;margin-bottom:2px">{label}</div>'
+        f'letter-spacing:0.12em;color:#8E9AAA;margin-bottom:2px">{label}</div>'
         f'<div style="{_F}font-size:1.05rem;font-weight:700;color:#000;line-height:1.2">{value}</div>'
         f'<div style="{_F}font-size:0.65rem;margin-top:2px">{arrow}</div>'
         f'</div>',
@@ -531,7 +534,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 _phase, _pcolor = "EARLY-CYCLE RECOVERY", "#1e8449"
                 _psub = "PMI expanding and curve positive - cyclicals, copper, and energy are the beneficiaries"
             else:
-                _phase, _pcolor = "MID-CYCLE EXPANSION", "#8E6F3E"
+                _phase, _pcolor = "MID-CYCLE EXPANSION", "#8E9AAA"
                 _psub = "Balanced conditions - quality growth equities and stable commodity demand"
             _regime_banner(_phase, _psub, _pcolor)
         except Exception:
@@ -594,7 +597,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     s_yoy = s.pct_change(12) * 100
                     fig_ip = go.Figure(go.Scatter(
                         x=s_yoy.dropna().index, y=s_yoy.dropna().values,
-                        line=dict(color="#8E6F3E", width=1.8),
+                        line=dict(color="#8E9AAA", width=1.8),
                         fill="tozeroy", fillcolor="rgba(142,111,62,0.08)",
                         name="Ind. Production YoY %",
                     ))
@@ -737,7 +740,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     s = money_data["Fed Total Assets ($B)"].last("10Y")
                     fig_fed = go.Figure(go.Scatter(
                         x=s.index, y=s.values / 1000,
-                        name="Fed Assets ($T)", line=dict(color="#8E6F3E", width=2),
+                        name="Fed Assets ($T)", line=dict(color="#8E9AAA", width=2),
                         fill="tozeroy", fillcolor="rgba(142,111,62,0.1)",
                     ))
                     fig_fed.update_layout(
@@ -790,7 +793,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
             with y_l:
                 fig_yld = go.Figure()
-                colors = ["#CFB991", "#8E6F3E", "#c0392b", "#2e7d32", "#3498db"]
+                colors = ["#CFB991", "#8E9AAA", "#c0392b", "#2e7d32", "#3498db"]
                 for i, col in enumerate(yields_df.columns):
                     fig_yld.add_trace(go.Scatter(
                         x=yields_df.index, y=yields_df[col],
@@ -816,7 +819,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 fig_curve = go.Figure(go.Scatter(
                     x=x_vals, y=y_vals, mode="lines+markers",
                     line=dict(color="#CFB991", width=2),
-                    marker=dict(size=7, color="#8E6F3E"),
+                    marker=dict(size=7, color="#8E9AAA"),
                     name="Yield Curve",
                 ))
                 fig_curve.update_layout(
@@ -1215,7 +1218,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:0;'
             f'padding:10px 14px;margin-bottom:8px">'
             f'<div style="{_F}font-size:0.54rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:0.12em;color:#8E6F3E;margin-bottom:2px">{label}</div>'
+            f'letter-spacing:0.12em;color:#8E9AAA;margin-bottom:2px">{label}</div>'
             f'<div style="{_F}font-size:1.0rem;font-weight:700;color:#e8e9ed;line-height:1.2">{value}</div>'
             f'<div style="{_F}font-size:0.62rem;color:#8890a1;margin-top:2px">{sub}</div>'
             f'{_bar}</div>',
@@ -1416,7 +1419,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 0.6rem">Anatomy of a Private Credit Bust</p>',
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 0.6rem">Anatomy of a Private Credit Bust</p>',
         unsafe_allow_html=True,
     )
 

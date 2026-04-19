@@ -379,8 +379,9 @@ def page_ai_chat(start: str, end: str) -> None:
     # ── Suggested questions (first visit only) ────────────────────────────────
     if not st.session_state["chat_messages"]:
         st.markdown(
-            '<p style="font-size:0.58rem;font-weight:700;letter-spacing:0.14em;'
-            'text-transform:uppercase;color:#6b7280;margin:0.8rem 0 0.4rem">Suggested questions</p>',
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;font-weight:700;'
+            'letter-spacing:.16em;text-transform:uppercase;color:#CFB991;'
+            'border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:.8rem 0 .4rem">Suggested Questions</p>',
             unsafe_allow_html=True,
         )
         cols = st.columns(2)
@@ -396,7 +397,7 @@ def page_ai_chat(start: str, end: str) -> None:
     # ── QUERY INPUT ───────────────────────────────────────────────────────────
     st.markdown(
         '<p style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-        'text-transform:uppercase;color:#8E6F3E;margin:0.6rem 0 0.25rem">Query Input</p>',
+        'text-transform:uppercase;color:#8E9AAA;margin:0.6rem 0 0.25rem">Query Input</p>',
         unsafe_allow_html=True,
     )
     _inp_col, _btn_col = st.columns([5, 1])

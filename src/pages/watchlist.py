@@ -33,10 +33,15 @@ _GROUP_MAP  = {name: grp  for (_, name, grp,  _)   in WATCHLIST}
 _HOURLY_ANNUAL = np.sqrt(252 * 23)   # ≈ 76.1
 
 
+_M = "font-family:'JetBrains Mono',monospace;"
+_G = "#CFB991"
+
+
 def _label(txt: str) -> None:
     st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 5px 0">{txt}</p>',
+        f'<p style="{_M}font-size:7.5px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:.16em;color:{_G};border-bottom:1px solid #1e1e1e;'
+        f'padding-bottom:4px;margin:.8rem 0 .4rem">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -169,7 +174,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         _TBL_CSS_SNAP = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#080808;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
 .ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
@@ -434,7 +439,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                     f'{vol_30d:.1f}% <span style="font-size:0.58rem">({regime_lbl})</span></span></div>'
                     f'{vol_24h_html}</div>'
                     f'<div style="margin-top:0.45rem;padding-top:0.4rem;border-top:1px solid #F0EDEA">'
-                    f'<span style="font-size:0.62rem;color:#8E6F3E">&#9872;&nbsp;{alert_ctx}</span>'
+                    f'<span style="font-size:0.62rem;color:#8E9AAA">&#9872;&nbsp;{alert_ctx}</span>'
                     f'</div></div>',
                     unsafe_allow_html=True,
                 )
@@ -555,7 +560,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 _TBL_CSS_COT = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
+.ec-table th{background:#080808;color:#CFB991;padding:7px 10px;text-align:left;
     border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
     letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
 .ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}

@@ -124,7 +124,7 @@ def _render_alpha_display(alpha: float) -> None:
         f'<div style="text-align:center;padding:12px 8px;'
         f'background:#0d0d0d;border:1px solid #2a2a2a">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-        f'color:#555960;letter-spacing:2px;text-transform:uppercase">α (Act Weight)</span>'
+        f'color:#555960;letter-spacing:.16em;text-transform:uppercase">α (Act Weight)</span>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:28px;'
         f'font-weight:700;color:{color};margin:4px 0">{alpha_pct:.0f}%</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
@@ -144,7 +144,7 @@ def _render_methodology() -> None:
         '<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
         'padding:10px 14px;margin-top:8px">'
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-        'color:#555960;letter-spacing:2px;margin:0 0 4px">METHODOLOGY</p>'
+        'color:#555960;letter-spacing:.16em;margin:0 0 4px">METHODOLOGY</p>'
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
         'color:#8E9AAA;line-height:1.6;margin:0">'
         'News GPR = α · Act Score + (1−α) · Threat Score. '
@@ -227,7 +227,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
                 f'height:160px;display:flex;flex-direction:column;'
                 f'align-items:center;justify-content:center;gap:4px">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-                f'color:#555960;letter-spacing:2px;text-transform:uppercase">{_lbl}</span>'
+                f'color:#555960;letter-spacing:.16em;text-transform:uppercase">{_lbl}</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
                 f'font-weight:700;color:{_col};opacity:.4">— —</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
@@ -240,7 +240,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
             f'height:160px;display:flex;flex-direction:column;'
             f'align-items:center;justify-content:center;gap:4px;margin-top:10px">'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-            f'color:#555960;letter-spacing:2px">α (ACT WEIGHT)</span>'
+            f'color:#555960;letter-spacing:.16em">α (ACT WEIGHT)</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
             f'font-weight:700;color:#555960;opacity:.4">—</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
@@ -308,7 +308,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
     # ── Row 4: per-conflict breakdown ──────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'PER-CONFLICT NEWS GPR</p>',
         unsafe_allow_html=True,
     )

@@ -20,6 +20,13 @@ from src.ui.shared import (
     _chart, _page_intro, _section_note, _definition_block,
     _page_conclusion, _page_header, _page_footer, _no_api_key_banner,
 )
+from src.analysis.war_country_scores import (
+    WAR_DATA as _WAR_DATA,
+    COUNTRY_WAR_WEIGHTS as _COUNTRY_WAR_WEIGHTS,
+    COUNTRY_INDICES as _COUNTRY_INDICES,
+    DEFAULT_WAR_WEIGHTS as _DEFAULT_WAR_WEIGHTS,
+    war_multipliers as _war_multipliers,
+)
 
 
 # ── Full world ISO-3 list (unscored countries get 0 → cream, choropleth covers all land) ──
@@ -83,222 +90,9 @@ _NAMES: dict[str, str] = {
     "OMN": "Oman",            "BHR": "Bahrain",
 }
 
-# ISO-3 → tracked equity indices
-_COUNTRY_INDICES: dict[str, list[str]] = {
-    "USA": ["S&P 500", "Nasdaq 100", "DJIA", "Russell 2000"],
-    "GBR": ["FTSE 100"],
-    "DEU": ["DAX"],
-    "FRA": ["CAC 40"],
-    "JPN": ["Nikkei 225", "TOPIX"],
-    "HKG": ["Hang Seng"],
-    "CHN": ["Shanghai Comp", "CSI 300"],
-    "IND": ["Sensex", "Nifty 50"],
-}
-
-
-# ── War impact scores (0–100) ─────────────────────────────────────────────────
-
-_WAR_DATA: list[dict] = [
-    {
-        "label":       "Ukraine War",
-        "event_label": "Ukraine War",
-        "color":       "#e74c3c",
-        "scores": {
-            "UKR": 100, "RUS": 88,  "BLR": 84,  "MDA": 78,
-            "POL": 78,  "FIN": 72,  "LTU": 70,  "LVA": 70,  "EST": 70,
-            "DEU": 74,  "ROU": 68,  "CZE": 65,  "SVK": 64,  "HUN": 62,
-            "BGR": 60,  "SRB": 52,  "HRV": 55,  "SVN": 52,  "GRC": 55,
-            "ITA": 62,  "FRA": 60,  "NLD": 58,  "BEL": 55,  "AUT": 58,
-            "SWE": 52,  "NOR": 50,  "DNK": 48,  "GBR": 48,
-            "CHE": 42,  "PRT": 38,  "ESP": 40,  "IRL": 30,  "LUX": 32,
-            "TUR": 48,  "GEO": 65,  "ARM": 50,  "AZE": 52,
-            "USA": 35,  "CAN": 28,  "BRA": 15,  "MEX": 12,
-            "ARG": 12,  "CHL": 10,  "COL": 10,
-            "JPN": 42,  "KOR": 35,  "CHN": 32,  "IND": 38,
-            "HKG": 30,  "TWN": 25,  "SGP": 22,
-            "AUS": 18,  "NZL": 14,
-            "PAK": 18,  "BGD": 14,  "VNM": 12,  "THA": 12,
-            "IDN": 10,  "MYS": 10,  "PHL": 10,
-            "ISR": 22,  "SAU": 20,  "ARE": 18,  "EGY": 20,
-            "TUN": 15,  "MAR": 14,  "DZA": 18,  "LBY": 22,
-            "IRN": 20,  "IRQ": 18,  "SYR": 25,  "JOR": 18,
-            "QAT": 15,  "KWT": 14,  "OMN": 12,  "BHR": 12,
-            "ZAF": 14,  "NGA": 12,  "KEN": 10,  "ETH": 10,  "SDN": 15,
-        },
-    },
-    {
-        "label":       "Israel-Hamas War",
-        "event_label": "Israel-Hamas",
-        "color":       "#f39c12",
-        "scores": {
-            "ISR": 100, "PSE": 100, "LBN": 88,  "YEM": 82,
-            "IRN": 80,  "SYR": 72,  "IRQ": 65,  "JOR": 70,
-            "EGY": 65,  "SAU": 62,  "QAT": 58,  "KWT": 50,
-            "ARE": 52,  "OMN": 45,  "BHR": 48,
-            "TUR": 55,  "LBY": 38,  "SDN": 35,  "MAR": 25,  "TUN": 28,
-            "DZA": 22,  "CYP": 42,  "GRC": 35,
-            "GBR": 35,  "DEU": 28,  "FRA": 32,  "ITA": 30,
-            "ESP": 28,  "NLD": 26,  "BEL": 25,  "PRT": 20,
-            "CHE": 18,  "SWE": 16,  "NOR": 18,  "DNK": 16,
-            "AUT": 22,  "POL": 18,  "HUN": 15,  "ROU": 15,
-            "USA": 30,  "CAN": 18,  "BRA": 10,  "MEX": 12,  "ARG": 10,
-            "JPN": 18,  "KOR": 20,  "CHN": 22,  "IND": 25,
-            "HKG": 22,  "TWN": 20,  "SGP": 28,
-            "PAK": 28,  "BGD": 22,  "IDN": 22,  "MYS": 20,
-            "VNM": 15,  "THA": 18,  "PHL": 14,
-            "AUS": 12,  "NZL": 10,
-            "RUS": 20,  "UKR": 18,
-            "ZAF": 14,  "NGA": 15,  "ETH": 12,  "KEN": 10,
-        },
-    },
-    {
-        "label":       "Iran/Hormuz Crisis",
-        "event_label": "Iran/Hormuz",
-        "color":       "#c0392b",
-        "scores": {
-            # Direct conflict parties
-            "IRN": 100, "ISR": 88,  "USA": 80,  "YEM": 75,
-            # Strait of Hormuz - critical chokepoint states
-            "OMN": 82,  "QAT": 80,  "ARE": 78,  "SAU": 78,
-            "KWT": 72,  "BHR": 70,  "IRQ": 68,
-            # Iran proxy / linked conflicts
-            "LBN": 65,  "SYR": 58,  "PSE": 62,  "JOR": 55,
-            # High oil/LNG import dependency via Hormuz
-            "JPN": 68,  "KOR": 65,  "IND": 62,  "PAK": 55,
-            "CHN": 55,  "SGP": 52,  "BGD": 30,
-            # Regional / shipping exposure
-            "EGY": 52,  "TUR": 50,  "GRC": 45,  "CYP": 40,
-            "ITA": 42,  "DEU": 40,  "GBR": 38,  "FRA": 38,
-            "NLD": 35,  "BEL": 28,  "ESP": 32,  "PRT": 22,
-            "NOR": 28,  "SWE": 20,  "DNK": 22,  "CHE": 18,
-            "AUT": 25,  "POL": 20,  "HUN": 18,  "ROU": 18,
-            # Asia-Pacific energy importers
-            "TWN": 48,  "HKG": 42,  "IDN": 32,  "MYS": 30,
-            "THA": 28,  "VNM": 22,  "PHL": 20,  "AUS": 25,
-            # Americas - indirect via oil price
-            "CAN": 15,  "BRA": 12,  "MEX": 14,  "ARG": 10,
-            # Africa - competing exporters / importers
-            "LBY": 25,  "DZA": 20,  "MAR": 18,  "TUN": 15,
-            "NGA": 15,  "ZAF": 20,  "ETH": 12,  "KEN": 10, "SDN": 18,
-            # Russia / Ukraine - indirect oil price benefit/exposure
-            "RUS": 18,  "UKR": 15,
-        },
-    },
-]
-
-
-# ── Country-specific conflict relevance weights ───────────────────────────────
-# (ukraine_weight, hamas_weight, iran_weight) - must sum to 1.0
-# Logic: weight reflects how much each conflict structurally drives risk
-# for that country (proximity, energy dependency, alliance, hometurf).
-_COUNTRY_WAR_WEIGHTS: dict[str, tuple[float, float, float]] = {
-    # ── Active conflict parties ──────────────────────────────────────────────
-    "UKR": (0.90, 0.06, 0.04),   # homeland invasion - Ukraine war dominates entirely
-    "RUS": (0.82, 0.08, 0.10),   # primary belligerent
-    "BLR": (0.84, 0.07, 0.09),   # de facto Russia proxy, deep Ukraine exposure
-    "ISR": (0.05, 0.70, 0.25),   # multi-front war: Hamas + Iran direct strikes
-    "PSE": (0.05, 0.88, 0.07),   # Gaza - entirely Hamas war
-    "IRN": (0.05, 0.15, 0.80),   # Iran/Hormuz is their war
-    "YEM": (0.08, 0.47, 0.45),   # Houthis active on both Hamas/Iran fronts
-
-    # ── Gulf States (Hormuz chokepoint - existential energy + port risk) ─────
-    "ARE": (0.07, 0.24, 0.69),   # Dubai port + Fujairah oil terminal ON the strait
-    "OMN": (0.06, 0.18, 0.76),   # shares Strait of Hormuz coastline with Iran
-    "QAT": (0.07, 0.20, 0.73),   # LNG exports transit Hormuz; US base present
-    "KWT": (0.08, 0.24, 0.68),   # oil exports entirely Hormuz-dependent
-    "BHR": (0.08, 0.26, 0.66),   # US 5th Fleet HQ; Hormuz-adjacent
-    "SAU": (0.07, 0.23, 0.70),   # majority of Saudi oil exports via Hormuz
-
-    # ── Israel conflict zone (Levant + Red Sea) ──────────────────────────────
-    "LBN": (0.06, 0.68, 0.26),   # Hezbollah front, Israeli strikes
-    "SYR": (0.15, 0.38, 0.47),   # Israeli strikes on Iran proxies; multi-war
-    "JOR": (0.07, 0.62, 0.31),   # Palestinian refugee pressure, direct airspace
-    "EGY": (0.10, 0.58, 0.32),   # Suez Canal + Red Sea - Hamas/Houthi primary
-    "IRQ": (0.12, 0.38, 0.50),   # Iran proxy militias + Hormuz energy channel
-
-    # ── Eastern Europe / NATO eastern flank ─────────────────────────────────
-    "MDA": (0.84, 0.08, 0.08),   # Transnistria conflict risk, direct neighbour
-    "POL": (0.80, 0.09, 0.11),   # NATO frontline, Ukrainian refugee host
-    "FIN": (0.78, 0.09, 0.13),   # longest NATO-Russia border
-    "LTU": (0.80, 0.08, 0.12),   # Suwalki Gap, Kaliningrad pressure
-    "LVA": (0.80, 0.08, 0.12),
-    "EST": (0.80, 0.08, 0.12),
-    "GEO": (0.76, 0.10, 0.14),   # prior Russian annexation (2008)
-    "ARM": (0.55, 0.12, 0.33),   # Armenian-Azerbaijani conflict + Iran proximity
-    "AZE": (0.55, 0.10, 0.35),
-
-    # ── Central/Eastern EU - Russian gas dependency ──────────────────────────
-    "DEU": (0.62, 0.16, 0.22),   # Nordstream, Zeitenwende military pivot
-    "AUT": (0.60, 0.15, 0.25),
-    "HUN": (0.58, 0.14, 0.28),   # Orbán pro-Russia stance, gas dependency
-    "CZE": (0.65, 0.14, 0.21),
-    "SVK": (0.64, 0.14, 0.22),
-    "BGR": (0.60, 0.16, 0.24),
-    "ROU": (0.62, 0.15, 0.23),
-    "HRV": (0.55, 0.18, 0.27),
-    "SRB": (0.55, 0.16, 0.29),
-    "SVN": (0.50, 0.18, 0.32),
-
-    # ── Western Europe - mixed Hormuz + Ukraine exposure ─────────────────────
-    "ITA": (0.32, 0.28, 0.40),   # Mediterranean energy corridor, Hormuz LNG
-    "GRC": (0.30, 0.28, 0.42),   # Aegean shipping, med energy
-    "CYP": (0.22, 0.32, 0.46),   # Nearest EU to Levant + Hormuz shipping
-    "FRA": (0.38, 0.28, 0.34),
-    "GBR": (0.36, 0.28, 0.36),
-    "NLD": (0.40, 0.24, 0.36),   # Rotterdam energy hub
-    "BEL": (0.38, 0.24, 0.38),
-    "ESP": (0.30, 0.28, 0.42),
-    "PRT": (0.28, 0.26, 0.46),
-    "SWE": (0.48, 0.20, 0.32),
-    "NOR": (0.42, 0.20, 0.38),   # North Sea producer but energy market exposed
-    "DNK": (0.42, 0.20, 0.38),
-    "CHE": (0.38, 0.22, 0.40),
-    "IRL": (0.32, 0.22, 0.46),
-    "LUX": (0.38, 0.24, 0.38),
-    "TUR": (0.38, 0.30, 0.32),   # Bosphorus/energy transit, Mideast proximity
-
-    # ── USA ──────────────────────────────────────────────────────────────────
-    "USA": (0.15, 0.33, 0.52),   # direct military in Iran/Hormuz; Israel patron; Ukraine aid
-    "CAN": (0.28, 0.20, 0.52),
-
-    # ── Asia-Pacific - Hormuz energy import dependency ───────────────────────
-    "JPN": (0.22, 0.14, 0.64),   # ~85% of oil imports transit Hormuz
-    "KOR": (0.24, 0.14, 0.62),   # ~75% of oil imports transit Hormuz
-    "TWN": (0.22, 0.14, 0.64),
-    "HKG": (0.20, 0.16, 0.64),
-    "CHN": (0.20, 0.16, 0.64),   # Hormuz-dependent; also Ukraine grain buyer
-    "SGP": (0.18, 0.18, 0.64),   # trading hub, Hormuz LNG/oil transit critical
-    "IND": (0.22, 0.16, 0.62),   # India-Pakistan conflict is separate event; Hormuz oil buyer
-    "PAK": (0.18, 0.20, 0.62),
-    "BGD": (0.18, 0.24, 0.58),
-    "IDN": (0.20, 0.22, 0.58),
-    "MYS": (0.18, 0.20, 0.62),
-    "THA": (0.22, 0.22, 0.56),
-    "VNM": (0.24, 0.20, 0.56),
-    "PHL": (0.22, 0.20, 0.58),
-    "AUS": (0.22, 0.18, 0.60),
-
-    # ── Latin America - indirect, oil price channel ───────────────────────────
-    "BRA": (0.16, 0.18, 0.66),
-    "MEX": (0.14, 0.20, 0.66),
-    "ARG": (0.18, 0.16, 0.66),
-    "CHL": (0.16, 0.16, 0.68),
-    "COL": (0.16, 0.18, 0.66),
-
-    # ── Africa ────────────────────────────────────────────────────────────────
-    "LBY": (0.18, 0.32, 0.50),   # Med coast, oil exporter, Hormuz pricing
-    "DZA": (0.18, 0.28, 0.54),
-    "MAR": (0.16, 0.30, 0.54),
-    "TUN": (0.16, 0.30, 0.54),
-    "NGA": (0.16, 0.18, 0.66),   # oil exporter, Hormuz pricing benchmark
-    "ZAF": (0.20, 0.18, 0.62),
-    "ETH": (0.18, 0.24, 0.58),
-    "KEN": (0.18, 0.22, 0.60),
-    "SDN": (0.16, 0.28, 0.56),
-}
-
-# Default weights for countries not explicitly listed above
-_DEFAULT_WAR_WEIGHTS = (0.36, 0.26, 0.38)  # mild Hormuz tilt - most global trade is energy
+# _COUNTRY_INDICES, _WAR_DATA, _COUNTRY_WAR_WEIGHTS, _DEFAULT_WAR_WEIGHTS
+# and _war_multipliers are imported from src.analysis.war_country_scores above.
+# Edit scoring data there — this file is visualization only.
 
 
 # ── Indian administered disputed territories - centroid hover markers ────────
@@ -384,73 +178,6 @@ def _war_period_returns(eq_r: pd.DataFrame) -> dict[str, dict[str, float]]:
                 cum = float((1 + s).prod() - 1) * 100
                 out.setdefault(idx, {})[war["label"]] = round(cum, 1)
     return out
-
-
-def _war_multipliers(cmd_r: pd.DataFrame) -> dict:
-    """
-    Compute live per-war intensity multipliers from commodity market signals.
-
-    Ukraine War      → driven by European gas dependency + broad oil spike.
-                       Natural gas z-score is the primary driver.
-    Israel-Hamas War → driven by safe-haven gold demand + Red Sea oil disruption.
-                       Gold z-score is the primary driver.
-    Iran/Hormuz      → almost entirely crude oil Strait-of-Hormuz risk.
-                       Oil z-score is the dominant driver.
-
-    Multiplier range: 0.65 (quiet/de-escalating) → 1.45 (hot escalation).
-    Baseline = 1.0. Scores are multiplied then clipped to [0, 100].
-
-    Returns dict with per-war multipliers + raw signal values for display.
-    """
-    if cmd_r.empty or len(cmd_r) < 30:
-        return {
-            "ukraine": 1.0, "hamas": 1.0, "iran": 1.0,
-            "signals": {}, "method": "fallback - insufficient data",
-        }
-
-    window = 20  # 20-trading-day rolling return for z-score
-
-    def _z(col_names: list[str]) -> float:
-        """Mean 20d cumulative return z-score for given commodity columns."""
-        cols = [c for c in col_names if c in cmd_r.columns]
-        if not cols:
-            return 0.0
-        cum = cmd_r[cols].rolling(window).sum().mean(axis=1) * 100
-        hist = cum.dropna()
-        if len(hist) < 40:
-            return 0.0
-        mu, sd = float(hist.iloc[:-1].mean()), float(hist.iloc[:-1].std())
-        if sd < 1e-6:
-            return 0.0
-        return float(np.clip((float(hist.iloc[-1]) - mu) / sd, -3.5, 3.5))
-
-    gas_z  = _z(["Natural Gas"])
-    oil_z  = _z(["WTI Crude Oil", "Brent Crude"])
-    gold_z = _z(["Gold"])
-
-    # ── Ukraine: gas z primary (0.55), oil z secondary (0.30), gold z minor (0.15) ──
-    ukraine_raw = 1.0 + 0.55 * (gas_z / 3.5) * 0.45 + 0.30 * (oil_z / 3.5) * 0.45 + 0.15 * (gold_z / 3.5) * 0.30
-    ukraine_m   = float(np.clip(ukraine_raw, 0.65, 1.45))
-
-    # ── Israel-Hamas: gold z primary (0.55), oil z secondary (0.35), gas minor (0.10) ──
-    hamas_raw = 1.0 + 0.55 * (gold_z / 3.5) * 0.40 + 0.35 * (oil_z / 3.5) * 0.40 + 0.10 * (gas_z / 3.5) * 0.20
-    hamas_m   = float(np.clip(hamas_raw, 0.65, 1.45))
-
-    # ── Iran/Hormuz: oil z dominant (0.75), gold z (0.20), gas minor (0.05) ──
-    iran_raw = 1.0 + 0.75 * (oil_z / 3.5) * 0.50 + 0.20 * (gold_z / 3.5) * 0.30 + 0.05 * (gas_z / 3.5) * 0.20
-    iran_m   = float(np.clip(iran_raw, 0.65, 1.45))
-
-    return {
-        "ukraine": round(ukraine_m, 3),
-        "hamas":   round(hamas_m,   3),
-        "iran":    round(iran_m,    3),
-        "signals": {
-            "Natural Gas z":   round(gas_z,  2),
-            "Crude Oil z":     round(oil_z,  2),
-            "Gold z":          round(gold_z, 2),
-        },
-        "method": "live 20d commodity z-scores",
-    }
 
 
 def _build_df(
@@ -900,7 +627,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     # ── War filter (above the hero) ───────────────────────────────────────────
     st.markdown(
         f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-        f'text-transform:uppercase;color:#8E6F3E;margin:0 0 4px">Filter by conflict</p>',
+        f'text-transform:uppercase;color:#8E9AAA;margin:0 0 4px">Filter by conflict</p>',
         unsafe_allow_html=True,
     )
     war_filter = st.radio(
@@ -929,7 +656,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         # Active conflict status cards
         st.markdown(
             f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 8px">Active Conflicts</p>',
+            f'text-transform:uppercase;color:#8E9AAA;margin:0 0 8px">Active Conflicts</p>',
             unsafe_allow_html=True,
         )
         for ev in active:
@@ -955,7 +682,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
                     unsafe_allow_html=True)
         st.markdown(
             f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 6px">'
+            f'text-transform:uppercase;color:#8E9AAA;margin:0 0 6px">'
             f'Today\'s live intensity multipliers</p>',
             unsafe_allow_html=True,
         )
@@ -965,7 +692,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             ("Iran/Hormuz",     multipliers["iran"],    "#c0392b"),
         ]
         for _wname, _m, _wc in _mult_rows:
-            _bar = int(min((_m - 0.65) / (1.45 - 0.65) * 100, 100))
+            _bar = int(min((_m - 0.92) / (1.15 - 0.92) * 100, 100))
             _mc  = "#c0392b" if _m > 1.15 else "#e67e22" if _m > 1.0 else "#2e7d32"
             st.markdown(
                 f'<div style="margin-bottom:6px">'
@@ -995,7 +722,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         # Impact scale legend
         st.markdown(
             f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 6px">Impact Scale</p>',
+            f'text-transform:uppercase;color:#8E9AAA;margin:0 0 6px">Impact Scale</p>',
             unsafe_allow_html=True,
         )
         for c, lbl in [
@@ -1021,7 +748,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         # Score methodology note
         st.markdown(
             f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-            f'text-transform:uppercase;color:#8E6F3E;margin:0 0 5px">Composite Score</p>'
+            f'text-transform:uppercase;color:#8E9AAA;margin:0 0 5px">Composite Score</p>'
             f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.6;margin:0">'
             f'<code style="font-size:0.62rem;background:#f0ede8;padding:1px 4px;'
             f'border-radius:2px">max(Ukraine, Hamas, Hormuz)</code> - the worst-case '
@@ -1385,7 +1112,7 @@ All intermediate scores triangulate from these anchors, cross-checked against:
     st.markdown(
         f'<div style="margin:1.2rem 0 0.4rem;border-top:1px solid #1e1e1e;padding-top:1rem">'
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E6F3E;margin:0 0 6px">Asset Exposure Overlay</p>'
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px">Asset Exposure Overlay</p>'
         f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0 0 10px;line-height:1.5">'
         f'Scenario-adjusted exposure scores for tracked assets — derived from the '
         f'structural conflict exposure registry, scaled by active TPS and current scenario multiplier.</p>'

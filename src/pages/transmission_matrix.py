@@ -348,7 +348,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
     # ── Section 1: Heatmap ─────────────────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin-bottom:4px">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
         'CIS-WEIGHTED CONFLICT × CHANNEL HEATMAP</p>',
         unsafe_allow_html=True,
     )
@@ -360,7 +360,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
     with col_l:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px;margin-bottom:4px">'
+            'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'PORTFOLIO CHANNEL STRESS</p>',
             unsafe_allow_html=True,
         )
@@ -369,7 +369,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
     with col_r:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px;margin-bottom:4px">'
+            'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'CONFLICT → CHANNEL → ASSET FLOW</p>',
             unsafe_allow_html=True,
         )
@@ -378,7 +378,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
     # ── Section 3: Commodity exposure ──────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'PORTFOLIO COMMODITY EXPOSURE  '
         '<span style="color:#555960">(CIS-weighted relevance)</span></p>',
         unsafe_allow_html=True,

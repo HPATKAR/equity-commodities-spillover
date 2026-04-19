@@ -68,7 +68,7 @@ def _render_kpi_row(stats: dict, scenario: dict) -> None:
                 f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                 f'padding:8px 10px">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-                f'color:#555960;letter-spacing:2px;text-transform:uppercase;'
+                f'color:#555960;letter-spacing:.16em;text-transform:uppercase;'
                 f'display:block">{label}</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
                 f'font-weight:700;color:{color};line-height:1.2;display:block">{value}</span>'
@@ -82,7 +82,7 @@ def _render_kpi_row(stats: dict, scenario: dict) -> None:
 def _render_exposure_table(items: list[dict], title: str = "RANKED EXPOSURE") -> None:
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        f'color:#8E9AAA;letter-spacing:2px;margin-bottom:6px">{title}</p>',
+        f'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">{title}</p>',
         unsafe_allow_html=True,
     )
     if not items:
@@ -350,7 +350,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     with col_side:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:2px;margin-bottom:6px">TOP HEDGES</p>',
+            'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">TOP HEDGES</p>',
             unsafe_allow_html=True,
         )
         _render_hedge_panel()
@@ -358,7 +358,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     # ── Asset drill-down ───────────────────────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'ASSET CONFLICT BETA DECOMPOSITION</p>',
         unsafe_allow_html=True,
     )
@@ -395,7 +395,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     # ── Conflict-specific affected universe ────────────────────────────────
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8E9AAA;letter-spacing:2px;margin:1.2rem 0 0.4rem">'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'CONFLICT AFFECTED UNIVERSE</p>',
         unsafe_allow_html=True,
     )
@@ -413,7 +413,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
         conf = conflict_options[conflict_id_sel]
         st.markdown(
             f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            f'color:#8E9AAA;letter-spacing:2px;margin-bottom:4px">'
+            f'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             f'ASSETS EXPOSED TO {conf["name"].upper()}</p>',
             unsafe_allow_html=True,
         )
@@ -433,7 +433,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
         '<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
         'padding:10px 14px;margin-top:16px">'
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-        'color:#555960;letter-spacing:2px;margin:0 0 4px">METHODOLOGY</p>'
+        'color:#555960;letter-spacing:.16em;margin:0 0 4px">METHODOLOGY</p>'
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
         'color:#8E9AAA;line-height:1.6;margin:0">'
         'SES (Structural Exposure Score): CIS-weighted average of per-conflict structural '

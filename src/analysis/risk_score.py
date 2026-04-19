@@ -496,7 +496,7 @@ def risk_score_history(
     energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
     vol_cols = [c for c in energy_metals if c in cmd_r.columns]
     if vol_cols:
-        rv        = cmd_r[vol_cols].rolling(30).std() * np.sqrt(252) * 100
+        rv        = cmd_r[vol_cols].rolling(20).std() * np.sqrt(252) * 100  # matches live _commodity_vol_residual_score
         avg_vol   = rv.mean(axis=1)
         v_mean    = avg_vol.ewm(span=60).mean()
         v_std     = avg_vol.ewm(span=60).std().replace(0, np.nan)
@@ -514,8 +514,8 @@ def risk_score_history(
         g_std  = g_cum.ewm(span=60).std().replace(0, np.nan)
         o_mean = o_cum.ewm(span=60).mean()
         o_std  = o_cum.ewm(span=60).std().replace(0, np.nan)
-        g_z    = ((g_cum - g_mean) / g_std).clip(-4, 4)
-        o_z    = ((o_cum - o_mean) / o_std).clip(-4, 4)
+        g_z    = ((g_cum - g_mean) / g_std).clip(-3.5, 3.5)  # matches war_country_scores z-clip
+        o_z    = ((o_cum - o_mean) / o_std).clip(-3.5, 3.5)
         # Flat +5 bonus when both elevated (matches live _oil_gold_signal fix)
         conflict_bonus = ((g_z > 1) & (o_z > 1)).astype(float) * 5.0
         og_score = (50 + g_z * 14 + o_z * 8 + conflict_bonus).clip(0, 100)
