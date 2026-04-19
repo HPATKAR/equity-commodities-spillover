@@ -381,7 +381,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         ("#27ae60", "CONFLICT MEDIA",  "GDELT 2.0 DOC API",
          "7-day article volume time-series per conflict · average tone · WoW volume trend · "
          "escalation signal (escalating / stable / de-escalating). No API key required.",
-         "Hourly", "~15 min", "3 h"),
+         "Hourly", "~15 min", "4 h"),
         ("#27ae60", "PHYSICAL STOCKS", "EIA Open Data",
          "U.S. crude oil · gasoline · distillate stocks · crude imports · natural gas storage. "
          "WoW, YoY, and vs-5-year seasonal average. Signal: draw (bullish) / build (bearish). "

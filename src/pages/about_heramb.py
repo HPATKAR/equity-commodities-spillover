@@ -283,7 +283,7 @@ def page_about_heramb() -> None:
             f"a 4-round dependency-ordered execution pipeline that auto-generates morning "
             f"briefings, stress outputs, and regime-filtered trade signals</span></li>"
             f"<li style='margin-bottom:4px;'><span class='ah-body'>"
-            f"Built a 6-source live intelligence layer: yfinance (50+ tickers), FRED (14 macro "
+            f"Built a 6-source live intelligence layer: yfinance (50+ tickers), FRED (24 macro "
             f"series), GDELT 2.0 (conflict media escalation), EIA Open Data (petroleum inventories), "
             f"IMF PortWatch (strait vessel traffic), and ACLED (armed conflict events) - "
             f"all feeding a proactive alert engine and AI analyst context</span></li>"
