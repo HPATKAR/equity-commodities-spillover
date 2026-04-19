@@ -861,6 +861,19 @@ def _render_geo_risk_block(
             unsafe_allow_html=True,
         )
 
+    # ── Market-freshness of lead conflict (affects ranking, not raw CIS) ─────
+    _lead_mf = 1.0
+    for _r in conflict_results.values():
+        if _r.get("name") == top_c:
+            _lead_mf = float(_r.get("market_freshness", 1.0))
+            break
+    # Only annotate when the multiplier is meaningfully different from neutral (1.0)
+    _lead_mf_sub = (
+        f'mkt x{_lead_mf:.2f} - {"boosted" if _lead_mf > 1.05 else "discounted"} by live signals'
+        if abs(_lead_mf - 1.0) > 0.05
+        else "highest CIS actor"
+    )
+
     # ── KPI strip - CSS grid guarantees equal-width tiles ─────────────────
     def _kt(lbl: str, val: str, vc: str, sub: str = "") -> str:
         return (
@@ -879,7 +892,7 @@ def _render_geo_risk_block(
         + _kt("Conflict Intensity",    f'{cis:.0f}',       cis_color, "CIS · 40% weight")
         + _kt("Transmission Pressure", f'{tps:.0f}',       tps_color, "TPS · 35% weight")
         + _kt("Market Confirmation",   f'{mcs:.0f}',       mcs_color, mcs_note or "MCS · 25% weight")
-        + _kt("Lead Conflict",         top_c_disp,         color,     "highest CIS actor")
+        + _kt("Lead Conflict",         top_c_disp,         color,     _lead_mf_sub)
         + _kt("News GPR",              news_gpr_val,       _GOLD,     news_gpr_sub)
         + _kt("Scenario",              sc_label.upper(),   sc_color,  f'geo ×{geo_mult:.2f}')
         + f'</div>',
