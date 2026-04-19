@@ -205,6 +205,52 @@ def fetch_all_conflict_intensities(
     }
 
 
+def acled_to_cis_dimensions(acled_result: dict, conflict_baseline: dict) -> dict:
+    """
+    Convert ACLED live event data into CIS dimension values that REPLACE the
+    hardcoded registry values when ACLED is configured and data is available.
+
+    This is the full live replacement (not just a nudge factor) for:
+      - deadliness           ← normalised fatalities vs conflict-type baseline
+      - geographic_diffusion ← event count spread (proxy for multi-region ops)
+      - escalation_trend     ← direct from ACLED escalation_signal
+
+    Parameters
+    ----------
+    acled_result      : dict returned by fetch_acled_intensity()
+    conflict_baseline : conflict dict from CONFLICTS registry (for fallback values
+                        and conflict-type calibration)
+
+    Returns
+    -------
+    dict with keys matching CIS dimension names. Only contains keys that ACLED
+    can confidently replace. Caller merges with hardcoded baseline using:
+        dims.update(acled_to_cis_dimensions(result, conflict))
+    """
+    if not acled_result.get("data_available"):
+        return {}
+
+    out: dict = {}
+
+    # ── deadliness: normalised fatalities ─────────────────────────────────────
+    # Scale: 0 fatalities → 0.0, 200+ fatalities/30d → 1.0 (linear, capped)
+    # 200/month ≈ Ukraine-scale intense combat; 20/month ≈ low-intensity conflict
+    fat = int(acled_result.get("fatalities_nd", 0))
+    out["deadliness"] = float(np.clip(fat / 200.0, 0.0, 1.0))
+
+    # ── geographic_diffusion: event count as proxy for operational spread ─────
+    # More events spread across locations → higher diffusion.
+    # Scale: 0 events → 0.0, 300+ events/30d → 1.0
+    events = int(acled_result.get("events_nd", 0))
+    out["geographic_diffusion"] = float(np.clip(events / 300.0, 0.0, 1.0))
+
+    # ── escalation_trend: direct from ACLED signal ────────────────────────────
+    # ACLED escalation_signal is already "escalating"/"stable"/"de-escalating"
+    out["escalation_trend"] = str(acled_result.get("escalation_signal", "stable"))
+
+    return out
+
+
 def acled_configured() -> bool:
     """True if ACLED credentials are set in environment."""
     return bool(os.environ.get("ACLED_API_KEY")) and bool(os.environ.get("ACLED_EMAIL"))

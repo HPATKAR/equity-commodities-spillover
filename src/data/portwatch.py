@@ -45,6 +45,19 @@ _DEFAULT_ENDPOINT = (
 _HORMUZ_PORTID   = "chokepoint6"   # forensically confirmed
 _OIL_TANKER_FRAC = 0.60            # crude+product ≈ 60% of n_tanker
 
+# PortWatch portid → strait_watch.py strait id mapping (forensically confirmed)
+PORTWATCH_STRAIT_MAP: dict[str, str] = {
+    "chokepoint1":  "suez",           # Suez Canal
+    "chokepoint4":  "bab_el_mandeb",  # Bab-el-Mandeb (Red Sea south entry)
+    "chokepoint5":  "malacca",        # Malacca Strait
+    "chokepoint6":  "hormuz",         # Strait of Hormuz
+    "chokepoint8":  "gibraltar",      # Gibraltar Strait
+}
+# Reverse: strait id → portid
+STRAIT_TO_PORTID: dict[str, str] = {v: k for k, v in PORTWATCH_STRAIT_MAP.items()}
+# Red Sea uses Bab-el-Mandeb as proxy (closest chokepoint with live data)
+STRAIT_TO_PORTID["red_sea"] = "chokepoint4"
+
 
 def _get_endpoint_and_token() -> tuple[str, str]:
     try:
@@ -155,6 +168,114 @@ def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
     df["oil_tanker"] = (df["n_tanker"] * _OIL_TANKER_FRAC).round().astype(int)
 
     return df[["date", "n_tanker", "oil_tanker", "n_total", "capacity_tanker"]]
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
+    """
+    Generic version of load_hormuz_tankers for any PortWatch chokepoint.
+
+    Parameters
+    ----------
+    portid : str — e.g. "chokepoint1", "chokepoint4", "chokepoint6"
+    days   : int — lookback window
+
+    Returns DataFrame columns: date, n_tanker, oil_tanker, n_total, capacity_tanker
+    """
+    import requests
+
+    url, token   = _get_endpoint_and_token()
+    cutoff       = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+    cutoff_year  = cutoff.year
+    cutoff_month = cutoff.month
+
+    where = (
+        f"portid='{portid}' AND ("
+        f"year>{cutoff_year} OR "
+        f"(year={cutoff_year} AND month>={cutoff_month})"
+        f")"
+    )
+    params: dict = {
+        "where":             where,
+        "outFields":         "date,year,month,day,n_tanker,n_total,capacity_tanker",
+        "orderByFields":     "date ASC",
+        "resultRecordCount": 500,
+        "f":                 "json",
+    }
+    if token:
+        params["token"] = token
+
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        return pd.DataFrame()
+
+    if "error" in data or not data.get("features"):
+        return pd.DataFrame()
+
+    rows = [f["attributes"] for f in data["features"]]
+    df   = pd.DataFrame(rows)
+
+    if "date" not in df.columns or "n_tanker" not in df.columns:
+        return pd.DataFrame()
+
+    df["date"] = pd.to_datetime(df["date"], unit="ms", utc=True).dt.tz_localize(None)
+    df = df.sort_values("date").reset_index(drop=True)
+    df["oil_tanker"] = (df["n_tanker"] * _OIL_TANKER_FRAC).round().astype(int)
+
+    return df[["date", "n_tanker", "oil_tanker", "n_total", "capacity_tanker"]]
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_all_straits_live(days_lookback: int = 7) -> dict[str, dict]:
+    """
+    Fetch live ship count snapshot for all mapped straits via PortWatch.
+
+    Returns {strait_id: {ships_current, ships_prior, ships_24h_change,
+                         ships_7d_avg, source, as_of}}
+
+    ships_current    = most recent day's n_tanker
+    ships_24h_change = current - prior day
+    ships_7d_avg     = 7-day rolling mean of n_tanker
+    source           = "PortWatch live" or "unavailable"
+    """
+    result: dict[str, dict] = {}
+    _empty_strait = {
+        "ships_current":    None,
+        "ships_prior":      None,
+        "ships_24h_change": None,
+        "ships_7d_avg":     None,
+        "source":           "unavailable",
+        "as_of":            None,
+    }
+
+    for strait_id, portid in STRAIT_TO_PORTID.items():
+        try:
+            df = load_strait_tankers(portid, days=max(days_lookback + 5, 14))
+            if df.empty or len(df) < 2:
+                result[strait_id] = dict(_empty_strait)
+                continue
+
+            current    = int(df["n_tanker"].iloc[-1])
+            prior      = int(df["n_tanker"].iloc[-2])
+            delta      = current - prior
+            avg_7d     = float(df["n_tanker"].tail(7).mean())
+            as_of_date = str(df["date"].iloc[-1].date())
+
+            result[strait_id] = {
+                "ships_current":    current,
+                "ships_prior":      prior,
+                "ships_24h_change": delta,
+                "ships_7d_avg":     round(avg_7d, 1),
+                "source":           "PortWatch live",
+                "as_of":            as_of_date,
+            }
+        except Exception:
+            result[strait_id] = dict(_empty_strait)
+
+    return result
 
 
 def brent_sensitivity_table(base_price: float) -> pd.DataFrame:

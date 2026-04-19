@@ -258,39 +258,51 @@ def page_strait_watch(start: str, end: str) -> None:
     _pw_loaded = False
 
     try:
-        from src.data.portwatch import load_hormuz_tankers
-        with st.spinner("Fetching IMF PortWatch live tanker data…"):
-            _pw_df = load_hormuz_tankers(days=365)
-        if not _pw_df.empty:
-            _pw_loaded  = True
-            _latest     = _pw_df.iloc[-1]
-            _live_total = int(_latest["n_tanker"])
-            _live_oil   = int(_latest["oil_tanker"])
-            _live_date  = pd.Timestamp(_latest["date"]).strftime("%b %d")
-            _prev_oil   = int(_pw_df.iloc[-2]["oil_tanker"]) if len(_pw_df) >= 2 else _live_oil
-            _live_delta = _live_oil - _prev_oil
+        from src.data.portwatch import load_hormuz_tankers, load_all_straits_live, STRAIT_TO_PORTID
 
-            for s in _straits:
-                if s["id"] == "hormuz":
-                    s["ships_current"]    = _live_oil
-                    s["ships_24h_change"] = _live_delta
-                    s["_live"]            = True
-                    s["_live_date"]       = _live_date
-                    s["_live_total"]      = _live_total
-                    s["ships_context"] = (
-                        f"IMF PortWatch (live · {_live_date}): {_live_total} total tankers/day · "
-                        f"{_live_oil} estimated oil tankers (60% proxy). "
-                        f"Baseline: {s['ships_baseline']}/day historical average."
-                    )
-                    # Publish disruption level to session_state so conflict_model.py
-                    # can use it in build_market_signals() for dynamic ranking.
-                    # disruption = 1 − (live_oil / baseline_oil_estimate)
+        with st.spinner("Fetching IMF PortWatch live data for all straits…"):
+            # Legacy Hormuz load (used for the detailed 365-day chart later in the page)
+            _pw_df = load_hormuz_tankers(days=365)
+
+            # New: live snapshot for ALL mapped straits
+            _live_straits = load_all_straits_live(days_lookback=7)
+
+        _pw_loaded = not _pw_df.empty
+
+        for s in _straits:
+            sid = s["id"]
+            live = _live_straits.get(sid, {})
+
+            if live.get("source") == "PortWatch live" and live.get("ships_current") is not None:
+                _live_total = live["ships_current"]
+                _live_delta = live["ships_24h_change"] or 0
+                _live_date  = live["as_of"] or "live"
+                _live_7d    = live["ships_7d_avg"]
+
+                s["ships_current"]    = _live_total
+                s["ships_24h_change"] = _live_delta
+                s["_live"]            = True
+                s["_live_date"]       = _live_date
+                s["ships_context"] = (
+                    f"IMF PortWatch (live · {_live_date}): {_live_total} tankers/day "
+                    f"({'↓' if _live_delta < 0 else '↑'}{abs(_live_delta)} vs yesterday). "
+                    f"7-day avg: {_live_7d}. "
+                    f"Baseline: {s['ships_baseline']}/day."
+                )
+
+                # Publish disruption fraction to session_state for conflict_model.py
+                if sid == "hormuz":
                     _baseline_oil = round(s["ships_baseline"] * 0.60)
-                    _disruption   = max(0.0, 1.0 - _live_oil / max(_baseline_oil, 1))
-                    st.session_state["_hormuz_disruption"] = round(_disruption, 3)
-                    break
+                    _oil_proxy    = round(_live_total * 0.60)
+                    _disruption   = max(0.0, 1.0 - _oil_proxy / max(_baseline_oil, 1))
+                    st.session_state["_hormuz_disruption"]  = round(_disruption, 3)
+
+                    # Also store for Hormuz chart (legacy path uses _pw_df)
+                    if not _pw_df.empty:
+                        s["_live_total"] = _live_total
+
     except Exception as _pw_err:
-        st.caption(f"PortWatch vessel counts unavailable ({type(_pw_err).__name__}) — disruption scores derived from commodity signals only.")
+        st.caption(f"PortWatch live counts unavailable ({type(_pw_err).__name__}) — showing last-known estimates.")
 
     # ── Load price data ────────────────────────────────────────────────────────
     with st.spinner("Loading commodity price data…"):
@@ -458,6 +470,21 @@ def page_strait_watch(start: str, end: str) -> None:
             else "AIS density · BIMCO / Lloyd's · Est. weekly"
         )
 
+        # 24h change: only show a number when data is genuinely live.
+        # Hardcoded _STRAITS deltas are rough quarterly estimates — showing
+        # them as a precise "▼2" number is misleading for non-live straits.
+        if is_live:
+            chg_html = (
+                f'<span style="{_M}font-size:0.72rem;font-weight:700;color:{chg_col}">'
+                f'{chg_sym}{abs(chg_24h)}</span>'
+                f'<span style="{_F}font-size:0.52rem;color:#555960;margin-left:4px">24h change</span>'
+            )
+        else:
+            chg_html = (
+                f'<span style="{_M}font-size:0.72rem;font-weight:700;color:#555960">—</span>'
+                f'<span style="{_F}font-size:0.52rem;color:#444;margin-left:4px">24h (est. only)</span>'
+            )
+
         with col:
             st.markdown(
                 f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
@@ -479,9 +506,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 f'ships/day</span></div>'
 
                 f'<div style="display:flex;align-items:center;gap:6px;margin:5px 0 8px">'
-                f'<span style="{_M}font-size:0.72rem;font-weight:700;color:{chg_col}">'
-                f'{chg_sym}{abs(chg_24h)}</span>'
-                f'<span style="{_F}font-size:0.52rem;color:#555960">24h change</span>'
+                f'{chg_html}'
                 f'</div>'
 
                 f'<div style="{_F}font-size:0.46rem;color:#444;margin-bottom:3px">'

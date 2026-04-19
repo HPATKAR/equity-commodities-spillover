@@ -159,66 +159,53 @@ def _check_conflict_freshness(conflict: dict) -> tuple[bool, bool]:
 
 # ── Per-conflict scorers ──────────────────────────────────────────────────────
 
-def _acled_cis_nudge(conflict: dict) -> tuple[float, str]:
-    """
-    Fetch ACLED live event data and return a CIS nudge factor and escalation override.
-
-    Returns (nudge_factor, escalation_override) where:
-    - nudge_factor: multiplier applied to base CIS (e.g., 1.15 = 15% uplift if escalating)
-    - escalation_override: "escalating"/"stable"/"de-escalating" if ACLED data is available,
-      else "" (no override)
-
-    Only applied when ACLED API is configured and returns data_available=True.
-    """
-    try:
-        from src.data.acled import fetch_acled_intensity, acled_configured
-        if not acled_configured():
-            return 1.0, ""
-
-        acled_id = conflict.get("acled_id", "")
-        if not acled_id:
-            return 1.0, ""
-
-        result = fetch_acled_intensity(acled_id, days=30)
-        if not result.get("data_available"):
-            return 1.0, ""
-
-        trend = float(result.get("events_trend", 0.0))
-        escalation = str(result.get("escalation_signal", "stable"))
-
-        # Map trend magnitude to a multiplicative nudge: ±25% max
-        nudge = float(np.clip(1.0 + trend * 0.5, 0.75, 1.25))
-        return nudge, escalation
-    except Exception:
-        return 1.0, ""
-
 
 def compute_cis(conflict: dict) -> float:
     """
     Conflict Intensity Score for a single conflict.
     Returns value in [0, 100].
 
-    When ACLED API is configured, live event counts (last 30 days) are used to
-    nudge the score: escalating event trend → CIS × up to 1.25, de-escalating → × 0.75.
-    This replaces the purely static deadliness/escalation_trend dimensions with
-    live-verified data for registered conflicts.
+    When ACLED API is configured, live event counts (last 30 days) REPLACE the
+    hardcoded deadliness, geographic_diffusion, and escalation_trend dimensions
+    entirely. civilian_danger and fragmentation remain structural (no live proxy).
+    This is the full live replacement path (not just a multiplicative nudge).
     """
     state_mult = _STATE_MULT.get(conflict.get("state", "active"), 1.0)
 
-    # ACLED live nudge (no-op if API not configured)
-    acled_nudge, acled_escalation = _acled_cis_nudge(conflict)
-    effective_escalation = acled_escalation or conflict.get("escalation_trend", "stable")
-
-    # Dimension values
+    # ── Start from hardcoded registry values (structural baseline) ────────────
     dims = {
         "deadliness":           float(conflict.get("deadliness",           0.5)),
         "civilian_danger":      float(conflict.get("civilian_danger",      0.5)),
         "geographic_diffusion": float(conflict.get("geographic_diffusion", 0.3)),
         "fragmentation":        float(conflict.get("fragmentation",        0.2)),
-        "escalation_trend":     _ESCALATION_MAP.get(effective_escalation, 0.5),
+        "escalation_trend":     _ESCALATION_MAP.get(
+                                    conflict.get("escalation_trend", "stable"), 0.5),
         "recency":              _recency_score(conflict),
         "source_coverage":      float(conflict.get("source_coverage",      0.7)),
     }
+
+    # ── ACLED live dimension replacement (when API is configured) ─────────────
+    # acled_to_cis_dimensions() returns only the keys ACLED can replace:
+    #   deadliness, geographic_diffusion, escalation_trend
+    # The remaining keys (civilian_danger, fragmentation) stay structural.
+    acled_nudge = 1.0
+    try:
+        from src.data.acled import fetch_acled_intensity, acled_to_cis_dimensions, acled_configured
+        if acled_configured():
+            acled_id = conflict.get("acled_id", "")
+            if acled_id:
+                result = fetch_acled_intensity(acled_id, days=30)
+                live_dims = acled_to_cis_dimensions(result, conflict)
+                # Replace hardcoded values with live ACLED measurements
+                if "deadliness" in live_dims:
+                    dims["deadliness"] = live_dims["deadliness"]
+                if "geographic_diffusion" in live_dims:
+                    dims["geographic_diffusion"] = live_dims["geographic_diffusion"]
+                if "escalation_trend" in live_dims:
+                    dims["escalation_trend"] = _ESCALATION_MAP.get(
+                        live_dims["escalation_trend"], 0.5)
+    except Exception:
+        pass  # fall through to hardcoded baseline
 
     raw = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
     cis = float(np.clip(raw * state_mult * acled_nudge * 100, 0, 100))
