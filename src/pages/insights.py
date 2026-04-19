@@ -951,6 +951,139 @@ def _build_insights(
     except Exception:
         pass
 
+    # ── 13. PortWatch chokepoint disruption signal ────────────────────────
+    _n_attempted += 1
+    try:
+        from src.data.portwatch import load_all_straits_live
+        _straits = load_all_straits_live(days_lookback=10)
+
+        # Pre-crisis baseline tankers/day for each chokepoint (IMF PortWatch historical avg)
+        _BASELINES = {
+            "hormuz":       71,
+            "bab_el_mandeb": 48,
+            "suez":         58,
+            "malacca":      78,
+        }
+        _STRAIT_NAMES = {
+            "hormuz":        "Strait of Hormuz",
+            "bab_el_mandeb": "Bab el-Mandeb",
+            "suez":          "Suez Canal",
+            "malacca":       "Malacca Strait",
+        }
+
+        # Compute disruption % for each strait that has live data
+        _disruptions = []
+        for sid, baseline in _BASELINES.items():
+            d = _straits.get(sid, {})
+            cur = d.get("ships_current")
+            if cur is None:
+                continue
+            pct_disruption = (baseline - cur) / baseline
+            _disruptions.append((sid, cur, baseline, pct_disruption, d))
+
+        if not _disruptions:
+            raise ValueError("no strait data")
+
+        # Lead signal = most disrupted chokepoint
+        _disruptions.sort(key=lambda x: x[3], reverse=True)
+        _top_sid, _top_cur, _top_base, _top_pct, _top_d = _disruptions[0]
+        _top_name  = _STRAIT_NAMES.get(_top_sid, _top_sid.replace("_", " ").title())
+        _avg_7d    = _top_d.get("ships_7d_avg")
+        _delta_24h = _top_d.get("ships_24h_change")
+        _as_of     = _top_d.get("as_of", "")
+
+        # Severity thresholds
+        if _top_pct >= 0.50:
+            color, emoji = _RED, "■"
+            _sev = "CRITICAL"
+            headline = (
+                f"PortWatch: {_top_name} severely disrupted - "
+                f"{_top_cur} tankers/day vs. {_top_base} baseline "
+                f"({_top_pct:.0%} below normal)"
+            )
+            action = (
+                f"{_top_name} is operating at {100*(1-_top_pct):.0f}% of pre-crisis capacity. "
+                f"Crude and LNG rerouting through longer Cape routes adds ~$1-3/bbl to freight cost. "
+                f"Physical supply disruption at this level supports Brent/WTI risk premium of $5-15/bbl. "
+                f"Review long crude / short refinery margin positions."
+            )
+            conf = min(60 + int(_top_pct * 40), 88)
+        elif _top_pct >= 0.20:
+            color, emoji = _AMBER, "●"
+            _sev = "ELEVATED"
+            headline = (
+                f"PortWatch: {_top_name} traffic reduced - "
+                f"{_top_cur} tankers/day vs. {_top_base} baseline "
+                f"({_top_pct:.0%} below normal)"
+            )
+            action = (
+                f"Chokepoint traffic is running {_top_pct:.0%} below the pre-crisis baseline. "
+                f"Not yet a full disruption but warrants monitoring - incremental freight cost "
+                f"is building in. Watch for further daily step-downs in the 7-day average."
+            )
+            conf = min(50 + int(_top_pct * 60), 75)
+        elif _top_pct <= -0.10:
+            # Above baseline = recovery signal
+            color, emoji = _GREEN, "●"
+            _sev = "RECOVERY"
+            headline = (
+                f"PortWatch: {_top_name} traffic recovering - "
+                f"{_top_cur} tankers/day ({abs(_top_pct):.0%} above prior baseline)"
+            )
+            action = (
+                f"Traffic at {_top_name} is above the pre-crisis baseline. "
+                f"Geo risk premium in crude may compress as the physical supply risk recedes."
+            )
+            conf = 55
+        else:
+            color, emoji = _GREEN, "●"
+            _sev = "NORMAL"
+            headline = (
+                f"PortWatch: chokepoint traffic normal - {_top_name} "
+                f"{_top_cur} tankers/day (within 20% of baseline)"
+            )
+            action = (
+                "No material chokepoint disruption detected. "
+                "Physical supply-route risk is not a current Brent/WTI premium driver."
+            )
+            conf = 60
+
+        # Build corroborating table for other straits
+        _corr_rows = "".join(
+            f"<b>{_STRAIT_NAMES.get(sid, sid)}</b>: {cur} ships/day "
+            f"({'<b style=\"color:#c0392b\">' if pct >= 0.2 else ''}"
+            f"{pct:+.0%} vs baseline"
+            f"{'</b>' if pct >= 0.2 else ''}). "
+            for sid, cur, base, pct, _ in _disruptions
+        )
+        _delta_str = (
+            f"24h change: <b>{_delta_24h:+.0f} ships</b>. " if _delta_24h is not None else ""
+        )
+        _avg_str = (
+            f"7d avg: <b>{_avg_7d:.0f} ships/day</b>. " if _avg_7d is not None else ""
+        )
+
+        detail = (
+            f"IMF PortWatch live tanker transit counts (no key required). "
+            f"As of: <b>{_as_of}</b>. "
+            f"<br><br>{_top_name}: <b>{_top_cur} tankers/day</b> vs. baseline <b>{_top_base}</b>. "
+            f"{_delta_str}{_avg_str}"
+            f"<br><br>All monitored straits: {_corr_rows}"
+            f"<br><br>Methodology: disruption % = (baseline - current) / baseline. "
+            f"Baselines from IMF PortWatch pre-2024 rolling averages. "
+            f"Hormuz carries ~21% of global petroleum liquids; "
+            f"Bab el-Mandeb ~12% of global seaborne trade."
+        )
+        conf_lbl = f"PortWatch live - {_sev.lower()} disruption at {_top_name}"
+
+        cards.append(dict(
+            emoji=emoji, headline=headline, action=action, color=color,
+            detail_html=detail, confidence=conf, confidence_label=conf_lbl,
+            geo_driver=_top_name[:12],
+        ))
+    except Exception:
+        pass
+
     return cards, _n_attempted
 
 
