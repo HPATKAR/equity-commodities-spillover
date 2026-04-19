@@ -1933,6 +1933,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         if not _al_eq_r.empty and not _al_cmd_r.empty:
             _al_corr    = average_cross_corr_series(_al_eq_r, _al_cmd_r, window=60)
             _al_regimes = detect_correlation_regime(_al_corr)
+            _al_regime_insuf = bool(_al_regimes.attrs.get("insufficient_data", False))
             _alerts     = compute_alerts(
                 eq_r=_al_eq_r, cmd_r=_al_cmd_r,
                 avg_corr=_al_corr, regimes=_al_regimes,
@@ -1946,7 +1947,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 render_alert_banner(_critical, market_context=(
                     f"Geo risk {risk['score']:.0f}/100 ({risk['label']}). "
                     f"CIS {risk['cis']:.0f} · TPS {risk['tps']:.0f}. "
-                    f"Regime: {_al_regimes.iloc[-1] if not _al_regimes.empty else 1}/3. "
+                    f"Regime: {_al_regimes.iloc[-1] if not _al_regimes.empty else 1}/3"
+                    f"{' [INSUF DATA]' if _al_regime_insuf else ''}. "
                     f"Lead conflict: {(conflict_agg.get('top_conflict') or 'none').replace('_',' ')}."
                 ))
 

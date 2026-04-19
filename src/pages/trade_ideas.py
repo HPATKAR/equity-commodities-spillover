@@ -255,8 +255,11 @@ def _backtest_trade(
     if not avail or _all_r.empty or _regimes.empty:
         return {"n_signals": 0, "error": "Insufficient data"}
 
-    # Align regime to returns index
-    reg = _regimes.reindex(_all_r.index, method="ffill").fillna(1).astype(int)
+    # Align regime to returns index.
+    # limit=20: forward-fill only up to 20 trading days (intra-week alignment).
+    # Dates before the regime series begins, or gaps > 20 days, receive sentinel -1
+    # so they are excluded from signal generation rather than mislabelled Normal.
+    reg = _regimes.reindex(_all_r.index, method="ffill", limit=20).fillna(-1).astype(int)
 
     # Entry signal: first day of a qualifying regime
     in_regime = reg.isin(trigger_regimes).astype(int)
@@ -402,15 +405,15 @@ def _render_trade_card(
             f'<div style="background:#111;padding:0.35rem 0.5rem">'
             f'<div style="font-weight:700;color:#CFB991;font-size:0.55rem;text-transform:uppercase;'
             f'letter-spacing:0.10em;margin-bottom:2px">Entry</div>'
-            f'<span style="color:#ddd">{trade.get("entry","—")}</span></div>'
+            f'<span style="color:#ddd">{trade.get("entry","-")}</span></div>'
             f'<div style="background:#111;padding:0.35rem 0.5rem">'
             f'<div style="font-weight:700;color:#8890a1;font-size:0.55rem;text-transform:uppercase;'
             f'letter-spacing:0.10em;margin-bottom:2px">Exit</div>'
-            f'<span style="color:#ddd">{trade.get("exit","—")}</span></div>'
+            f'<span style="color:#ddd">{trade.get("exit","-")}</span></div>'
             f'<div style="background:#1a0000;padding:0.35rem 0.5rem">'
             f'<div style="font-weight:700;color:#c0392b;font-size:0.55rem;text-transform:uppercase;'
             f'letter-spacing:0.10em;margin-bottom:2px">Risks</div>'
-            f'<span style="color:#ddd">{trade.get("risk","—")}</span></div>'
+            f'<span style="color:#ddd">{trade.get("risk","-")}</span></div>'
             f'</div>'
             # ── Extended fields: stop / target / invalidation / holding ──
             + (
@@ -419,19 +422,19 @@ def _render_trade_card(
                 f'<div style="background:#0a100a;border:1px solid #1a2a1a;padding:0.3rem 0.5rem">'
                 f'<div style="font-weight:700;color:#27ae60;font-size:0.50rem;text-transform:uppercase;'
                 f'letter-spacing:0.10em;margin-bottom:2px">Stop</div>'
-                f'<span style="color:#ddd">{trade.get("stop","—")}</span></div>'
+                f'<span style="color:#ddd">{trade.get("stop","-")}</span></div>'
                 f'<div style="background:#0a100a;border:1px solid #1a2a1a;padding:0.3rem 0.5rem">'
                 f'<div style="font-weight:700;color:#27ae60;font-size:0.50rem;text-transform:uppercase;'
                 f'letter-spacing:0.10em;margin-bottom:2px">Target</div>'
-                f'<span style="color:#ddd">{trade.get("target","—")}</span></div>'
+                f'<span style="color:#ddd">{trade.get("target","-")}</span></div>'
                 f'<div style="background:#0d0d14;border:1px solid #1a1a2a;padding:0.3rem 0.5rem">'
                 f'<div style="font-weight:700;color:#2980b9;font-size:0.50rem;text-transform:uppercase;'
                 f'letter-spacing:0.10em;margin-bottom:2px">Invalidation</div>'
-                f'<span style="color:#ddd">{trade.get("invalidation","—")}</span></div>'
+                f'<span style="color:#ddd">{trade.get("invalidation","-")}</span></div>'
                 f'<div style="background:#111;border:1px solid #1e1e1e;padding:0.3rem 0.5rem">'
                 f'<div style="font-weight:700;color:#8890a1;font-size:0.50rem;text-transform:uppercase;'
                 f'letter-spacing:0.10em;margin-bottom:2px">Holding Period</div>'
-                f'<span style="color:#ddd">{trade.get("holding_period","—")}</span></div>'
+                f'<span style="color:#ddd">{trade.get("holding_period","-")}</span></div>'
                 f'</div>'
                 if any(trade.get(k) for k in ["stop", "target", "invalidation", "holding_period"])
                 else ""
@@ -549,7 +552,7 @@ def _render_trade_card(
                 if _sas_vals:
                     _avg_sas = sum(_sas_vals) / len(_sas_vals)
                     if _avg_sas >= 60:
-                        _pass_reasons.append(f"SAS {_avg_sas:.0f} — high exposure")
+                        _pass_reasons.append(f"SAS {_avg_sas:.0f} - high exposure")
                     elif _avg_sas >= 35:
                         _pass_reasons.append(f"SAS {_avg_sas:.0f}")
                 # Hedge signal
@@ -620,7 +623,7 @@ def _render_trade_card(
                 pass
 
         # ── Payoff table expander ──────────────────────────────────────────
-        with st.expander(f"Scenario Payoff Table — {trade['name'][:40]}", expanded=False):
+        with st.expander(f"Scenario Payoff Table - {trade['name'][:40]}", expanded=False):
             try:
                 from src.analysis.profit_projection import project_trade
                 proj   = project_trade(trade)
@@ -677,9 +680,9 @@ def _render_trade_card(
         _is_geo_trade  = trade.get("generated", False)
         _debate_open   = _is_geo_trade  # expand debate panel for geo trades by default
         _debate_label  = (
-            f"⚡ Agent Debate — {trade['name'][:40]}"
+            f"⚡ Agent Debate - {trade['name'][:40]}"
             if _is_geo_trade
-            else f"Agent Debate — {trade['name'][:40]}"
+            else f"Agent Debate - {trade['name'][:40]}"
         )
         with st.expander(_debate_label, expanded=_debate_open):
             try:
@@ -688,7 +691,7 @@ def _render_trade_card(
                     challenge_trade, get_subject_threads,
                 )
                 _trade_subject_id = trade.get("name", f"trade_{trade_idx}")
-                # Look up by subject_id (trade name) — works across sessions
+                # Look up by subject_id (trade name) - works across sessions
                 _stored_key = f"_debate_tid_{trade_idx}"
                 msgs = get_subject_threads(_trade_subject_id)
 
@@ -794,7 +797,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _ti_sid  = get_scenario_id()
         _ti_cis  = _ti_agg.get("portfolio_cis", _ti_agg.get("cis", 50.0))
         _ti_tps  = _ti_agg.get("portfolio_tps", _ti_agg.get("tps", 50.0))
-        _ti_top  = (_ti_agg.get("top_conflict", "—") or "—").replace("_", " ").title()
+        _ti_top  = (_ti_agg.get("top_conflict", "-") or "-").replace("_", " ").title()
         _ti_mult = _ti_sc.get("geo_mult", 1.0)
         _ti_sc_color = _ti_sc.get("color", "#CFB991")
 
@@ -825,7 +828,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
     except Exception as _geo_err:
-        st.caption(f"Geo context unavailable — conflict model load failed: {_geo_err}")
+        st.caption(f"Geo context unavailable - conflict model load failed: {_geo_err}")
 
     with st.spinner("Loading data…"):
         eq_r, cmd_r = load_returns(start, end)
@@ -837,6 +840,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Current regime ─────────────────────────────────────────────────────
     avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
     regimes  = detect_correlation_regime(avg_corr)
+    # Read attrs BEFORE any pandas operation (reindex/ffill lose attrs)
+    _regime_insuf = bool(regimes.attrs.get("insufficient_data", False))
+    _regime_n_obs = int(regimes.attrs.get("n_obs", 0))
     current  = int(regimes.iloc[-1]) if not regimes.empty else 1
     r_name   = _REGIME_NAMES[current]
     r_color  = _REGIME_COLORS[current]
@@ -917,12 +923,19 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
 
     k1, k2, k3, k4, k5, k6 = st.columns(6)
+    _regime_display = (
+        f'<div style="{_F_ti}font-size:1.0rem;font-weight:700;color:{r_color}">{r_name}</div>'
+        f'<div style="{_F_ti}font-size:0.52rem;color:#e67e22;margin-top:2px">'
+        f'INSUF DATA ({_regime_n_obs}&lt;60 obs)</div>'
+        if _regime_insuf else
+        f'<div style="{_F_ti}font-size:1.0rem;font-weight:700;color:{r_color}">{r_name}</div>'
+    )
     k1.markdown(
         f'<div style="border:1px solid {r_color};border-radius:0;'
         f'padding:0.6rem 0.85rem;background:#0d0d0d">'
         f'<div style="{_F_ti}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#CFB991;margin-bottom:3px">Regime</div>'
-        f'<div style="{_F_ti}font-size:1.0rem;font-weight:700;color:{r_color}">{r_name}</div>'
+        f'{_regime_display}'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -938,7 +951,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown(
         f'<p style="font-size:0.70rem;color:#8890a1;margin-bottom:0.6rem">'
-        f'<b style="color:#e8e8e8">{len(active_trades)}</b> ideas — '
+        f'<b style="color:#e8e8e8">{len(active_trades)}</b> ideas - '
         f'<b style="color:#e67e22">{_n_geo}</b> conflict-driven · '
         f'<b style="color:#8890a1">{_n_stat}</b> static · '
         f'sorted by exposure × confidence · regime: '
@@ -1119,7 +1132,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 "model": "Conflict-driven + regime-filtered trade ideas", "regime": r_name,
                 "assumption_count": 5, "trade_has_stop": True,
                 "notes": [
-                    f"Current regime index: {current}/3 — {len(active_trades)} ideas active after filters",
+                    f"Current regime index: {current}/3 - {len(active_trades)} ideas active after filters",
                     f"{_n_geo} conflict-generated candidates, {_n_stat} static library ideas",
                     "Trade entry/exit levels are illustrative ranges, not live-calibrated prices",
                     "Correlation-based regime uses 60d rolling window - whipsaws in trending vol regimes",

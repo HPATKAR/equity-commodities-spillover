@@ -98,7 +98,10 @@ def detect_correlation_regime(
     """
     s = avg_corr_series.dropna()
     if len(s) < 60:
-        return pd.Series(1, index=avg_corr_series.index, name="regime")
+        _insuf = pd.Series(1, index=avg_corr_series.index, name="regime")
+        _insuf.attrs["insufficient_data"] = True
+        _insuf.attrs["n_obs"] = len(s)
+        return _insuf
 
     # 1. Smooth with rolling median to remove single-day noise
     smoothed = s.rolling(smooth_window, min_periods=1, center=True).median()
@@ -144,6 +147,8 @@ def detect_correlation_regime(
     # Reindex back to original (may include NaN-leading rows)
     result = regime_out.reindex(avg_corr_series.index).ffill().fillna(1).astype(int)
     result.name = "regime"
+    result.attrs["insufficient_data"] = False
+    result.attrs["n_obs"] = len(s)
     return result
 
 
