@@ -719,6 +719,11 @@ _VALID_PAGES = {
 }
 _ABOUT_PAGES = {"about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce"}
 
+# Chat param must be read BEFORE navigation clears query_params
+if "chat" in st.query_params:
+    st.session_state["_global_chat_open"] = True
+    del st.query_params["chat"]
+
 _qp = st.query_params.get("page", "")
 if _qp in _VALID_PAGES:
     st.session_state["current_page"] = _qp
@@ -1570,7 +1575,7 @@ from src.pages.stress_test     import page_stress_test
 from src.pages.scenario_engine import page_scenario_engine
 from src.pages.macro_dashboard  import page_macro_dashboard
 from src.pages.model_accuracy   import page_model_accuracy
-from src.pages.ai_chat         import page_ai_chat
+from src.pages.ai_chat         import page_ai_chat, open_chat_dialog
 from src.pages.insights        import page_insights
 from src.pages.strait_watch    import page_strait_watch
 from src.pages.about_heramb       import page_about_heramb
@@ -1634,6 +1639,48 @@ if not st.session_state.get("_startup_warmed"):
     except Exception:
         pass
     st.session_state["_startup_warmed"] = True
+
+
+# ── Global floating AI chat launcher ─────────────────────────────────────────
+# Show FAB on every page except the full AI chat page (would be redundant).
+# Dialog triggered by ?chat=open URL param; one-time pop() prevents infinite reopen.
+if current != "ai_chat":
+    if st.session_state.pop("_global_chat_open", False):
+        open_chat_dialog(_start, _end)
+    components.html("""<script>
+(function() {
+    var pdoc = window.parent.document;
+    if (pdoc.getElementById('ec-chat-fab')) return;
+    var fab = pdoc.createElement('a');
+    fab.id = 'ec-chat-fab';
+    fab.href = '?chat=open';
+    fab.title = 'Open AI Research Desk';
+    fab.style.cssText = [
+        'position:fixed',
+        'bottom:24px',
+        'right:24px',
+        'z-index:9997',
+        'background:#0d0d0d',
+        'border:1px solid #CFB991',
+        'color:#CFB991',
+        'font-family:"JetBrains Mono",monospace',
+        'font-size:10px',
+        'font-weight:700',
+        'letter-spacing:.14em',
+        'text-transform:uppercase',
+        'text-decoration:none',
+        'padding:10px 14px',
+        'cursor:pointer',
+        'user-select:none',
+        'box-shadow:0 4px 24px rgba(0,0,0,.5)',
+        'transition:background .15s,color .15s',
+    ].join(';');
+    fab.textContent = 'AI DESK';
+    fab.onmouseover = function() { this.style.background='#CFB991'; this.style.color='#000'; };
+    fab.onmouseout  = function() { this.style.background='#0d0d0d'; this.style.color='#CFB991'; };
+    pdoc.body.appendChild(fab);
+})();
+</script>""", height=0)
 
 
 def _stub_page(name: str):

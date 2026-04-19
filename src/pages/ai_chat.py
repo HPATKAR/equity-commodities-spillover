@@ -286,8 +286,8 @@ INDIA / RUPEE MACRO FRAMEWORK
 LIVE DATA SOURCES IN CONTEXT BELOW
   Market prices       yfinance (equities, commodities, FI, FX)
   Conflict scores     CIS/TPS computed live from conflict_model.py
-  GDELT signals       Media volume escalation — 7-day trend, article tone (no API key)
-  PortWatch           IMF ArcGIS chokepoint tanker counts — live daily snapshots
+  GDELT signals       Media volume escalation - 7-day trend, article tone (no API key)
+  PortWatch           IMF ArcGIS chokepoint tanker counts - live daily snapshots
   ACLED               Armed conflict event/fatality counts (if API key configured)
 
 LIVE MARKET CONTEXT
@@ -316,6 +316,167 @@ _SUGGESTED = [
     "How does a Brent oil spike affect the Indian rupee and Nifty 50?",
     "What is the India private credit / RBI rate outlook right now?",
 ]
+
+
+# ── Shared chat core ───────────────────────────────────────────────────────
+
+def render_chat_core(start: str, end: str, show_status_bar: bool = True) -> None:
+    """
+    Single implementation of the chat engine: session state init, context
+    auto-load, message history, text input, and streaming API call.
+
+    Called by both page_ai_chat() (full AI Research Desk page) and
+    open_chat_dialog() (global floating launcher on every page).
+    Both share the same session-state keys, the same _SYSTEM_TEMPLATE, and
+    the same Anthropic / OpenAI code path - no duplication.
+
+    show_status_bar: show compact context-age label. Suppressed on the full
+    page (which has its own richer status bar above).
+    """
+    # API keys
+    anthropic_key = openai_key = ""
+    try:
+        _keys = st.secrets.get("keys", {})
+        anthropic_key = _keys.get("anthropic_api_key", "") or ""
+        openai_key    = _keys.get("openai_api_key", "")    or ""
+    except Exception:
+        pass
+    _has_key  = bool(anthropic_key or openai_key)
+    _provider = "anthropic" if anthropic_key else ("openai" if openai_key else None)
+
+    # Session state (idempotent - safe to call from multiple entry points)
+    if "chat_messages"   not in st.session_state:
+        st.session_state["chat_messages"]   = []
+    if "chat_context"    not in st.session_state:
+        st.session_state["chat_context"]    = None
+    if "chat_context_ts" not in st.session_state:
+        st.session_state["chat_context_ts"] = None
+
+    # Auto-load context on first call (shared with refresh button in page_ai_chat)
+    if st.session_state["chat_context"] is None:
+        with st.spinner("Loading market context..."):
+            st.session_state["chat_context"]    = _build_market_context(start, end)
+            st.session_state["chat_context_ts"] = datetime.datetime.now()
+
+    context = st.session_state["chat_context"] or ""
+
+    # Compact status line (suppressed on full page which has its own status bar)
+    if show_status_bar and st.session_state["chat_context_ts"]:
+        _delta = datetime.datetime.now() - st.session_state["chat_context_ts"]
+        _age   = (f"{int(_delta.total_seconds() // 60)}m ago"
+                  if _delta.total_seconds() >= 60 else "just loaded")
+        _ctx_ok = context and not context.startswith("Market data unavailable")
+        st.markdown(
+            f'<p style="font-size:0.58rem;color:#8890a1;margin:0 0 0.5rem">'
+            f'Context: <span style="color:{"#CFB991" if _ctx_ok else "#c0392b"};'
+            f'font-family:\'JetBrains Mono\',monospace;font-weight:600">{_age}</span></p>',
+            unsafe_allow_html=True,
+        )
+
+    # Message history
+    for msg in st.session_state["chat_messages"]:
+        with st.chat_message(msg["role"]):
+            if msg["role"] == "assistant":
+                st.markdown(
+                    '<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+                    'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.25rem">'
+                    'AI Analyst</span>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown(msg["content"])
+
+    # Input
+    st.markdown(
+        '<p style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+        'text-transform:uppercase;color:#8E9AAA;margin:0.6rem 0 0.25rem">Query Input</p>',
+        unsafe_allow_html=True,
+    )
+    _inp_col, _btn_col = st.columns([5, 1])
+    _typed = _inp_col.text_area(
+        "Ask the analyst",
+        placeholder="e.g. How is the current regime affecting oil-equity correlations?",
+        height=80,
+        label_visibility="collapsed",
+        key="chat_textarea",
+    )
+    _send = _btn_col.button("Send", type="primary", key="send_chat", use_container_width=True)
+    # _sq_input may be set by suggested-question buttons in page_ai_chat;
+    # pop() returns None in the launcher context (no suggested questions there)
+    _sq   = st.session_state.pop("_sq_input", None)
+    user_input = _sq or (_typed.strip() if (_send and _typed.strip()) else None)
+
+    # Handle new input
+    if user_input:
+        if not _has_key:
+            st.warning("Add an API key to .streamlit/secrets.toml to enable responses.")
+        else:
+            st.session_state["chat_messages"].append({"role": "user", "content": user_input})
+            with st.chat_message("user"):
+                st.markdown(user_input)
+
+            system_prompt = _SYSTEM_TEMPLATE.format(context=context)
+            api_messages  = [{"role": "system", "content": system_prompt}]
+            for m in st.session_state["chat_messages"][-20:]:
+                api_messages.append({"role": m["role"], "content": m["content"]})
+
+            with st.chat_message("assistant"):
+                st.markdown(
+                    '<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
+                    'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.25rem">'
+                    'AI Analyst</span>',
+                    unsafe_allow_html=True,
+                )
+                response = ""
+                try:
+                    if _provider == "anthropic":
+                        import anthropic as _ant
+                        _client = _ant.Anthropic(api_key=anthropic_key)
+                        with _client.messages.stream(
+                            model="claude-sonnet-4-6",
+                            max_tokens=1024,
+                            system=system_prompt,
+                            messages=[m for m in api_messages if m["role"] != "system"],
+                        ) as _stream:
+                            response = st.write_stream(_stream.text_stream)
+                    else:
+                        from openai import OpenAI as _OpenAI
+                        _client = _OpenAI(api_key=openai_key)
+                        _stream = _client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=api_messages,
+                            max_tokens=1024,
+                            temperature=0.25,
+                            stream=True,
+                        )
+                        response = st.write_stream(
+                            c.choices[0].delta.content
+                            for c in _stream
+                            if c.choices[0].delta.content
+                        )
+                except Exception as e:
+                    response = f"Request failed: {e}"
+                    st.error(response)
+
+            st.session_state["chat_messages"].append(
+                {"role": "assistant", "content": response}
+            )
+
+    # Clear button (button click already triggers rerun - no explicit st.rerun needed)
+    if st.session_state["chat_messages"]:
+        st.markdown("<br>", unsafe_allow_html=True)
+        c1, c2 = st.columns([1, 5])
+        if c1.button("Clear conversation", key="clear_chat"):
+            st.session_state["chat_messages"] = []
+
+
+@st.dialog("AI Research Desk", width="large")
+def open_chat_dialog(start: str, end: str) -> None:
+    """
+    Global floating chat launcher (every page except AI Research Desk).
+    Opens as a modal and delegates entirely to render_chat_core() -
+    same session state, same context, same API as the full page.
+    """
+    render_chat_core(start, end, show_status_bar=True)
 
 
 # ── Page ───────────────────────────────────────────────────────────────────
@@ -425,7 +586,8 @@ def page_ai_chat(start: str, end: str) -> None:
     _has_key  = bool(anthropic_key or openai_key)
     _provider = "anthropic" if anthropic_key else ("openai" if openai_key else None)
 
-    # ── Session state ─────────────────────────────────────────────────────────
+    # ── Session state init (render_chat_core is also idempotent, but the
+    #    refresh button below needs these keys to exist first) ────────────────
     if "chat_messages"   not in st.session_state:
         st.session_state["chat_messages"]   = []
     if "chat_context"    not in st.session_state:
@@ -433,17 +595,16 @@ def page_ai_chat(start: str, end: str) -> None:
     if "chat_context_ts" not in st.session_state:
         st.session_state["chat_context_ts"] = None
 
-    # ── Auto-load context on first visit ──────────────────────────────────────
+    # Explicit context refresh (page-only feature; auto-load is inside render_chat_core
+    # so it also fires when the launcher opens on a different page).
     status_col, btn_col = st.columns([6, 1])
     _refresh = btn_col.button("Refresh context", key="refresh_ctx", use_container_width=True)
-
-    if st.session_state["chat_context"] is None or _refresh:
-        with st.spinner("Loading live market context…"):
-            ctx = _build_market_context(start, end)
-            st.session_state["chat_context"]    = ctx
+    if _refresh:
+        with st.spinner("Loading live market context..."):
+            st.session_state["chat_context"]    = _build_market_context(start, end)
             st.session_state["chat_context_ts"] = datetime.datetime.now()
 
-    # ── Status bar rendered AFTER load so age is always current ───────────────
+    # Status bar (rendered after refresh so age is always current)
     if st.session_state["chat_context_ts"]:
         _delta = datetime.datetime.now() - st.session_state["chat_context_ts"]
         _age   = f"{int(_delta.total_seconds() // 60)}m ago" if _delta.total_seconds() >= 60 else "just loaded"
@@ -461,16 +622,14 @@ def page_ai_chat(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── No API key warning (non-blocking - chat input still shown below) ──────
+    # No API key warning
     if not _has_key:
         st.warning(
             "No API key configured. Add one of the following to `.streamlit/secrets.toml` to enable responses:\n\n"
             "```toml\n[keys]\nanthropics_api_key = \"sk-ant-...\"\n# or\nopenai_api_key = \"sk-...\"\n```"
         )
 
-    context = st.session_state["chat_context"] or ""
-
-    # ── Suggested questions (first visit only) ────────────────────────────────
+    # Suggested questions (first visit only) - sets _sq_input; consumed by render_chat_core
     if not st.session_state["chat_messages"]:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;font-weight:700;'
@@ -488,105 +647,12 @@ def page_ai_chat(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── QUERY INPUT ───────────────────────────────────────────────────────────
-    st.markdown(
-        '<p style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-        'text-transform:uppercase;color:#8E9AAA;margin:0.6rem 0 0.25rem">Query Input</p>',
-        unsafe_allow_html=True,
-    )
-    _inp_col, _btn_col = st.columns([5, 1])
-    _typed = _inp_col.text_area(
-        "Ask the analyst",
-        placeholder="e.g. How is the current regime affecting oil–equity correlations?",
-        height=80,
-        label_visibility="collapsed",
-        key="chat_textarea",
-    )
-    _send = _btn_col.button("Send", type="primary", key="send_chat", use_container_width=True)
-    _sq   = st.session_state.pop("_sq_input", None)
-    user_input = _sq or (_typed.strip() if (_send and _typed.strip()) else None)
+    # ── Core chat: messages, input, API call ──────────────────────────────────
+    # Same function called by open_chat_dialog (global floating launcher).
+    # show_status_bar=False: this page has its own status bar above.
+    render_chat_core(start, end, show_status_bar=False)
 
-    # ── Message history ───────────────────────────────────────────────────────
-    for msg in st.session_state["chat_messages"]:
-        with st.chat_message(msg["role"]):
-            if msg["role"] == "assistant":
-                st.markdown(
-                    f'<div style="padding-left:0.8rem">'
-                    f'<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-                    f'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.35rem">'
-                    f'AI Analyst</span>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            st.markdown(msg["content"])
-
-    # ── Handle new input ──────────────────────────────────────────────────────
-    if user_input:
-        if not _has_key:
-            st.warning("Add an API key (see above) to receive AI responses.")
-        else:
-            st.session_state["chat_messages"].append({"role": "user", "content": user_input})
-
-            with st.chat_message("user"):
-                st.markdown(user_input)
-
-            system_prompt = _SYSTEM_TEMPLATE.format(context=context)
-            api_messages  = [{"role": "system", "content": system_prompt}]
-            for m in st.session_state["chat_messages"][-20:]:
-                api_messages.append({"role": m["role"], "content": m["content"]})
-
-            with st.chat_message("assistant"):
-                st.markdown(
-                    '<div style="padding-left:0.8rem">'
-                    '<span style="font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
-                    'text-transform:uppercase;color:#CFB991;display:block;margin-bottom:0.35rem">'
-                    'AI Analyst</span>'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
-                response = ""
-                try:
-                    if _provider == "anthropic":
-                        import anthropic as _ant
-                        _client = _ant.Anthropic(api_key=anthropic_key)
-                        _user_msgs = [m for m in api_messages if m["role"] != "system"]
-                        with _client.messages.stream(
-                            model="claude-sonnet-4-6",
-                            max_tokens=1024,
-                            system=system_prompt,
-                            messages=_user_msgs,
-                        ) as _stream:
-                            response = st.write_stream(_stream.text_stream)
-                    else:
-                        from openai import OpenAI as _OpenAI
-                        _client = _OpenAI(api_key=openai_key)
-                        _stream = _client.chat.completions.create(
-                            model="gpt-4o",
-                            messages=api_messages,
-                            max_tokens=1024,
-                            temperature=0.25,
-                            stream=True,
-                        )
-                        response = st.write_stream(
-                            c.choices[0].delta.content
-                            for c in _stream
-                            if c.choices[0].delta.content
-                        )
-                except Exception as e:
-                    response = f"⚠ Request failed: {e}"
-                    st.error(response)
-
-            st.session_state["chat_messages"].append(
-                {"role": "assistant", "content": response}
-            )
-
-    # ── Utility bar ───────────────────────────────────────────────────────────
-    if st.session_state["chat_messages"]:
-        st.markdown("<br>", unsafe_allow_html=True)
-        c1, c2 = st.columns([1, 5])
-        if c1.button("Clear conversation", key="clear_chat"):
-            st.session_state["chat_messages"] = []
-            st.rerun()
+    context = st.session_state["chat_context"] or ""  # for context inspector below
 
     # ── Context inspector ─────────────────────────────────────────────────────
     with st.expander("Injected market context", expanded=True):
