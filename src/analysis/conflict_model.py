@@ -566,9 +566,13 @@ def aggregate_portfolio_scores(
     """
     Aggregate per-conflict CIS and TPS into portfolio-level scores.
 
-    CIS_portfolio  = intensity-weighted mean of per-conflict CIS
-    TPS_portfolio  = intensity-weighted mean of per-conflict TPS
-    Confidence     = mean confidence across active conflicts
+    CIS_portfolio  = weighted_mean_CIS * n_eff^0.25
+    TPS_portfolio  = weighted_mean_TPS * n_eff^0.25
+    n_eff          = 1 / HHI (HHI-based effective conflict count)
+
+    The n_eff^0.25 breadth multiplier ensures that adding a new active conflict
+    increases (not decreases) the portfolio score — more simultaneous crises
+    means higher systemic stress, not a diluted average.
 
     Returns:
         {cis, tps, confidence, conflict_weights, top_conflict}
@@ -601,15 +605,19 @@ def aggregate_portfolio_scores(
 
     weights = {cid: v / total_cis for cid, v in cis_vals.items()}
 
-    portfolio_cis = float(np.clip(
-        sum(cis_vals[cid] * weights[cid] for cid in conflict_results),
-        0, 100
-    ))
+    weighted_mean_cis = sum(cis_vals[cid] * weights[cid] for cid in conflict_results)
+    weighted_mean_tps = sum(conflict_results[cid]["tps"] * weights[cid] for cid in conflict_results)
 
-    portfolio_tps = float(np.clip(
-        sum(conflict_results[cid]["tps"] * weights[cid] for cid in conflict_results),
-        0, 100
-    ))
+    # HHI-based effective conflict count — portfolio theory breadth multiplier.
+    # n_eff = 1/HHI ranges from 1 (single conflict) to N (equal-weight N conflicts).
+    # n_eff^0.25 (4th-root) rewards breadth without double-counting: adding a new
+    # conflict at CIS=70 to a portfolio at CIS=83 should raise the score, not lower it.
+    hhi = sum(w ** 2 for w in weights.values())
+    n_eff = 1.0 / max(hhi, 1e-9)
+    breadth_mult = n_eff ** 0.25
+
+    portfolio_cis = float(np.clip(weighted_mean_cis * breadth_mult, 0, 100))
+    portfolio_tps = float(np.clip(weighted_mean_tps * breadth_mult, 0, 100))
 
     avg_conf = float(np.mean([r["confidence"] for r in conflict_results.values()]))
 

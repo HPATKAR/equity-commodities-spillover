@@ -41,26 +41,33 @@ from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
 
 _MODEL_CONFIG: dict = {
     # Top-level layer weights (must sum to 1.0)
+    # MCS raised to 0.35: live market signals (price, vol, safe-haven) are
+    # the most responsive real-time stress indicators.  CIS/TPS are driven by
+    # the CONFLICTS registry which updates manually and slowly.
     "weights": {
-        "cis":  0.40,   # Conflict Intensity Score  (conflict_model.py)
-        "tps":  0.35,   # Transmission Pressure Score (conflict_model.py)
-        "mcs":  0.25,   # Market Confirmation Score   (this file)
+        "cis":  0.35,   # Conflict Intensity Score  (conflict_model.py)
+        "tps":  0.30,   # Transmission Pressure Score (conflict_model.py)
+        "mcs":  0.35,   # Market Confirmation Score   (this file)
     },
     # MCS sub-signal weights (must sum to 1.0)
+    # - rates_vol reduced: TLT falls during geo stress (not a reliable boost)
+    # - cmd_vol raised: raw vol now (not residualized); captures oil spikes directly
+    # - safe_haven raised: gold + oil joint elevation is primary geo-stress signal
+    # - corr_accel reduced: velocity-based, less lag, but narrower scope
     "mcs_weights": {
         "eq_vol":     0.15,
-        "rates_vol":  0.15,
-        "cmd_vol":    0.15,
-        "safe_haven": 0.22,
-        "oil_gold":   0.18,
-        "corr_accel": 0.15,   # correlation acceleration (2nd derivative, orthog to level)
+        "rates_vol":  0.10,
+        "cmd_vol":    0.22,
+        "safe_haven": 0.25,
+        "oil_gold":   0.20,
+        "corr_accel": 0.08,
     },
     # risk_score_history() weights — approximates live model using mkt-only signals
     "history_weights": {
-        "eq_vol":     0.40,
+        "eq_vol":     0.35,
         "oil_gold":   0.35,
-        "cmd_vol":    0.13,
-        "corr_accel": 0.12,
+        "cmd_vol":    0.20,
+        "corr_accel": 0.10,
     },
 }
 
@@ -83,10 +90,16 @@ def _fetch_tlt() -> pd.Series:
 
 # ── EWM z-score helper ────────────────────────────────────────────────────────
 
-def _ewm_zscore(series: pd.Series, span: int = 60) -> pd.Series:
-    """Exponentially weighted z-score. Slower to react than simple rolling."""
-    mu    = series.ewm(span=span, min_periods=20).mean()
-    sigma = series.ewm(span=span, min_periods=20).std()
+def _ewm_zscore(series: pd.Series, span: int = 252) -> pd.Series:
+    """
+    Exponentially weighted z-score. Default span=252 (one trading year).
+    span=60 caused the 'new normal' effect: after 2+ months of elevated stress,
+    the EWM mean rose to match the crisis level, producing z≈0 even during
+    active wars.  A 252-day window keeps the pre-crisis baseline visible
+    throughout the stress period.
+    """
+    mu    = series.ewm(span=span, min_periods=60).mean()
+    sigma = series.ewm(span=span, min_periods=60).std()
     return (series - mu) / sigma.replace(0, np.nan)
 
 
@@ -98,7 +111,7 @@ def _zscore_to_score(z: float, scale: float = 12.0) -> float:
 # ── Market Confirmation Layer ─────────────────────────────────────────────────
 
 def _equity_vol_score(eq_r: pd.DataFrame | None) -> float:
-    """20d realized equity vol z-scored via EWM. Returns 0–100."""
+    """20d realized equity vol z-scored via EWM (span=252). Returns 0–100."""
     if eq_r is None or eq_r.empty:
         return 50.0
     spx_cols = [c for c in ["S&P 500", "Eurostoxx 50", "Nikkei 225"] if c in eq_r.columns]
@@ -106,106 +119,104 @@ def _equity_vol_score(eq_r: pd.DataFrame | None) -> float:
         spx_cols = list(eq_r.columns[:3])
     rv = eq_r[spx_cols].rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
     rv = rv.dropna()
-    if len(rv) < 40:
+    if len(rv) < 80:
         return 50.0
-    z = float(_ewm_zscore(rv, span=60).iloc[-1])
+    z = float(_ewm_zscore(rv).iloc[-1])
     return _zscore_to_score(z)
 
 
 def _rates_vol_score(cmd_r: pd.DataFrame) -> float:
     """
     MOVE-proxy: 20d realized vol of TLT (long Treasury ETF) as rates vol measure.
-    More orthogonal to equity vol than VIX.
+    More orthogonal to equity vol than VIX. span=252 baseline.
     """
     try:
         tlt = _fetch_tlt()
-        if tlt.empty or len(tlt) < 40:
+        if tlt.empty or len(tlt) < 80:
             return 50.0
         tlt_r = tlt.pct_change().dropna()
         rv    = tlt_r.rolling(20).std() * np.sqrt(252) * 100
         rv    = rv.dropna()
-        z = float(_ewm_zscore(rv, span=60).iloc[-1])
+        z = float(_ewm_zscore(rv).iloc[-1])
         return _zscore_to_score(z, scale=10.0)
     except Exception:
         return 50.0
 
 
-def _commodity_vol_residual_score(
-    cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None
-) -> float:
+def _commodity_vol_score(cmd_r: pd.DataFrame) -> float:
     """
-    Commodity vol residualized on equity vol — extracts the commodity-specific
-    stress component that is NOT explained by broad equity fear.
-    Prevents double-counting VIX-driven commodity vol.
+    Raw commodity vol z-score (EWM span=252). No residualization.
+
+    The previous version residualized commodity vol against equity vol to
+    prevent double-counting.  This was wrong for geopolitical supply shocks:
+    during war/blockade, oil vol rises AND equities fall in tandem.  The OLS
+    regression finds a positive beta and subtracts it, producing a near-zero
+    residual precisely when the oil signal should be highest.
+
+    Raw vol z-scored against a 252-day baseline correctly captures elevated
+    commodity stress without removing the legitimate co-movement.
     """
     energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas",
                      "Gold", "Silver", "Copper"]
     cols = [c for c in energy_metals if c in cmd_r.columns]
     if not cols:
         return 50.0
-
-    rv_cmd = cmd_r[cols].rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
-    rv_cmd = rv_cmd.dropna()
-
-    if eq_r is not None and not eq_r.empty:
-        # Residualize: regress cmd_vol on eq_vol, use residual
-        eq_cols  = list(eq_r.columns[:5])
-        rv_eq    = eq_r[eq_cols].rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
-        common   = rv_cmd.index.intersection(rv_eq.index)
-        if len(common) > 40:
-            rv_c = rv_cmd.reindex(common)
-            rv_e = rv_eq.reindex(common)
-            # OLS over trailing 252 days
-            tail = min(len(common), 252)
-            x    = rv_e.iloc[-tail:].values
-            y    = rv_c.iloc[-tail:].values
-            mask = ~(np.isnan(x) | np.isnan(y))
-            if mask.sum() > 30:
-                beta = np.polyfit(x[mask], y[mask], 1)[0]
-                rv_cmd = rv_c - beta * rv_e
-
-    if len(rv_cmd.dropna()) < 30:
+    rv = cmd_r[cols].rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
+    rv = rv.dropna()
+    if len(rv) < 80:
         return 50.0
-    z = float(_ewm_zscore(rv_cmd.dropna(), span=60).iloc[-1])
+    z = float(_ewm_zscore(rv).iloc[-1])
     return _zscore_to_score(z, scale=11.0)
 
 
 def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
     """
-    Safe-haven signal: Gold 20d cumulative return z-score.
-    Boosted if TLT is also positive (corroborating flight-to-safety).
-    Gold z > 1 = safe-haven bid = geopolitical stress signal.
+    Safe-haven signal: Gold 20d cumulative return z-score (span=252).
+
+    Geopolitical premium: when both gold AND oil are elevated simultaneously,
+    this is the market signature of a war/supply-shock — distinct from a pure
+    risk-off growth scare (gold up, oil down).  Boost is a smooth ramp
+    proportional to the joint magnitude, no binary threshold.
+
+    Previous TLT-corroboration was anti-signal: TLT FALLS during geopolitical
+    stress (rates up, inflation fear), so the boost condition was never met
+    during the exact regimes we need to score highest.
     """
     gold_col = next((c for c in ["Gold"] if c in cmd_r.columns), None)
     if not gold_col:
         return 50.0
 
     gold_r = cmd_r[gold_col].dropna()
-    if len(gold_r) < 60:
+    if len(gold_r) < 80:
         return 50.0
 
-    g_cum  = gold_r.rolling(20).sum() * 100
-    g_cum  = g_cum.dropna()
-    if len(g_cum) < 40:
+    g_cum = gold_r.rolling(20).sum() * 100
+    g_cum = g_cum.dropna()
+    if len(g_cum) < 80:
         return 50.0
 
-    g_z = float(_ewm_zscore(g_cum, span=60).iloc[-1])
-
-    # TLT corroboration — reuse the cached 200d fetch (60d subset is sufficient)
-    tlt_boost = 0.0
-    try:
-        tlt = _fetch_tlt()
-        if not tlt.empty and len(tlt) >= 20:
-            tlt_r   = tlt.pct_change().dropna()
-            tlt_ret = float(tlt_r.iloc[-20:].sum() * 100)
-            tlt_z   = tlt_ret / max(float(tlt_r.std() * np.sqrt(20) * 100), 1)
-            if g_z > 0.5 and tlt_z > 0.3:
-                tlt_boost = min(tlt_z * 4, 10.0)
-    except Exception:
-        pass
-
+    g_z       = float(_ewm_zscore(g_cum).iloc[-1])
     raw_score = _zscore_to_score(g_z, scale=14.0)
-    return float(np.clip(raw_score + tlt_boost, 0.0, 100.0))
+
+    # Geopolitical premium: gold + oil joint elevation (war/supply-shock signature)
+    # Proportional ramp — no hardcoded on/off threshold
+    geo_boost = 0.0
+    oil_col = next((c for c in ["WTI Crude Oil", "Brent Crude"] if c in cmd_r.columns), None)
+    if oil_col:
+        try:
+            oil_r = cmd_r[oil_col].dropna()
+            if len(oil_r) >= 80:
+                o_roll = oil_r.rolling(20).sum() * 100
+                o_roll = o_roll.dropna()
+                if len(o_roll) > 60:
+                    o_z = float(_ewm_zscore(o_roll).iloc[-1])
+                    # Both positive → geopolitical premium, scaled to joint strength
+                    if g_z > 0 and o_z > 0:
+                        geo_boost = float(np.clip((g_z + o_z) * 3.0, 0.0, 12.0))
+        except Exception:
+            pass
+
+    return float(np.clip(raw_score + geo_boost, 0.0, 100.0))
 
 
 def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict]:
@@ -225,25 +236,27 @@ def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict
     gold_r = cmd_r[gold_cols[0]].dropna()
     oil_r  = cmd_r[oil_cols[0]].dropna()
 
-    if len(gold_r) < 60 or len(oil_r) < 60:
+    if len(gold_r) < 80 or len(oil_r) < 80:
         return 50.0, {"gold_z": 0.0, "oil_z": 0.0, "gold_ret": 0.0, "oil_ret": 0.0}
 
     gold_cum = float(gold_r.iloc[-window:].sum()) * 100
     oil_cum  = float(oil_r.iloc[-window:].sum()) * 100
 
-    # EWM z-scores vs trailing history
+    # EWM z-scores vs 252-day trailing baseline (prevents new-normal adaptation)
     g_roll = gold_r.rolling(window).sum() * 100
     o_roll = oil_r.rolling(window).sum() * 100
 
-    g_z = float(_ewm_zscore(g_roll.dropna(), span=60).iloc[-1]) if len(g_roll.dropna()) > 30 else 0.0
-    o_z = float(_ewm_zscore(o_roll.dropna(), span=60).iloc[-1]) if len(o_roll.dropna()) > 30 else 0.0
+    g_z = float(_ewm_zscore(g_roll.dropna()).iloc[-1]) if len(g_roll.dropna()) > 60 else 0.0
+    o_z = float(_ewm_zscore(o_roll.dropna()).iloc[-1]) if len(o_roll.dropna()) > 60 else 0.0
 
-    gold_contribution = float(np.clip(g_z * 14, -28, 35))   # was *15 (slight overbias)
+    gold_contribution = float(np.clip(g_z * 14, -28, 35))
     oil_amplifier     = float(np.clip(o_z * 8,  -15, 20))
-    # Flat bonus: avoid zero-collapse when one signal is neutral. +5 pts when
-    # both gold AND oil are elevated (g_z > 1, o_z > 1) — a joint geopolitical
-    # premium that is signal-magnitude-independent.
-    conflict_bonus    = 5.0 if (g_z > 1.0 and o_z > 1.0) else 0.0
+    # Smooth conflict bonus: proportional to how far above neutral each signal is.
+    # Previous flat +5 created a discontinuity at g_z=1, o_z=1 (±5 pts at threshold).
+    # Now: ramp begins as soon as either signal is positive, scales with joint strength.
+    g_excess       = max(0.0, g_z - 0.7)
+    o_excess       = max(0.0, o_z - 0.7)
+    conflict_bonus = float(np.clip((g_excess + o_excess) * 5.0, 0.0, 15.0))
 
     score = float(np.clip(50 + gold_contribution + oil_amplifier + conflict_bonus, 0, 100))
     return score, {
@@ -256,25 +269,24 @@ def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict
 
 def _corr_accel_score(avg_corr: pd.Series, span: int = 20) -> float:
     """
-    Correlation acceleration score — second derivative of rolling correlation.
+    Correlation velocity score — first derivative of rolling correlation.
 
-    Uses the *rate-of-change* of correlation rather than its level, making
-    this signal orthogonal to CIS which already incorporates geographic_diffusion
-    (a level-based proxy). Avoids double-counting that existed with the old
-    correlation-percentile approach.
+    Changed from 2nd derivative (acceleration) to 1st derivative (velocity):
+    triple EWM smoothing created ~30d of lag, meaning the signal fired AFTER
+    the correlation regime had already stabilised.  Velocity (1st deriv) has
+    ~10d lag and is still orthogonal to the correlation level already captured
+    by CIS geographic_diffusion.
 
-    Returns 0–100 where 100 = correlation is accelerating at the fastest pace
-    ever seen in the sample.
+    Returns 0–100 where 100 = correlation rising faster than any point in sample.
     """
-    if avg_corr.empty or len(avg_corr) < 90:
+    if avg_corr.empty or len(avg_corr) < 60:
         return 50.0
     smooth   = avg_corr.ewm(span=span).mean()
-    velocity = smooth.diff()
-    accel    = velocity.ewm(span=span).mean().dropna()
-    if len(accel) < 60:
+    velocity = smooth.diff().dropna()
+    if len(velocity) < 40:
         return 50.0
-    current_accel = float(accel.iloc[-1])
-    return float(np.clip((accel < current_accel).mean() * 100, 0, 100))
+    current_vel = float(velocity.iloc[-1])
+    return float(np.clip((velocity < current_vel).mean() * 100, 0, 100))
 
 
 def _market_confirmation_score(
@@ -286,14 +298,13 @@ def _market_confirmation_score(
     Market Confirmation Score (MCS) — 5 orthogonalized signals.
     Weights sum to 1.0. Returns (score, component_dict).
     """
-    eq_vol   = _equity_vol_score(eq_r)
-    rates_vol = _rates_vol_score(cmd_r)
-    cmd_vol  = _commodity_vol_residual_score(cmd_r, eq_r)
-    safe_hav = _safe_haven_score(cmd_r, eq_r)
+    eq_vol     = _equity_vol_score(eq_r)
+    rates_vol  = _rates_vol_score(cmd_r)
+    cmd_vol    = _commodity_vol_score(cmd_r)
+    safe_hav   = _safe_haven_score(cmd_r, eq_r)
     og_score, og_detail = _oil_gold_signal(cmd_r)
-    corr_accel = _corr_accel_score(avg_corr)
+    corr_vel   = _corr_accel_score(avg_corr)
 
-    # Weights from _MODEL_CONFIG — oil-gold and safe-haven carry most geo signal
     w = _MODEL_CONFIG["mcs_weights"]
 
     mcs = (
@@ -302,16 +313,16 @@ def _market_confirmation_score(
         + w["cmd_vol"]    * cmd_vol
         + w["safe_haven"] * safe_hav
         + w["oil_gold"]   * og_score
-        + w["corr_accel"] * corr_accel
+        + w["corr_accel"] * corr_vel
     )
 
     components = {
-        "Equity Vol (orthog)":     round(eq_vol,      1),
-        "Rates Vol (TLT proxy)":   round(rates_vol,   1),
-        "Commodity Vol (residual)":round(cmd_vol,      1),
-        "Safe-Haven Bid":          round(safe_hav,     1),
-        "Oil-Gold Signal":         round(og_score,     1),
-        "Correlation Accel":       round(corr_accel,   1),
+        "Equity Vol":        round(eq_vol,    1),
+        "Rates Vol (TLT)":   round(rates_vol, 1),
+        "Commodity Vol":     round(cmd_vol,   1),
+        "Safe-Haven Bid":    round(safe_hav,  1),
+        "Oil-Gold Signal":   round(og_score,  1),
+        "Corr Velocity":     round(corr_vel,  1),
     }
     return float(np.clip(mcs, 0, 100)), components
 
@@ -484,49 +495,51 @@ def risk_score_history(
 
     hw = _MODEL_CONFIG["history_weights"]
 
-    # 1. Correlation acceleration (2nd derivative — orthogonal to CIS level signal)
+    # 1. Correlation velocity (1st derivative — matches live _corr_accel_score update)
+    # Switched from acceleration (2nd deriv, ~30d lag) to velocity (1st deriv, ~10d lag)
     smooth   = avg_corr.ewm(span=20).mean()
     velocity = smooth.diff()
-    accel    = velocity.ewm(span=20).mean()
-    a_mean   = accel.ewm(span=60).mean()
-    a_std    = accel.ewm(span=60).std().replace(0, np.nan)
-    corr_accel_score = (50 + ((accel - a_mean) / a_std).clip(-3, 3) * 16.67).clip(0, 100)
+    v_mean   = velocity.ewm(span=252).mean()
+    v_std    = velocity.ewm(span=252).std().replace(0, np.nan)
+    corr_accel_score = (50 + ((velocity - v_mean) / v_std.replace(0, np.nan)).clip(-3, 3) * 16.67).clip(0, 100)
 
-    # 2. Commodity vol z-score (EWM)
+    # 2. Raw commodity vol z-score (span=252, no residualization — matches live)
     energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
     vol_cols = [c for c in energy_metals if c in cmd_r.columns]
     if vol_cols:
-        rv        = cmd_r[vol_cols].rolling(20).std() * np.sqrt(252) * 100  # matches live _commodity_vol_residual_score
+        rv        = cmd_r[vol_cols].rolling(20).std() * np.sqrt(252) * 100
         avg_vol   = rv.mean(axis=1)
-        v_mean    = avg_vol.ewm(span=60).mean()
-        v_std     = avg_vol.ewm(span=60).std().replace(0, np.nan)
-        vol_score = (50 + ((avg_vol - v_mean) / v_std).clip(-3, 3) * 11).clip(0, 100)
+        v_mean2   = avg_vol.ewm(span=252).mean()
+        v_std2    = avg_vol.ewm(span=252).std().replace(0, np.nan)
+        vol_score = (50 + ((avg_vol - v_mean2) / v_std2).clip(-3, 3) * 11).clip(0, 100)
     else:
         vol_score = pd.Series(50.0, index=avg_corr.index)
 
-    # 3. Oil-Gold signal (rolling EWM z-scores, flat conflict bonus — matches live)
+    # 3. Oil-Gold signal (span=252, smooth conflict bonus — matches live)
     gold_col = next((c for c in ["Gold"] if c in cmd_r.columns), None)
     oil_col  = next((c for c in ["WTI Crude Oil", "Brent Crude"] if c in cmd_r.columns), None)
     if gold_col and oil_col:
         g_cum  = cmd_r[gold_col].rolling(20).sum() * 100
         o_cum  = cmd_r[oil_col].rolling(20).sum()  * 100
-        g_mean = g_cum.ewm(span=60).mean()
-        g_std  = g_cum.ewm(span=60).std().replace(0, np.nan)
-        o_mean = o_cum.ewm(span=60).mean()
-        o_std  = o_cum.ewm(span=60).std().replace(0, np.nan)
-        g_z    = ((g_cum - g_mean) / g_std).clip(-3.5, 3.5)  # matches war_country_scores z-clip
+        g_mean = g_cum.ewm(span=252).mean()
+        g_std  = g_cum.ewm(span=252).std().replace(0, np.nan)
+        o_mean = o_cum.ewm(span=252).mean()
+        o_std  = o_cum.ewm(span=252).std().replace(0, np.nan)
+        g_z    = ((g_cum - g_mean) / g_std).clip(-3.5, 3.5)
         o_z    = ((o_cum - o_mean) / o_std).clip(-3.5, 3.5)
-        # Flat +5 bonus when both elevated (matches live _oil_gold_signal fix)
-        conflict_bonus = ((g_z > 1) & (o_z > 1)).astype(float) * 5.0
+        # Smooth ramp bonus (matches live fix — no binary threshold)
+        g_excess = (g_z - 0.7).clip(lower=0)
+        o_excess = (o_z - 0.7).clip(lower=0)
+        conflict_bonus = ((g_excess + o_excess) * 5.0).clip(upper=15.0)
         og_score = (50 + g_z * 14 + o_z * 8 + conflict_bonus).clip(0, 100)
     else:
         og_score = pd.Series(50.0, index=avg_corr.index)
 
-    # 4. Equity vol proxy
+    # 4. Equity vol proxy (span=252)
     if eq_r is not None and not eq_r.empty:
         eq_vol_raw   = eq_r.rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
-        ev_mean      = eq_vol_raw.ewm(span=60).mean()
-        ev_std       = eq_vol_raw.ewm(span=60).std().replace(0, np.nan)
+        ev_mean      = eq_vol_raw.ewm(span=252).mean()
+        ev_std       = eq_vol_raw.ewm(span=252).std().replace(0, np.nan)
         eq_vol_score = (50 + ((eq_vol_raw - ev_mean) / ev_std).clip(-3, 3) * 11).clip(0, 100)
     else:
         eq_vol_score = pd.Series(50.0, index=avg_corr.index)
