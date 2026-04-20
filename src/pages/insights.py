@@ -1172,7 +1172,21 @@ def _build_private_credit_insight(
         pass
 
     if not scores:
-        return None
+        return dict(
+            emoji="○",
+            headline="Private credit bubble risk — data unavailable",
+            action="FRED API key not configured or market data fetch failed. "
+                   "Add a FRED key in Settings to enable HY OAS spread analysis.",
+            color=_GREY,
+            detail_html=(
+                "<b>Required data sources:</b><br>"
+                "• FRED API key → HY OAS (BAMLH0A0HYM2) and IG OAS (BAMLC0A0CM)<br>"
+                "• yfinance → BKLN (leveraged loans), ARCC/OBDC/FSK (BDC basket)<br><br>"
+                "Without these, the private credit bubble score cannot be computed."
+            ),
+            confidence=0,
+            confidence_label="No Data",
+        )
 
     # ── Composite score ──────────────────────────────────────────────────
     _weights = {"hy_oas": 0.50, "bkln": 0.30, "bdc": 0.20}

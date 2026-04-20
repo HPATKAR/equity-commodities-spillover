@@ -1084,7 +1084,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     if not eq_r.empty:
         _rf("yfinance_prices")
     if not cmd_r.empty:
-        _rf("conflict_model")
+        _rf("commodity_prices")
 
     with st.spinner("Building composite stress index…"):
         avg_corr   = average_cross_corr_series(eq_r, cmd_r, window=60)
@@ -1122,8 +1122,8 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         f'letter-spacing:0.14em;color:#8E9AAA;margin:0.6rem 0 0.5rem 0">Signal Scorecard</p>',
         unsafe_allow_html=True,
     )
-    recall_str = f"{stats['recall']:.0f}" if stats["recall"] else "?"
-    f1_str     = f"{stats['f1']:.0f}"     if stats["f1"]     else "?"
+    recall_str = f"{stats['recall']:.0f}" if stats.get("recall") is not None else "?"
+    f1_str     = f"{stats['f1']:.0f}"     if stats.get("f1")     is not None else "?"
     sc1, sc2, sc3, sc4 = st.columns(4)
     _signal_card(sc1,
         "Regime Detection",
@@ -1620,22 +1620,20 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
         with st.spinner("Running z-score quantile hit rate tests…"):
             hr_df = _granger_forward_returns(eq_r, cmd_r, test_pairs, fwd_days)
-        if True:
+        if hr_df.empty:
+            st.info("No significant Granger pairs found for the selected asset set.")
+        else:
+            k1, k2, k3, k4 = st.columns(4)
+            k1.metric("Pairs Tested",         len(hr_df))
+            k2.metric("Positive Edge (>3pp)",  int((hr_df["Edge (pp)"].dropna() > 3).sum()))
+            avg_long  = hr_df["Long Hit Rate (%)"].dropna().mean()
+            avg_short = hr_df["Short Hit Rate (%)"].dropna().mean()
+            k3.metric("Avg Long Hit Rate",  f"{avg_long:.1f}%"  if not np.isnan(avg_long)  else "–")
+            k4.metric("Avg Short Hit Rate", f"{avg_short:.1f}%" if not np.isnan(avg_short) else "–")
 
-            if hr_df.empty:
-                st.info("No significant Granger pairs found for the selected asset set.")
-            else:
-                k1, k2, k3, k4 = st.columns(4)
-                k1.metric("Pairs Tested",         len(hr_df))
-                k2.metric("Positive Edge (>3pp)",  int((hr_df["Edge (pp)"].dropna() > 3).sum()))
-                avg_long  = hr_df["Long Hit Rate (%)"].dropna().mean()
-                avg_short = hr_df["Short Hit Rate (%)"].dropna().mean()
-                k3.metric("Avg Long Hit Rate",  f"{avg_long:.1f}%"  if not np.isnan(avg_long)  else "–")
-                k4.metric("Avg Short Hit Rate", f"{avg_short:.1f}%" if not np.isnan(avg_short) else "–")
-
-                gc1, gc2 = st.columns([1, 1])
-                with gc1:
-                    _TBL_CSS = """
+            gc1, gc2 = st.columns([1, 1])
+            with gc1:
+                _TBL_CSS = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
 .ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
@@ -1646,79 +1644,79 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 .ec-table tr:nth-child(odd) td{background:#111111}
 .ec-table tr:hover td{background:#202020}
 </style>"""
-                    rows_html = ""
-                    for _, row in hr_df.iterrows():
-                        edge_val = row.get("Edge (pp)")
-                        _is_nan = lambda v: v is None or (isinstance(v, float) and np.isnan(v))
-                        if _is_nan(edge_val):
-                            edge_str = "–"
-                            edge_style = "color:#8890a1"
-                        elif edge_val > 5:
-                            edge_str = f"{edge_val:+.1f}pp"
-                            edge_style = "color:#4ade80;font-weight:700"
-                        elif edge_val < -5:
-                            edge_str = f"{edge_val:+.1f}pp"
-                            edge_style = "color:#f87171;font-weight:700"
-                        else:
-                            edge_str = f"{edge_val:+.1f}pp"
-                            edge_style = "color:#e8e9ed"
-                        pval = row.get("p-value")
-                        pval_str = f"{pval:.4f}" if not _is_nan(pval) else "–"
-                        lhr = row.get("Long Hit Rate (%)")
-                        lhr_str = f"{lhr:.1f}%" if not _is_nan(lhr) else "–"
-                        shr = row.get("Short Hit Rate (%)")
-                        shr_str = f"{shr:.1f}%" if not _is_nan(shr) else "–"
-                        rows_html += (
-                            f"<tr>"
-                            f"<td style='color:#b8b8b8'>{row.get('Cause','')}</td>"
-                            f"<td style='color:#b8b8b8'>{row.get('Effect','')}</td>"
-                            f"<td style='color:#8890a1'>{pval_str}</td>"
-                            f"<td style='color:#e8e9ed'>{lhr_str}</td>"
-                            f"<td style='color:#e8e9ed'>{shr_str}</td>"
-                            f"<td style='{edge_style}'>{edge_str}</td>"
-                            f"</tr>"
-                        )
-                    html_tbl = (
-                        _TBL_CSS
-                        + "<table class='ec-table'>"
-                        + "<thead><tr>"
-                        + "<th>Cause</th><th>Effect</th><th>p-value</th>"
-                        + "<th>Long Hit Rate</th><th>Short Hit Rate</th><th>Edge (pp)</th>"
-                        + "</tr></thead><tbody>"
-                        + rows_html
-                        + "</tbody></table>"
+                rows_html = ""
+                for _, row in hr_df.iterrows():
+                    edge_val = row.get("Edge (pp)")
+                    _is_nan = lambda v: v is None or (isinstance(v, float) and np.isnan(v))
+                    if _is_nan(edge_val):
+                        edge_str = "–"
+                        edge_style = "color:#8890a1"
+                    elif edge_val > 5:
+                        edge_str = f"{edge_val:+.1f}pp"
+                        edge_style = "color:#4ade80;font-weight:700"
+                    elif edge_val < -5:
+                        edge_str = f"{edge_val:+.1f}pp"
+                        edge_style = "color:#f87171;font-weight:700"
+                    else:
+                        edge_str = f"{edge_val:+.1f}pp"
+                        edge_style = "color:#e8e9ed"
+                    pval = row.get("p-value")
+                    pval_str = f"{pval:.4f}" if not _is_nan(pval) else "–"
+                    lhr = row.get("Long Hit Rate (%)")
+                    lhr_str = f"{lhr:.1f}%" if not _is_nan(lhr) else "–"
+                    shr = row.get("Short Hit Rate (%)")
+                    shr_str = f"{shr:.1f}%" if not _is_nan(shr) else "–"
+                    rows_html += (
+                        f"<tr>"
+                        f"<td style='color:#b8b8b8'>{row.get('Cause','')}</td>"
+                        f"<td style='color:#b8b8b8'>{row.get('Effect','')}</td>"
+                        f"<td style='color:#8890a1'>{pval_str}</td>"
+                        f"<td style='color:#e8e9ed'>{lhr_str}</td>"
+                        f"<td style='color:#e8e9ed'>{shr_str}</td>"
+                        f"<td style='{edge_style}'>{edge_str}</td>"
+                        f"</tr>"
                     )
-                    st.markdown(html_tbl, unsafe_allow_html=True)
+                html_tbl = (
+                    _TBL_CSS
+                    + "<table class='ec-table'>"
+                    + "<thead><tr>"
+                    + "<th>Cause</th><th>Effect</th><th>p-value</th>"
+                    + "<th>Long Hit Rate</th><th>Short Hit Rate</th><th>Edge (pp)</th>"
+                    + "</tr></thead><tbody>"
+                    + rows_html
+                    + "</tbody></table>"
+                )
+                st.markdown(html_tbl, unsafe_allow_html=True)
 
-                with gc2:
-                    edges    = hr_df["Edge (pp)"].fillna(0)
-                    labels   = hr_df["Cause"] + " → " + hr_df["Effect"]
-                    fig_edge = go.Figure(go.Bar(
-                        y=labels, x=edges, orientation="h",
-                        marker_color=["#2e7d32" if v >= 0 else "#c0392b" for v in edges],
-                        text=[f"{v:+.1f}pp" for v in edges],
-                        textposition="outside",
-                        textfont=dict(size=9, family="JetBrains Mono, monospace"),
-                    ))
-                    fig_edge.add_vline(x=0, line=dict(color="#ABABAB", width=1.5, dash="dot"))
-                    fig_edge.add_vline(x=3, line=dict(color="#2e7d32", width=1, dash="dot"),
-                                       annotation_text="+3pp threshold",
-                                       annotation_font_size=8, annotation_font_color="#2e7d32")
-                    fig_edge.update_layout(
-                        template="purdue",
-                        height=max(280, len(hr_df) * 34),
-                        title=dict(text=f"Directional Edge: {fwd_days}d Forward", font=dict(size=10)),
-                        xaxis=dict(title="Edge above 50% baseline (pp)", ticksuffix="pp"),
-                        margin=dict(l=180, r=80, t=40, b=30),
-                    )
-                    _chart(fig_edge)
-                    _insight_note(
-                        "How much better than a <b>50/50 coin flip</b> each commodity→equity "
-                        "signal is. A <b>+3pp edge</b> means the signal is right 53% of the time. "
-                        "Modest but statistically meaningful over hundreds of trades. "
-                        "<b>Energy→equity pairs</b> consistently show the strongest edge during "
-                        "supply shocks and oil price dislocations."
-                    )
+            with gc2:
+                edges    = hr_df["Edge (pp)"].fillna(0)
+                labels   = hr_df["Cause"] + " → " + hr_df["Effect"]
+                fig_edge = go.Figure(go.Bar(
+                    y=labels, x=edges, orientation="h",
+                    marker_color=["#2e7d32" if v >= 0 else "#c0392b" for v in edges],
+                    text=[f"{v:+.1f}pp" for v in edges],
+                    textposition="outside",
+                    textfont=dict(size=9, family="JetBrains Mono, monospace"),
+                ))
+                fig_edge.add_vline(x=0, line=dict(color="#ABABAB", width=1.5, dash="dot"))
+                fig_edge.add_vline(x=3, line=dict(color="#2e7d32", width=1, dash="dot"),
+                                   annotation_text="+3pp threshold",
+                                   annotation_font_size=8, annotation_font_color="#2e7d32")
+                fig_edge.update_layout(
+                    template="purdue",
+                    height=max(280, len(hr_df) * 34),
+                    title=dict(text=f"Directional Edge: {fwd_days}d Forward", font=dict(size=10)),
+                    xaxis=dict(title="Edge above 50% baseline (pp)", ticksuffix="pp"),
+                    margin=dict(l=180, r=80, t=40, b=30),
+                )
+                _chart(fig_edge)
+                _insight_note(
+                    "How much better than a <b>50/50 coin flip</b> each commodity→equity "
+                    "signal is. A <b>+3pp edge</b> means the signal is right 53% of the time. "
+                    "Modest but statistically meaningful over hundreds of trades. "
+                    "<b>Energy→equity pairs</b> consistently show the strongest edge during "
+                    "supply shocks and oil price dislocations."
+                )
 
     _thread(
         "Statistical causality is a necessary but not sufficient condition. The geopolitical risk score "
@@ -1752,21 +1750,19 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
         with st.spinner("Loading COT data and running backtest…"):
             cot_acc = _cot_contrarian_accuracy(cmd_p, fwd_weeks)
-        if True:
+        if cot_acc.empty:
+            st.warning("COT data unavailable or insufficient signals.")
+        else:
+            valid_long  = cot_acc["Long Accuracy (%)"].dropna()
+            valid_short = cot_acc["Short Accuracy (%)"].dropna()
+            ca, cb, cc = st.columns(3)
+            ca.metric("Avg Long Acc",  f"{valid_long.mean():.1f}%"  if not valid_long.empty  else "–")
+            cb.metric("Avg Short Acc", f"{valid_short.mean():.1f}%" if not valid_short.empty else "–")
+            cc.metric("Markets >55%",  int((valid_long>55).sum() + (valid_short>55).sum()))
 
-            if cot_acc.empty:
-                st.warning("COT data unavailable or insufficient signals.")
-            else:
-                valid_long  = cot_acc["Long Accuracy (%)"].dropna()
-                valid_short = cot_acc["Short Accuracy (%)"].dropna()
-                ca, cb, cc = st.columns(3)
-                ca.metric("Avg Long Acc",  f"{valid_long.mean():.1f}%"  if not valid_long.empty  else "–")
-                cb.metric("Avg Short Acc", f"{valid_short.mean():.1f}%" if not valid_short.empty else "–")
-                cc.metric("Markets >55%",  int((valid_long>55).sum() + (valid_short>55).sum()))
-
-                ca1, ca2 = st.columns([1, 1])
-                with ca1:
-                    _TBL_CSS2 = """
+            ca1, ca2 = st.columns([1, 1])
+            with ca1:
+                _TBL_CSS2 = """
 <style>
 .ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
 .ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
@@ -1777,81 +1773,81 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 .ec-table tr:nth-child(odd) td{background:#111111}
 .ec-table tr:hover td{background:#202020}
 </style>"""
-                    def _acc_style(val):
-                        if val is None or (isinstance(val, float) and pd.isna(val)):
-                            return "color:#8890a1", "–"
-                        if val >= 60:
-                            return "color:#4ade80;font-weight:700", f"{val:.1f}%"
-                        if val <= 40:
-                            return "color:#f87171;font-weight:700", f"{val:.1f}%"
-                        return "color:#CFB991", f"{val:.1f}%"
-                    rows_html = ""
-                    for _, row in cot_acc.iterrows():
-                        la_style, la_str = _acc_style(row.get("Long Accuracy (%)"))
-                        sa_style, sa_str = _acc_style(row.get("Short Accuracy (%)"))
-                        rows_html += (
-                            f"<tr>"
-                            f"<td style='color:#b8b8b8'>{row.get('Commodity','')}</td>"
-                            f"<td style='{la_style}'>{la_str}</td>"
-                            f"<td style='{sa_style}'>{sa_str}</td>"
-                            f"</tr>"
-                        )
-                    cot_extra_cols = [c for c in cot_acc.columns if c not in ("Commodity","Long Accuracy (%)","Short Accuracy (%)")]
-                    cot_extra_headers = "".join(f"<th>{c}</th>" for c in cot_extra_cols)
-                    html_tbl2 = (
-                        _TBL_CSS2
-                        + "<table class='ec-table'>"
-                        + "<thead><tr>"
-                        + "<th>Commodity</th><th>Long Accuracy</th><th>Short Accuracy</th>"
-                        + cot_extra_headers
-                        + "</tr></thead><tbody>"
-                        + rows_html
-                        + "</tbody></table>"
+                def _acc_style(val):
+                    if val is None or (isinstance(val, float) and pd.isna(val)):
+                        return "color:#8890a1", "–"
+                    if val >= 60:
+                        return "color:#4ade80;font-weight:700", f"{val:.1f}%"
+                    if val <= 40:
+                        return "color:#f87171;font-weight:700", f"{val:.1f}%"
+                    return "color:#CFB991", f"{val:.1f}%"
+                rows_html = ""
+                for _, row in cot_acc.iterrows():
+                    la_style, la_str = _acc_style(row.get("Long Accuracy (%)"))
+                    sa_style, sa_str = _acc_style(row.get("Short Accuracy (%)"))
+                    rows_html += (
+                        f"<tr>"
+                        f"<td style='color:#b8b8b8'>{row.get('Commodity','')}</td>"
+                        f"<td style='{la_style}'>{la_str}</td>"
+                        f"<td style='{sa_style}'>{sa_str}</td>"
+                        f"</tr>"
                     )
-                    st.markdown(html_tbl2, unsafe_allow_html=True)
-                    _insight_note(
-                        "Accuracy above <b>55%</b> is considered meaningful - pure luck is 50%. "
-                        "<b>Gold and WTI</b> historically show the strongest contrarian accuracy "
-                        "due to their deep, speculator-heavy futures markets."
-                    )
+                cot_extra_cols = [c for c in cot_acc.columns if c not in ("Commodity","Long Accuracy (%)","Short Accuracy (%)")]
+                cot_extra_headers = "".join(f"<th>{c}</th>" for c in cot_extra_cols)
+                html_tbl2 = (
+                    _TBL_CSS2
+                    + "<table class='ec-table'>"
+                    + "<thead><tr>"
+                    + "<th>Commodity</th><th>Long Accuracy</th><th>Short Accuracy</th>"
+                    + cot_extra_headers
+                    + "</tr></thead><tbody>"
+                    + rows_html
+                    + "</tbody></table>"
+                )
+                st.markdown(html_tbl2, unsafe_allow_html=True)
+                _insight_note(
+                    "Accuracy above <b>55%</b> is considered meaningful - pure luck is 50%. "
+                    "<b>Gold and WTI</b> historically show the strongest contrarian accuracy "
+                    "due to their deep, speculator-heavy futures markets."
+                )
 
-                with ca2:
-                    cot_valid = cot_acc.dropna(subset=["Long Accuracy (%)"])
-                    if not cot_valid.empty:
-                        fig_cot_acc = go.Figure()
+            with ca2:
+                cot_valid = cot_acc.dropna(subset=["Long Accuracy (%)"])
+                if not cot_valid.empty:
+                    fig_cot_acc = go.Figure()
+                    fig_cot_acc.add_trace(go.Bar(
+                        name="Crowded Long", y=cot_valid["Commodity"],
+                        x=cot_valid["Long Accuracy (%)"],
+                        orientation="h", marker_color="#c0392b", opacity=0.85,
+                    ))
+                    cot_short_df = cot_acc.dropna(subset=["Short Accuracy (%)"])
+                    if not cot_short_df.empty:
                         fig_cot_acc.add_trace(go.Bar(
-                            name="Crowded Long", y=cot_valid["Commodity"],
-                            x=cot_valid["Long Accuracy (%)"],
-                            orientation="h", marker_color="#c0392b", opacity=0.85,
+                            name="Crowded Short", y=cot_short_df["Commodity"],
+                            x=cot_short_df["Short Accuracy (%)"],
+                            orientation="h", marker_color="#2e7d32", opacity=0.85,
                         ))
-                        cot_short_df = cot_acc.dropna(subset=["Short Accuracy (%)"])
-                        if not cot_short_df.empty:
-                            fig_cot_acc.add_trace(go.Bar(
-                                name="Crowded Short", y=cot_short_df["Commodity"],
-                                x=cot_short_df["Short Accuracy (%)"],
-                                orientation="h", marker_color="#2e7d32", opacity=0.85,
-                            ))
-                        fig_cot_acc.add_vline(x=50, line=dict(color="#ABABAB", width=1.5, dash="dot"),
-                                              annotation_text="50% random", annotation_font_size=8)
-                        fig_cot_acc.add_vline(x=55, line=dict(color="#2e7d32", width=1, dash="dot"),
-                                              annotation_text="55% signal", annotation_font_size=8,
-                                              annotation_font_color="#2e7d32")
-                        fig_cot_acc.update_layout(
-                            template="purdue",
-                            height=max(260, len(cot_valid) * 32),
-                            barmode="group",
-                            title=dict(text=f"COT Contrarian Accuracy ({fwd_weeks}w)", font=dict(size=10)),
-                            xaxis=dict(title="Accuracy (%)", ticksuffix="%", range=[0, 100]),
-                            margin=dict(l=120, r=60, t=40, b=30),
-                        )
-                        _chart(fig_cot_acc)
-                        _insight_note(
-                            "Green bars show accuracy when the signal predicted a <b>price rise</b> "
-                            "(crowded short reversal); red bars show accuracy when predicting a "
-                            "<b>price fall</b> (crowded long reversal). "
-                            "Any reading above the <b>55% dashed line</b> indicates the signal "
-                            "has genuine forecasting power beyond random chance."
-                        )
+                    fig_cot_acc.add_vline(x=50, line=dict(color="#ABABAB", width=1.5, dash="dot"),
+                                          annotation_text="50% random", annotation_font_size=8)
+                    fig_cot_acc.add_vline(x=55, line=dict(color="#2e7d32", width=1, dash="dot"),
+                                          annotation_text="55% signal", annotation_font_size=8,
+                                          annotation_font_color="#2e7d32")
+                    fig_cot_acc.update_layout(
+                        template="purdue",
+                        height=max(260, len(cot_valid) * 32),
+                        barmode="group",
+                        title=dict(text=f"COT Contrarian Accuracy ({fwd_weeks}w)", font=dict(size=10)),
+                        xaxis=dict(title="Accuracy (%)", ticksuffix="%", range=[0, 100]),
+                        margin=dict(l=120, r=60, t=40, b=30),
+                    )
+                    _chart(fig_cot_acc)
+                    _insight_note(
+                        "Green bars show accuracy when the signal predicted a <b>price rise</b> "
+                        "(crowded short reversal); red bars show accuracy when predicting a "
+                        "<b>price fall</b> (crowded long reversal). "
+                        "Any reading above the <b>55% dashed line</b> indicates the signal "
+                        "has genuine forecasting power beyond random chance."
+                    )
 
     # ── Page conclusion ─────────────────────────────────────────────────────
     bal_str = f"{stats['balanced_acc']:.0f}%" if stats["balanced_acc"] else "–"
