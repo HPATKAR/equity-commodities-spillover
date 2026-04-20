@@ -487,7 +487,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                     unsafe_allow_html=True,
                 )
             else:
-                st.info("Implied vol data unavailable. Requires ^OVX, ^GVZ, ^VIX, ^VVIX from Yahoo Finance.")
+                pass  # Implied vol data unavailable — skip section rather than showing a banner
     except Exception:
         pass
 
@@ -982,26 +982,24 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                             messages=[{"role": "user", "content": _prompt}],
                         )
                         st.session_state[_narrative_key] = _resp.choices[0].message.content
-            except Exception as _e:
-                # Do NOT cache the error - let it retry on next render.
-                st.warning(f"Narrative generation failed: {_e}", icon="⚠️")
+            except Exception:
+                pass  # Silent — retry on next render; don't surface API errors to users
 
     _narrative_val = st.session_state.get(_narrative_key, "")
+    if not _narrative_val:
+        return  # AI narrative unavailable — skip section entirely rather than showing a banner
     st.markdown(
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:0.14em;color:#8E9AAA;margin:0.5rem 0 0.3rem">AI Market Narrative</p>',
         unsafe_allow_html=True,
     )
-    if not _narrative_val:
-        st.info("Add `anthropic_api_key` or `openai_api_key` to `.streamlit/secrets.toml` to enable AI narratives.")
-    else:
-        st.markdown(
-            f'<div style="padding:0.8rem 1rem;'
-            f'background:#1c1c1c;border-radius:0;margin-bottom:0.8rem">'
-            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#e8e9ed;line-height:1.75">'
-            f'{_narrative_val.replace(chr(10), "<br>")}</div></div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        f'<div style="padding:0.8rem 1rem;'
+        f'background:#1c1c1c;border-radius:0;margin-bottom:0.8rem">'
+        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#e8e9ed;line-height:1.75">'
+        f'{_narrative_val.replace(chr(10), "<br>")}</div></div>',
+        unsafe_allow_html=True,
+    )
 
     _page_conclusion(
         "Current Market Regime",
@@ -1137,10 +1135,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         if _n_pend > 0:
             st.markdown("---")
             render_pending_review()
-    except Exception as _e:
-        import traceback as _tb
-        st.error(f"AI Workforce error: {_e}")
-        with st.expander("Error details", expanded=False):
-            st.code(_tb.format_exc(), language="text")
+    except Exception:
+        pass  # AI Workforce module unavailable — skip section silently
 
     _page_footer()

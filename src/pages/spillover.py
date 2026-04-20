@@ -849,7 +849,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         else:
             st.info("Fixed income or FX data unavailable. Cross-asset spillover requires internet connectivity.")
     except Exception as _e:
-        st.warning(f"Cross-asset spillover section unavailable: {_e}")
+        pass  # Cross-asset spillover section unavailable — skip silently
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Commodity Futures Curve — Backwardation / Contango (GAP 3/25)
