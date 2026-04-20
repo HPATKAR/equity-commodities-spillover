@@ -718,7 +718,7 @@ COMMODITY_TICKERS = {
     # Metals - industrial
     "Copper":           "HG=F",
     "Aluminum":         "ALI=F",
-    "Nickel":           "NILSY",
+    # Nickel (NILSY delisted 2024; LME nickel not available via yfinance)
     # Agriculture
     "Wheat":            "ZW=F",
     "Corn":             "ZC=F",
@@ -732,7 +732,7 @@ COMMODITY_TICKERS = {
 COMMODITY_GROUPS = {
     "Energy":          ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gasoline (RBOB)", "Heating Oil"],
     "Precious Metals": ["Gold", "Silver", "Platinum"],
-    "Industrial Metals": ["Copper", "Aluminum", "Nickel"],
+    "Industrial Metals": ["Copper", "Aluminum"],
     "Agriculture":     ["Wheat", "Corn", "Soybeans", "Sugar #11", "Coffee", "Cotton"],
 }
 
@@ -756,7 +756,7 @@ FIXED_INCOME_GROUPS: dict[str, list[str]] = {
 
 # ── FX tickers (yfinance) ───────────────────────────────────────────────────
 FX_TICKERS: dict[str, str] = {
-    "DXY (Dollar Index)": "UUP",
+    "DXY (Dollar Index)": "DX-Y.NYB",
     "EUR/USD":            "EURUSD=X",
     "USD/JPY":            "USDJPY=X",
     "GBP/USD":            "GBPUSD=X",
@@ -965,7 +965,7 @@ WATCHLIST = [
     ("NG=F",  "Natural Gas",      "Energy",           "Europe energy crisis proxy"),
     ("GC=F",  "Gold",             "Precious Metals",  "Safe haven & inflation hedge"),
     ("HG=F",  "Copper",           "Industrial Metals","Global growth bellwether"),
-    ("NILSY", "Nickel",           "Industrial Metals","EV battery supply risk"),
+    # Nickel removed — NILSY delisted; no working yfinance nickel futures ticker
     ("ZW=F",  "Wheat",            "Agriculture",      "Ukraine/Russia supply shock"),
     ("ZC=F",  "Corn",             "Agriculture",      "Ethanol & food inflation"),
     ("ZS=F",  "Soybeans",         "Agriculture",      "China-US trade war proxy"),

@@ -202,11 +202,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             f'{_age_label}</div></div>',
             unsafe_allow_html=True,
         )
-        if st.button("Refresh", key="overview_refresh_btn", use_container_width=True):
+        if st.button("Refresh", key="overview_refresh_btn", width="stretch"):
             st.session_state["overview_last_loaded"] = _dt.datetime.now()
             st.cache_data.clear()
             st.rerun()
-        if st.button("Open Analyst", key="hdr_ai_analyst_btn", type="primary", use_container_width=True):
+        if st.button("Open Analyst", key="hdr_ai_analyst_btn", type="primary", width="stretch"):
             st.session_state["current_page"] = "ai_chat"
             st.rerun()
     _no_api_key_banner("AI analyst and agent-generated insights")

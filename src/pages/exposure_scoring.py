@@ -178,7 +178,7 @@ def _render_beta_chart(asset_data: dict) -> None:
         ),
         bargap=0.25,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Conflict radar: all assets beta to one conflict ───────────────────────────
@@ -228,7 +228,7 @@ def _render_conflict_affected_chart(conflict_id: str, conflict_color: str) -> No
         ),
         bargap=0.22,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Hedge asset panel ─────────────────────────────────────────────────────────

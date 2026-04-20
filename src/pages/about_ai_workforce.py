@@ -535,7 +535,7 @@ def page_about_ai_workforce() -> None:
         run_clicked = st.button(
             "Run All Agents Now",
             key="workforce_run_btn",
-            use_container_width=True,
+            width="stretch",
             type="primary",
             disabled=(n_stale == 0),
             help="Run the full 3-round pipeline (Rounds 1-3). CQO runs per page.",
@@ -544,7 +544,7 @@ def page_about_ai_workforce() -> None:
         force_clicked = st.button(
             "Force Refresh All",
             key="workforce_force_btn",
-            use_container_width=True,
+            width="stretch",
             type="secondary",
             help="Invalidate all cached outputs and re-run the full pipeline.",
         )

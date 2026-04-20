@@ -1982,7 +1982,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             })
 
         _bm_df = _bm_pd.DataFrame(_bm_rows)
-        st.dataframe(_bm_df, use_container_width=True, hide_index=True)
+        st.dataframe(_bm_df, width="stretch", hide_index=True)
         st.caption(
             "Hit Rate = model assertions passed on historical price data for each snapshot date. "
             "Posterior feeds calibrate_confidence() as α=40% weight alongside model self-report. "
@@ -2010,7 +2010,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     }
                     for d in _sel_res["details"]
                 ]
-                st.dataframe(_bm_pd.DataFrame(_detail_rows), use_container_width=True, hide_index=True)
+                st.dataframe(_bm_pd.DataFrame(_detail_rows), width="stretch", hide_index=True)
             else:
                 st.caption("No assertions for this agent in the benchmark registry.")
 
@@ -2027,7 +2027,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     "Assertions":   _n_assert,
                     "Agents":       ", ".join(_s.get("assertions", {}).keys()),
                 })
-            st.dataframe(_bm_pd.DataFrame(_snap_rows), use_container_width=True, hide_index=True)
+            st.dataframe(_bm_pd.DataFrame(_snap_rows), width="stretch", hide_index=True)
             st.caption("VIX > 35 = Crisis ground truth · VIX > 22 = Elevated · else Normal. "
                        "CIS/TPS proxied from risk_score when conflict model can't be back-tested.")
     except Exception as _bm_err:

@@ -128,7 +128,7 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                if st.button("Select", key=f"ci_sel_{cid}", use_container_width=True):
+                if st.button("Select", key=f"ci_sel_{cid}", width="stretch"):
                     st.session_state.ci_selected = cid
                     st.rerun()
 
@@ -187,7 +187,7 @@ def _render_intensity_breakdown(selected_id: str, selected: dict) -> None:
                    showgrid=False),
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── TPS channel breakdown ─────────────────────────────────────────────────────
@@ -243,7 +243,7 @@ def _render_tps_channels(selected_id: str) -> None:
                    showgrid=False),
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Top affected assets ───────────────────────────────────────────────────────
@@ -442,7 +442,7 @@ def _render_transmission_heatmap(results: dict) -> None:
             showgrid=False,
         ),
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Page entry point ──────────────────────────────────────────────────────────
@@ -526,7 +526,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                         "As Of":        gd["as_of"],
                     })
                 if rows:
-                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
                 else:
                     st.caption("No GDELT data rows to display.")
 
@@ -643,7 +643,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         _col_debate, _col_trigger = st.columns([4, 1])
         with _col_trigger:
             if st.button("Run Assessment", key=f"ci_debate_{selected_id}",
-                         use_container_width=True):
+                         width="stretch"):
                 _cis   = selected["cis"]
                 _tps   = selected["tps"]
                 _trend = selected["trend"]

@@ -761,7 +761,7 @@ if _need_auth and not st.session_state.get("_auth_ok", False):
     _pw_in = _pw_col.text_input("Password", type="password", key="_auth_pw",
                                 label_visibility="collapsed",
                                 placeholder="Password")
-    if _pw_col.button("Enter", key="_auth_btn", type="primary", use_container_width=True):
+    if _pw_col.button("Enter", key="_auth_btn", type="primary", width="stretch"):
         _correct = ""
         try:
             _correct = st.secrets.get("auth", {}).get("password", "")

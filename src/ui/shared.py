@@ -119,7 +119,7 @@ def _chart(fig: go.Figure, **kwargs) -> None:
     """Render a Plotly figure with sensible Streamlit defaults."""
     st.plotly_chart(
         fig,
-        use_container_width=True,
+        width="stretch",
         config={
             "displayModeBar": True,
             "modeBarButtonsToRemove": ["lasso2d", "select2d"],
@@ -860,7 +860,7 @@ div[data-testid="stPopoverBody"] .stButton > button {
             )
             _gap, _btn_col = st.columns([0.82, 0.18])
             with _btn_col:
-                with st.popover(_lbl, use_container_width=True):
+                with st.popover(_lbl, width="stretch"):
                     # Section header helper
                     def _sec(label: str, sub: str = "") -> None:
                         _sh = (

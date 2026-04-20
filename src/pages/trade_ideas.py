@@ -670,7 +670,7 @@ def _render_trade_card(
                     "Wtd P&L":    f"{r['prob_weighted_pnl']:+.2f}%",
                     "Active":     "★" if r["is_current"] else "",
                 } for r in p_table])
-                st.dataframe(pt_df, use_container_width=True, hide_index=True)
+                st.dataframe(pt_df, width="stretch", hide_index=True)
 
             except Exception as exc:
                 st.caption(f"Payoff projection unavailable: {exc}")

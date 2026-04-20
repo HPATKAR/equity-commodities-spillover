@@ -208,12 +208,12 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 data=get_template_csv(),
                 file_name="portfolio_template.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
             )
 
         with _ic3:
             if _existing_portfolio and st.button(
-                "Clear Portfolio", use_container_width=True, key="clear_pf_btn"
+                "Clear Portfolio", width="stretch", key="clear_pf_btn"
             ):
                 clear_portfolio()
                 st.rerun()
@@ -493,7 +493,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         eq_w = round(100.0 / n_stocks, 2)
 
         bcol1, bcol2, bcol3 = st.columns([1, 1, 3])
-        if bcol1.button("Equal Weight", key="eq_weight_btn", use_container_width=True):
+        if bcol1.button("Equal Weight", key="eq_weight_btn", width="stretch"):
             for tk in selected_stocks:
                 st.session_state[f"sw_{tk}"] = eq_w
 
@@ -535,7 +535,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
 
         edited_df = st.data_editor(
             stock_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             num_rows="fixed",
             key="stock_weight_editor",
@@ -586,7 +586,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             f'{tw_status}</span></div>',
             unsafe_allow_html=True,
         )
-        if norm_col.button("Normalize to 100%", key="normalize_btn", use_container_width=True):
+        if norm_col.button("Normalize to 100%", key="normalize_btn", width="stretch"):
             combined_weights_raw = {a: w / total_w * 100 for a, w in combined_weights_raw.items()}
             total_w = 100.0
 

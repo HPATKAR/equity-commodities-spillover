@@ -111,7 +111,7 @@ def _render_conflict_news_gpr(per_conflict: dict) -> None:
         bargap=0.18,
         bargroupgap=0.06,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Alpha gauge (donut-style) ─────────────────────────────────────────────────
@@ -265,17 +265,17 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
     with g1:
         st.plotly_chart(
             _mini_gauge(threat_score, "THREAT SCORE", "#e67e22"),
-            use_container_width=True, config={"displayModeBar": False},
+            width="stretch", config={"displayModeBar": False},
         )
     with g2:
         st.plotly_chart(
             _mini_gauge(act_score, "ACT SCORE", "#c0392b"),
-            use_container_width=True, config={"displayModeBar": False},
+            width="stretch", config={"displayModeBar": False},
         )
     with g3:
         st.plotly_chart(
             _mini_gauge(news_gpr, "NEWS GPR", "#CFB991"),
-            use_container_width=True, config={"displayModeBar": False},
+            width="stretch", config={"displayModeBar": False},
         )
     with g4:
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)

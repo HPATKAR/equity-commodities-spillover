@@ -735,7 +735,7 @@ def _render_geo_risk_block(
                 annotation_font={"size": 8, "color": color, "family": "JetBrains Mono"},
                 annotation_position="right",
             )
-            st.plotly_chart(fig_hist, use_container_width=True,
+            st.plotly_chart(fig_hist, width="stretch",
                             config={"displayModeBar": False})
         else:
             st.markdown(
@@ -1174,7 +1174,7 @@ def _render_scenario_switch() -> None:
             sdef["label"],
             key=f"scen_{sid}",
             type="primary" if active else "secondary",
-            use_container_width=True,
+            width="stretch",
         ):
             set_scenario(sid)
             st.rerun()
@@ -1195,13 +1195,13 @@ def _render_scenario_switch() -> None:
                 _cmp["label"],
                 key=f"cmp_{'_'.join(_cmp['scenarios'])}",
                 type="primary" if _active_cmp else "secondary",
-                use_container_width=True,
+                width="stretch",
                 help=_cmp["desc"],
             ):
                 set_compound_scenario(_cmp["scenarios"])
                 st.rerun()
         if is_compound:
-            if st.button("Clear compound → back to Base", key="cmp_clear", use_container_width=False):
+            if st.button("Clear compound → back to Base", key="cmp_clear", width="content"):
                 set_scenario("base")
                 st.rerun()
 
@@ -1391,7 +1391,7 @@ def _render_quickjump() -> None:
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                if st.button("→", key=f"qj_{page_id}", use_container_width=True):
+                if st.button("→", key=f"qj_{page_id}", width="stretch"):
                     st.query_params["page"] = page_id
                     st.rerun()
 

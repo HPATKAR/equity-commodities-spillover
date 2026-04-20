@@ -275,7 +275,7 @@ def _render_workforce_content(agents_state: dict, agent_list: list,
             if st.button(
                 ("● " if enabled else "○ ") + label,
                 key=f"{key_prefix}agent_toggle_{aid}",
-                use_container_width=True,
+                width="stretch",
                 help=f"{'Disable' if enabled else 'Enable'} {meta['name']}",
             ):
                 toggle_agent(aid)

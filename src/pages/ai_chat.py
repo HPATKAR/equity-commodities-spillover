@@ -399,7 +399,7 @@ def render_chat_core(start: str, end: str, show_status_bar: bool = True) -> None
         label_visibility="collapsed",
         key="chat_textarea",
     )
-    _send = _btn_col.button("Send", type="primary", key="send_chat", use_container_width=True)
+    _send = _btn_col.button("Send", type="primary", key="send_chat", width="stretch")
     # _sq_input may be set by suggested-question buttons in page_ai_chat;
     # pop() returns None in the launcher context (no suggested questions there)
     _sq   = st.session_state.pop("_sq_input", None)
@@ -598,7 +598,7 @@ def page_ai_chat(start: str, end: str) -> None:
     # Explicit context refresh (page-only feature; auto-load is inside render_chat_core
     # so it also fires when the launcher opens on a different page).
     status_col, btn_col = st.columns([6, 1])
-    _refresh = btn_col.button("Refresh context", key="refresh_ctx", use_container_width=True)
+    _refresh = btn_col.button("Refresh context", key="refresh_ctx", width="stretch")
     if _refresh:
         with st.spinner("Loading live market context..."):
             st.session_state["chat_context"]    = _build_market_context(start, end)
@@ -639,7 +639,7 @@ def page_ai_chat(start: str, end: str) -> None:
         )
         cols = st.columns(2)
         for i, q in enumerate(_SUGGESTED):
-            if cols[i % 2].button(q, key=f"sq_{i}", use_container_width=True):
+            if cols[i % 2].button(q, key=f"sq_{i}", width="stretch"):
                 st.session_state["_sq_input"] = q
 
     st.markdown(

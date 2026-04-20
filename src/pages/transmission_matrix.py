@@ -121,7 +121,7 @@ def _render_weighted_heatmap(results: dict) -> None:
             showgrid=False,
         ),
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Channel dominance bar chart ───────────────────────────────────────────────
@@ -173,7 +173,7 @@ def _render_channel_dominance(results: dict) -> None:
                    showgrid=False),
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Sankey: conflict → channel → asset class ──────────────────────────────────
@@ -274,7 +274,7 @@ def _render_sankey(results: dict) -> None:
         margin=dict(l=10, r=10, t=10, b=10),
         height=340,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 # ── Commodity exposure table ──────────────────────────────────────────────────
