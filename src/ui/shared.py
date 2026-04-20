@@ -998,20 +998,21 @@ a:hover{{color:#CFB991;}}
   var f = window.frameElement;
   if (!f) return;
 
-  /* ── 1. Full-width: break out of Streamlit block-container ── */
-  f.style.width          = '100vw';
-  f.style.position       = 'relative';
-  f.style.left           = '50%';
-  f.style.transform      = 'translateX(-50%)';
-  f.style.maxWidth       = '100vw';
-  f.style.border         = 'none';
-  f.style.display        = 'block';
-  f.style.marginLeft     = '0';
-  f.style.marginRight    = '0';
-  f.style.overflow       = 'hidden';
+  /* ── 1. Full-width: style BOTH the iframe AND its Streamlit parent div ──
+     Matching the navbar's dual-target approach.
+     left:50%+translateX(-50%) is computed against the PARENT width, not the
+     viewport, so it breaks when the parent is constrained by block-container
+     max-width. Instead: free the parent first, then set iframe to width:100%. */
+  var p = f.parentElement;
+  if (p) {{
+    p.style.cssText = 'width:100%!important;max-width:none!important;' +
+      'overflow:visible!important;padding:0!important;margin:0!important;';
+  }}
+  f.style.cssText = 'width:100%!important;border:none!important;' +
+    'display:block!important;margin:0!important;overflow:hidden!important;';
 
-  /* ── 2. Walk every ancestor: remove overflow clip + bottom spacing ── */
-  var el = f.parentElement;
+  /* ── 2. Walk ancestors above p: remove overflow clip + bottom spacing ── */
+  var el = p ? p.parentElement : null;
   while (el && el !== window.parent.document.body) {{
     el.style.overflow      = 'visible';
     el.style.maxWidth      = 'none';
@@ -1032,15 +1033,22 @@ a:hover{{color:#CFB991;}}
     window.parent.document.head.appendChild(s);
   }}
 
-  /* ── 4. Auto-size iframe height to exact content height ── */
+  /* ── 4. Auto-size: update BOTH iframe height AND parent div height ──
+     Streamlit allocates a fixed height slot for the parent div from the
+     components.html(height=) param. Without updating p.style.height the
+     parent retains that allocation even after the iframe shrinks, producing
+     a blank gap below the footer content. */
   function measure() {{
     var h = document.documentElement.scrollHeight || document.body.scrollHeight;
-    if (h > 20) f.style.height = h + 'px';
+    if (h > 20) {{
+      f.style.height = h + 'px';
+      if (p) p.style.height = h + 'px';
+    }}
   }}
-  /* Run immediately, after fonts, and with two fallback retries */
+  /* Run immediately, after fonts load, and once more 200 ms later */
   measure();
   if (document.fonts && document.fonts.ready) {{
-    document.fonts.ready.then(function() {{ measure(); setTimeout(measure, 150); }});
+    document.fonts.ready.then(function() {{ measure(); setTimeout(measure, 200); }});
   }} else {{
     setTimeout(measure, 400);
   }}
@@ -1088,17 +1096,17 @@ function nav(page) {{
         <li><a href="#" onclick="nav('about_heramb');return false;">Heramb S. Patkar</a></li>
         <li><a href="#" onclick="nav('about_jiahe');return false;">Jiahe Miao</a></li>
         <li><a href="#" onclick="nav('about_ilian');return false;">Ilian Zalomai</a></li>
-        <li><a href="https://business.purdue.edu/" target="_blank">Daniels School of Business</a></li>
+        <li><a href="https://business.purdue.edu/" target="_blank" rel="noopener noreferrer">Daniels School of Business</a></li>
       </ul>
     </div>
 
     <div>
       <p class="ft-hd">Data Sources</p>
       <ul>
-        <li><a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a></li>
-        <li><a href="https://fred.stlouisfed.org" target="_blank">FRED &middot; Federal Reserve</a></li>
-        <li><a href="https://financialdatasets.ai" target="_blank">FinancialDatasets</a></li>
-        <li><a href="https://www.cftc.gov" target="_blank">CFTC COT Reports</a></li>
+        <li><a href="https://finance.yahoo.com" target="_blank" rel="noopener noreferrer">Yahoo Finance</a></li>
+        <li><a href="https://fred.stlouisfed.org" target="_blank" rel="noopener noreferrer">FRED &middot; Federal Reserve</a></li>
+        <li><a href="https://financialdatasets.ai" target="_blank" rel="noopener noreferrer">FinancialDatasets</a></li>
+        <li><a href="https://www.cftc.gov" target="_blank" rel="noopener noreferrer">CFTC COT Reports</a></li>
       </ul>
     </div>
 
@@ -1107,12 +1115,8 @@ function nav(page) {{
 <div class="ft-bar">
   <p>&copy; {yr} Cross-Asset Spillover Monitor &middot; Purdue Daniels &middot; MGMT 69000-120 &middot; For educational purposes only &middot; Not investment advice</p>
 </div>
-</body></html>""", height=380, scrolling=False)
-    _VALID = {'overview','war_impact_map','geopolitical','correlation','spillover',
-              'watchlist','trade_ideas','stress_test','scenario_engine','model_accuracy','ai_chat',
-              'about_heramb','about_jiahe','about_ilian'}
-    _ft_last = st.session_state.get("_ft_nav_last", "")
-    if _ft_click and _ft_click in _VALID and _ft_click != _ft_last:
-        st.session_state["_ft_nav_last"] = _ft_click
-        st.session_state["current_page"] = _ft_click
-        st.rerun()
+</body></html>""", height=300, scrolling=False)
+    # components.html() always returns None — navigation is handled entirely
+    # by window.parent.location.href inside nav() in the JS above.
+    # The _ft_click return-value check that previously appeared here was dead
+    # code and has been removed.
