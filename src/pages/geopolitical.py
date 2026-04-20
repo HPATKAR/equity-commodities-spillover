@@ -287,7 +287,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E9AAA;margin:1.4rem 0 0.4rem">'
-        f'Active Conflict Scores (CIS / TPS)</p>',
+        f'Active Conflict Scores — CIS: Conflict Intensity · TPS: Transmission Pressure · 0–100</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -313,7 +313,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                     f'color:{_fresh_col(_cr.get("freshness","aging"))};float:right">'
                     f'{_cr.get("freshness","?").upper()}</span>'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:6.5px;'
-                    f'color:{_src_col};margin-top:1px">CIS SRC: {_src_txt}</div>'
+                    f'color:{_src_col};margin-top:1px">SOURCE: {_src_txt}</div>'
                     f'<div style="display:flex;gap:10px;margin-top:4px">'
                     f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
                     f'color:#555960">CIS</span>'

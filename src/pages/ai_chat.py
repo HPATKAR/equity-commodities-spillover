@@ -626,7 +626,7 @@ def page_ai_chat(start: str, end: str) -> None:
     if not _has_key:
         st.warning(
             "No API key configured. Add one of the following to `.streamlit/secrets.toml` to enable responses:\n\n"
-            "```toml\n[keys]\nanthropics_api_key = \"sk-ant-...\"\n# or\nopenai_api_key = \"sk-...\"\n```"
+            "```toml\n[keys]\nanthropic_api_key = \"sk-ant-...\"\n# or\nopenai_api_key = \"sk-...\"\n```"
         )
 
     # Suggested questions (first visit only) - sets _sq_input; consumed by render_chat_core
