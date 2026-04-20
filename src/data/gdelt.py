@@ -37,9 +37,25 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import streamlit as st
 
 _GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
+
+# Browser-like UA — Python's default "python-requests/x.x" is commonly blocked by CDN rules
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+}
+
+# Manual success-only cache.
+# @st.cache_data caches failure dicts identically to successes, locking the app
+# into a 3-hour failure window even after GDELT recovers.  This dict only stores
+# successful results; failures are never persisted so the next call retries live.
+_GDELT_CACHE: dict[tuple, tuple[dict, datetime.datetime]] = {}
+_GDELT_TTL_S = 10800  # 3 hours (matches old @st.cache_data ttl)
 
 # ── Conflict → GDELT search query mapping ─────────────────────────────────────
 # Queries are GDELT boolean search strings: keywords + location + theme tags.
@@ -78,7 +94,6 @@ _GDELT_CONFLICT_QUERIES: dict[str, dict] = {
 }
 
 
-@st.cache_data(ttl=10800, show_spinner=False)  # 3-hour cache
 def fetch_gdelt_escalation(
     conflict_id: str,
     timespan: str = "7d",
@@ -120,6 +135,16 @@ def fetch_gdelt_escalation(
     if conflict_id not in _GDELT_CONFLICT_QUERIES:
         return {**_empty, "source": f"Unknown conflict_id: {conflict_id}"}
 
+    # Check success-only manual cache before hitting the network
+    _cache_key = (conflict_id, timespan)
+    _cached = _GDELT_CACHE.get(_cache_key)
+    if _cached:
+        _result, _cached_at = _cached
+        if (datetime.datetime.now() - _cached_at).total_seconds() < _GDELT_TTL_S:
+            return _result
+        # TTL expired — remove stale entry and fall through to live fetch
+        del _GDELT_CACHE[_cache_key]
+
     cfg = _GDELT_CONFLICT_QUERIES[conflict_id]
 
     try:
@@ -133,7 +158,7 @@ def fetch_gdelt_escalation(
             "TIMESPAN":   timespan,
             "MAXRECORDS": 250,
         }
-        resp = requests.get(_GDELT_DOC_API, params=params, timeout=20)
+        resp = requests.get(_GDELT_DOC_API, params=params, timeout=20, headers=_HEADERS)
         resp.raise_for_status()
         data = resp.json()
 
@@ -189,7 +214,8 @@ def fetch_gdelt_escalation(
                 "TIMESPAN":   "3d",
                 "MAXRECORDS": 50,
             }
-            art_resp = requests.get(_GDELT_DOC_API, params=art_params, timeout=15)
+            art_resp = requests.get(_GDELT_DOC_API, params=art_params, timeout=15,
+                                    headers=_HEADERS)
             art_data = art_resp.json()
             articles = art_data.get("articles", [])
             if articles:
@@ -197,8 +223,8 @@ def fetch_gdelt_escalation(
                 if tones:
                     tone_recent = float(np.mean(tones))
                     # Positive GDELT tone = more positive language.
-                    # A tone < −2 is meaningfully alarming for conflict coverage.
-                    # We report tone_delta vs a neutral baseline of −1.5 (typical conflict coverage)
+                    # A tone < -2 is meaningfully alarming for conflict coverage.
+                    # We report tone_delta vs a neutral baseline of -1.5 (typical conflict coverage)
                     tone_delta = tone_recent - (-1.5)
         except Exception:
             pass
@@ -209,7 +235,7 @@ def fetch_gdelt_escalation(
         except Exception:
             pass
 
-        return {
+        result = {
             "volume_recent":     vol_recent,
             "volume_prior":      vol_prior,
             "volume_trend":      round(trend, 3),
@@ -220,19 +246,38 @@ def fetch_gdelt_escalation(
             "source":            "GDELT live",
             "as_of":             str(datetime.date.today()),
         }
+        # Only cache successes — failures must NOT be cached so the next call retries
+        _GDELT_CACHE[_cache_key] = (result, datetime.datetime.now())
+        return result
 
-    except Exception as e:
+    except requests.exceptions.HTTPError as he:
+        # Capture actual HTTP status code for actionable error messages
+        _status = he.response.status_code if he.response is not None else "?"
+        _msg = f"GDELT HTTP {_status}"
         try:
             from src.analysis.freshness import record_failure
-            record_failure("gdelt", f"GDELT fetch error: {type(e).__name__}")
+            record_failure("gdelt", _msg)
         except Exception:
             pass
-        return {**_empty, "source": f"GDELT error: {type(e).__name__}"}
+        return {**_empty, "source": _msg}
+
+    except Exception as e:
+        _msg = f"GDELT {type(e).__name__}"
+        try:
+            from src.analysis.freshness import record_failure
+            record_failure("gdelt", _msg)
+        except Exception:
+            pass
+        return {**_empty, "source": _msg}
 
 
-@st.cache_data(ttl=10800, show_spinner=False)
 def fetch_all_gdelt_signals(timespan: str = "7d") -> dict[str, dict]:
-    """Fetch GDELT escalation signals for all tracked conflicts."""
+    """
+    Fetch GDELT escalation signals for all tracked conflicts.
+    Each conflict result is individually cached (success-only, 3h TTL) inside
+    fetch_gdelt_escalation. No outer cache needed here: callers always get
+    cached data for healthy conflicts and a live retry for failed ones.
+    """
     return {
         cid: fetch_gdelt_escalation(cid, timespan=timespan)
         for cid in _GDELT_CONFLICT_QUERIES
