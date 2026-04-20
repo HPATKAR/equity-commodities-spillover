@@ -38,6 +38,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 
 _GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
 
@@ -284,12 +285,14 @@ def fetch_gdelt_escalation(
         return {**_empty, "source": _msg}
 
 
+@st.cache_data(ttl=10800, show_spinner=False)
 def fetch_all_gdelt_signals(timespan: str = "7d") -> dict[str, dict]:
     """
     Fetch GDELT escalation signals for all tracked conflicts.
     Each conflict result is individually cached (success-only, 3h TTL) inside
-    fetch_gdelt_escalation. No outer cache needed here: callers always get
-    cached data for healthy conflicts and a live retry for failed ones.
+    fetch_gdelt_escalation. Outer @st.cache_data(ttl=10800) caches the aggregated
+    result across all sessions — cold start (9-12s with sleeps) happens at most
+    once per 3h, then all subsequent calls return instantly from Streamlit cache.
 
     Inter-conflict delay (1.5s) is applied only for live fetches — cached results
     are returned immediately. This prevents the 6-conflict cold-start from firing

@@ -286,7 +286,7 @@ def _fill_gaps(df: pd.DataFrame, method: str = "ffill", limit: int = 5) -> pd.Da
 
 # ── Cached loaders ─────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=300, show_spinner=False)   # 5 min when LSEG live; 1 hr otherwise
+@st.cache_data(ttl=1800, show_spinner=False)   # 5 min when LSEG live; 1 hr otherwise
 def load_equity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -298,7 +298,7 @@ def load_equity_prices(
     return _fill_gaps(_fetch_yf(EQUITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def load_commodity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -310,7 +310,7 @@ def load_commodity_prices(
     return _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def load_all_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -321,7 +321,7 @@ def load_all_prices(
     return eq, cmd
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def load_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -355,7 +355,7 @@ def load_combined_returns(
     return combined.dropna(how="all")
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)
 def load_fred_series(
     fred_api_key: Optional[str] = None,
     start: str = str(DEFAULT_START),
