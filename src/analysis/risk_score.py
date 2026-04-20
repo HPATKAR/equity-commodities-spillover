@@ -56,11 +56,11 @@ _MODEL_CONFIG: dict = {
     # - corr_accel reduced: velocity-based, less lag, but narrower scope
     "mcs_weights": {
         "eq_vol":     0.15,
-        "rates_vol":  0.10,
+        "rates_vol":  0.07,
         "cmd_vol":    0.22,
-        "safe_haven": 0.25,
-        "oil_gold":   0.20,
-        "corr_accel": 0.08,
+        "safe_haven": 0.28,
+        "oil_gold":   0.23,
+        "corr_accel": 0.05,
     },
     # risk_score_history() weights — approximates live model using mkt-only signals
     "history_weights": {
@@ -103,8 +103,8 @@ def _ewm_zscore(series: pd.Series, span: int = 252) -> pd.Series:
     return (series - mu) / sigma.replace(0, np.nan)
 
 
-def _zscore_to_score(z: float, scale: float = 12.0) -> float:
-    """Map EWM z-score → [0, 100]. z=0 → 50, z=+2 → ~74, z=−2 → ~26."""
+def _zscore_to_score(z: float, scale: float = 15.0) -> float:
+    """Map EWM z-score → [0, 100]. z=0 → 50, z=+2 → ~80, z=−2 → ~20."""
     return float(np.clip(50.0 + float(z) * scale, 0.0, 100.0))
 
 
@@ -166,7 +166,7 @@ def _commodity_vol_score(cmd_r: pd.DataFrame) -> float:
     if len(rv) < 80:
         return 50.0
     z = float(_ewm_zscore(rv).iloc[-1])
-    return _zscore_to_score(z, scale=11.0)
+    return _zscore_to_score(z, scale=14.0)
 
 
 def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
@@ -196,7 +196,7 @@ def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
         return 50.0
 
     g_z       = float(_ewm_zscore(g_cum).iloc[-1])
-    raw_score = _zscore_to_score(g_z, scale=14.0)
+    raw_score = _zscore_to_score(g_z, scale=16.0)
 
     # Geopolitical premium: gold + oil joint elevation (war/supply-shock signature)
     # Proportional ramp — no hardcoded on/off threshold
@@ -212,7 +212,7 @@ def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
                     o_z = float(_ewm_zscore(o_roll).iloc[-1])
                     # Both positive → geopolitical premium, scaled to joint strength
                     if g_z > 0 and o_z > 0:
-                        geo_boost = float(np.clip((g_z + o_z) * 3.0, 0.0, 12.0))
+                        geo_boost = float(np.clip((g_z + o_z) * 5.0, 0.0, 20.0))
         except Exception:
             pass
 
@@ -249,14 +249,14 @@ def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict
     g_z = float(_ewm_zscore(g_roll.dropna()).iloc[-1]) if len(g_roll.dropna()) > 60 else 0.0
     o_z = float(_ewm_zscore(o_roll.dropna()).iloc[-1]) if len(o_roll.dropna()) > 60 else 0.0
 
-    gold_contribution = float(np.clip(g_z * 14, -28, 35))
-    oil_amplifier     = float(np.clip(o_z * 8,  -15, 20))
+    gold_contribution = float(np.clip(g_z * 17, -34, 42))
+    oil_amplifier     = float(np.clip(o_z * 11, -20, 28))
     # Smooth conflict bonus: proportional to how far above neutral each signal is.
     # Previous flat +5 created a discontinuity at g_z=1, o_z=1 (±5 pts at threshold).
     # Now: ramp begins as soon as either signal is positive, scales with joint strength.
     g_excess       = max(0.0, g_z - 0.7)
     o_excess       = max(0.0, o_z - 0.7)
-    conflict_bonus = float(np.clip((g_excess + o_excess) * 5.0, 0.0, 15.0))
+    conflict_bonus = float(np.clip((g_excess + o_excess) * 7.5, 0.0, 22.0))
 
     score = float(np.clip(50 + gold_contribution + oil_amplifier + conflict_bonus, 0, 100))
     return score, {
@@ -511,7 +511,7 @@ def risk_score_history(
         avg_vol   = rv.mean(axis=1)
         v_mean2   = avg_vol.ewm(span=252).mean()
         v_std2    = avg_vol.ewm(span=252).std().replace(0, np.nan)
-        vol_score = (50 + ((avg_vol - v_mean2) / v_std2).clip(-3, 3) * 11).clip(0, 100)
+        vol_score = (50 + ((avg_vol - v_mean2) / v_std2).clip(-3, 3) * 14).clip(0, 100)
     else:
         vol_score = pd.Series(50.0, index=avg_corr.index)
 
@@ -531,7 +531,7 @@ def risk_score_history(
         g_excess = (g_z - 0.7).clip(lower=0)
         o_excess = (o_z - 0.7).clip(lower=0)
         conflict_bonus = ((g_excess + o_excess) * 5.0).clip(upper=15.0)
-        og_score = (50 + g_z * 14 + o_z * 8 + conflict_bonus).clip(0, 100)
+        og_score = (50 + g_z * 17 + o_z * 11 + conflict_bonus).clip(0, 100)
     else:
         og_score = pd.Series(50.0, index=avg_corr.index)
 
@@ -540,7 +540,7 @@ def risk_score_history(
         eq_vol_raw   = eq_r.rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
         ev_mean      = eq_vol_raw.ewm(span=252).mean()
         ev_std       = eq_vol_raw.ewm(span=252).std().replace(0, np.nan)
-        eq_vol_score = (50 + ((eq_vol_raw - ev_mean) / ev_std).clip(-3, 3) * 11).clip(0, 100)
+        eq_vol_score = (50 + ((eq_vol_raw - ev_mean) / ev_std).clip(-3, 3) * 15).clip(0, 100)
     else:
         eq_vol_score = pd.Series(50.0, index=avg_corr.index)
 
@@ -574,6 +574,7 @@ def plot_risk_gauge(result: dict, height: int = 260) -> go.Figure:
         value=score,
         number=dict(
             suffix="/100",
+            valueformat=".1f",
             font=dict(size=32, family="JetBrains Mono, monospace", color=color),
         ),
         title=dict(
