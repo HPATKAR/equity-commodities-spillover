@@ -33,6 +33,7 @@ Date filter note: GDELT TimelineVol returns a time-series of volume
 from __future__ import annotations
 
 import datetime
+import time
 from typing import Optional
 
 import numpy as np
@@ -147,7 +148,11 @@ def fetch_gdelt_escalation(
 
     cfg = _GDELT_CONFLICT_QUERIES[conflict_id]
 
-    try:
+    # Retry loop: one automatic retry on 429 (rate-limit) with exponential back-off.
+    # All other errors surface immediately; successes break out of the loop.
+    _max_attempts = 2
+    for _attempt in range(_max_attempts):
+      try:
         import requests
 
         # TimelineVol: returns volume per time bucket as JSON
@@ -203,6 +208,9 @@ def fetch_gdelt_escalation(
         else:
             escalation = "stable"
 
+        # Brief pause between TimelineVol and ArtList to avoid back-to-back 429s
+        time.sleep(0.8)
+
         # Fetch tone via ArtList for the same query (last 3d only to keep fast)
         tone_recent = 0.0
         tone_delta  = 0.0
@@ -250,9 +258,14 @@ def fetch_gdelt_escalation(
         _GDELT_CACHE[_cache_key] = (result, datetime.datetime.now())
         return result
 
-    except requests.exceptions.HTTPError as he:
+      except requests.exceptions.HTTPError as he:
         # Capture actual HTTP status code for actionable error messages
         _status = he.response.status_code if he.response is not None else "?"
+        # 429 = rate limited — back off and retry once before giving up
+        if _status == 429 and _attempt < _max_attempts - 1:
+            _backoff = 4.0 * (_attempt + 1)  # 4s on first retry
+            time.sleep(_backoff)
+            continue
         _msg = f"GDELT HTTP {_status}"
         try:
             from src.analysis.freshness import record_failure
@@ -261,7 +274,7 @@ def fetch_gdelt_escalation(
             pass
         return {**_empty, "source": _msg}
 
-    except Exception as e:
+      except Exception as e:
         _msg = f"GDELT {type(e).__name__}"
         try:
             from src.analysis.freshness import record_failure
@@ -277,11 +290,24 @@ def fetch_all_gdelt_signals(timespan: str = "7d") -> dict[str, dict]:
     Each conflict result is individually cached (success-only, 3h TTL) inside
     fetch_gdelt_escalation. No outer cache needed here: callers always get
     cached data for healthy conflicts and a live retry for failed ones.
+
+    Inter-conflict delay (1.5s) is applied only for live fetches — cached results
+    are returned immediately. This prevents the 6-conflict cold-start from firing
+    12 requests in <2s and triggering GDELT's 429 rate limiter.
     """
-    return {
-        cid: fetch_gdelt_escalation(cid, timespan=timespan)
-        for cid in _GDELT_CONFLICT_QUERIES
-    }
+    results = {}
+    for cid in _GDELT_CONFLICT_QUERIES:
+        # Check local cache before deciding whether to sleep
+        _ck = (cid, timespan)
+        _hit = _GDELT_CACHE.get(_ck)
+        _is_cached = bool(
+            _hit and (datetime.datetime.now() - _hit[1]).total_seconds() < _GDELT_TTL_S
+        )
+        results[cid] = fetch_gdelt_escalation(cid, timespan=timespan)
+        if not _is_cached:
+            # Only throttle between live network calls, not cache hits
+            time.sleep(1.5)
+    return results
 
 
 def gdelt_escalation_override(conflict_id: str) -> str:
