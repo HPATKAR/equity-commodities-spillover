@@ -62,6 +62,9 @@ _FAIL_REGISTRY: dict[str, dict] = {}   # source → {ts, message, count}
 # Critical sources — if any fail, show a visible warning banner
 _CRITICAL_SOURCES = {"yfinance_prices", "yfinance_vix"}
 
+# Optional enrichment sources — failures are tracked internally but never shown in the banner
+_BANNER_SUPPRESSED = {"gdelt", "acled", "portwatch", "eia_inventory"}
+
 
 def record_fetch(source: str, ts: Optional[datetime.datetime] = None) -> None:
     """Record a successful fetch for a named source. Also clears any failure record."""
@@ -101,7 +104,7 @@ def data_health_html() -> str:
     Returns empty string if all critical sources are healthy.
     """
     critical_failures = {s: v for s, v in _FAIL_REGISTRY.items() if s in _CRITICAL_SOURCES}
-    all_failures      = _FAIL_REGISTRY
+    all_failures      = {s: v for s, v in _FAIL_REGISTRY.items() if s not in _BANNER_SUPPRESSED}
 
     if not all_failures:
         return ""
