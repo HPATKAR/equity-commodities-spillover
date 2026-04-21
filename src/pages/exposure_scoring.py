@@ -25,7 +25,6 @@ from src.analysis.exposure import (
     conflict_affected_universe,
     exposure_summary_stats,
 )
-from src.analysis.conflict_model import score_all_conflicts
 from src.analysis.scenario_state import get_scenario, get_scenario_id
 from src.data.config import CONFLICTS
 
@@ -322,8 +321,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
 
     # ── Load data ──────────────────────────────────────────────────────────
     try:
-        conflict_results = score_all_conflicts()
-        all_assets       = score_all_assets(conflict_results)
+        all_assets       = score_all_assets()
     except Exception as e:
         st.error(f"Exposure model error: {e}")
         return

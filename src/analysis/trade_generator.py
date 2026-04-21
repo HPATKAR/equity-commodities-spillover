@@ -457,7 +457,7 @@ def generate_conflict_trades(
     if conflict_results is None:
         conflict_results = score_all_conflicts()
     if all_assets is None:
-        all_assets = score_all_assets(conflict_results=conflict_results)
+        all_assets = score_all_assets()
     if scenario_id is None:
         scenario_id = get_scenario_id()
 

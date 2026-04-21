@@ -162,7 +162,6 @@ def _top_conflict(
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def score_all_assets(
-    conflict_results: Optional[dict] = None,
     scenario_id: Optional[str] = None,
 ) -> dict[str, dict]:
     """
@@ -173,14 +172,17 @@ def score_all_assets(
                           sector_tags, route_tags, direction}}
 
     direction: "long_geo_risk" | "safe_haven" | "neutral"
+
+    Note: conflict_results are always fetched internally via score_all_conflicts()
+    (itself cached). Passing a dict here was removed — dicts are unhashable and
+    would break @st.cache_data.
     """
     from src.analysis.conflict_model import (
         score_all_conflicts, aggregate_portfolio_scores,
     )
     from src.analysis.scenario_state import get_scenario
 
-    if conflict_results is None:
-        conflict_results = score_all_conflicts()
+    conflict_results = score_all_conflicts()
 
     agg = aggregate_portfolio_scores(conflict_results)
 

@@ -856,7 +856,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         from src.analysis.exposure import score_all_assets
         from src.analysis.conflict_model import score_all_conflicts
         _cr  = score_all_conflicts()
-        _aa  = score_all_assets(conflict_results=_cr)
+        _aa  = score_all_assets()
         generated = generate_conflict_trades(regime=current, conflict_results=_cr, all_assets=_aa)
         # Retain full exposure data for ranking and card display
         asset_exposure = dict(_aa)

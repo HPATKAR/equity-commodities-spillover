@@ -159,10 +159,10 @@ def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
         return pd.DataFrame()
 
     features = data.get("features", [])
-    if not features:
+    if not isinstance(features, list) or not features:
         return pd.DataFrame()
 
-    rows = [f["attributes"] for f in features]
+    rows = [f["attributes"] for f in features if isinstance(f, dict) and "attributes" in f]
     df   = pd.DataFrame(rows)
 
     if "date" not in df.columns or "n_tanker" not in df.columns:
