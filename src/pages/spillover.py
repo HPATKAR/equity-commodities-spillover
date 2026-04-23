@@ -164,7 +164,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             m2.metric("Significant (p<.05)", len(sig_df))
             m3.metric("Cmd → Equity links", len(c2e))
 
-            if not c2e.empty:
+            if not c2e.empty and c2e["cause"].nunique() > 0 and c2e["effect"].nunique() > 0:
                 pivot = c2e.pivot(index="effect", columns="cause", values="min_p")
                 fig_gc = go.Figure(go.Heatmap(
                     z=pivot.values,

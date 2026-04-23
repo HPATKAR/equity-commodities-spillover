@@ -785,7 +785,9 @@ def load_iv_snapshot() -> dict[str, float]:
             t = yf.Ticker(ticker)
             hist = t.history(period="2d")
             if not hist.empty:
-                result[name] = float(hist["Close"].dropna().iloc[-1])
+                _close = hist["Close"].dropna()
+                if not _close.empty:
+                    result[name] = float(_close.iloc[-1])
         except Exception:
             pass
     return result

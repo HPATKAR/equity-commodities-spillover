@@ -501,7 +501,8 @@ def risk_score_history(
     velocity = smooth.diff()
     v_mean   = velocity.ewm(span=252).mean()
     v_std    = velocity.ewm(span=252).std().replace(0, np.nan)
-    corr_accel_score = (50 + ((velocity - v_mean) / v_std.replace(0, np.nan)).clip(-3, 3) * 16.67).clip(0, 100)
+    _vel_z   = ((velocity - v_mean) / v_std).clip(-3, 3)
+    corr_accel_score = (50 + _vel_z.fillna(0) * 16.67).clip(0, 100)
 
     # 2. Raw commodity vol z-score (span=252, no residualization — matches live)
     energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
