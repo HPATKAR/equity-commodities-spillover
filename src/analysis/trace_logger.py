@@ -29,6 +29,7 @@ _FIELDS   = [
     "prompt_chars", "completion_chars",
     "prompt_tokens_est", "completion_tokens_est",
     "latency_ms", "cost_usd_est",
+    "status", "error_type",
 ]
 
 # Approximate list prices per 1M tokens, USD (April 2025)
@@ -95,6 +96,43 @@ def log_trace(
             "completion_tokens_est": completion_tokens,
             "latency_ms":            f"{latency_ms:.0f}",
             "cost_usd_est":          f"{cost_usd:.6f}",
+            "status":                "ok",
+            "error_type":            "",
+        }
+        try:
+            _ensure_log()
+            with open(_LOG_FILE, "a", newline="") as f:
+                csv.DictWriter(f, fieldnames=_FIELDS).writerow(row)
+        except Exception:
+            _accumulate_in_session(row)
+    except Exception:
+        pass
+
+
+def log_failure(
+    agent_id:   str,
+    error_type: str,
+    error_msg:  str,
+) -> None:
+    """
+    Record a failed agent LLM call.  Failed calls are as important as
+    successes for harness observability — production failures almost always
+    originate in tool execution or context truncation, not model quality.
+    """
+    try:
+        row = {
+            "timestamp":             datetime.datetime.now().isoformat(timespec="seconds"),
+            "agent_id":              agent_id,
+            "provider":              "",
+            "model":                 "",
+            "prompt_chars":          0,
+            "completion_chars":      0,
+            "prompt_tokens_est":     0,
+            "completion_tokens_est": 0,
+            "latency_ms":            "",
+            "cost_usd_est":          "0.000000",
+            "status":                "error",
+            "error_type":            f"{error_type}: {error_msg[:80]}",
         }
         try:
             _ensure_log()

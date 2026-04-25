@@ -270,6 +270,9 @@ class Orchestrator:
         """
         orch = self.orch
         orch["pipeline_status"] = "running"
+        # Clear stale divergence flags from previous run — flags must reflect
+        # the current pipeline execution only, not accumulate across sessions.
+        orch["divergence_flags"] = []
         results: dict[str, Any] = {}
 
         for round_n in (1, 2, 3):
@@ -279,6 +282,13 @@ class Orchestrator:
                 if not is_enabled(aid):
                     continue
                 if _is_fresh(aid):
+                    # Still build and store a fresh handoff so peer context
+                    # is available to downstream agents even on cache hits.
+                    existing = _get_handoff(aid)
+                    if not existing:
+                        cached_result = {"narrative": get_agent(aid).get("last_output", "")}
+                        h = self._build_handoff(aid, cached_result, market_context)
+                        _store_handoff(aid, h)
                     continue
                 ctx = self._build_context(aid, market_context)
                 result = self._run_agent(aid, ctx)
@@ -288,10 +298,11 @@ class Orchestrator:
                 h = self._build_handoff(aid, result, market_context)
                 _store_handoff(aid, h)
 
-                # Numeric field-level divergence detection
-                if result.get("narrative"):
-                    flags = _detect_divergence(aid, h, orch)
-                    orch["divergence_flags"].extend(flags)
+                # Numeric field-level divergence detection — runs on the handoff
+                # regardless of whether narrative is populated (field check is
+                # independent of text; empty narrative does not skip this).
+                flags = _detect_divergence(aid, h, orch)
+                orch["divergence_flags"].extend(flags)
 
             orch["round_complete"][round_n] = True
 
@@ -300,14 +311,33 @@ class Orchestrator:
         return results
 
     def run_round_one(self, market_context: dict) -> dict[str, Any]:
-        """Run only Round 1 agents. Useful for quick page loads."""
+        """
+        Run only Round 1 agents. Useful for quick page loads.
+        Stores handoffs so downstream agents can access peer context
+        even when only the fast path is used.
+        """
+        orch = self.orch
         results = {}
         for spec in [p for p in PIPELINE if p["round"] == 1]:
             aid = spec["id"]
-            if not is_enabled(aid) or _is_fresh(aid):
+            if not is_enabled(aid):
+                continue
+            if _is_fresh(aid):
+                existing = _get_handoff(aid)
+                if not existing:
+                    cached_result = {"narrative": get_agent(aid).get("last_output", "")}
+                    h = self._build_handoff(aid, cached_result, market_context)
+                    _store_handoff(aid, h)
                 continue
             ctx = self._build_context(aid, market_context)
-            results[aid] = self._run_agent(aid, ctx)
+            result = self._run_agent(aid, ctx)
+            results[aid] = result
+            # Store handoff — critical so Round 2/3 agents that call
+            # _peer_context() later in the session find typed data.
+            h = self._build_handoff(aid, result, market_context)
+            _store_handoff(aid, h)
+            flags = _detect_divergence(aid, h, orch)
+            orch["divergence_flags"].extend(flags)
         return results
 
     # ── Handoff builder ────────────────────────────────────────────────────────
@@ -321,8 +351,12 @@ class Orchestrator:
         a     = get_agent(agent_id)
         conf  = result.get("confidence", a.get("confidence", 0.5))
         regime_map = {"Normal": 1, "Elevated": 2, "Crisis": 3}
-        regime_raw = mc.get("regime_name", "Normal")
-        regime_int = regime_map.get(regime_raw, 1)
+        # Prefer agent's own regime assessment (result["regime"]) over the
+        # shared market-context regime.  Using mc["regime_name"] for ALL agents
+        # makes them identical, rendering regime divergence checks vacuous —
+        # every agent would report the same value and Δ would always be 0.
+        agent_regime_raw = result.get("regime_name") or mc.get("regime_name", "Normal")
+        regime_int = result.get("regime") or regime_map.get(agent_regime_raw, 1)
 
         h = AgentHandoff(
             agent_id=agent_id,
@@ -561,30 +595,49 @@ class Orchestrator:
     # ── Agent dispatch ─────────────────────────────────────────────────────────
 
     def _run_agent(self, agent_id: str, context: dict) -> dict:
-        """Dispatch to the appropriate agent module."""
+        """
+        Dispatch to the appropriate agent module.
+        Retries once on failure (transient LLM timeout/network error).
+        Logs failures to trace_logger for harness observability.
+        """
+        import time as _time
+
+        _MODULE_MAP = {
+            "signal_auditor":        "src.agents.signal_auditor",
+            "macro_strategist":      "src.agents.macro_strategist",
+            "geopolitical_analyst":  "src.agents.geopolitical_analyst",
+            "risk_officer":          "src.agents.risk_officer",
+            "commodities_specialist":"src.agents.commodities_specialist",
+            "stress_engineer":       "src.agents.stress_engineer",
+            "trade_structurer":      "src.agents.trade_structurer",
+        }
+        if agent_id not in _MODULE_MAP:
+            return {}
+
         set_status(agent_id, "investigating")
-        try:
-            if agent_id == "signal_auditor":
-                from src.agents.signal_auditor import run
-            elif agent_id == "macro_strategist":
-                from src.agents.macro_strategist import run
-            elif agent_id == "geopolitical_analyst":
-                from src.agents.geopolitical_analyst import run
-            elif agent_id == "risk_officer":
-                from src.agents.risk_officer import run
-            elif agent_id == "commodities_specialist":
-                from src.agents.commodities_specialist import run
-            elif agent_id == "stress_engineer":
-                from src.agents.stress_engineer import run
-            elif agent_id == "trade_structurer":
-                from src.agents.trade_structurer import run
-            else:
-                return {}
-            return run(context, self.provider, self.api_key)  # type: ignore
-        except Exception as e:
-            log_activity(agent_id, "pipeline error", str(e)[:80], "warning")
-            set_status(agent_id, "idle")
-            return {"error": str(e)}
+        last_err = None
+
+        for attempt in range(2):  # one retry on failure
+            try:
+                import importlib
+                mod = importlib.import_module(_MODULE_MAP[agent_id])
+                return mod.run(context, self.provider, self.api_key)
+            except Exception as e:
+                last_err = e
+                # Log failure to trace for harness observability — failed calls
+                # are as important as successes for auditing pipeline health.
+                try:
+                    from src.analysis.trace_logger import log_failure
+                    log_failure(agent_id, type(e).__name__, str(e)[:120])
+                except Exception:
+                    pass
+                log_activity(agent_id, f"pipeline error (attempt {attempt+1})",
+                             str(e)[:80], "warning")
+                if attempt == 0:
+                    _time.sleep(1.5)  # brief pause before retry
+
+        set_status(agent_id, "idle")
+        return {"error": str(last_err)}
 
     # ── Introspection ──────────────────────────────────────────────────────────
 
