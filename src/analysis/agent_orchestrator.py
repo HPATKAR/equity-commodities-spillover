@@ -294,6 +294,12 @@ class Orchestrator:
                 result = self._run_agent(aid, ctx)
                 results[aid] = result
 
+                # Skip handoff and divergence for failed agents — an error
+                # result has no typed fields to check and must not pollute
+                # downstream peer context with empty/wrong numeric data.
+                if result.get("error"):
+                    continue
+
                 # Store structured handoff for downstream peer context
                 h = self._build_handoff(aid, result, market_context)
                 _store_handoff(aid, h)
@@ -307,7 +313,11 @@ class Orchestrator:
             orch["round_complete"][round_n] = True
 
         orch["pipeline_run"]    = datetime.datetime.now()
-        orch["pipeline_status"] = "complete"
+        # Mark partial failure if any agent returned an error
+        failed = [aid for aid, r in results.items() if r.get("error")]
+        orch["pipeline_status"] = "partial" if failed else "complete"
+        if failed:
+            orch["failed_agents"] = failed
         return results
 
     def run_round_one(self, market_context: dict) -> dict[str, Any]:
@@ -614,6 +624,11 @@ class Orchestrator:
         if agent_id not in _MODULE_MAP:
             return {}
 
+        # Guard: empty api_key with a live provider causes a 401 that burns
+        # both retry attempts.  Treat missing key the same as missing provider.
+        if not self.api_key or not self.api_key.strip():
+            self.provider = None
+
         set_status(agent_id, "investigating")
         last_err = None
 
@@ -621,7 +636,27 @@ class Orchestrator:
             try:
                 import importlib
                 mod = importlib.import_module(_MODULE_MAP[agent_id])
-                return mod.run(context, self.provider, self.api_key)
+                result = mod.run(context, self.provider, self.api_key)
+
+                # Guard: agents return an "unavailable" string as narrative when
+                # _call_ai raises (e.g. "Risk Officer unavailable: ...").
+                # That error string must not be stored as agent output or used
+                # to build a handoff — treat it as a recoverable failure.
+                narrative = result.get("narrative", "")
+                if narrative and "unavailable:" in narrative.lower():
+                    last_err = narrative
+                    try:
+                        from src.analysis.trace_logger import log_failure
+                        log_failure(agent_id, "LLMError", narrative[:120])
+                    except Exception:
+                        pass
+                    log_activity(agent_id, f"LLM error (attempt {attempt+1})",
+                                 narrative[:80], "warning")
+                    if attempt == 0:
+                        _time.sleep(1.5)
+                    continue
+
+                return result
             except Exception as e:
                 last_err = e
                 # Log failure to trace for harness observability — failed calls
@@ -654,6 +689,7 @@ class Orchestrator:
             "agents_stale":     agents_stale,
             "divergence_flags": orch.get("divergence_flags", []),
             "n_divergences":    len(orch.get("divergence_flags", [])),
+            "failed_agents":    orch.get("failed_agents", []),
         }
 
     def divergence_flags(self) -> list[dict]:

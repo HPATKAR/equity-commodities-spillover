@@ -50,7 +50,7 @@ _SCHEMA_HINT = """{
 }"""
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
     """
     Returns a validated TradeOutput dict.
