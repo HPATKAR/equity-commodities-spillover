@@ -89,6 +89,19 @@ def _pipeline_diagram() -> None:
         status_meta = STATUSES.get(status, STATUSES.get("idle", {}))
         s_color = status_meta.get("color", "#555960") if status_meta else "#555960"
 
+        # Confidence gate badge — harness threshold check
+        try:
+            from src.analysis.agent_orchestrator import CONFIDENCE_THRESHOLDS
+            gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)
+        except Exception:
+            gate = 0.50
+        low_conf = (conf is not None and conf < gate)
+        low_conf_badge = (
+            f'<span style="{_M}font-size:0.42rem;font-weight:700;letter-spacing:0.08em;'
+            f'text-transform:uppercase;color:#e67e22;border:1px solid rgba(230,126,34,0.4);'
+            f'padding:1px 4px;margin-left:2px">⚠ LOW CONF</span>'
+        ) if low_conf else ""
+
         return (
             f'<div style="background:#131313;border:1px solid #2a2a2a;'
             f'border-top:2px solid {color};padding:0.55rem 0.7rem;'
@@ -98,10 +111,11 @@ def _pipeline_diagram() -> None:
             f'letter-spacing:0.04em;margin-bottom:2px">{meta.get("short","")}</div>'
             f'<div style="{_F}font-size:0.54rem;color:#555960;line-height:1.4">'
             f'{meta.get("desc","")}</div>'
-            f'<div style="margin-top:6px;display:flex;gap:6px;align-items:center">'
+            f'<div style="margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
             f'<span style="{_M}font-size:0.46rem;font-weight:700;letter-spacing:0.10em;'
             f'text-transform:uppercase;color:{s_color}">{status.replace("_"," ")}</span>'
             f'<span style="{_M}font-size:0.46rem;color:#8890a1">{conf_str}</span>'
+            f'{low_conf_badge}'
             f'</div></div>'
         )
 
@@ -219,6 +233,14 @@ def _render_agent_full(aid: str) -> None:
         elif diff < 3600: ts_str = f"{int(diff/60)}m ago"
         else:             ts_str = f"{int(diff/3600)}h ago"
 
+    # Confidence gate check
+    try:
+        from src.analysis.agent_orchestrator import CONFIDENCE_THRESHOLDS
+        _gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)
+    except Exception:
+        _gate = 0.50
+    _low_conf = (conf is not None and conf < _gate)
+
     if not output:
         st.markdown(
             f'<div style="border:1px solid #1e1e1e;padding:0.5rem 0.8rem;'
@@ -281,6 +303,13 @@ def _render_agent_full(aid: str) -> None:
         f'<div style="{_M}font-size:0.48rem;font-weight:700;letter-spacing:0.10em;'
         f'text-transform:uppercase;color:{s_color}">{status.replace("_"," ")}</div>'
         f'<div style="{_M}font-size:0.46rem;color:#555960;margin-top:1px">{ts_str}</div>'
+        + (
+            f'<div style="{_M}font-size:0.42rem;font-weight:700;letter-spacing:0.08em;'
+            f'text-transform:uppercase;color:#e67e22;border:1px solid rgba(230,126,34,0.4);'
+            f'padding:1px 5px;margin-top:3px">⚠ LOW CONF {int(conf*100) if conf else "?"}% '
+            f'&lt; {int(_gate*100)}% gate</div>'
+            if _low_conf else ""
+        ) +
         f'</div>'
         f'</div>'
 

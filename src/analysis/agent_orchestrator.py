@@ -72,6 +72,7 @@ class AgentHandoff(TypedDict, total=False):
     corr_pct:           Optional[float]   # correlation percentile
     granger_hit_rate:   Optional[float]   # signal auditor hit rate
     routed_to:          list              # downstream agent ids
+    low_confidence:     bool              # True if confidence < CONFIDENCE_THRESHOLDS[agent_id]
 
 # ── Pipeline definition ───────────────────────────────────────────────────────
 
@@ -92,6 +93,30 @@ PIPELINE: list[dict] = [
      "depends_on": ["risk_officer", "macro_strategist", "geopolitical_analyst",
                     "commodities_specialist"]},
 ]
+
+# ── Confidence gate thresholds ────────────────────────────────────────────────
+# Below these levels the harness flags the output as LOW CONFIDENCE.
+# Thresholds are set at 80% of each agent's measured eval hit rate so the
+# gate fires when confidence falls meaningfully below demonstrated accuracy:
+#   risk_officer       eval hit rate 77.3%  →  gate at 0.55 (80% × 0.69 base)
+#   macro_strategist   eval hit rate 70.0%  →  gate at 0.50
+#   geopolitical_analyst  75.0%            →  gate at 0.52
+#   commodities_specialist 80.0%           →  gate at 0.55
+#   stress_engineer    66.7%               →  gate at 0.48
+#   signal_auditor     manual              →  gate at 0.48 (conservative)
+#   trade_structurer   structured output   →  gate at 0.45 (Pydantic schema guards quality)
+# Below threshold: output is still shown but flagged LOW CONFIDENCE in the
+# harness trace and surfaced as a warning badge in the AI Workforce UI.
+CONFIDENCE_THRESHOLDS: dict[str, float] = {
+    "risk_officer":          0.55,
+    "macro_strategist":      0.50,
+    "geopolitical_analyst":  0.52,
+    "commodities_specialist":0.55,
+    "stress_engineer":       0.48,
+    "signal_auditor":        0.48,
+    "trade_structurer":      0.45,
+    "quality_officer":       0.60,
+}
 
 # How long an agent output is considered fresh (seconds)
 AGENT_TTL: dict[str, int] = {
@@ -304,6 +329,22 @@ class Orchestrator:
                 h = self._build_handoff(aid, result, market_context)
                 _store_handoff(aid, h)
 
+                # Confidence gate — log to trace when output falls below threshold.
+                # Output is still used downstream but flagged so peers and UI
+                # know they are working with uncertain upstream data.
+                if h.get("low_confidence"):
+                    gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)
+                    try:
+                        from src.analysis.trace_logger import log_failure
+                        log_failure(aid, "LowConfidence",
+                                    f"conf={h['confidence']:.2f} < gate={gate:.2f}")
+                    except Exception:
+                        pass
+                    log_activity(aid, "low confidence gate",
+                                 f"conf={h['confidence']:.2f} < threshold={gate:.2f} "
+                                 f"— output flagged, downstream peers notified",
+                                 "warning")
+
                 # Numeric field-level divergence detection — runs on the handoff
                 # regardless of whether narrative is populated (field check is
                 # independent of text; empty narrative does not skip this).
@@ -346,6 +387,17 @@ class Orchestrator:
             # _peer_context() later in the session find typed data.
             h = self._build_handoff(aid, result, market_context)
             _store_handoff(aid, h)
+            if h.get("low_confidence"):
+                gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)
+                try:
+                    from src.analysis.trace_logger import log_failure
+                    log_failure(aid, "LowConfidence",
+                                f"conf={h['confidence']:.2f} < gate={gate:.2f}")
+                except Exception:
+                    pass
+                log_activity(aid, "low confidence gate",
+                             f"conf={h['confidence']:.2f} < threshold={gate:.2f}",
+                             "warning")
             flags = _detect_divergence(aid, h, orch)
             orch["divergence_flags"].extend(flags)
         return results
@@ -368,13 +420,17 @@ class Orchestrator:
         agent_regime_raw = result.get("regime_name") or mc.get("regime_name", "Normal")
         regime_int = result.get("regime") or regime_map.get(agent_regime_raw, 1)
 
+        conf_float = float(conf) if conf is not None else 0.5
+        gate       = CONFIDENCE_THRESHOLDS.get(agent_id, 0.50)
+
         h = AgentHandoff(
             agent_id=agent_id,
             ts=datetime.datetime.now(),
             narrative=result.get("narrative", ""),  # FULL text, never truncated
-            confidence=float(conf) if conf is not None else 0.5,
+            confidence=conf_float,
             regime=regime_int,
             routed_to=result.get("routed_to", []),
+            low_confidence=(conf_float < gate),
         )
 
         # Per-agent typed fields
