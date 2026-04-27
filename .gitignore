@@ -23,3 +23,6 @@ env/
 # IDE
 .vscode/
 .idea/
+
+# Runtime logs — session LLM trace data, not source
+logs/
