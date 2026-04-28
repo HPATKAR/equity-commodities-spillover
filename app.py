@@ -179,8 +179,9 @@ hr { border-top-color: rgba(207,185,145,0.2) !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #DEDAD5; border-radius: 3px; }
+::-webkit-scrollbar-track { background: #0d0d0d; }
+::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #CFB991; }
 
 /* ── Divider ── */
 hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
@@ -203,12 +204,37 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 /* ── Spinner font ── */
 [data-testid="stSpinner"] p { font-size: 0.68rem !important; color: var(--ink-faint) !important; letter-spacing: 0.06em !important; }
 
-/* ── Alert boxes ── */
+/* ── Alert / info / warning / error boxes ── */
 [data-testid="stAlert"] {
     border-radius: 3px !important;
     font-size: 0.72rem !important;
     border-left-width: 3px !important;
     padding: 0.55rem 0.9rem !important;
+    background: #161616 !important;
+}
+/* info */
+[data-testid="stAlert"][data-baseweb="notification"][kind="info"],
+div[class*="stInfo"] {
+    border-left-color: #4a90d9 !important;
+    background: rgba(74,144,217,0.07) !important;
+}
+/* warning */
+[data-testid="stAlert"][data-baseweb="notification"][kind="warning"],
+div[class*="stWarning"] {
+    border-left-color: #e67e22 !important;
+    background: rgba(230,126,34,0.07) !important;
+}
+/* error */
+[data-testid="stAlert"][data-baseweb="notification"][kind="error"],
+div[class*="stError"] {
+    border-left-color: #c0392b !important;
+    background: rgba(192,57,43,0.07) !important;
+}
+/* success */
+[data-testid="stAlert"][data-baseweb="notification"][kind="success"],
+div[class*="stSuccess"] {
+    border-left-color: #27ae60 !important;
+    background: rgba(39,174,96,0.07) !important;
 }
 
 /* ── Expander header ── */
@@ -252,8 +278,74 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 /* ── Date inputs ── */
 [data-testid="stDateInput"] input { font-size: 0.68rem !important; font-family: var(--font-mono) !important; }
 
-/* ── Plotly chart container borders ── */
-.stPlotlyChart { border: 1px solid var(--rule) !important; border-radius: 4px !important; overflow: hidden; }
+/* ── Plotly chart container ── */
+.stPlotlyChart {
+    border: 1px solid var(--rule) !important;
+    border-radius: 4px !important;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.stPlotlyChart:hover { border-color: rgba(207,185,145,0.35) !important; }
+
+/* ── Radio buttons ── */
+[data-testid="stRadio"] label {
+    font-size: 0.70rem !important;
+    color: #8890a1 !important;
+    cursor: pointer;
+}
+[data-testid="stRadio"] label:has(input:checked) { color: #CFB991 !important; }
+[data-testid="stRadio"] label input[type="radio"] { accent-color: #CFB991; }
+[data-testid="stRadio"] > label > div:first-child {
+    font-size: 0.58rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    color: var(--ink-faint) !important;
+}
+
+/* ── Checkbox ── */
+[data-testid="stCheckbox"] input[type="checkbox"] { accent-color: #CFB991; }
+[data-testid="stCheckbox"] label {
+    font-size: 0.70rem !important; color: #8890a1 !important;
+}
+[data-testid="stCheckbox"] label:has(input:checked) { color: #e8e9ed !important; }
+
+/* ── Number input ── */
+[data-testid="stNumberInput"] input {
+    font-family: var(--font-mono) !important;
+    font-size: 0.80rem !important;
+    background: #1c1c1c !important;
+    border-color: #2a2a2a !important;
+    color: #CFB991 !important;
+}
+[data-testid="stNumberInput"] input:focus { border-color: var(--gold) !important; outline: none !important; }
+[data-testid="stNumberInput"] button {
+    background: #1c1c1c !important;
+    border-color: #2a2a2a !important;
+    color: #8890a1 !important;
+}
+
+/* ── Progress bar ── */
+[data-testid="stProgress"] > div > div {
+    background: #1e1e1e !important;
+    border-radius: 2px !important;
+}
+[data-testid="stProgress"] > div > div > div {
+    background: linear-gradient(90deg, #8E6F3E 0%, #CFB991 100%) !important;
+    border-radius: 2px !important;
+}
+
+/* ── Tab panel background ── */
+[data-testid="stTabs"] [role="tabpanel"] {
+    padding-top: 0.75rem !important;
+    background: transparent !important;
+}
+
+/* ── Column divider — thin vertical rule between adjacent columns ── */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"] + [data-testid="stColumn"] {
+    border-left: 1px solid #1a1a1a !important;
+    padding-left: 1rem !important;
+}
 
 /* ── KPI number in stMetric - enforce mono font ── */
 [data-testid="stMetricValue"] > div { font-family: var(--font-mono) !important; }

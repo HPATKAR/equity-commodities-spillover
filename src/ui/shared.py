@@ -21,38 +21,59 @@ _BLACK  = "#000000"
 
 # ── Plotly template ────────────────────────────────────────────────────────
 
+_BG       = "#111111"    # page background
+_BG_WARM  = "#161616"    # chart plot area — slightly warmer than page
+_GRID     = "#1e1e1e"    # grid lines — barely visible, structural only
+_TICK     = "#555960"    # axis tick labels — muted
+_LEGEND   = "#8890a1"    # legend text
+
 _PURDUE_TEMPLATE = go.layout.Template(
     layout=go.Layout(
-        font=dict(family="DM Sans, Inter, sans-serif", color=_BLACK, size=12),
-        paper_bgcolor="#ffffff",
-        plot_bgcolor="#fafaf8",
+        font=dict(family="DM Sans, Inter, sans-serif", color="#e8e9ed", size=12),
+        paper_bgcolor=_BG,
+        plot_bgcolor=_BG_WARM,
         colorway=PALETTE,
         xaxis=dict(
-            showgrid=True, gridcolor="#EEEBE6", gridwidth=1,
-            zeroline=False, showspikes=True, spikecolor="#CFB991",
+            showgrid=True, gridcolor=_GRID, gridwidth=1,
+            zeroline=False,
+            showspikes=True, spikecolor="#CFB991",
             spikethickness=1, spikedash="dot",
-            tickfont=dict(family="JetBrains Mono, monospace", size=10),
+            tickfont=dict(family="JetBrains Mono, monospace", size=10, color=_TICK),
+            linecolor=_GRID, linewidth=1,
             rangeslider=dict(visible=False),
         ),
         yaxis=dict(
-            showgrid=True, gridcolor="#EEEBE6", gridwidth=1,
-            zeroline=False, showspikes=True, spikecolor="#CFB991",
+            showgrid=True, gridcolor=_GRID, gridwidth=1,
+            zeroline=False,
+            showspikes=True, spikecolor="#CFB991",
             spikethickness=1, spikedash="dot",
-            tickfont=dict(family="JetBrains Mono, monospace", size=10),
+            tickfont=dict(family="JetBrains Mono, monospace", size=10, color=_TICK),
+            linecolor=_GRID, linewidth=1,
         ),
         legend=dict(
             orientation="h", yanchor="top", y=-0.18,
             xanchor="left", x=0,
-            font=dict(size=10),
-            bgcolor="rgba(255,255,255,0)",
-            bordercolor="#E8E5E0", borderwidth=0,
+            font=dict(size=10, color=_LEGEND),
+            bgcolor="rgba(0,0,0,0)",
+            borderwidth=0,
         ),
         hoverlabel=dict(
-            bgcolor="rgba(10,10,10,0.94)", font_color="#CFB991",
-            font_family="JetBrains Mono, monospace", font_size=11,
-            bordercolor="#CFB991",
+            bgcolor="rgba(8,8,8,0.96)",
+            font_color="#CFB991",
+            font_family="JetBrains Mono, monospace",
+            font_size=11,
+            bordercolor="#2a2a2a",
+        ),
+        title=dict(
+            font=dict(family="DM Sans, sans-serif", size=13, color="#c8c8c8"),
+            x=0.0, xanchor="left", pad=dict(l=4, t=4),
         ),
         margin=dict(l=48, r=24, t=36, b=80),
+        modebar=dict(
+            bgcolor="rgba(0,0,0,0)",
+            color="#555960",
+            activecolor="#CFB991",
+        ),
     )
 )
 pio.templates["purdue"] = _PURDUE_TEMPLATE
@@ -104,9 +125,11 @@ def _style_fig(fig: go.Figure, height: int = 400) -> go.Figure:
                     dict(count=5,  label="5Y",  step="year",  stepmode="backward"),
                     dict(step="all", label="ALL"),
                 ],
-                font=dict(size=10),
-                bgcolor="#f0ede8",
+                font=dict(size=10, color="#8890a1"),
+                bgcolor="#1a1a1a",
                 activecolor=_GOLD,
+                bordercolor="#2a2a2a",
+                borderwidth=1,
             ),
             rangeslider=dict(visible=False),
             type="date",
@@ -177,13 +200,14 @@ def _section_note(text: str) -> None:
 
 def _definition_block(title: str, body: str) -> None:
     st.markdown(
-        f"""<div style="border:1px solid #2a2a2a;margin:0.6rem 0 0.9rem">
-        <div style="background:{_BLACK};padding:0.4rem 0.9rem;border-bottom:1px solid #2a2a2a">
-          <span style="font-size:0.56rem;font-weight:700;letter-spacing:0.16em;
+        f"""<div style="border:1px solid #1e1e1e;border-left:2px solid {_GOLD};
+        margin:0.6rem 0 0.9rem;background:#131313">
+        <div style="padding:0.38rem 0.9rem;border-bottom:1px solid #1a1a1a">
+          <span style="font-size:0.52rem;font-weight:700;letter-spacing:0.18em;
           text-transform:uppercase;color:{_GOLD}">{title}</span>
         </div>
-        <div style="padding:0.65rem 0.9rem;font-size:0.70rem;color:#c8c8c8;
-        background:#1c1c1c;line-height:1.75;font-family:'DM Sans',sans-serif">{body}</div>
+        <div style="padding:0.65rem 0.9rem;font-size:0.70rem;color:#b8b8b8;
+        line-height:1.80;font-family:'DM Sans',sans-serif">{body}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -294,15 +318,20 @@ def _insight_note(text: str) -> None:
 def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "") -> None:
     delta_html = ""
     if delta:
-        col = delta_color or ("#2e7d32" if delta.startswith("+") else "#c0392b")
-        delta_html = f'<div style="font-size:0.65rem;color:{col};margin-top:2px">{delta}</div>'
+        col = delta_color or ("#27ae60" if delta.startswith("+") else "#c0392b")
+        delta_html = (
+            f'<div style="font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.60rem;color:{col};margin-top:3px;letter-spacing:0.02em">'
+            f'{delta}</div>'
+        )
     st.markdown(
-        f"""<div style="border-bottom:1px solid #2a2a2a;
-        padding:0.55rem 0;background:transparent">
-        <div style="font-size:0.58rem;font-weight:600;letter-spacing:0.14em;
-        text-transform:uppercase;color:#888;margin-bottom:4px">{label}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;
-        font-weight:700;color:#e8e9ed">{value}</div>
+        f"""<div style="border-left:2px solid rgba(207,185,145,0.22);
+        padding:0.50rem 0 0.50rem 0.70rem;background:#141414;
+        border-bottom:1px solid #1a1a1a;transition:border-left-color 0.2s">
+        <div style="font-size:0.52rem;font-weight:700;letter-spacing:0.16em;
+        text-transform:uppercase;color:#555960;margin-bottom:5px">{label}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.02rem;
+        font-weight:700;color:#CFB991;line-height:1.1">{value}</div>
         {delta_html}</div>""",
         unsafe_allow_html=True,
     )
@@ -329,20 +358,24 @@ def _section_header(number: str, title: str, subtitle: str = "") -> None:
 
 
 def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
-    """Flat inline regime label - no pill, no rounded corners, no background fill."""
+    """Flat inline regime label with ambient glow at crisis intensity."""
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;'
-        f'color:#888;margin-left:0.75rem;font-weight:400">{sub}</span>'
+        f'color:#666;margin-left:0.75rem;font-weight:400;font-style:italic">{sub}</span>'
         if sub else ""
     )
+    # Ambient glow — more visible at higher severity (crisis red vs. normal gold)
+    glow = f"box-shadow:0 -1px 8px {color}26"
     st.markdown(
-        f'<div style="border-top:2px solid {color};border-bottom:1px solid #2a2a2a;'
-        f'padding:0.4rem 0;display:flex;align-items:baseline;gap:0;margin-bottom:0.9rem">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.54rem;font-weight:700;'
-        f'letter-spacing:0.14em;text-transform:uppercase;color:#888;margin-right:0.6rem">'
+        f'<div style="border-top:2px solid {color};border-bottom:1px solid #1e1e1e;'
+        f'padding:0.42rem 0.5rem 0.42rem 0;{glow};'
+        f'display:flex;align-items:baseline;gap:0;margin-bottom:0.9rem;'
+        f'background:linear-gradient(180deg,{color}08 0%,transparent 100%)">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
+        f'letter-spacing:0.18em;text-transform:uppercase;color:#444a55;margin-right:0.65rem">'
         f'REGIME</span>'
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;'
-        f'font-weight:700;color:{color}">{label}</span>'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;'
+        f'font-weight:700;color:{color};letter-spacing:-0.01em">{label}</span>'
         f'{sub_html}'
         f'</div>',
         unsafe_allow_html=True,
@@ -361,10 +394,10 @@ def _narrative_box(text: str) -> None:
             html_parts.append(p)
     html = "<br><br>".join(html_parts)
     st.markdown(
-        f'<div style="border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;'
-        f'padding:0.75rem 0;margin:0.35rem 0 0.75rem">'
+        f'<div style="background:#131313;border-top:1px solid #222;border-bottom:1px solid #222;'
+        f'padding:0.80rem 0.90rem;margin:0.35rem 0 0.75rem">'
         f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.73rem;'
-        f'color:#c8c8c8;line-height:1.80">{html}</div></div>',
+        f'color:#c0c0c0;line-height:1.85;max-width:820px">{html}</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -734,13 +767,16 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         if subtitle else '<div style="margin-bottom:0.5rem"></div>'
     )
     st.markdown(
-        f'<div style="border-left:2px solid #CFB991;padding-left:12px;margin-bottom:0.75rem">'
-        f'<div style="display:flex;align-items:center;margin-bottom:5px">'
+        f'<div style="border-left:2px solid #CFB991;'
+        f'box-shadow:-1px 0 12px rgba(207,185,145,0.10);'
+        f'padding-left:12px;margin-bottom:0.75rem">'
+        f'<div style="display:flex;align-items:center;margin-bottom:4px">'
         f'{_logo_img}'
         f'<span style="{_Mh}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
-        f'text-transform:uppercase;color:#555960">{_eye}</span>'
+        f'text-transform:uppercase;color:#444a55">{_eye}</span>'
         f'</div>'
-        f'<h1 style="{_Fh}font-size:1.25rem;font-weight:700;color:#e8e8e8;margin:0 0 3px">{title}</h1>'
+        f'<h1 style="{_Fh}font-size:1.22rem;font-weight:700;'
+        f'color:#e8e8e8;margin:0 0 2px;letter-spacing:-0.01em;line-height:1.2">{title}</h1>'
         f'{_sub_html}'
         f'</div>',
         unsafe_allow_html=True,
