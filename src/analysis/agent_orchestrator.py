@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import datetime
 import json
+from dataclasses import dataclass
 from typing import Any, TypedDict, Optional
 
 import streamlit as st
@@ -137,13 +138,207 @@ AGENT_TTL: dict[str, int] = {
     "quality_officer":       1800,
 }
 
-# Divergence detection: these agent pairs should NOT reach opposite conclusions
-DIVERGENCE_PAIRS: list[tuple[str, str, str]] = [
-    # (agent_a, agent_b, topic_keyword)
-    ("macro_strategist", "risk_officer", "hawkish"),
-    ("geopolitical_analyst", "stress_engineer", "critical"),
-    ("macro_strategist", "geopolitical_analyst", "oil"),
-]
+# ── DivergenceRule: typed, self-checking divergence spec ─────────────────────
+# Replaces the ad-hoc (agent_a, agent_b, field, threshold) tuple list.
+# .check() is the single source of truth for "did these two agents diverge?".
+
+@dataclass(frozen=True)
+class DivergenceRule:
+    """
+    Specifies the maximum acceptable numeric gap between two agents on a
+    shared typed field.  Frozen dataclass — rules cannot be mutated at runtime.
+
+    .check(h_a, h_b) → (diverged: bool, diff: float)
+    Returns (False, 0.0) when either agent has no value for the field —
+    a missing value is not a divergence, it is a coverage gap.
+    """
+    agent_a:   str
+    agent_b:   str
+    field:     str
+    threshold: float
+
+    def applicable(self, agent_id: str) -> bool:
+        """True if this rule involves the given agent."""
+        return agent_id in (self.agent_a, self.agent_b)
+
+    def peer_of(self, agent_id: str) -> str:
+        """Return the other agent in this rule."""
+        return self.agent_b if agent_id == self.agent_a else self.agent_a
+
+    def check(self, h_a: dict, h_b: dict) -> tuple[bool, float]:
+        """
+        Compare field values between two handoffs.
+        Returns (diverged, diff).  diverged=True iff |val_a − val_b| > threshold.
+        """
+        va = h_a.get(self.field)
+        vb = h_b.get(self.field)
+        if va is None or vb is None:
+            return False, 0.0
+        diff = abs(float(va) - float(vb))
+        return diff > self.threshold, round(diff, 2)
+
+
+# All numeric divergence rules in one place — edit here, nowhere else.
+_DIVERGENCE_RULES: tuple[DivergenceRule, ...] = (
+    DivergenceRule("macro_strategist",     "risk_officer",          "risk_score", 20.0),
+    DivergenceRule("geopolitical_analyst", "risk_officer",          "risk_score", 20.0),
+    DivergenceRule("geopolitical_analyst", "stress_engineer",       "regime",      1.0),
+    DivergenceRule("macro_strategist",     "geopolitical_analyst",  "regime",      1.0),
+)
+
+# ── Handoff schema validation ─────────────────────────────────────────────────
+# Written rules become code here.  Every constraint that was previously a
+# comment (e.g. "confidence must be 0.0–1.0") is now an enforced check that
+# writes to the trace CSV on violation.
+
+class HandoffValidationError(ValueError):
+    """Raised when an AgentHandoff violates schema constraints."""
+
+_VALID_REGIMES  = frozenset({1, 2, 3})
+_ERROR_MARKERS  = ("unavailable:", "error:", "traceback", "exception raised")
+
+
+def _validate_handoff(h: "AgentHandoff", agent_id: str) -> list[str]:
+    """
+    Validate an AgentHandoff against all schema constraints.
+    Returns a list of violation strings; empty list means the handoff is valid.
+    Does NOT raise — the caller decides whether to sanitize or reject.
+
+    Constraints enforced
+    ────────────────────
+    confidence       ∈ [0.0, 1.0]   — not regex-parsed, must be a numeric float
+    regime           ∈ {1, 2, 3}    — 1=Normal 2=Elevated 3=Crisis, nothing else valid
+    risk_score       ∈ [0.0, 100.0] — composite score bounds
+    cis, tps         ∈ [0.0, 100.0] — conflict model score bounds
+    corr_pct         ∈ [0.0, 100.0] — percentile
+    granger_hit_rate ∈ [0.0, 1.0]   — fraction, not percentage
+    narrative        must not start with an error-marker string; error strings
+                     must never be stored as agent output (caught in _run_agent,
+                     double-checked here as defence-in-depth)
+    agent_id         must match the key this handoff is stored under
+    """
+    violations: list[str] = []
+
+    conf = h.get("confidence")
+    if conf is not None:
+        try:
+            if not (0.0 <= float(conf) <= 1.0):
+                violations.append(f"confidence={conf!r} outside [0.0, 1.0]")
+        except (TypeError, ValueError):
+            violations.append(f"confidence={conf!r} is not numeric")
+
+    regime = h.get("regime")
+    if regime is not None:
+        try:
+            if int(regime) not in _VALID_REGIMES:
+                violations.append(f"regime={regime!r} not in {{1, 2, 3}}")
+        except (TypeError, ValueError):
+            violations.append(f"regime={regime!r} is not an integer")
+
+    rs = h.get("risk_score")
+    if rs is not None:
+        try:
+            if not (0.0 <= float(rs) <= 100.0):
+                violations.append(f"risk_score={rs!r} outside [0.0, 100.0]")
+        except (TypeError, ValueError):
+            violations.append(f"risk_score={rs!r} is not numeric")
+
+    for pct_field in ("cis", "tps", "corr_pct"):
+        v = h.get(pct_field)
+        if v is not None:
+            try:
+                if not (0.0 <= float(v) <= 100.0):
+                    violations.append(f"{pct_field}={v!r} outside [0.0, 100.0]")
+            except (TypeError, ValueError):
+                violations.append(f"{pct_field}={v!r} is not numeric")
+
+    ghr = h.get("granger_hit_rate")
+    if ghr is not None:
+        try:
+            if not (0.0 <= float(ghr) <= 1.0):
+                violations.append(f"granger_hit_rate={ghr!r} outside [0.0, 1.0]")
+        except (TypeError, ValueError):
+            violations.append(f"granger_hit_rate={ghr!r} is not numeric")
+
+    narrative = h.get("narrative", "")
+    if narrative:
+        _lower = narrative.lower().lstrip()
+        for marker in _ERROR_MARKERS:
+            if marker in _lower:
+                violations.append(
+                    f"narrative contains error marker '{marker}': {narrative[:60]!r}"
+                )
+                break
+
+    stored_id = h.get("agent_id", "")
+    if stored_id and stored_id != agent_id:
+        violations.append(
+            f"agent_id mismatch: handoff.agent_id={stored_id!r} "
+            f"stored under key={agent_id!r}"
+        )
+
+    return violations
+
+
+def _assert_round_ready(round_n: int, orch: dict) -> None:
+    """
+    Assert that all prior rounds are marked complete before round_n runs.
+    Raises RuntimeError on violation — a round-ordering bug is a hard error,
+    not a warning, because downstream agents would receive incomplete peer context.
+    """
+    for prior in range(1, round_n):
+        if not orch.get("round_complete", {}).get(prior, False):
+            raise RuntimeError(
+                f"Pipeline dependency violation: Round {round_n} cannot start — "
+                f"Round {prior} is not marked complete.  Check PIPELINE definition "
+                f"and call order in Orchestrator.run()."
+            )
+
+
+def _validate_pipeline_config() -> None:
+    """
+    Module-level sanity check — runs once at import time.
+    Verifies that PIPELINE, CONFIDENCE_THRESHOLDS, and AGENT_TTL are
+    internally consistent so misconfigurations surface immediately, not
+    silently at runtime during a live session.
+
+    Checks
+    ──────
+    • Every depends_on reference in PIPELINE names a defined agent id
+    • Every pipeline agent has an entry in CONFIDENCE_THRESHOLDS
+    • Every pipeline agent has an entry in AGENT_TTL
+    • No duplicate agent ids in PIPELINE
+    • All DivergenceRule agent references exist in PIPELINE
+    """
+    defined_ids = {p["id"] for p in PIPELINE}
+
+    seen: set[str] = set()
+    for spec in PIPELINE:
+        aid = spec["id"]
+        assert aid not in seen, \
+            f"Duplicate agent id in PIPELINE: '{aid}'"
+        seen.add(aid)
+
+        for dep in spec.get("depends_on", []):
+            assert dep in defined_ids, (
+                f"PIPELINE misconfiguration: '{aid}' depends_on '{dep}' "
+                f"which is not defined in PIPELINE"
+            )
+
+    for aid in defined_ids:
+        assert aid in CONFIDENCE_THRESHOLDS, (
+            f"CONFIDENCE_THRESHOLDS missing entry for pipeline agent '{aid}'"
+        )
+        assert aid in AGENT_TTL, (
+            f"AGENT_TTL missing entry for pipeline agent '{aid}'"
+        )
+
+    for rule in _DIVERGENCE_RULES:
+        for ref in (rule.agent_a, rule.agent_b):
+            assert ref in defined_ids, (
+                f"DivergenceRule references unknown agent '{ref}' "
+                f"(rule: {rule.agent_a}/{rule.agent_b}/{rule.field})"
+            )
 
 
 def _orch_state() -> dict:
@@ -170,7 +365,61 @@ def _is_fresh(agent_id: str) -> bool:
 
 
 def _store_handoff(agent_id: str, handoff: AgentHandoff) -> None:
-    """Persist structured handoff in session_state for peer lookup."""
+    """
+    Validate then persist a structured handoff in session_state.
+
+    Validation runs _validate_handoff() before storage.  On violation:
+      1. Each violation is written to trace_logger as HandoffValidation error.
+      2. Out-of-range numeric fields are clamped in-place (e.g. confidence
+         clipped to [0,1]) so downstream agents still receive a usable value.
+      3. An invalid regime is reset to 1 (Normal) — the safe fallback.
+    The harness never silently discards a handoff; clamping + tracing is
+    preferable to dropping, because downstream agents need *some* peer signal.
+    """
+    violations = _validate_handoff(handoff, agent_id)
+    if violations:
+        try:
+            from src.analysis.trace_logger import log_failure
+            for v in violations:
+                log_failure(agent_id, "HandoffValidation", v)
+        except Exception:
+            pass
+
+        # Sanitize in-place — clamp numeric fields into valid ranges
+        conf = handoff.get("confidence")
+        if conf is not None:
+            try:
+                handoff["confidence"] = float(max(0.0, min(1.0, float(conf))))
+            except (TypeError, ValueError):
+                handoff["confidence"] = 0.5
+
+        regime = handoff.get("regime")
+        if regime is not None:
+            try:
+                handoff["regime"] = int(regime) if int(regime) in _VALID_REGIMES else 1
+            except (TypeError, ValueError):
+                handoff["regime"] = 1
+
+        rs = handoff.get("risk_score")
+        if rs is not None:
+            try:
+                handoff["risk_score"] = float(max(0.0, min(100.0, float(rs))))
+            except (TypeError, ValueError):
+                handoff["risk_score"] = None
+
+        for pct_field in ("cis", "tps", "corr_pct"):
+            v = handoff.get(pct_field)
+            if v is not None:
+                try:
+                    handoff[pct_field] = float(max(0.0, min(100.0, float(v))))
+                except (TypeError, ValueError):
+                    handoff[pct_field] = None
+
+        # Strip error-marker narratives — must not enter peer context
+        narrative = handoff.get("narrative", "")
+        if narrative and any(m in narrative.lower() for m in _ERROR_MARKERS):
+            handoff["narrative"] = ""
+
     init_agents()
     if "agent_handoffs" not in st.session_state:
         st.session_state["agent_handoffs"] = {}
@@ -219,65 +468,53 @@ def _detect_divergence(
     agent_id: str, handoff: AgentHandoff, orch: dict
 ) -> list[dict]:
     """
-    Numeric field-level divergence detection.
-    Compares typed fields (risk_score, regime, cis, cmd_vol_z) between peer
-    handoffs — NOT keyword string matching. A divergence is flagged when:
-      • risk_score differs by > 20 pts between two agents that both compute it
-      • regime disagrees between geo_analyst and macro_strategist
-      • cis vs risk_score imply opposite threat levels
-    Returns list of divergence dicts (may be empty).
+    Numeric field-level divergence detection driven by _DIVERGENCE_RULES.
+
+    Iterates all DivergenceRule instances applicable to agent_id, calls
+    rule.check() — the single authoritative comparison — and writes a
+    verification event to the trace CSV for every rule checked (fired or
+    passed).  Only fired rules append to the returned flag list.
     """
     flags: list[dict] = []
     peer_handoffs = st.session_state.get("agent_handoffs", {})
 
-    NUMERIC_PAIRS: list[tuple[str, str, str, float]] = [
-        # (agent_a, agent_b, field, max_allowed_diff)
-        ("macro_strategist",    "risk_officer",     "risk_score",  20.0),
-        ("geopolitical_analyst","risk_officer",      "risk_score",  20.0),
-        ("geopolitical_analyst","stress_engineer",   "regime",       1.0),
-        ("macro_strategist",    "geopolitical_analyst", "regime",    1.0),
-    ]
-
-    for a_id, b_id, field, threshold in NUMERIC_PAIRS:
-        if agent_id not in (a_id, b_id):
+    for rule in _DIVERGENCE_RULES:
+        if not rule.applicable(agent_id):
             continue
-        peer_id = b_id if agent_id == a_id else a_id
+        peer_id = rule.peer_of(agent_id)
         peer_h  = peer_handoffs.get(peer_id)
         if not peer_h:
             continue
 
-        val_a = handoff.get(field)
-        val_b = peer_h.get(field)
-        if val_a is None or val_b is None:
-            continue
-
-        diff = abs(float(val_a) - float(val_b))
-        fired = diff > threshold
+        diverged, diff = rule.check(handoff, peer_h)
+        val_a = handoff.get(rule.field)
+        val_b = peer_h.get(rule.field)
         detail = (
-            f"{field}: {val_a} vs {val_b} "
-            f"(Δ={diff:.1f}, threshold={threshold}, "
+            f"{rule.field}: {val_a} vs {val_b} "
+            f"(Δ={diff:.1f}, threshold={rule.threshold}, "
             f"agents={agent_id}/{peer_id})"
         )
         try:
             from src.analysis.trace_logger import log_verification_event
-            log_verification_event("divergence", agent_id, detail, fired)
+            log_verification_event("divergence", agent_id, detail, diverged)
         except Exception:
             pass
-        if fired:
+        if diverged:
             flags.append({
-                "agent_a":  agent_id,
-                "agent_b":  peer_id,
-                "field":    field,
-                "val_a":    val_a,
-                "val_b":    val_b,
-                "diff":     round(diff, 2),
-                "threshold":threshold,
-                "ts":       datetime.datetime.now(),
+                "agent_a":   agent_id,
+                "agent_b":   peer_id,
+                "field":     rule.field,
+                "val_a":     val_a,
+                "val_b":     val_b,
+                "diff":      diff,
+                "threshold": rule.threshold,
+                "ts":        datetime.datetime.now(),
             })
             log_activity(
                 agent_id,
                 f"numeric divergence vs {AGENTS.get(peer_id,{}).get('short', peer_id)}",
-                f"{field}: {val_a} vs {val_b} (Δ={diff:.1f}, threshold={threshold})",
+                f"{rule.field}: {val_a} vs {val_b} "
+                f"(Δ={diff:.1f}, threshold={rule.threshold})",
                 "warning",
             )
     return flags
@@ -319,6 +556,7 @@ class Orchestrator:
         results: dict[str, Any] = {}
 
         for round_n in (1, 2, 3):
+            _assert_round_ready(round_n, orch)   # hard error if prior round incomplete
             agents_in_round = [p for p in PIPELINE if p["round"] == round_n]
             for spec in agents_in_round:
                 aid = spec["id"]
@@ -797,3 +1035,9 @@ class Orchestrator:
 def get_orchestrator(provider: str | None, api_key: str) -> Orchestrator:
     """Factory - returns (and caches) the session's Orchestrator instance."""
     return Orchestrator(provider, api_key)
+
+
+# ── Module-level config validation ───────────────────────────────────────────
+# Runs once at import time.  Any PIPELINE/threshold misconfiguration raises
+# AssertionError immediately — not silently at runtime during a live session.
+_validate_pipeline_config()
