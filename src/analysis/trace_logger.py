@@ -144,6 +144,50 @@ def log_failure(
         pass
 
 
+def log_verification_event(
+    check_type: str,   # "divergence" | "confidence_gate"
+    agent_id:   str,
+    detail:     str,   # e.g. "risk_score: 72 vs 48 (Δ=24, threshold=20)"
+    fired:      bool,  # True = threshold breached
+) -> None:
+    """
+    Record a verification loop event to the trace CSV.
+
+    check_type="divergence"       → numeric field divergence between two agents
+    check_type="confidence_gate"  → agent output below confidence threshold
+
+    fired=True  means the check tripped (divergence detected / gate breached).
+    fired=False means the check ran and passed (valuable for coverage proof).
+
+    Written as a synthetic trace row: latency_ms=0, cost=0, status="verification".
+    The prof's requirement: "which verification loops fired" must appear in the
+    trace CSV, not only in ephemeral session_state.
+    """
+    try:
+        row = {
+            "timestamp":             datetime.datetime.now().isoformat(timespec="seconds"),
+            "agent_id":              agent_id,
+            "provider":              "harness",
+            "model":                 check_type,
+            "prompt_chars":          0,
+            "completion_chars":      0,
+            "prompt_tokens_est":     0,
+            "completion_tokens_est": 0,
+            "latency_ms":            "0",
+            "cost_usd_est":          "0.000000",
+            "status":                "verification_fired" if fired else "verification_pass",
+            "error_type":            detail[:120],
+        }
+        try:
+            _ensure_log()
+            with open(_LOG_FILE, "a", newline="") as f:
+                csv.DictWriter(f, fieldnames=_FIELDS).writerow(row)
+        except Exception:
+            _accumulate_in_session(row)
+    except Exception:
+        pass
+
+
 def read_traces() -> "list[dict]":
     """Return all trace rows as a list of dicts. Merges file + session_state buffer."""
     rows: list[dict] = []

@@ -96,24 +96,31 @@ PIPELINE: list[dict] = [
 
 # ── Confidence gate thresholds ────────────────────────────────────────────────
 # Below these levels the harness flags the output as LOW CONFIDENCE.
-# Thresholds are set at 80% of each agent's measured eval hit rate so the
-# gate fires when confidence falls meaningfully below demonstrated accuracy:
-#   risk_officer       eval hit rate 77.3%  →  gate at 0.55 (80% × 0.69 base)
-#   macro_strategist   eval hit rate 70.0%  →  gate at 0.50
-#   geopolitical_analyst  75.0%            →  gate at 0.52
-#   commodities_specialist 80.0%           →  gate at 0.55
-#   stress_engineer    66.7%               →  gate at 0.48
-#   signal_auditor     manual              →  gate at 0.48 (conservative)
-#   trade_structurer   structured output   →  gate at 0.45 (Pydantic schema guards quality)
+# Thresholds derived from measured eval hit rates (evals/results-2026-04.md,
+# run 2026-04-28, 56-case benchmark).  Gate = 80% × hit_rate, min 0.35.
+# Agents returning all-None on historical fields (geo, signal_auditor) are
+# eval-limited by offline API access — gate is held at conservative floor.
+#
+#   Agent                  Measured hit rate   Gate
+#   ─────────────────────  ─────────────────   ────
+#   risk_officer           43.3% (13/30)       0.35
+#   macro_strategist       63.6%  (7/11)       0.50
+#   geopolitical_analyst    0.0%  (0/11)*      0.40  * eval offline — CIS/TPS need live API
+#   commodities_specialist 33.3%  (1/3)        0.35
+#   stress_engineer       100.0%  (1/1)        0.48  (small sample — hold floor)
+#   signal_auditor          0.0%  (0/4)*       0.40  * eval offline — granger needs live data
+#   trade_structurer      structured output    0.45  (Pydantic schema guards quality)
+#   quality_officer       per-page audit       0.60
+#
 # Below threshold: output is still shown but flagged LOW CONFIDENCE in the
-# harness trace and surfaced as a warning badge in the AI Workforce UI.
+# harness trace (status="verification_fired") and surfaced in AI Workforce UI.
 CONFIDENCE_THRESHOLDS: dict[str, float] = {
-    "risk_officer":          0.55,
+    "risk_officer":          0.35,
     "macro_strategist":      0.50,
-    "geopolitical_analyst":  0.52,
-    "commodities_specialist":0.55,
+    "geopolitical_analyst":  0.40,
+    "commodities_specialist":0.35,
     "stress_engineer":       0.48,
-    "signal_auditor":        0.48,
+    "signal_auditor":        0.40,
     "trade_structurer":      0.45,
     "quality_officer":       0.60,
 }
@@ -245,7 +252,18 @@ def _detect_divergence(
             continue
 
         diff = abs(float(val_a) - float(val_b))
-        if diff > threshold:
+        fired = diff > threshold
+        detail = (
+            f"{field}: {val_a} vs {val_b} "
+            f"(Δ={diff:.1f}, threshold={threshold}, "
+            f"agents={agent_id}/{peer_id})"
+        )
+        try:
+            from src.analysis.trace_logger import log_verification_event
+            log_verification_event("divergence", agent_id, detail, fired)
+        except Exception:
+            pass
+        if fired:
             flags.append({
                 "agent_a":  agent_id,
                 "agent_b":  peer_id,
@@ -334,15 +352,15 @@ class Orchestrator:
                 # know they are working with uncertain upstream data.
                 if h.get("low_confidence"):
                     gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)
+                    conf_detail = f"conf={h['confidence']:.2f} < gate={gate:.2f}"
                     try:
-                        from src.analysis.trace_logger import log_failure
-                        log_failure(aid, "LowConfidence",
-                                    f"conf={h['confidence']:.2f} < gate={gate:.2f}")
+                        from src.analysis.trace_logger import log_failure, log_verification_event
+                        log_failure(aid, "LowConfidence", conf_detail)
+                        log_verification_event("confidence_gate", aid, conf_detail, True)
                     except Exception:
                         pass
                     log_activity(aid, "low confidence gate",
-                                 f"conf={h['confidence']:.2f} < threshold={gate:.2f} "
-                                 f"— output flagged, downstream peers notified",
+                                 f"{conf_detail} — output flagged, downstream peers notified",
                                  "warning")
 
                 # Numeric field-level divergence detection — runs on the handoff
@@ -389,15 +407,14 @@ class Orchestrator:
             _store_handoff(aid, h)
             if h.get("low_confidence"):
                 gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)
+                conf_detail = f"conf={h['confidence']:.2f} < gate={gate:.2f}"
                 try:
-                    from src.analysis.trace_logger import log_failure
-                    log_failure(aid, "LowConfidence",
-                                f"conf={h['confidence']:.2f} < gate={gate:.2f}")
+                    from src.analysis.trace_logger import log_failure, log_verification_event
+                    log_failure(aid, "LowConfidence", conf_detail)
+                    log_verification_event("confidence_gate", aid, conf_detail, True)
                 except Exception:
                     pass
-                log_activity(aid, "low confidence gate",
-                             f"conf={h['confidence']:.2f} < threshold={gate:.2f}",
-                             "warning")
+                log_activity(aid, "low confidence gate", conf_detail, "warning")
             flags = _detect_divergence(aid, h, orch)
             orch["divergence_flags"].extend(flags)
         return results
