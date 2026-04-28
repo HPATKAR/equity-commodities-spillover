@@ -184,14 +184,15 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
 
     if data_status == "no_feed":
         st.markdown(
-            f'<div style="background:#130808;border:1px solid #c0392b;'
-            f'padding:12px 16px;margin-bottom:12px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            f'font-weight:700;color:#c0392b">■ RSS FEED UNAVAILABLE</span><br>'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
-            f'color:#8E9AAA;margin-top:4px;display:block">{feed_error or "No headlines returned from feeds."}</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            f'color:#555960">Scores show 0 — not a low-risk signal. Fix feed to restore.</span>'
+            f'<div class="nx-feed-item critical" style="margin-bottom:12px;padding:12px 16px">'
+            f'<div class="nx-feed-item-header">'
+            f'<span class="nx-feed-item-type">RSS FEED UNAVAILABLE</span>'
+            f'<span class="nx-badge nx-badge-critical">OFFLINE</span>'
+            f'</div>'
+            f'<div class="nx-feed-item-body">{feed_error or "No headlines returned from feeds."}</div>'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
+            f'color:#555960;margin-top:4px">'
+            f'Scores show 0 — not a low-risk signal. Fix feed to restore.</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -283,14 +284,14 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
 
     # ── Row 2: headline counts ─────────────────────────────────────────────
     st.markdown(
-        f'<div style="display:flex;gap:20px;margin:4px 0 12px;padding:6px 12px;'
-        f'background:#0d0d0d;border:1px solid #1e1e1e">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        f'color:#e67e22">THREAT {n_threat} headlines</span>'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        f'color:#c0392b">ACT {n_act} headlines</span>'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        f'color:#8E9AAA">{result.get("n_raw", "?")} raw · fetched {result["fetched_at"]}</span>'
+        f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0 12px;'
+        f'padding:6px 12px;background:#111d2e;border:1px solid #1e2d40">'
+        f'<span class="nx-live-dot"></span>'
+        f'<span class="nx-badge nx-badge-warning">THREAT &nbsp;{n_threat}</span>'
+        f'<span class="nx-badge nx-badge-critical">ACT &nbsp;{n_act}</span>'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
+        f'color:#555960;margin-left:auto">'
+        f'{result.get("n_raw","?")} raw &nbsp;·&nbsp; fetched {result["fetched_at"]}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )

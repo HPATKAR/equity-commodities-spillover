@@ -1008,14 +1008,14 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_intel_panel(conflict_results: dict) -> None:
-    # Shared section header above both columns
+    n_active = sum(1 for r in conflict_results.values() if r.get("state") == "active")
     st.markdown(
-        f'<div style="display:flex;align-items:center;gap:8px;'
-        f'border-bottom:1px solid #1e1e1e;padding-bottom:.2rem;margin-bottom:.3rem">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">Intelligence Panel</span>'
-        f'<span style="{_F}font-size:12px;color:#C8D4E0">'
-        f'Active conflicts · CIS/TPS scores · transmission channel pressure</span>'
+        f'<div class="nx-panel-header" style="margin-bottom:0.5rem">'
+        f'<span class="nx-panel-title">&#x2318; Intelligence Panel</span>'
+        f'<span style="display:flex;align-items:center;gap:8px">'
+        f'<span class="nx-badge nx-badge-critical">{n_active} ACTIVE CONFLICTS</span>'
+        f'<span class="nx-panel-meta">CIS · TPS · Transmission Channels</span>'
+        f'</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1767,43 +1767,41 @@ def _render_live_signals() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_agent_strip() -> None:
-    feed = st.session_state.get("agent_activity", [])[:4]
+    feed = st.session_state.get("agent_activity", [])[:5]
     if not feed:
         return
 
-    st.markdown(
-        f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0;margin:.6rem 0 .3rem">'
-        f'AI Analyst Activity</div>',
-        unsafe_allow_html=True,
+    n_pending = pending_count()
+    pending_badge = (
+        f'<span class="nx-badge nx-badge-warning">{n_pending} PENDING</span>'
+        if n_pending else
+        '<span class="nx-live-dot"></span><span style="font-family:\'JetBrains Mono\',monospace;'
+        'font-size:0.50rem;color:#27ae60;letter-spacing:0.10em">ALL PROCESSED</span>'
     )
 
-    rows = ""
+    rows_html = ""
     for entry in feed:
         ag     = AGENTS.get(entry["agent_id"], {})
         color  = ag.get("color", "#8E9AAA")
-        ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
-        rows += (
-            f'<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;'
-            f'border-bottom:1px solid #111">'
-            f'<span style="{_M}font-size:10px;color:{color};min-width:26px;font-weight:700">'
-            f'{ag.get("short","?")}</span>'
-            f'<span style="{_F}font-size:12px;color:#D8E0EC;flex:1">'
-            f'{entry["action"]}: {entry["detail"][:65]}</span>'
-            f'<span style="{_M}font-size:10px;color:#C8D4E0">{ts_str}</span>'
+        ts_str = entry["ts"].strftime("%H:%M:%S") if isinstance(entry["ts"], datetime.datetime) else "-"
+        action = entry.get("action", "")
+        detail = entry.get("detail", "")[:72]
+        rows_html += (
+            f'<div class="nx-intel-row">'
+            f'<span class="nx-intel-ts">{ts_str}</span>'
+            f'<span class="nx-intel-entity" style="color:{color}">{ag.get("short","?")}</span>'
+            f'<span class="nx-intel-condition">{action}: {detail}</span>'
             f'</div>'
         )
 
-    n_pending = pending_count()
-    pending_note = (
-        f'<div style="{_M}font-size:11px;color:#e67e22;margin-top:4px">'
-        f'{n_pending} item{"s" if n_pending != 1 else ""} awaiting human review</div>'
-        if n_pending else ""
-    )
-
     st.markdown(
-        f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;padding:.4rem .7rem">'
-        f'{rows}{pending_note}</div>',
+        f'<div class="nx-feed-panel" style="margin-top:0.6rem">'
+        f'<div class="nx-feed-panel-header">'
+        f'<span class="nx-panel-title">AI Analyst Activity</span>'
+        f'<span style="display:flex;align-items:center;gap:6px">{pending_badge}</span>'
+        f'</div>'
+        f'<div style="padding:0 0.85rem 0.4rem">{rows_html}</div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 

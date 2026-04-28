@@ -21,9 +21,9 @@ _BLACK  = "#000000"
 
 # ── Plotly template ────────────────────────────────────────────────────────
 
-_BG       = "#111111"    # page background
-_BG_WARM  = "#161616"    # chart plot area — slightly warmer than page
-_GRID     = "#1e1e1e"    # grid lines — barely visible, structural only
+_BG       = "#0d1219"    # page background — deep navy terminal
+_BG_WARM  = "#111923"    # chart plot area — slightly lifted navy
+_GRID     = "#162030"    # grid lines — navy-tinted, structural only
 _TICK     = "#555960"    # axis tick labels — muted
 _LEGEND   = "#8890a1"    # legend text
 
@@ -1156,3 +1156,136 @@ function nav(page) {{
     # by window.parent.location.href inside nav() in the JS above.
     # The _ft_click return-value check that previously appeared here was dead
     # code and has been removed.
+
+
+# ── Nexus-inspired arrangement components ─────────────────────────────────────
+# These helpers render structural HTML using the CSS classes defined in app.py.
+# They encode the Nexus Terminal's panel/feed/badge layout language into
+# reusable Python functions so pages stay DRY.
+
+def _nx_badge(text: str, level: str = "nominal") -> str:
+    """
+    Return an inline HTML severity badge string (not rendered — caller embeds in f-string).
+    level: 'critical' | 'warning' | 'nominal' | 'live' | 'high-impact' | 'med-impact' |
+           'low-impact' | 'active' | 'draft' | 'error'
+    """
+    css = f"nx-badge nx-badge-{level}"
+    return f'<span class="{css}">{text}</span>'
+
+
+def _nx_live_dot(color: str = "green") -> str:
+    """Return the animated live-status dot HTML. color: 'green' | 'red' | 'amber'"""
+    extra = "" if color == "green" else f" {color}"
+    return f'<span class="nx-live-dot{extra}"></span>'
+
+
+def _nx_panel_header(title: str, meta: str = "", badge: str = "") -> None:
+    """Render a Nexus-style panel header row: TITLE  [meta text]  [badge]."""
+    right = ""
+    if badge:
+        right += badge + " "
+    if meta:
+        right += f'<span class="nx-panel-meta">{meta}</span>'
+    st.markdown(
+        f'<div class="nx-panel-header">'
+        f'<span class="nx-panel-title">{title}</span>'
+        f'<span style="display:flex;align-items:center;gap:6px">{right}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _nx_intel_table(rows: list[dict]) -> None:
+    """
+    Render a Nexus-style intelligence alert table.
+    Each row dict: {ts, entity, condition, level, action_label (opt), action_url (opt)}
+    level: 'critical' | 'warning' | 'nominal'
+    """
+    html = '<div style="padding:0">'
+    for r in rows:
+        badge = _nx_badge(r.get("level", "nominal").upper(), r.get("level", "nominal"))
+        action_html = ""
+        if r.get("action_label"):
+            action_html = (
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+                f'font-weight:700;letter-spacing:0.08em;text-transform:uppercase;'
+                f'border:1px solid rgba(207,185,145,0.35);color:#CFB991;'
+                f'padding:2px 8px;cursor:pointer;white-space:nowrap">'
+                f'{r["action_label"]}</span>'
+            )
+        html += (
+            f'<div class="nx-intel-row">'
+            f'<span class="nx-intel-ts">{r.get("ts","")}</span>'
+            f'<span class="nx-intel-entity">{r.get("entity","")}</span>'
+            f'<span class="nx-intel-condition">{r.get("condition","")}</span>'
+            f'<span class="nx-intel-severity">{badge} {action_html}</span>'
+            f'</div>'
+        )
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def _nx_feed_item(
+    type_label: str,
+    body: str,
+    ts: str = "",
+    impact: str = "",
+    level: str = "intel",   # 'critical' | 'warning' | 'intel' | 'data'
+) -> str:
+    """
+    Return HTML for a single Nexus-style right-panel feed item.
+    Caller wraps multiple items in a .nx-feed-panel div.
+    """
+    impact_html = f'<div class="nx-feed-impact">{impact}</div>' if impact else ""
+    return (
+        f'<div class="nx-feed-item {level}">'
+        f'<div class="nx-feed-item-header">'
+        f'<span class="nx-feed-item-type">{type_label}</span>'
+        f'<span class="nx-feed-item-ts">{ts}</span>'
+        f'</div>'
+        f'<div class="nx-feed-item-body">{body}</div>'
+        f'{impact_html}'
+        f'</div>'
+    )
+
+
+def _nx_kpi_tile(
+    ticker: str,
+    value: str,
+    delta: str = "",
+    delta_up: bool | None = None,
+) -> str:
+    """Return HTML for a single Nexus KPI ticker tile. Embed via st.markdown."""
+    if delta:
+        if delta_up is True:
+            d_html = f'<div class="nx-kpi-tile-delta-up">▲ {delta}</div>'
+        elif delta_up is False:
+            d_html = f'<div class="nx-kpi-tile-delta-down">▼ {delta}</div>'
+        else:
+            d_html = f'<div style="color:#8890a1;font-size:0.62rem">{delta}</div>'
+    else:
+        d_html = ""
+    return (
+        f'<div class="nx-kpi-tile">'
+        f'<div class="nx-kpi-tile-ticker">{ticker}</div>'
+        f'<div class="nx-kpi-tile-value">{value}</div>'
+        f'{d_html}'
+        f'</div>'
+    )
+
+
+def _nx_route_row(name: str, status: str, level: str = "nominal") -> str:
+    """Return HTML for a single trade-route status row."""
+    badge = _nx_badge(status, level)
+    icon = {"nominal": "✓", "warning": "⚠", "critical": "✕", "live": "●"}.get(level, "·")
+    icon_color = {
+        "nominal": "#27ae60", "warning": "#e67e22",
+        "critical": "#c0392b", "live": "#27ae60",
+    }.get(level, "#8890a1")
+    return (
+        f'<div class="nx-route-row">'
+        f'<span style="color:{icon_color};margin-right:6px;font-size:0.62rem">{icon}</span>'
+        f'<span class="nx-route-name">{name}</span>'
+        f'{badge}'
+        f'</div>'
+    )
