@@ -39,9 +39,8 @@ _G = "#CFB991"
 
 def _label(txt: str) -> None:
     st.markdown(
-        f'<p style="{_M}font-size:7.5px;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:.16em;color:{_G};border-bottom:1px solid #1e1e1e;'
-        f'padding-bottom:4px;margin:.8rem 0 .4rem">{txt}</p>',
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -160,7 +159,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     h_selected = h_selected or h_names_filtered[:4]
     d_selected = d_selected or watch_names[:5]
 
-    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -229,7 +228,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "volatility is normal or elevated."
     )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -303,7 +302,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "that stress is noise or part of a sustained directional move."
     )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -371,7 +370,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 "reversals as investors adjust positions."
             )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -418,33 +417,33 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 ) if vol_24h > 0 else ""
 
                 st.markdown(
-                    f'<div style="border:1px solid #E8E5E0;'
-                    f'border-radius:0;padding:0.75rem 1rem;margin-bottom:0.6rem;background:#fff">'
+                    f'<div style="border:1px solid #1e1e1e;border-left:2px solid rgba(207,185,145,0.22);'
+                    f'border-radius:0;padding:0.75rem 1rem;margin-bottom:0.6rem;background:#141414">'
                     f'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
                     f'<div><span style="font-size:0.52rem;text-transform:uppercase;'
-                    f'letter-spacing:0.12em;color:#666666;font-weight:600">{group}</span>'
-                    f'<div style="font-size:0.84rem;font-weight:700;color:#000;'
+                    f'letter-spacing:0.12em;color:#8890a1;font-weight:600">{group}</span>'
+                    f'<div style="font-size:0.84rem;font-weight:700;color:#e8e9ed;'
                     f'font-family:\'DM Sans\',sans-serif;margin-top:1px">{name}</div></div>'
                     f'<div style="text-align:right">'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.0rem;'
-                    f'font-weight:700;color:#000">{last_price:,.2f}</div>'
+                    f'font-weight:700;color:#CFB991">{last_price:,.2f}</div>'
                     f'<div style="font-size:0.62rem;color:{d1_color};'
                     f'font-family:\'JetBrains Mono\',monospace;font-weight:600">{d1_pct:+.2f}% 1d</div>'
                     f'</div></div>'
                     f'<div style="display:flex;gap:1.1rem;margin-top:0.45rem;flex-wrap:wrap">'
-                    f'<div style="font-size:0.66rem;color:#333333">'
+                    f'<div style="font-size:0.66rem;color:#8890a1">'
                     f'YTD&nbsp;<span style="color:{ytd_color};font-weight:600">{ytd_pct:+.1f}%</span></div>'
-                    f'<div style="font-size:0.66rem;color:#333333">'
+                    f'<div style="font-size:0.66rem;color:#8890a1">'
                     f'30d Vol&nbsp;<span style="color:{regime_col};font-weight:600">'
                     f'{vol_30d:.1f}% <span style="font-size:0.58rem">({regime_lbl})</span></span></div>'
                     f'{vol_24h_html}</div>'
-                    f'<div style="margin-top:0.45rem;padding-top:0.4rem;border-top:1px solid #F0EDEA">'
-                    f'<span style="font-size:0.62rem;color:#8E9AAA">&#9872;&nbsp;{alert_ctx}</span>'
+                    f'<div style="margin-top:0.45rem;padding-top:0.4rem;border-top:1px solid #1e1e1e">'
+                    f'<span style="font-size:0.62rem;color:#8890a1">&#9872;&nbsp;{alert_ctx}</span>'
                     f'</div></div>',
                     unsafe_allow_html=True,
                 )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -524,7 +523,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                     "decouple sharply when supply shocks dominate."
                 )
 
-        st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+        st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                     unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════

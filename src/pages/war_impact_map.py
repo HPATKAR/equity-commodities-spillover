@@ -646,7 +646,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
     else:
         score_col = "score"
 
-    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ── Hero: left panel + globe ──────────────────────────────────────────────
@@ -662,23 +662,23 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         for ev in active:
             days = (today - ev["start"]).days
             st.markdown(
-                f'<div style="padding:0.55rem 0.8rem;'
-                f'background:#fafaf8;border-radius:0;margin-bottom:8px">'
+                f'<div style="padding:0.55rem 0.8rem;border-left:2px solid rgba(207,185,145,0.22);'
+                f'background:#141414;border-radius:0;margin-bottom:8px">'
                 f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.11em;'
                 f'text-transform:uppercase;color:{ev["color"]}">{ev["category"]}</div>'
-                f'<div style="{_F}font-size:0.80rem;font-weight:700;color:#1a1a1a;'
+                f'<div style="{_F}font-size:0.80rem;font-weight:700;color:#e8e9ed;'
                 f'margin-top:1px;line-height:1.3">{ev["name"]}</div>'
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;'
-                f'color:#666;margin-top:3px">'
+                f'color:#8890a1;margin-top:3px">'
                 f'{ev["start"].strftime("%d %b %Y")} &nbsp;&middot;&nbsp; {days:,}d elapsed</div>'
-                f'<div style="{_F}font-size:0.62rem;color:#444;margin-top:5px;line-height:1.55">'
+                f'<div style="{_F}font-size:0.62rem;color:#8890a1;margin-top:5px;line-height:1.55">'
                 f'{ev["description"][:130]}{"…" if len(ev["description"]) > 130 else ""}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
         # ── Dynamic intensity multipliers ────────────────────────────────
-        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                     unsafe_allow_html=True)
         st.markdown(
             f'<p style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.14em;'
@@ -716,7 +716,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
-        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                     unsafe_allow_html=True)
 
         # Impact scale legend
@@ -742,7 +742,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
-        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+        st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                     unsafe_allow_html=True)
 
         # Score methodology note
@@ -792,7 +792,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
 
         _render_globe_component(df, score_col)
 
-    st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ── Methodology expanders ─────────────────────────────────────────────────

@@ -37,7 +37,7 @@ _DEFAULT_ALL = _DEFAULT_EQ + _DEFAULT_CMD
 def _label(txt: str) -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">{txt}</p>',
+        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 

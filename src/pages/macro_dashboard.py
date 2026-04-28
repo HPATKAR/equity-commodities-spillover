@@ -26,9 +26,8 @@ _G = "#CFB991"
 def _label(txt: str) -> None:
     import streamlit as _st
     _st.markdown(
-        f'<p style="{_M}font-size:7.5px;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:.16em;color:{_G};border-bottom:1px solid #1e1e1e;'
-        f'padding-bottom:4px;margin:.8rem 0 .4rem">{txt}</p>',
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 from src.data.config import PALETTE
@@ -208,18 +207,21 @@ def _kpi(col, label: str, value: str, delta: str = "", delta_up: bool | None = N
     arrow = ""
     if delta:
         if delta_up is True:
-            arrow = f'<span style="color:#2e7d32">▲ {delta}</span>'
+            arrow = (f'<span style="color:#27ae60;font-family:\'JetBrains Mono\',monospace;'
+                     f'font-size:0.60rem">▲ {delta}</span>')
         elif delta_up is False:
-            arrow = f'<span style="color:#c0392b">▼ {delta}</span>'
+            arrow = (f'<span style="color:#c0392b;font-family:\'JetBrains Mono\',monospace;'
+                     f'font-size:0.60rem">▼ {delta}</span>')
         else:
-            arrow = f'<span style="color:#888">{delta}</span>'
+            arrow = f'<span style="color:#555960;font-size:0.60rem">{delta}</span>'
     col.markdown(
-        f'<div style="background:#fafaf8;border:1px solid #E8E5E0;border-radius:0;'
-        f'padding:10px 14px;margin-bottom:8px">'
-        f'<div style="{_F}font-size:0.55rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.12em;color:#8E9AAA;margin-bottom:2px">{label}</div>'
-        f'<div style="{_F}font-size:1.05rem;font-weight:700;color:#000;line-height:1.2">{value}</div>'
-        f'<div style="{_F}font-size:0.65rem;margin-top:2px">{arrow}</div>'
+        f'<div style="background:#141414;border:1px solid #1e1e1e;'
+        f'border-left:2px solid rgba(207,185,145,0.22);'
+        f'padding:0.55rem 0.75rem 0.55rem 0.70rem;margin-bottom:0.5rem">'
+        f'<div style="{_F}font-size:0.52rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.16em;color:#555960;margin-bottom:4px">{label}</div>'
+        f'<div style="{_M}font-size:1.02rem;font-weight:700;color:#CFB991;line-height:1.1">{value}</div>'
+        f'<div style="margin-top:3px">{arrow}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )

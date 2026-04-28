@@ -29,9 +29,8 @@ _G = "#CFB991"
 
 def _label(txt: str) -> None:
     st.markdown(
-        f'<p style="{_M}font-size:7.5px;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:.16em;color:{_G};border-bottom:1px solid #1e1e1e;'
-        f'padding-bottom:4px;margin:.8rem 0 .4rem">{txt}</p>',
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -72,19 +71,19 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     # Event info bar
     st.markdown(
         f'<div style="display:flex;gap:16px;align-items:stretch;margin-bottom:8px">'
-        f'<div style="padding:4px 10px;background:#fafaf8;flex:1">'
+        f'<div style="padding:4px 10px;background:#141414;border-left:2px solid rgba(207,185,145,0.22);flex:1">'
         f'<div style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.10em;color:{ev["color"]}">{ev["category"]}</div>'
-        f'<div style="{_F}font-size:0.85rem;font-weight:700;color:#000">{ev["name"]}</div>'
+        f'<div style="{_F}font-size:0.85rem;font-weight:700;color:#e8e9ed">{ev["name"]}</div>'
         f'</div>'
-        f'<div style="border-left:1px solid #E8E5E0;padding:4px 10px">'
-        f'<div style="{_F}font-size:0.56rem;font-weight:600;text-transform:uppercase;letter-spacing:0.10em;color:#888">Period</div>'
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.78rem;font-weight:600">'
+        f'<div style="border-left:1px solid #1e1e1e;padding:4px 10px">'
+        f'<div style="{_F}font-size:0.56rem;font-weight:600;text-transform:uppercase;letter-spacing:0.10em;color:#8890a1">Period</div>'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.78rem;font-weight:600;color:#e8e9ed">'
         f'{ev["start"].strftime("%d %b %Y")} → {ev["end"].strftime("%d %b %Y")}</div>'
         f'</div>'
-        f'<div style="border-left:1px solid #E8E5E0;padding:4px 10px;flex:2">'
-        f'<div style="{_F}font-size:0.56rem;font-weight:600;text-transform:uppercase;letter-spacing:0.10em;color:#888">Context</div>'
-        f'<div style="{_F}font-size:0.64rem;color:#333;line-height:1.5">{ev["description"][:180]}{"…" if len(ev["description"])>180 else ""}</div>'
+        f'<div style="border-left:1px solid #1e1e1e;padding:4px 10px;flex:2">'
+        f'<div style="{_F}font-size:0.56rem;font-weight:600;text-transform:uppercase;letter-spacing:0.10em;color:#8890a1">Context</div>'
+        f'<div style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.5">{ev["description"][:180]}{"…" if len(ev["description"])>180 else ""}</div>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -107,7 +106,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
 
     assets_in_prices = [a for a in selected_assets if a in all_prices.columns]
 
-    st.markdown('<div style="margin:0.3rem 0 0.5rem;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.3rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # Compute
@@ -184,7 +183,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 "those remaining negative post-event suggest lasting structural damage from the shock."
             )
 
-    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #E8E5E0"></div>',
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
 
     # ── ROW 2: Volatility shift | Correlation shift table ───────────────────

@@ -171,7 +171,7 @@ def _render_market_snapshot(snap: dict) -> None:
 def _label(txt: str) -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px 0">{txt}</p>',
+        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -302,8 +302,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     def _kpi(col, label, value, delta="", dcolor=""):
         col.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:0;'
-            f'padding:0.55rem 0.75rem;background:#1c1c1c">'
+            f'<div style="border:1px solid #1e1e1e;border-left:2px solid rgba(207,185,145,0.22);border-radius:0;'
+            f'padding:0.55rem 0.75rem;background:#141414">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
@@ -314,8 +314,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         )
 
     k1.markdown(
-        f'<div style="border-top:2px solid {regime_color};border-bottom:1px solid #E8E5E0;border-radius:0;'
-        f'padding:0.55rem 0.75rem;background:#1c1c1c">'
+        f'<div style="border-top:2px solid {regime_color};border-bottom:1px solid #1e1e1e;border-radius:0;'
+        f'padding:0.55rem 0.75rem;background:#141414">'
         f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
         f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">Correlation Regime</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.98rem;'
@@ -517,7 +517,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         else:
             d_color = "#8890a1"
         col.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:0;'
+            f'<div style="border:1px solid #1e1e1e;border-radius:0;'
             f'padding:0.55rem 0.75rem;background:#1c1c1c">'
             f'<div style="{_F}font-size:0.58rem;font-weight:600;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#8890a1;margin-bottom:3px">{label}</div>'
@@ -693,7 +693,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     with ews_l:
         _label("Early Warning System")
         st.markdown(
-            f'<div style="border:1px solid #E8E5E0;border-radius:0;padding:0.75rem;'
+            f'<div style="border:1px solid #1e1e1e;border-radius:0;padding:0.75rem;'
             f'background:#1c1c1c;border-top:3px solid {comp_color}">'
             f'<div style="{_F}font-size:0.56rem;font-weight:700;letter-spacing:0.12em;'
             f'text-transform:uppercase;color:#6b7280;margin-bottom:4px">Composite Score</div>'
@@ -714,7 +714,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         for col, (name, data) in zip(sig_cols, sig_items):
             s = data["score"]; c = _ews_score_color(s)
             col.markdown(
-                f'<div style="border:1px solid #E8E5E0;border-radius:0;padding:0.6rem 0.55rem;'
+                f'<div style="border:1px solid #1e1e1e;border-radius:0;padding:0.6rem 0.55rem;'
                 f'background:#1c1c1c;border-top:2px solid {c}">'
                 f'<div style="{_F}font-size:0.54rem;font-weight:700;letter-spacing:0.10em;'
                 f'text-transform:uppercase;color:#6b7280;margin-bottom:3px">{name}</div>'

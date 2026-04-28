@@ -1032,8 +1032,8 @@ def _signal_card(col, title, primary_metric, primary_label,
     )
 
     html = (
-        f'<div style="border:1px solid #E8E5E0;border-radius:0;'
-        f'padding:1rem 1.1rem 0.9rem;background:#1c1c1c;'
+        f'<div style="border:1px solid #1e1e1e;border-radius:0;'
+        f'padding:1rem 1.1rem 0.9rem;background:#141414;'
         f'border-top:3px solid {accent};">'
         f'<div style="{_F}font-size:0.52rem;font-weight:700;letter-spacing:0.16em;'
         f'text-transform:uppercase;color:#6b7280;margin-bottom:0.5rem;">{title}</div>'
