@@ -1004,6 +1004,176 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § 3.5  RISK BRIEFING PANEL  (right column — Nexus "Risk Officer Briefing")
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_risk_briefing_panel(
+    risk: dict,
+    conflict_results: dict,
+    alerts: list | None = None,
+) -> None:
+    """
+    Compact right-column panel matching Nexus 'Risk Officer Briefing'.
+    Shows: status + top narrative sentence + top 3 critical alerts as feed items
+    + live conflict scores + agent activity.
+    """
+    score    = risk["score"]
+    color    = risk["color"]
+    label    = risk["label"]
+    cis      = risk["cis"]
+    tps      = risk["tps"]
+    top_c    = (risk.get("top_conflict") or "-").replace("_", " ").title()
+
+    # Severity level for badge
+    if score >= 65:
+        badge_level, badge_text = "critical", "CRITICAL"
+    elif score >= 45:
+        badge_level, badge_text = "warning", "ELEVATED"
+    else:
+        badge_level, badge_text = "nominal", "NOMINAL"
+
+    # Top transmission channel
+    ch_scores: dict[str, float] = {}
+    for r in conflict_results.values():
+        if r.get("state") != "active":
+            continue
+        w = r["cis"] / 100
+        for ch, v in r.get("transmission", {}).items():
+            ch_scores[ch] = ch_scores.get(ch, 0.0) + v * w
+    top_ch = max(ch_scores, key=ch_scores.get).replace("_", " ") if ch_scores else "—"
+
+    # Header
+    st.markdown(
+        f'<div class="nx-panel-header">'
+        f'<span class="nx-panel-title">&#x26A0; Risk Officer Briefing</span>'
+        f'<span class="nx-badge nx-badge-{badge_level}">{badge_text}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Situation summary
+    st.markdown(
+        f'<div style="padding:0.55rem 0;border-bottom:1px solid #1a2538">'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
+        f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+        f'color:{color};margin-bottom:4px">GEO RISK SCORE</div>'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.60rem;'
+        f'font-weight:700;color:{color};line-height:1">{score:.0f}'
+        f'<span style="font-size:0.62rem;color:#8890a1">/100 · {label}</span></div>'
+        f'<div style="margin-top:6px;display:flex;gap:12px">'
+        f'<span style="font-size:0.58rem;font-family:\'JetBrains Mono\',monospace;color:#8890a1">'
+        f'CIS <b style="color:#e8e9ed">{cis:.0f}</b></span>'
+        f'<span style="font-size:0.58rem;font-family:\'JetBrains Mono\',monospace;color:#8890a1">'
+        f'TPS <b style="color:#e8e9ed">{tps:.0f}</b></span>'
+        f'<span style="font-size:0.58rem;font-family:\'JetBrains Mono\',monospace;color:#8890a1">'
+        f'CH <b style="color:#CFB991">{top_ch[:16]}</b></span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Critical alerts as feed items
+    critical_alerts = [a for a in (alerts or []) if getattr(a, "severity", "") == "critical"][:3]
+    warning_alerts  = [a for a in (alerts or []) if getattr(a, "severity", "") == "warning"][:2]
+
+    if critical_alerts or warning_alerts:
+        st.markdown(
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+            'color:#CFB991;padding:0.45rem 0 0.3rem">Active Alerts</div>',
+            unsafe_allow_html=True,
+        )
+        for a in critical_alerts:
+            st.markdown(
+                f'<div class="nx-feed-item critical" style="padding:0.4rem 0">'
+                f'<div class="nx-feed-item-header">'
+                f'<span class="nx-feed-item-type">ALARM</span>'
+                f'</div>'
+                f'<div class="nx-feed-item-body" style="line-height:1.5">'
+                f'{getattr(a, "title", str(a))[:110]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        for a in warning_alerts:
+            st.markdown(
+                f'<div class="nx-feed-item warning" style="padding:0.4rem 0">'
+                f'<div class="nx-feed-item-header">'
+                f'<span class="nx-feed-item-type" style="color:#e67e22">WARNING</span>'
+                f'</div>'
+                f'<div class="nx-feed-item-body" style="line-height:1.5">'
+                f'{getattr(a, "title", str(a))[:110]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Top 4 active conflicts as compact intel rows
+    active = sorted(
+        [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"],
+        key=lambda x: x[1]["cis"], reverse=True,
+    )[:4]
+    if active:
+        st.markdown(
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+            'color:#CFB991;padding:0.45rem 0 0.3rem">Active Conflicts</div>',
+            unsafe_allow_html=True,
+        )
+        rows_html = ""
+        for cid, r in active:
+            cis_v = r["cis"]
+            bar_c = "#c0392b" if cis_v >= 65 else "#e67e22" if cis_v >= 45 else "#8890a1"
+            rows_html += (
+                f'<div style="display:flex;align-items:center;gap:6px;'
+                f'padding:4px 0;border-bottom:1px solid #1a2538">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
+                f'font-weight:700;color:{r["color"]};min-width:52px;white-space:nowrap">'
+                f'{r["label"][:10]}</span>'
+                f'<div style="flex:1;background:#162030;height:3px;border-radius:1px">'
+                f'<div style="width:{cis_v:.0f}%;height:3px;background:{bar_c};border-radius:1px"></div>'
+                f'</div>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
+                f'font-weight:700;color:{bar_c};min-width:24px;text-align:right">{cis_v:.0f}</span>'
+                f'</div>'
+            )
+        st.markdown(rows_html, unsafe_allow_html=True)
+
+    # Agent activity (last 3 events)
+    feed = st.session_state.get("agent_activity", [])[:3]
+    if feed:
+        st.markdown(
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+            'color:#CFB991;padding:0.45rem 0 0.3rem">AI Analyst Activity</div>',
+            unsafe_allow_html=True,
+        )
+        for entry in feed:
+            ag     = AGENTS.get(entry["agent_id"], {})
+            ag_col = ag.get("color", "#8890a1")
+            ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
+            st.markdown(
+                f'<div style="display:flex;gap:6px;align-items:flex-start;'
+                f'padding:3px 0;border-bottom:1px solid #1a2538">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
+                f'color:{ag_col};font-weight:700;min-width:28px">{ag.get("short","?")}</span>'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;'
+                f'color:#b8b8b8;flex:1;line-height:1.45">'
+                f'{entry.get("action","")}: {entry.get("detail","")[:52]}</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+                f'color:#555960;white-space:nowrap">{ts_str}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Updated timestamp
+    st.markdown(
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'color:#555960;padding-top:0.5rem;border-top:1px solid #1a2538;margin-top:0.4rem">'
+        f'Updated: {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # § 4  INTEL PANEL - conflict table (left) + channels (right)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1939,6 +2109,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 risk_history=_score_hist if isinstance(_score_hist, pd.Series)
                              else pd.Series(dtype=float),
             )
+            # Cache all alerts for risk briefing panel
+            st.session_state["_cached_alerts"] = _alerts
             # Show only critical alerts on Home (warnings live on Overview)
             _critical = [a for a in _alerts if a.severity == "critical"]
             if _critical:
@@ -1998,11 +2170,17 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # § 3  Context Narrative
-    _render_context_narrative(risk, conflict_results)
-
-    # § 4  Intel Panel
-    _render_intel_panel(conflict_results)
+    # ── § 3 + § 3.5  Nexus 2-column split: context (main) | risk briefing (right) ──
+    _col_ctx, _col_brief = st.columns([2.0, 1.0], gap="medium")
+    with _col_ctx:
+        # § 3  Context Narrative
+        _render_context_narrative(risk, conflict_results)
+        # § 4  Intel Panel (inside main column so it stays readable width)
+        _render_intel_panel(conflict_results)
+    with _col_brief:
+        # § 3.5  Risk Officer Briefing (Nexus right panel)
+        _computed_alerts = st.session_state.get("_cached_alerts", [])
+        _render_risk_briefing_panel(risk, conflict_results, alerts=_computed_alerts)
 
     # § 5  Scenario Switch
     _render_scenario_switch()

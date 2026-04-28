@@ -158,11 +158,12 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     current_r = int(regimes.dropna().iloc[-1]) if not regimes.empty else 1
 
     # ══════════════════════════════════════════════════════════════════════
-    # ROW 1: Rolling Correlation | DCC-GARCH
+    # ROW 1: DCC-GARCH (wide) | Granger Summary + Rolling Correlation controls
+    # Nexus layout: wide main chart left, compact quantitative matrix right
     # ══════════════════════════════════════════════════════════════════════
-    col_rc, col_dcc = st.columns(2, gap="medium")
+    col_dcc, col_rc = st.columns([1.8, 1.0], gap="medium")
 
-    # ── Panel 1: Rolling Correlation ──────────────────────────────────────
+    # ── Panel 1 (right): Rolling Correlation controls + pair selector ─────
     with col_rc:
         _label("Rolling Pairwise Correlation")
         ca1, ca2, ca3 = st.columns([1, 1, 0.8])
@@ -235,12 +236,73 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 "Diverging lines mean each pair is responding to its own specific fundamental driver."
             )
 
-    # ── Panel 2: DCC-GARCH ────────────────────────────────────────────────
-    _thread(
-        "Simple rolling correlation smooths over the past equally. DCC-GARCH below does better: "
-        "it lets correlation update dynamically, giving more weight to recent observations and "
-        "producing a cleaner estimate of the current coupling strength."
-    )
+        # ── Granger Causality summary (Nexus right-panel compact matrix) ──────
+        st.markdown(
+            '<div style="margin-top:0.8rem">'
+            '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
+            'text-transform:uppercase;letter-spacing:0.14em;color:#8890a1;margin:0 0 0.4rem">Granger Causality (p < 0.05)</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        try:
+            from src.analysis.spillover import granger_grid
+            _g_eq  = [c for c in ["S&P 500", "DAX", "Nikkei 225"] if c in eq_r.columns]
+            _g_cmd = [c for c in ["WTI Crude Oil", "Gold", "Copper"] if c in cmd_r.columns]
+            if _g_eq and _g_cmd:
+                _g_r  = pd.concat([eq_r[_g_eq], cmd_r[_g_cmd]], axis=1).dropna()
+                _g_df = granger_grid(_g_r, max_lag=4)
+                # Build compact Nexus-style matrix
+                _g_causes = _g_df["cause"].unique()[:3]
+                _g_effects = _g_df["effect"].unique()[:3]
+                _hdr = '<div style="display:grid;grid-template-columns:80px ' + ' '.join(['1fr']*len(_g_effects)) + ';gap:2px;margin-bottom:2px">'
+                _hdr += '<span style="font-size:0.48rem;color:#555960"> </span>'
+                for e in _g_effects:
+                    _hdr += f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.48rem;color:#8890a1;text-align:center">{e[:8]}</span>'
+                _hdr += '</div>'
+                _rows_g = ""
+                for c in _g_causes:
+                    _rows_g += '<div style="display:grid;grid-template-columns:80px ' + ' '.join(['1fr']*len(_g_effects)) + ';gap:2px;margin-bottom:2px">'
+                    _rows_g += f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#CFB991">{c[:10]}</span>'
+                    for e in _g_effects:
+                        _sub = _g_df[(_g_df["cause"] == c) & (_g_df["effect"] == e)]
+                        if not _sub.empty:
+                            _pv = float(_sub.iloc[0]["p_value"])
+                            _sig = _sub.iloc[0].get("holm_significant", _pv < 0.05)
+                            _bg = "rgba(192,57,43,0.25)" if _sig else "rgba(136,144,161,0.08)"
+                            _tc = "#e05241" if _sig else "#555960"
+                            _rows_g += f'<div style="background:{_bg};text-align:center;padding:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;font-weight:700;color:{_tc}">{_pv:.3f}</div>'
+                        else:
+                            _rows_g += '<div style="background:rgba(136,144,161,0.05);text-align:center;padding:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#555960">—</div>'
+                    _rows_g += '</div>'
+                st.markdown(
+                    f'<div style="background:#0d1219;border:1px solid #1e2d40;padding:0.6rem;margin-bottom:0.4rem">'
+                    f'{_hdr}{_rows_g}'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;color:#555960;margin-top:6px">'
+                    f'Red = Holm-significant (p&lt;0.05). Row causes column.</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        except Exception:
+            pass
+
+        # ── Current regime KPI ────────────────────────────────────────────────
+        _reg_c   = _REGIME_COLORS.get(current_r, "#8890a1")
+        _reg_lbl = _REGIME_NAMES.get(current_r, "—")
+        st.markdown(
+            f'<div style="background:#111d2e;border:1px solid #1e2d40;'
+            f'border-left:2px solid {_reg_c};padding:0.55rem 0.75rem;margin-top:0.4rem">'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
+            f'text-transform:uppercase;letter-spacing:0.14em;color:#555960;margin-bottom:3px">'
+            f'Current Correlation Regime</div>'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.0rem;'
+            f'font-weight:700;color:{_reg_c}">{_reg_lbl}</div>'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;color:#8890a1;margin-top:2px">'
+            f'Avg |Corr| basis · 60d window</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Panel 2 (left wide): DCC-GARCH ───────────────────────────────────
     with col_dcc:
         _label("DCC-GARCH Dynamic Conditional Correlation")
         cd1, cd2 = st.columns(2)
@@ -315,7 +377,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     # ══════════════════════════════════════════════════════════════════════
     # ROW 2: Regime Detection | Regime Forecast (Markov)
     # ══════════════════════════════════════════════════════════════════════
-    col_reg, col_mkov = st.columns(2, gap="medium")
+    col_reg, col_mkov = st.columns([1.0, 1.8], gap="medium")
 
     # ── Panel 3: Regime Detection ─────────────────────────────────────────
     with col_reg:
@@ -513,6 +575,73 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 f"Historical average duration in {_REGIME_NAMES[current_r]}: <b>{avg_run_str}</b>. "
                 f"Probability of staying in current regime next period: <b>{p_stay:.1f}%</b>."
             )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ROW 3: Significant Spillover Events table (Nexus bottom-right pattern)
+    # ══════════════════════════════════════════════════════════════════════
+    try:
+        from src.analysis.spillover import granger_grid
+        _ev_r    = pd.concat([eq_r, cmd_r], axis=1).dropna()
+        _ev_cols = list(eq_r.columns[:3]) + list(cmd_r.columns[:4])
+        _ev_r    = _ev_r[[c for c in _ev_cols if c in _ev_r.columns]]
+        if len(_ev_r.columns) >= 2 and len(_ev_r) >= 60:
+            _ev_df = granger_grid(_ev_r, max_lag=4)
+            _sig   = _ev_df[_ev_df.get("holm_significant", _ev_df["p_value"] < 0.05)].copy()
+            if not _sig.empty:
+                _sig = _sig.nsmallest(8, "p_value")
+
+                # Nexus-style event table header
+                _th_s = ("font-family:'JetBrains Mono',monospace;font-size:0.54rem;font-weight:700;"
+                         "letter-spacing:0.10em;text-transform:uppercase;color:#8890a1;"
+                         "padding:4px 10px;text-align:left;border-bottom:1px solid #1e2d40;background:#0d1219")
+                _th_html = (
+                    f'<tr><th style="{_th_s}">Source</th>'
+                    f'<th style="{_th_s}">Target</th>'
+                    f'<th style="{_th_s}">P-Value</th>'
+                    f'<th style="{_th_s}">Lag</th>'
+                    f'<th style="{_th_s}">Magnitude</th>'
+                    f'<th style="{_th_s}">Signal</th></tr>'
+                )
+                _td_s = ("font-family:'JetBrains Mono',monospace;font-size:0.58rem;"
+                         "padding:5px 10px;border-bottom:1px solid #162030")
+                _rows_ev = ""
+                for _, row in _sig.iterrows():
+                    _pv    = float(row["p_value"])
+                    _pv_c  = "#e05241" if _pv < 0.01 else "#e8902a" if _pv < 0.05 else "#8890a1"
+                    _lag_v = int(row.get("bic_lag", row.get("lag", 0)))
+                    _magn  = f"↑ {abs(_pv):.4f}" if _pv < 0.025 else f"↓ {abs(_pv):.4f}"
+                    _rows_ev += (
+                        f'<tr>'
+                        f'<td style="{_td_s};color:#CFB991">{str(row["cause"])[:14]}</td>'
+                        f'<td style="{_td_s};color:#CFB991">{str(row["effect"])[:14]}</td>'
+                        f'<td style="{_td_s};color:{_pv_c};font-weight:700">{_pv:.4f}</td>'
+                        f'<td style="{_td_s};color:#8890a1">{_lag_v}d</td>'
+                        f'<td style="{_td_s};color:{"#27ae60" if _pv < 0.025 else "#e67e22"}">'
+                        f'{"↑ Strong" if _pv < 0.01 else "↑ Sig." if _pv < 0.05 else "~"}</td>'
+                        f'<td style="{_td_s}">'
+                        f'<span class="nx-badge {"nx-badge-critical" if _pv < 0.01 else "nx-badge-warning"}">'
+                        f'{"HIGH" if _pv < 0.01 else "MODERATE"}</span></td>'
+                        f'</tr>'
+                    )
+
+                st.markdown(
+                    f'<div class="nx-panel-header" style="margin:0.9rem 0 0.5rem">'
+                    f'<span class="nx-panel-title">&#x1F4C5; Significant Spillover Events</span>'
+                    f'<span class="nx-badge nx-badge-live">LIVE MONITORING</span>'
+                    f'</div>'
+                    f'<div style="background:#0d1219;border:1px solid #1e2d40;overflow-x:auto">'
+                    f'<table style="width:100%;border-collapse:collapse">'
+                    f'<thead>{_th_html}</thead>'
+                    f'<tbody>{_rows_ev}</tbody>'
+                    f'</table>'
+                    f'</div>'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.54rem;'
+                    f'color:#555960;margin-top:4px">'
+                    f'Holm-Bonferroni corrected · BIC lag selection · p &lt; 0.05 threshold</div>',
+                    unsafe_allow_html=True,
+                )
+    except Exception:
+        pass
 
     # ── Equity-Bond Correlation Regime Note ───────────────────────────────────
     if not fi_r.empty and "US 20Y+ Treasury (TLT)" in fi_r.columns and "S&P 500" in eq_r.columns:
