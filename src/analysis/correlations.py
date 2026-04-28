@@ -320,11 +320,27 @@ def dcc_correlation(
     r2: pd.Series,
     a: float = 0.05,
     b: float = 0.90,
+    ewma_lambda: float = 0.94,
 ) -> pd.Series:
     """
-    Simplified DCC-GARCH dynamic conditional correlation between two series.
-    Uses Engle (2002) DCC(1,1) with given a, b parameters.
-    a + b < 1 required for stationarity.
+    DCC-GARCH(1,1) dynamic conditional correlation (Engle 2002).
+
+    Implementation follows the two-step procedure:
+      Step 1  — EWMA volatility pre-whitening (RiskMetrics, λ=0.94).
+                Raw returns are standardised by their EWMA conditional
+                standard deviation before the DCC recursion.  Skipping
+                this step causes the quasi-correlation matrix Q to be
+                contaminated by heteroskedasticity, inflating correlations
+                during high-vol episodes even when the true ρ is unchanged.
+      Step 2  — DCC(1,1) recursion on the standardised residuals ε̃_t:
+                Q_t = (1−a−b)Q̄ + a ε̃_{t−1}ε̃'_{t−1} + b Q_{t−1}
+                R_t = diag(Q_t)^{−½} Q_t diag(Q_t)^{−½}
+
+    Parameters
+    ----------
+    a, b        : DCC(1,1) parameters; a+b < 1 for covariance stationarity.
+    ewma_lambda : EWMA decay factor for volatility pre-whitening (0 < λ < 1).
+                  λ=0.94 is the J.P. Morgan RiskMetrics daily standard.
     """
     combined = pd.concat([r1, r2], axis=1).dropna()
     if len(combined) < 30:
@@ -336,19 +352,28 @@ def dcc_correlation(
     # Step 1: demean
     x = x - x.mean(axis=0)
 
-    # Step 2: unconditional covariance Q-bar
-    Q_bar = (x.T @ x) / T
+    # EWMA volatility pre-whitening (RiskMetrics λ=0.94)
+    # h[t] = λ·h[t-1] + (1-λ)·x[t-1]²  — initialised at sample variance
+    h = np.var(x, axis=0, ddof=1).copy()
+    eps = np.zeros_like(x)
+    for t in range(T):
+        eps[t] = x[t] / np.sqrt(h + 1e-12)
+        h = ewma_lambda * h + (1.0 - ewma_lambda) * x[t] ** 2
 
-    # Step 3: iterate DCC
-    Q = Q_bar.copy()
+    # Step 2: unconditional covariance of standardised residuals
+    Q_bar = (eps.T @ eps) / T
+
+    # Step 3: DCC(1,1) recursion on standardised residuals
+    Q   = Q_bar.copy()
     dcc = np.zeros(T)
 
     for t in range(1, T):
-        eps = x[t - 1]
-        Q = (1 - a - b) * Q_bar + a * np.outer(eps, eps) + b * Q
-        D_inv = np.diag(1.0 / np.sqrt(np.diag(Q)))
+        e = eps[t - 1]
+        Q = (1 - a - b) * Q_bar + a * np.outer(e, e) + b * Q
+        D_inv = np.diag(1.0 / np.sqrt(np.maximum(np.diag(Q), 1e-12)))
         R = D_inv @ Q @ D_inv
-        dcc[t] = R[0, 1]
+        # Clip to valid correlation range to guard against numerical drift
+        dcc[t] = float(np.clip(R[0, 1], -1.0, 1.0))
 
     dcc_series = pd.Series(dcc, index=combined.index, name="DCC")
     dcc_series.iloc[0] = np.nan

@@ -3,6 +3,19 @@ Spillover analytics:
   - Granger causality (commodity → equity and vice versa)
   - Transfer entropy (directional information flow)
   - Diebold-Yilmaz spillover index (VAR-based)
+
+Academic references
+───────────────────
+Granger (1969) "Investigating Causal Relations by Econometric Models and
+  Cross-spectral Methods." Econometrica 37(3): 424–438.
+Lütkepohl (2005) "New Introduction to Multiple Time Series Analysis."
+  Springer. (BIC lag selection for VAR, Ch. 4)
+Schreiber (2000) "Measuring Information Transfer." PRL 85(2): 461–464.
+  (Transfer entropy definition + shuffle significance test)
+Diebold & Yilmaz (2012) "Better to Give than to Receive: Forecast-Based
+  Measurement of Volatility Spillovers." IJF 28(1): 57–66.
+Engle (2002) "Dynamic Conditional Correlation." JBES 20(3): 339–350.
+  (DCC-GARCH — EWMA pre-whitening in correlations.py)
 """
 
 from __future__ import annotations
@@ -25,26 +38,45 @@ def granger_test(
 ) -> dict:
     """
     Test whether `cause` Granger-causes `effect`.
-    Returns dict: {lag: p_value, ..., 'min_p': ..., 'significant': bool}
+
+    Lag selection: BIC-optimal lag chosen via VAR(maxlags, ic='bic') before
+    testing.  Testing at the data-selected lag avoids the implicit p-hacking
+    of comparing test statistics across all lags 1..max_lag and reporting the
+    minimum — a known multiple-comparison inflation (Lütkepohl 2005, Ch. 4).
+
+    Falls back to max_lag if BIC selection fails (e.g. too few observations).
+
+    Returns dict: {min_p, significant, best_lag, bic_lag, results}
     """
     combined = pd.concat([effect, cause], axis=1).dropna()
     if len(combined) < max_lag * 10:
-        return {"min_p": np.nan, "significant": False, "results": {}}
+        return {"min_p": np.nan, "significant": False, "results": {}, "bic_lag": max_lag}
     try:
-        res = grangercausalitytests(combined.values, maxlag=max_lag, verbose=False)
+        # Step 1: BIC-optimal lag selection (Lütkepohl 2005)
+        try:
+            var_sel = VAR(combined.values)
+            sel_res = var_sel.fit(maxlags=max_lag, ic="bic")
+            bic_lag = max(sel_res.k_ar, 1)
+        except Exception:
+            bic_lag = max_lag
+
+        # Step 2: Granger test at BIC-selected lag only
+        res = grangercausalitytests(combined.values, maxlag=bic_lag, verbose=False)
         p_values = {
             lag: min(r[0][test][1] for test in ["ssr_ftest", "ssr_chi2test"])
             for lag, r in res.items()
         }
-        min_p = min(p_values.values())
+        # At bic_lag, report that p-value; keep all lags for reference
+        bic_p = p_values.get(bic_lag, min(p_values.values()))
         return {
-            "min_p": round(min_p, 4),
-            "significant": min_p < significance,
-            "results": p_values,
-            "best_lag": min(p_values, key=p_values.get),
+            "min_p":      round(bic_p, 4),
+            "significant": bic_p < significance,
+            "results":    p_values,
+            "best_lag":   bic_lag,
+            "bic_lag":    bic_lag,
         }
     except Exception:
-        return {"min_p": np.nan, "significant": False, "results": {}}
+        return {"min_p": np.nan, "significant": False, "results": {}, "bic_lag": max_lag}
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -56,7 +88,18 @@ def granger_grid(
 ) -> pd.DataFrame:
     """
     Full grid of Granger tests: commodity → equity AND equity → commodity.
-    Returns tidy DataFrame: [cause, effect, direction, min_p, significant, best_lag].
+
+    Multiple-comparison correction: with N_eq × N_cmd × 2 simultaneous tests,
+    naïve p < 0.05 thresholds produce ~5% false positives by construction.
+    We apply the Holm-Bonferroni step-down procedure (Holm 1979), which is
+    uniformly more powerful than Bonferroni while still controlling the
+    family-wise error rate at α.  Both 'significant' (unadjusted) and
+    'holm_significant' (family-wise corrected) are returned so callers can
+    choose the appropriate threshold for their audience.
+
+    Returns tidy DataFrame:
+      [cause, effect, direction, min_p, significant, best_lag, bic_lag,
+       holm_significant, bonferroni_significant]
     """
     rows = []
     eq_cols  = equity_returns.columns.tolist()
@@ -74,21 +117,44 @@ def granger_grid(
 
             # commodity → equity
             res1 = granger_test(r_cmd, r_eq, max_lag, significance)
-            rows.append({
-                "cause": cmd, "effect": eq,
-                "direction": "Commodity → Equity",
-                **res1,
-            })
+            rows.append({"cause": cmd, "effect": eq,
+                         "direction": "Commodity → Equity", **res1})
             # equity → commodity
             res2 = granger_test(r_eq, r_cmd, max_lag, significance)
-            rows.append({
-                "cause": eq, "effect": cmd,
-                "direction": "Equity → Commodity",
-                **res2,
-            })
+            rows.append({"cause": eq, "effect": cmd,
+                         "direction": "Equity → Commodity", **res2})
 
-    df = pd.DataFrame(rows)
-    return df.drop(columns=["results"], errors="ignore")
+    df = pd.DataFrame(rows).drop(columns=["results"], errors="ignore")
+    if df.empty:
+        return df
+
+    # ── Holm-Bonferroni correction (Holm 1979) ────────────────────────────
+    # Sort by p-value ascending; compare p_i to α/(m − i + 1)
+    valid_mask = df["min_p"].notna()
+    n_valid = int(valid_mask.sum())
+    holm_sig  = pd.Series(False, index=df.index)
+    bonf_sig  = pd.Series(False, index=df.index)
+
+    if n_valid > 0:
+        sorted_idx = df.loc[valid_mask, "min_p"].sort_values().index
+        # Bonferroni (conservative): p < α/m for all
+        bonf_threshold = significance / n_valid
+        bonf_sig[valid_mask] = df.loc[valid_mask, "min_p"] < bonf_threshold
+
+        # Holm step-down: reject H_(i) if p_(i) < α/(m − i + 1), stop at first retain
+        reject = True
+        for rank_i, idx_i in enumerate(sorted_idx):
+            if not reject:
+                break
+            threshold_i = significance / (n_valid - rank_i)
+            if df.at[idx_i, "min_p"] < threshold_i:
+                holm_sig.at[idx_i] = True
+            else:
+                reject = False  # stop — all subsequent are also retained
+
+    df["holm_significant"]       = holm_sig
+    df["bonferroni_significant"] = bonf_sig
+    return df
 
 
 # ── Transfer entropy ───────────────────────────────────────────────────────
@@ -108,8 +174,15 @@ def transfer_entropy(
 ) -> float:
     """
     Transfer entropy: TE(source → target).
-    Measures how much the past of `source` reduces uncertainty in `target`
-    beyond `target`'s own past.
+
+    Measures the directed information flow from source to target: how much
+    the past of `source` reduces uncertainty in `target` beyond `target`'s
+    own past (Schreiber 2000).
+
+    TE(X→Y) = H(Y_t | Y_{t-1}) − H(Y_t | Y_{t-1}, X_{t-1})
+
+    Raw TE values are always ≥ 0 by construction; significance requires a
+    separate shuffle test — see transfer_entropy_significance().
     """
     combined = pd.concat([source, target], axis=1).dropna()
     if len(combined) < lag + 20:
@@ -135,6 +208,49 @@ def transfer_entropy(
     return float(max(te, 0.0))
 
 
+def transfer_entropy_significance(
+    source: pd.Series,
+    target: pd.Series,
+    lag: int = 1,
+    n_bins: int = 5,
+    n_shuffle: int = 200,
+    rng_seed: int = 42,
+) -> tuple[float, float]:
+    """
+    Estimate TE significance via surrogate/shuffle test (Schreiber 2000).
+
+    Under the null hypothesis that source carries no information about
+    target beyond target's own past, shuffling source destroys temporal
+    ordering while preserving the marginal distribution.  The empirical
+    p-value is the fraction of shuffle TEs that exceed the observed TE.
+
+    Returns (te_observed, p_value).  p_value < 0.05 indicates that the
+    observed information transfer is unlikely to arise by chance.
+    """
+    te_obs = transfer_entropy(source, target, lag=lag, n_bins=n_bins)
+    if np.isnan(te_obs):
+        return (np.nan, np.nan)
+
+    rng    = np.random.default_rng(rng_seed)
+    src    = source.dropna().values.copy()
+    tgt    = target.dropna().values.copy()
+
+    null_tes: list[float] = []
+    for _ in range(n_shuffle):
+        rng.shuffle(src)
+        null_te = transfer_entropy(
+            pd.Series(src), pd.Series(tgt), lag=lag, n_bins=n_bins
+        )
+        if np.isfinite(null_te):
+            null_tes.append(null_te)
+
+    if not null_tes:
+        return (te_obs, np.nan)
+
+    p_value = float(np.mean(np.array(null_tes) >= te_obs))
+    return (te_obs, p_value)
+
+
 def optimal_te_lag(
     source: pd.Series,
     target: pd.Series,
@@ -158,24 +274,35 @@ def optimal_te_lag(
 def transfer_entropy_matrix(
     equity_returns: pd.DataFrame,
     commodity_returns: pd.DataFrame,
-    lag: int = 0,         # 0 = auto-select optimal lag per pair (recommended)
+    lag: int = 0,           # 0 = auto-select optimal lag per pair (recommended)
     n_bins: int = 5,
     max_lag: int = 5,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+    n_shuffle: int = 200,   # shuffle iterations for significance test; 0 = skip
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Returns two DataFrames:
-      te_cmd_to_eq[equity, commodity] = TE(commodity → equity) at optimal lag
-      te_eq_to_cmd[equity, commodity] = TE(equity → commodity) at optimal lag
+    Returns four DataFrames (te_c2e, te_e2c, pval_c2e, pval_e2c):
+
+      te_c2e[equity, commodity]   = TE(commodity → equity) at optimal lag
+      te_e2c[equity, commodity]   = TE(equity → commodity) at optimal lag
+      pval_c2e[equity, commodity] = shuffle p-value for commodity → equity TE
+      pval_e2c[equity, commodity] = shuffle p-value for equity → commodity TE
 
     When lag=0 (default), the optimal lag (1..max_lag) is selected per pair
-    by maximising TE(commodity → equity). This captures the 2-5 day transmission
-    delay that commodity shocks take to fully propagate into equity prices.
+    by maximising TE(commodity → equity).  This captures the 2-5 day
+    transmission delay documented in commodity-equity spillover literature.
+
+    Significance test: Schreiber (2000) surrogate method — source series is
+    shuffled n_shuffle times to build a null distribution; p-value is the
+    fraction of null TEs ≥ observed TE.  Set n_shuffle=0 to skip (returns
+    NaN p-value matrices, useful for fast interactive exploration).
     """
     eq_cols  = equity_returns.columns.tolist()
     cmd_cols = commodity_returns.columns.tolist()
 
-    te_c2e = pd.DataFrame(index=eq_cols, columns=cmd_cols, dtype=float)
-    te_e2c = pd.DataFrame(index=eq_cols, columns=cmd_cols, dtype=float)
+    te_c2e   = pd.DataFrame(index=eq_cols, columns=cmd_cols, dtype=float)
+    te_e2c   = pd.DataFrame(index=eq_cols, columns=cmd_cols, dtype=float)
+    pval_c2e = pd.DataFrame(index=eq_cols, columns=cmd_cols, dtype=float)
+    pval_e2c = pd.DataFrame(index=eq_cols, columns=cmd_cols, dtype=float)
 
     for eq in eq_cols:
         for cmd in cmd_cols:
@@ -185,11 +312,25 @@ def transfer_entropy_matrix(
             # Auto-select the lag that maximises commodity→equity TE
             _lag = optimal_te_lag(r_cmd, r_eq, max_lag=max_lag, n_bins=n_bins) if lag == 0 else lag
 
-            te_c2e.loc[eq, cmd] = transfer_entropy(r_cmd, r_eq,  _lag, n_bins)
-            # Use same lag for reverse direction for comparability
-            te_e2c.loc[eq, cmd] = transfer_entropy(r_eq,  r_cmd, _lag, n_bins)
+            if n_shuffle > 0:
+                te_val_c2e, pv_c2e = transfer_entropy_significance(r_cmd, r_eq,  _lag, n_bins, n_shuffle)
+                te_val_e2c, pv_e2c = transfer_entropy_significance(r_eq,  r_cmd, _lag, n_bins, n_shuffle)
+            else:
+                te_val_c2e = transfer_entropy(r_cmd, r_eq,  _lag, n_bins)
+                te_val_e2c = transfer_entropy(r_eq,  r_cmd, _lag, n_bins)
+                pv_c2e = pv_e2c = np.nan
 
-    return te_c2e.astype(float), te_e2c.astype(float)
+            te_c2e.loc[eq, cmd]   = te_val_c2e
+            te_e2c.loc[eq, cmd]   = te_val_e2c
+            pval_c2e.loc[eq, cmd] = pv_c2e
+            pval_e2c.loc[eq, cmd] = pv_e2c
+
+    return (
+        te_c2e.astype(float),
+        te_e2c.astype(float),
+        pval_c2e.astype(float),
+        pval_e2c.astype(float),
+    )
 
 
 def net_flow_matrix(
@@ -250,7 +391,13 @@ def diebold_yilmaz(
 
     try:
         model  = VAR(data)
-        result = model.fit(lag_order)
+        # BIC-optimal lag selection (Lütkepohl 2005): avoids over-fitting from
+        # a fixed lag_order that may not reflect the data-generating process.
+        # lag_order is treated as the upper bound; ic='bic' selects within it.
+        try:
+            result = model.fit(maxlags=lag_order, ic="bic")
+        except Exception:
+            result = model.fit(lag_order)
         fevd   = result.fevd(horizon)
 
         n = len(data.columns)
@@ -346,7 +493,10 @@ def rolling_diebold_yilmaz(
         chunk = data.iloc[end_i - window: end_i]
         try:
             model  = VAR(chunk)
-            result = model.fit(lag_order)
+            try:
+                result = model.fit(maxlags=lag_order, ic="bic")
+            except Exception:
+                result = model.fit(lag_order)
             fevd   = result.fevd(horizon)
             n      = len(chunk.columns)
             tbl    = pd.DataFrame(
@@ -411,7 +561,10 @@ def regime_conditional_spillover(
 
         try:
             model  = VAR(subset)
-            result = model.fit(lag_order)
+            try:
+                result = model.fit(maxlags=lag_order, ic="bic")
+            except Exception:
+                result = model.fit(lag_order)
             fevd   = result.fevd(horizon)
             tbl    = pd.DataFrame(
                 fevd.decomp[-1] * 100,

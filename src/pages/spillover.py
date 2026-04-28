@@ -155,14 +155,18 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         if granger_df.empty:
             st.warning("Not enough data for Granger tests.")
         else:
-            sig_df = granger_df[granger_df["significant"]].copy()
-            c2e    = sig_df[sig_df["direction"] == "Commodity → Equity"]
+            sig_df  = granger_df[granger_df["significant"]].copy()
+            holm_df = granger_df[granger_df.get("holm_significant", granger_df["significant"])].copy()
+            c2e     = sig_df[sig_df["direction"] == "Commodity → Equity"]
+            c2e_holm = holm_df[holm_df["direction"] == "Commodity → Equity"]
 
-            # Metrics row
+            # Metrics row — show both raw p<.05 count and Holm-corrected count
             m1, m2, m3 = st.columns(3)
-            m1.metric("Tested pairs",      len(granger_df))
-            m2.metric("Significant (p<.05)", len(sig_df))
-            m3.metric("Cmd → Equity links", len(c2e))
+            m1.metric("Tested pairs",          len(granger_df))
+            m2.metric("Sig (p<.05 unadj.)",    len(sig_df),
+                      delta=f"{len(holm_df)} Holm-corrected",
+                      delta_color="off")
+            m3.metric("Cmd → Equity (Holm)",   len(c2e_holm))
 
             if not c2e.empty and c2e["cause"].nunique() > 0 and c2e["effect"].nunique() > 0:
                 pivot = c2e.pivot(index="effect", columns="cause", values="min_p")
@@ -251,21 +255,31 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     )
     with col_te:
         _label("Transfer Entropy: Net Information Flow")
-        with st.spinner("Computing transfer entropy…"):
-            te_c2e, te_e2c = transfer_entropy_matrix(eq_r[sel_eq], cmd_r[sel_cmd])
+        with st.spinner("Computing transfer entropy + shuffle significance…"):
+            te_c2e, te_e2c, pval_c2e, pval_e2c = transfer_entropy_matrix(
+                eq_r[sel_eq], cmd_r[sel_cmd]
+            )
             net_te = net_flow_matrix(te_c2e, te_e2c)
 
         if net_te.empty:
             st.warning("Transfer entropy computation failed.")
         else:
+            # Overlay significance: hatched or annotated for p < 0.05
+            # Use net-direction p-value: c2e where net > 0, e2c where net < 0
+            sig_mask = (net_te > 0) & (pval_c2e < 0.05) | (net_te <= 0) & (pval_e2c < 0.05)
+            text_ann = net_te.round(3).astype(str)
+            for r in net_te.index:
+                for c in net_te.columns:
+                    if sig_mask.loc[r, c]:
+                        text_ann.loc[r, c] = text_ann.loc[r, c] + "*"
             fig_te = go.Figure(go.Heatmap(
                 z=net_te.values.astype(float),
                 x=net_te.columns.tolist(),
                 y=net_te.index.tolist(),
                 colorscale=[[0,"#c0392b"],[0.5,"#1e1e1e"],[1,"#2e7d32"]],
                 zmid=0,
-                text=net_te.round(4).values.astype(float),
-                texttemplate="%{text:.3f}",
+                text=text_ann.values,
+                texttemplate="%{text}",
                 textfont=dict(size=8, family="JetBrains Mono, monospace", color="#e8e9ed"),
                 colorbar=dict(title="Net TE", thickness=10),
             ))
@@ -278,12 +292,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 margin=dict(l=100, r=40, t=20, b=90),
             )
             _chart(fig_te)
-            _panel_note("Green = commodity leads equity. Red = equity leads commodity.")
+            _panel_note("Green = commodity leads equity. Red = equity leads commodity. * = p < 0.05 (shuffle test, Schreiber 2000).")
             _insight_note(
                 "Transfer entropy measures the net direction of information flow between two assets - "
                 "which one is telling the story, and which one is listening. Green cells mean the "
                 "commodity is driving the equity. Red cells mean the equity is driving the commodity. "
-                "This goes beyond correlation by capturing the directionality of influence."
+                "Asterisked cells pass the shuffle significance test (p < 0.05): the observed TE "
+                "exceeds 95% of null-distribution TEs from 200 random source permutations."
             )
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #2a2a2a"></div>',
