@@ -2518,6 +2518,267 @@ def _render_risk_arc(risk: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § L3  CONFLICT LANDSCAPE  (left column — CIS × TPS 2-D scatter)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_conflict_landscape(conflict_results: dict) -> None:
+    """Left column: scatter of all tracked conflicts on a CIS × TPS plane."""
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Conflict Landscape</div>',
+        unsafe_allow_html=True,
+    )
+    if not conflict_results:
+        st.markdown(
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+            f'padding:.35rem .55rem;{_M}font-size:9px;color:#555960">No conflicts tracked</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # Canvas
+    W, H   = 216, 162
+    ML, MB = 22, 18   # left/bottom margin for axis labels
+    PW     = W - ML   # usable plot width
+    PH     = H - MB   # usable plot height
+
+    def _fx(v: float) -> float:   # CIS → SVG x
+        return ML + v / 100.0 * PW
+
+    def _fy(v: float) -> float:   # TPS → SVG y  (inverted: 0 at bottom)
+        return H - MB - v / 100.0 * PH
+
+    mx, my = _fx(50), _fy(50)
+
+    # Quadrant fills
+    fills = (
+        f'<rect x="{mx:.1f}" y="0" width="{W - mx:.1f}" height="{my:.1f}" fill="rgba(192,57,43,0.07)"/>'
+        f'<rect x="{ML}" y="{my:.1f}" width="{mx - ML:.1f}" height="{PH - my:.1f}" fill="rgba(230,126,34,0.04)"/>'
+    )
+
+    # Grid lines at 25 / 50 / 75
+    grid = ""
+    for v in (25, 50, 75):
+        gx, gy = _fx(v), _fy(v)
+        c = "#2a2a2a" if v == 50 else "#191919"
+        sw = "0.8" if v == 50 else "0.4"
+        grid += (
+            f'<line x1="{gx:.1f}" y1="0" x2="{gx:.1f}" y2="{PH:.1f}" stroke="{c}" stroke-width="{sw}"/>'
+            f'<line x1="{ML}" y1="{gy:.1f}" x2="{W}" y2="{gy:.1f}" stroke="{c}" stroke-width="{sw}"/>'
+        )
+
+    # Quadrant text labels
+    qlbls = (
+        f'<text x="{_fx(75):.1f}" y="9" font-size="6.5" fill="rgba(192,57,43,0.55)" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">CRITICAL</text>'
+        f'<text x="{_fx(25):.1f}" y="9" font-size="6.5" fill="#222" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="middle">VOLATILE</text>'
+        f'<text x="{_fx(75):.1f}" y="{PH - 3:.1f}" font-size="6.5" fill="#222" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="middle">ISOLATED</text>'
+        f'<text x="{_fx(25):.1f}" y="{PH - 3:.1f}" font-size="6.5" fill="#222" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="middle">LATENT</text>'
+    )
+
+    # Axis tick labels
+    ticks = ""
+    for v in (0, 50, 100):
+        ticks += (
+            f'<text x="{_fx(v):.1f}" y="{H - 2}" font-size="6" fill="#2a2a2a" '
+            f'font-family="JetBrains Mono,monospace" text-anchor="middle">{v}</text>'
+            f'<text x="{ML - 2}" y="{_fy(v) + 3:.1f}" font-size="6" fill="#2a2a2a" '
+            f'font-family="JetBrains Mono,monospace" text-anchor="end">{v}</text>'
+        )
+    axis_lbls = (
+        f'<text x="{W}" y="{H}" font-size="7" fill="#444" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="end">CIS →</text>'
+        f'<text x="2" y="8" font-size="7" fill="#444" '
+        f'font-family="JetBrains Mono,monospace">↑ TPS</text>'
+    )
+
+    # Conflict dots — monitoring first (behind), active on top
+    active_items, mon_items = [], []
+    for cid, r in conflict_results.items():
+        entry = (float(r.get("cis", 0)), float(r.get("tps", 0)),
+                 r.get("color", "#8890a1"), r.get("label", cid)[:3].upper())
+        if r.get("state") == "active":
+            active_items.append(entry)
+        else:
+            mon_items.append(entry)
+
+    dots = ""
+    for cis_v, tps_v, col, lbl in mon_items:
+        px, py = _fx(cis_v), _fy(tps_v)
+        dots += (
+            f'<circle cx="{px:.1f}" cy="{py:.1f}" r="5" '
+            f'fill="{col}" fill-opacity="0.18" stroke="{col}" stroke-width="0.6" stroke-opacity="0.4"/>'
+        )
+    for cis_v, tps_v, col, lbl in active_items:
+        px, py = _fx(cis_v), _fy(tps_v)
+        dots += (
+            f'<circle cx="{px:.1f}" cy="{py:.1f}" r="9" '
+            f'fill="{col}" fill-opacity="0.18" stroke="{col}" stroke-width="1.5"/>'
+            f'<text x="{px:.1f}" y="{py + 2.5:.1f}" font-size="6" fill="{col}" '
+            f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{lbl}</text>'
+        )
+
+    svg = (
+        f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" style="display:block">'
+        + fills + grid + qlbls + ticks + axis_lbls + dots
+        + f'</svg>'
+    )
+
+    n_act = len(active_items)
+    n_mon = len(mon_items)
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .65rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+        f'<span style="{_M}font-size:8px;color:#555960">CIS × TPS · all tracked</span>'
+        f'<div style="display:flex;gap:4px">'
+        f'<span style="background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.28);'
+        f'{_M}font-size:7px;color:#e05241;padding:1px 5px">{n_act} ACTIVE</span>'
+        f'<span style="background:#111;border:1px solid #1e1e1e;'
+        f'{_M}font-size:7px;color:#555960;padding:1px 5px">{n_mon} MON</span>'
+        f'</div>'
+        f'</div>'
+        f'{svg}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R3  RISK COMPASS  (right column — 5-axis radar)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
+    """Right column: pentagon radar across CIS, TPS, MCS, Volatility, Coupling."""
+    cis   = float(risk.get("cis",   50.0))
+    tps   = float(risk.get("tps",   50.0))
+    mcs   = float(risk.get("mcs",   50.0))
+    score = float(risk.get("score", 50.0))
+
+    # Volatility score: VIX 40 = 100%
+    vix_val = 20.0
+    for d in _load_market_pulse():
+        if d["sym"] == "^VIX":
+            vix_val = float(d["val"])
+            break
+    vol_score = min(vix_val / 40.0 * 100.0, 100.0)
+
+    # Coupling score: correlation [-1, 1] → [5, 95]
+    if corr_val is not None:
+        coup_score = 5.0 + (corr_val + 1.0) / 2.0 * 90.0
+    else:
+        coup_score = 50.0
+
+    # 5 axes — ordered to make the pentagon visually balanced
+    axes = [
+        ("CIS",  cis,        "#c0392b"),   # top
+        ("MCS",  mcs,        "#2980b9"),   # upper-right
+        ("VOL",  vol_score,  "#8E6F3E"),   # lower-right
+        ("COUP", coup_score, "#27ae60"),   # lower-left
+        ("TPS",  tps,        "#e67e22"),   # upper-left
+    ]
+    n = len(axes)
+
+    cx, cy, R = 105, 100, 64
+    LOFF = 16   # label offset beyond ring
+
+    def _ang(i: int) -> float:
+        return math.radians(-90.0 + i * 360.0 / n)
+
+    def _pt(i: int, val: float):
+        a = _ang(i)
+        r = val / 100.0 * R
+        return cx + r * math.cos(a), cy + r * math.sin(a)
+
+    # Concentric pentagon grid rings
+    grid_html = ""
+    for pct in (25, 50, 75, 100):
+        pts = " ".join(
+            f'{cx + pct/100*R*math.cos(_ang(i)):.1f},{cy + pct/100*R*math.sin(_ang(i)):.1f}'
+            for i in range(n)
+        )
+        c  = "#2a2a2a" if pct == 50 else "#191919"
+        sw = "0.9"    if pct == 50 else "0.5"
+        grid_html += f'<polygon points="{pts}" fill="none" stroke="{c}" stroke-width="{sw}"/>'
+
+    # Axis spokes
+    spoke_html = "".join(
+        f'<line x1="{cx}" y1="{cy}" '
+        f'x2="{cx + R * math.cos(_ang(i)):.1f}" y2="{cy + R * math.sin(_ang(i)):.1f}" '
+        f'stroke="#1e1e1e" stroke-width="1"/>'
+        for i in range(n)
+    )
+
+    # Data polygon
+    data_pts = " ".join(f'{_pt(i, axes[i][1])[0]:.1f},{_pt(i, axes[i][1])[1]:.1f}' for i in range(n))
+    fill_c = "#c0392b" if score >= 65 else "#e67e22" if score >= 45 else "#27ae60"
+
+    # Labels + endpoint dots per axis
+    lbl_html = ""
+    for i, (name, val, col) in enumerate(axes):
+        a   = _ang(i)
+        cos_a, sin_a = math.cos(a), math.sin(a)
+        lx  = cx + (R + LOFF) * cos_a
+        ly  = cy + (R + LOFF) * sin_a
+        anc = "middle" if abs(cos_a) < 0.3 else ("start" if cos_a > 0 else "end")
+        # stagger name / value vertically so they don't overlap
+        n_dy = -5 if sin_a < -0.25 else (3 if sin_a > 0.25 else -4)
+        v_dy = n_dy + 10
+        lbl_html += (
+            f'<text x="{lx:.1f}" y="{ly + n_dy:.1f}" font-size="8" fill="#8890a1" '
+            f'font-family="JetBrains Mono,monospace" text-anchor="{anc}">{name}</text>'
+            f'<text x="{lx:.1f}" y="{ly + v_dy:.1f}" font-size="8.5" fill="{col}" '
+            f'font-family="JetBrains Mono,monospace" text-anchor="{anc}" font-weight="700">{val:.0f}</text>'
+        )
+        px, py = _pt(i, val)
+        lbl_html += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{col}" opacity="0.9"/>'
+
+    # Score in center
+    ctr_html = (
+        f'<text x="{cx}" y="{cy - 5}" font-size="15" fill="{fill_c}" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{score:.0f}</text>'
+        f'<text x="{cx}" y="{cy + 9}" font-size="7" fill="#555960" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="middle">GRS</text>'
+    )
+
+    SVG_W, SVG_H = 210, 195
+    svg = (
+        f'<svg width="{SVG_W}" height="{SVG_H}" viewBox="0 0 {SVG_W} {SVG_H}" '
+        f'style="display:block;margin:0 auto">'
+        + grid_html + spoke_html
+        + f'<polygon points="{data_pts}" fill="{fill_c}" fill-opacity="0.13" '
+        f'stroke="{fill_c}" stroke-width="1.5" stroke-linejoin="round"/>'
+        + lbl_html + ctr_html
+        + f'</svg>'
+    )
+
+    severity_lbl = "HIGH" if score >= 65 else "ELEVATED" if score >= 45 else "NOMINAL"
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Risk Compass</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .65rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+        f'<span style="{_M}font-size:8px;color:#555960">5-dimension risk profile</span>'
+        f'<span style="background:{fill_c}1a;border:1px solid {fill_c}44;'
+        f'{_M}font-size:7px;font-weight:700;letter-spacing:.10em;color:{fill_c};'
+        f'padding:1px 5px">{severity_lbl}</span>'
+        f'</div>'
+        f'{svg}'
+        f'<div style="{_M}font-size:7.5px;color:#2e2e2e;margin-top:3px">'
+        f'VOL=VIX stress · COUP=eq↔cmd coupling · MCS=market conditions</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2678,8 +2939,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # Intelligence feed only — scenario switch moved full-width below 3-col
         # to prevent left col from being taller than right col (gap issue)
         _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
-        # Correlation pulse — fills remaining left-col space with the core metric
+        # Correlation pulse — 60-day equity↔commodity sparkline + regime badge
         _render_correlation_pulse(_al_corr, _al_regimes)
+        # Conflict landscape — CIS×TPS scatter of all tracked conflicts
+        _render_conflict_landscape(conflict_results)
 
     with _col_ctr:
         # Market pulse horizontal strip
@@ -2728,6 +2991,14 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # Where to go now — action routing, comes after diagnosis
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_next_action(conflict_agg, conflict_results, compact=True)
+        # Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _corr_cur = (
+            float(_al_corr.dropna().iloc[-1])
+            if _al_corr is not None and len(_al_corr.dropna()) >= 1
+            else None
+        )
+        _render_risk_compass(risk, corr_val=_corr_cur)
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
