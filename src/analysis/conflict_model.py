@@ -397,7 +397,7 @@ def compute_market_freshness(conflict: dict, market_data: dict) -> float:
 
 # ── Portfolio aggregation ─────────────────────────────────────────────────────
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=7200, show_spinner=False)
 def score_all_conflicts() -> dict[str, dict]:
     """
     Compute CIS, TPS, and confidence for every conflict in CONFLICTS.

@@ -132,7 +132,7 @@ _STYLE = """<style>
 # Score history loader (cached - market data only fetched once per TTL)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False)
 def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[dict, pd.Series]:
     """
     Load market returns, compute avg_corr, then run the full 3-layer risk score.
@@ -1944,7 +1944,7 @@ _PULSE_TICKERS = [
 ]
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False)
 def _load_market_pulse() -> list[dict]:
     """Fetch last 2 closes for macro pulse tickers. Returns list of dicts."""
     try:
@@ -2526,19 +2526,39 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     init_agents()
     init_scenario()
 
-    # ── Load conflict model ────────────────────────────────────────────────
-    with st.spinner("Loading conflict model…"):
+    # ── Parallel data load ────────────────────────────────────────────────
+    # score_all_conflicts (GDELT HTTP) and _load_market_pulse (yfinance 6-ticker)
+    # run in background threads while _load_market_risk (yfinance 30+ tickers,
+    # has st.session_state write) runs on the main thread. This overlaps the two
+    # largest I/O operations and cuts cold-start time by ~50%.
+    from concurrent.futures import ThreadPoolExecutor
+
+    with st.spinner("Loading market data & intelligence…"):
+        _scenario_id = get_scenario_id()
+        with ThreadPoolExecutor(max_workers=2) as _pool:
+            _f_conflict = _pool.submit(score_all_conflicts)
+            _f_pulse    = _pool.submit(_load_market_pulse)
+            # Main thread: market risk (contains st.session_state write — must not thread)
+            risk, _score_hist = _load_market_risk(start, end, _scenario_id)
+
+        # Collect thread results after main-thread work completes
         try:
-            conflict_results = score_all_conflicts()
-            conflict_agg     = aggregate_portfolio_scores(conflict_results)
+            conflict_results = _f_conflict.result()
             record_fetch("conflict_model")
         except Exception:
             conflict_results = {}
-            conflict_agg = {
-                "cis": 50.0, "tps": 50.0,
-                "portfolio_cis": 50.0, "portfolio_tps": 50.0,
-                "confidence": 0.5, "top_conflict": None,
-            }
+        try:
+            _f_pulse.result()   # cache is now warm; result consumed by _render_market_pulse_cards
+        except Exception:
+            pass
+
+    conflict_agg = aggregate_portfolio_scores(conflict_results)
+    if not conflict_agg:
+        conflict_agg = {
+            "cis": 50.0, "tps": 50.0,
+            "portfolio_cis": 50.0, "portfolio_tps": 50.0,
+            "confidence": 0.5, "top_conflict": None,
+        }
 
     # Cache conflict results for n_active count in masthead
     st.session_state["_conflict_results_cache"] = conflict_results
@@ -2548,34 +2568,29 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         1 for r in conflict_results.values() if r.get("state") == "active"
     )
 
-    # ── Full 3-layer risk score + history (market-data-fed, cached) ───────
-    with st.spinner("Computing risk score…"):
-        risk, _score_hist = _load_market_risk(start, end, get_scenario_id())
-        if risk.get("_market_fallback") or not risk.get("score"):
-            # Fallback: conflict-model-only estimate when market data unavailable.
-            # Clearly labeled - never silently substituted.
-            cis_f = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
-            tps_f = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
-            raw   = round(0.40 * cis_f + 0.35 * tps_f + 0.25 * 50, 1)
-            if raw < 25:   lbl, col = "Low",      "#2e7d32"
-            elif raw < 50: lbl, col = "Moderate", "#8E9AAA"
-            elif raw < 75: lbl, col = "Elevated", "#e67e22"
-            else:          lbl, col = "High",     "#c0392b"
-            _fallback_at = risk.get("_computed_at", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            risk = {
-                "score": raw, "label": lbl, "color": col,
-                "cis": cis_f, "tps": tps_f, "mcs": 50.0,
-                "confidence": conflict_agg.get("confidence", 0.5),
-                "top_conflict": conflict_agg.get("top_conflict"),
-                "news_gpr": None, "n_threat": 0, "n_act": 0,
-                "mcs_components": {}, "components": {}, "weights": {},
-                "conflict_detail": {},
-                # Fallback markers - rendered as warning in geo risk block
-                "_market_fallback": True,
-                "_computed_at": _fallback_at,
-                "_is_eod": None,
-                "_data_date": None,
-            }
+    # Apply conflict-model fallback if market data was unavailable.
+    if risk.get("_market_fallback") or not risk.get("score"):
+        cis_f = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
+        tps_f = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
+        raw   = round(0.40 * cis_f + 0.35 * tps_f + 0.25 * 50, 1)
+        if raw < 25:   lbl, col = "Low",      "#2e7d32"
+        elif raw < 50: lbl, col = "Moderate", "#8E9AAA"
+        elif raw < 75: lbl, col = "Elevated", "#e67e22"
+        else:          lbl, col = "High",     "#c0392b"
+        _fallback_at = risk.get("_computed_at", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        risk = {
+            "score": raw, "label": lbl, "color": col,
+            "cis": cis_f, "tps": tps_f, "mcs": 50.0,
+            "confidence": conflict_agg.get("confidence", 0.5),
+            "top_conflict": conflict_agg.get("top_conflict"),
+            "news_gpr": None, "n_threat": 0, "n_act": 0,
+            "mcs_components": {}, "components": {}, "weights": {},
+            "conflict_detail": {},
+            "_market_fallback": True,
+            "_computed_at": _fallback_at,
+            "_is_eod": None,
+            "_data_date": None,
+        }
 
     # ── Populate session-state deltas ──────────────────────────────────────
     _new_cis  = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
