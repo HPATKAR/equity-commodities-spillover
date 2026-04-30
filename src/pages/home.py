@@ -2518,6 +2518,144 @@ def _render_risk_arc(risk: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § L4  ESCALATION TRACKER  (left column — trend / CIS velocity per conflict)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_escalation_tracker(conflict_results: dict) -> None:
+    """Left column: per-conflict trend direction and escalation status."""
+    active = [
+        (cid, r) for cid, r in conflict_results.items()
+        if r.get("state") == "active"
+    ]
+    if not active:
+        return
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Escalation Tracker</div>',
+        unsafe_allow_html=True,
+    )
+
+    rows = ""
+    for cid, r in sorted(active, key=lambda x: x[1].get("cis", 0), reverse=True):
+        trend     = r.get("trend", "stable")
+        esc       = r.get("escalation", "stable")
+        cis_v     = float(r.get("cis", 0))
+        col       = r.get("color", "#8890a1")
+        lbl       = r.get("label", cid)
+
+        if trend == "rising":
+            t_icon, t_col = "▲", "#c0392b"
+        elif trend == "falling":
+            t_icon, t_col = "▼", "#27ae60"
+        else:
+            t_icon, t_col = "→", "#e67e22"
+
+        if esc == "escalating":
+            esc_bg, esc_c, esc_txt = "rgba(192,57,43,0.12)", "#e05241", "ESC ↑"
+        elif esc == "de-escalating":
+            esc_bg, esc_c, esc_txt = "rgba(39,174,96,0.10)", "#27ae60", "DE-ESC"
+        else:
+            esc_bg, esc_c, esc_txt = "rgba(136,144,161,0.08)", "#8890a1", "STABLE"
+
+        bar_w = min(int(cis_v), 100)
+        rows += (
+            f'<div style="display:flex;align-items:center;gap:6px;padding:5px .55rem;'
+            f'border-bottom:1px solid #111;background:#0f0f0f">'
+            # trend arrow
+            f'<span style="{_M}font-size:11px;font-weight:700;color:{t_col};'
+            f'min-width:12px;flex-shrink:0">{t_icon}</span>'
+            # name
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{col};'
+            f'min-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+            f'{lbl[:14]}</span>'
+            # bar
+            f'<div style="flex:1;background:#1a1a1a;height:3px;border-radius:1px;min-width:20px">'
+            f'<div style="width:{bar_w}%;height:3px;background:{col};border-radius:1px;opacity:.8"></div></div>'
+            # CIS value
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{col};min-width:22px;text-align:right">'
+            f'{cis_v:.0f}</span>'
+            # escalation badge
+            f'<span style="background:{esc_bg};border:1px solid {esc_c}44;'
+            f'{_M}font-size:7px;font-weight:700;color:{esc_c};padding:1px 4px;'
+            f'letter-spacing:.06em;flex-shrink:0">{esc_txt}</span>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;overflow:hidden">{rows}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § L5  TOP AFFECTED COMMODITIES  (left column — commodity exposure hit-list)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_top_commodities(conflict_results: dict) -> None:
+    """Left column: commodities most exposed across active conflicts."""
+    from collections import Counter
+
+    # Collect commodities from active conflicts, weighted by CIS
+    ctr: Counter = Counter()
+    conflict_count: dict[str, int] = {}
+    for cid, r in conflict_results.items():
+        if r.get("state") != "active":
+            continue
+        cis_w = float(r.get("cis", 50)) / 100.0
+        for com in r.get("affected_commodities", []):
+            key = com.strip()
+            ctr[key] += cis_w
+            conflict_count[key] = conflict_count.get(key, 0) + 1
+
+    if not ctr:
+        return
+
+    top = ctr.most_common(6)
+    max_score = top[0][1] if top else 1.0
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Commodity Exposure</div>',
+        unsafe_allow_html=True,
+    )
+
+    rows = ""
+    for com, score in top:
+        n_c   = conflict_count.get(com, 1)
+        bar_w = int(score / max_score * 100)
+        # Color by exposure level
+        if score / max_score > 0.66:
+            bar_c = "#c0392b"
+        elif score / max_score > 0.33:
+            bar_c = "#e67e22"
+        else:
+            bar_c = "#8890a1"
+
+        rows += (
+            f'<div style="padding:.3rem .55rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:#C8D4E0;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">'
+            f'{com}</span>'
+            f'<span style="{_M}font-size:8px;color:{bar_c}">'
+            f'{n_c} conflict{"s" if n_c > 1 else ""}</span>'
+            f'</div>'
+            f'<div style="background:#1a1a1a;height:3px;border-radius:1px">'
+            f'<div style="width:{bar_w}%;height:3px;background:{bar_c};border-radius:1px;opacity:.85"></div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # § L3  CONFLICT LANDSCAPE  (left column — CIS × TPS 2-D scatter)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2779,6 +2917,193 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § R4  5-DAY RETURNS HEATMAP  (right column — colored day-by-day asset grid)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_returns_heatmap() -> None:
+    """Right column: 5-day daily-return heat grid for each pulse instrument."""
+    data = _load_market_pulse()
+    if not data:
+        return
+
+    # Need at least 2 price points to compute any return
+    rows_data = []
+    n_days = 0
+    for d in data:
+        series = d.get("series", [])
+        if len(series) < 2:
+            continue
+        returns = [
+            (series[i + 1] - series[i]) / series[i] * 100.0
+            for i in range(len(series) - 1)
+        ]
+        rows_data.append((d["label"], d["sym"], returns))
+        n_days = max(n_days, len(returns))
+
+    if not rows_data or n_days == 0:
+        return
+
+    # Day column headers — count back from today
+    day_labels = [f"D-{n_days - i}" for i in range(n_days - 1)] + ["TODAY"]
+
+    # Color helpers
+    def _cell_bg(pct: float, is_vix: bool) -> str:
+        pos = pct > 0
+        if is_vix:
+            pos = not pos   # rising VIX = bad
+        intensity = min(abs(pct) / 2.0, 1.0)   # cap at ±2%
+        if pos:
+            r = int(20 + (1 - intensity) * 15)
+            g = int(60 + intensity * 50)
+            b = int(20 + (1 - intensity) * 15)
+        else:
+            r = int(60 + intensity * 70)
+            g = int(20 + (1 - intensity) * 15)
+            b = int(20 + (1 - intensity) * 15)
+        return f"rgb({r},{g},{b})"
+
+    def _cell_txt(pct: float) -> str:
+        sign = "+" if pct >= 0 else ""
+        return f"{sign}{pct:.2f}"
+
+    # Header row
+    hdr_cells = "".join(
+        f'<th style="{_M}font-size:7px;font-weight:700;letter-spacing:.08em;'
+        f'color:#555960;text-align:center;padding:3px 4px;border-right:1px solid #111">'
+        f'{lbl}</th>'
+        for lbl in day_labels
+    )
+    header = (
+        f'<tr><th style="{_M}font-size:7px;color:#555960;padding:3px 6px;'
+        f'text-align:left;border-right:1px solid #1e1e1e;min-width:52px">ASSET</th>'
+        + hdr_cells + f'</tr>'
+    )
+
+    # Data rows
+    tbody = ""
+    for label, sym, returns in rows_data:
+        is_vix = sym == "^VIX"
+        # Pad with blanks if fewer days than max
+        padded = [None] * (n_days - len(returns)) + returns
+        cells  = ""
+        for pct in padded:
+            if pct is None:
+                cells += f'<td style="background:#111;padding:4px 3px"></td>'
+            else:
+                bg  = _cell_bg(pct, is_vix)
+                txt = _cell_txt(pct)
+                cells += (
+                    f'<td style="background:{bg};{_M}font-size:7.5px;font-weight:700;'
+                    f'color:#e8e9ed;text-align:center;padding:4px 3px;'
+                    f'border-right:1px solid #111;white-space:nowrap">{txt}</td>'
+                )
+        tbody += (
+            f'<tr style="border-bottom:1px solid #111">'
+            f'<td style="{_M}font-size:8px;font-weight:700;color:#A8B8C8;'
+            f'padding:4px 6px;border-right:1px solid #1e1e1e;white-space:nowrap">'
+            f'{label}</td>'
+            + cells + f'</tr>'
+        )
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Daily Returns</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">'
+        f'<table style="width:100%;border-collapse:collapse">'
+        f'<thead style="background:#0a0a0a;border-bottom:1px solid #1e1e1e">{header}</thead>'
+        f'<tbody>{tbody}</tbody>'
+        f'</table>'
+        f'<div style="{_M}font-size:7px;color:#2a2a2a;padding:3px 6px">'
+        f'day-over-day % · VIX inverted (↑ VIX = red)</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R5  TRANSMISSION CHANNELS  (right column — channel-level TPS breakdown)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CHANNEL_GROUPS = {
+    "Energy":        ("oil_gas", "energy_infra"),
+    "Shipping":      ("shipping", "chokepoint", "supply_chain"),
+    "Metals":        ("metals",),
+    "FX / Sanctions":("fx", "sanctions"),
+    "Equity / Infl": ("equity_sector", "credit", "inflation"),
+}
+
+def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
+    """Right column: aggregate transmission pressure by channel group."""
+    active = [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"]
+    if not active:
+        return
+
+    # Aggregate channel scores across active conflicts (weighted by CIS)
+    totals: dict[str, float] = {g: 0.0 for g in _CHANNEL_GROUPS}
+    weights_sum: dict[str, float] = {g: 0.0 for g in _CHANNEL_GROUPS}
+
+    for _, r in active:
+        tx  = r.get("transmission", {}) or {}
+        cis_w = float(r.get("cis", 50)) / 100.0
+        for group, keys in _CHANNEL_GROUPS.items():
+            vals = [float(tx.get(k, 0.0)) for k in keys if k in tx]
+            if vals:
+                totals[group]      += (sum(vals) / len(vals)) * cis_w
+                weights_sum[group] += cis_w
+
+    # Normalize to 0-100
+    scores: dict[str, float] = {}
+    for g in _CHANNEL_GROUPS:
+        if weights_sum[g] > 0:
+            scores[g] = min(totals[g] / weights_sum[g] * 100.0, 100.0)
+        else:
+            scores[g] = 0.0
+
+    # Fall back to TPS-scaled estimate if all zeroes (sparse transmission data)
+    if all(v < 1.0 for v in scores.values()):
+        tps = float(risk.get("tps", 50.0))
+        default = {"Energy": tps * 0.90, "Shipping": tps * 0.75,
+                   "Metals": tps * 0.55, "FX / Sanctions": tps * 0.45, "Equity / Infl": tps * 0.40}
+        scores = default
+
+    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Transmission Channels</div>',
+        unsafe_allow_html=True,
+    )
+
+    rows = ""
+    for group, score in sorted_scores:
+        bw = int(score)
+        if score >= 65:   bc = "#c0392b"
+        elif score >= 40: bc = "#e67e22"
+        else:             bc = "#2980b9"
+        rows += (
+            f'<div style="padding:.28rem .55rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+            f'<span style="{_M}font-size:8.5px;font-weight:700;color:#8890a1">{group}</span>'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{bc}">{score:.0f}</span>'
+            f'</div>'
+            f'<div style="background:#1a1a1a;height:4px;border-radius:2px">'
+            f'<div style="width:{bw}%;height:4px;background:{bc};border-radius:2px;opacity:.85"></div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2943,6 +3268,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_correlation_pulse(_al_corr, _al_regimes)
         # Conflict landscape — CIS×TPS scatter of all tracked conflicts
         _render_conflict_landscape(conflict_results)
+        # Escalation tracker — trend/escalation status per active conflict
+        _render_escalation_tracker(conflict_results)
+        # Top commodities — exposure-weighted commodity risk ranking
+        _render_top_commodities(conflict_results)
 
     with _col_ctr:
         # Market pulse horizontal strip
@@ -2999,6 +3328,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             else None
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
+        # 5-day returns heatmap — asset performance grid
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_returns_heatmap()
+        # Transmission channels — how conflicts flow into commodity markets
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_transmission_channels(conflict_results, risk)
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
