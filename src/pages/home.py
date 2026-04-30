@@ -71,14 +71,17 @@ _STYLE = """<style>
 /* ── Section rule ── */
 .hm-rule{border:none;border-top:1px solid #1e1e1e;margin:.3rem 0 .25rem}
 /* ── Conflict table rows ── */
-.hm-crow{display:flex;align-items:center;gap:8px;padding:5px 0;
-  border-bottom:1px solid #111}
+.hm-crow{display:flex;align-items:center;gap:10px;padding:8px 10px;
+  border-bottom:1px solid #111;border-left:3px solid transparent;
+  background:#0a0a0a;transition:background .12s ease,border-left-color .12s ease}
+.hm-crow:hover{background:#0f0f0f;border-left-color:#CFB991}
 /* ── Nav card ── */
 .hm-nav{background:#0f0f0f;border:1px solid #1e1e1e;
-  padding:6px 8px;margin-bottom:3px;
-  transition:box-shadow .15s ease,border-color .15s ease}
-.hm-nav:hover{box-shadow:0 0 0 1px #CFB991,inset 0 0 8px rgba(207,185,145,.07);
-  border-color:#CFB991!important}
+  padding:12px 14px;margin-bottom:5px;min-height:72px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  transition:box-shadow .15s ease,border-color .15s ease,background .15s ease}
+.hm-nav:hover{box-shadow:0 0 0 1px #CFB991,inset 0 0 14px rgba(207,185,145,.09);
+  border-color:#CFB991!important;background:rgba(20,20,20,0.9)!important}
 .hm-nav:hover .hm-sc{border-color:#CFB991!important;color:#CFB991!important}
 /* ── Use-case tags ── */
 .hm-tag{display:inline-block;font-family:'JetBrains Mono',monospace!important;
@@ -97,8 +100,9 @@ _STYLE = """<style>
 .hm-nav+div [data-testid="stButton"]>button{
   width:100%!important;text-align:center!important}
 /* ── Recommendation row ── */
-.hm-rec{border-left:3px solid;padding:.25rem .6rem;margin-bottom:3px;
-  background:#0a0a0a;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hm-rec{border-left:3px solid;padding:.35rem .8rem;margin-bottom:4px;
+  background:#0f0f0f;border-top:1px solid #1e1e1e;border-bottom:1px solid #1e1e1e;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 /* ── Pulse dot for high-risk ── */
 @keyframes hm-pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .hm-dot{display:inline-block;width:7px;height:7px;border-radius:50%;
@@ -106,10 +110,11 @@ _STYLE = """<style>
 /* ── Terminal-style buttons (scenario pills + nav arrows) ── */
 [data-testid="stButton"]>button{
   font-family:'JetBrains Mono',monospace!important;
-  font-size:11px!important;font-weight:700!important;
-  letter-spacing:.06em!important;text-transform:uppercase!important;
-  border-radius:1px!important;padding:3px 6px!important;
-  height:auto!important;min-height:0!important;line-height:1.6!important}
+  font-size:9px!important;font-weight:700!important;
+  letter-spacing:.05em!important;text-transform:uppercase!important;
+  border-radius:1px!important;padding:3px 5px!important;
+  height:auto!important;min-height:0!important;line-height:1.5!important;
+  white-space:normal!important;overflow-wrap:break-word!important}
 [data-testid="stButton"]>button[kind="secondary"]{
   background:transparent!important;border:1px solid #2a2a2a!important;color:#C8D4E0!important}
 [data-testid="stButton"]>button[kind="secondary"]:hover{
@@ -118,6 +123,8 @@ _STYLE = """<style>
   background:#0f0f0f!important;border:1px solid #CFB991!important;color:#CFB991!important}
 [data-testid="stButton"]>button[kind="primary"]:hover{
   background:rgba(207,185,145,.08)!important}
+/* ── Reduce top page padding only ── */
+.block-container{padding-top:1rem!important}
 </style>"""
 
 
@@ -227,21 +234,29 @@ def _render_masthead(conflict_agg: dict) -> None:
     )
 
     # ── Status bar ────────────────────────────────────────────────────────
+    _sit_rgb = {"#c0392b": "192,57,43", "#e67e22": "230,126,34", "#27ae60": "39,174,96"}.get(sit_color, "207,185,145")
     st.markdown(
-        f'<div style="background:#080808;border:1px solid #1e1e1e;'
-        f'padding:.3rem 1rem;display:flex;align-items:center;gap:16px;'
-        f'flex-wrap:wrap;margin-bottom:.4rem">'
-        f'<span style="{_M}font-size:11px;color:#C8D4E0">'
-        f'{now.strftime("%a %d %b %Y · %H:%M")}'
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+        f'border-left:3px solid {sit_color};'
+        f'padding:.4rem 1rem;display:flex;align-items:center;gap:16px;'
+        f'flex-wrap:wrap;margin-bottom:.5rem">'
+        f'<span class="nx-live-dot"></span>'
+        f'<span style="{_M}font-size:11px;color:#C8D4E0;letter-spacing:.02em">'
+        f'{now.strftime("%a %d %b %Y")}&nbsp;'
+        f'<span style="color:#2a2a2a">│</span>&nbsp;'
+        f'{now.strftime("%H:%M")} LOCAL'
         f'</span>'
-        f'<span style="{_M}font-size:10px;color:#2a2a2a">│</span>'
-        f'<span style="{_M}font-size:11px;color:#C8D4E0">'
-        f'{n_act} active conflict{"s" if n_act != 1 else ""}&nbsp;·&nbsp;'
-        f'{sc_note}&nbsp;·&nbsp;'
-        f'CIS <b style="color:{sit_color}">{cis:.0f}</b>'
+        f'<span style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
+        f'border:1px solid rgba({_sit_rgb},0.35);'
+        f'{_M}font-size:9px;font-weight:700;padding:2px 9px;letter-spacing:.14em;border-radius:1px">'
+        f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE'
         f'</span>'
-        f'<span style="background:{sit_color};color:#fff;margin-left:auto;'
-        f'{_M}font-size:10px;font-weight:700;padding:2px 7px;letter-spacing:.12em">'
+        f'<span style="{_M}font-size:10px;color:#A8B8C8">{sc_note}</span>'
+        f'<span style="{_M}font-size:10px;color:#A8B8C8">'
+        f'CIS&nbsp;<b style="color:{sit_color}">{cis:.0f}</b>'
+        f'</span>'
+        f'<span style="margin-left:auto;background:{sit_color};color:#000;'
+        f'{_M}font-size:9px;font-weight:700;padding:3px 11px;letter-spacing:.16em">'
         f'{sit_label}</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -291,8 +306,8 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
     pct = min(value, 100)
     weighted_contribution = value * weight
     return (
-        f'<div style="display:flex;align-items:center;gap:7px;padding:4px 0;'
-        f'border-bottom:1px solid #0d0d0d">'
+        f'<div style="display:flex;align-items:center;gap:7px;padding:5px 0;'
+        f'border-bottom:1px solid #111">'
         f'<span style="{_M}font-size:10px;color:#DCE4F0;min-width:95px;white-space:nowrap">'
         f'{label}</span>'
         f'<div style="flex:1;background:#111;height:5px;border-radius:1px">'
@@ -635,7 +650,7 @@ def _render_geo_risk_block(
         st.markdown(
             f'<div style="display:flex;align-items:center;gap:10px;'
             f'border-top:3px solid {color};border-bottom:1px solid #1e1e1e;'
-            f'background:#0a0a0a;padding:.3rem .8rem;margin-bottom:.1rem">'
+            f'background:#0f0f0f;padding:.4rem .9rem;margin-bottom:.1rem">'
             f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#DCE4F0">Geopolitical Risk Score</span>'
             f'<span style="background:{color};color:#000;{_M}font-size:11px;font-weight:700;'
@@ -673,83 +688,123 @@ def _render_geo_risk_block(
             unsafe_allow_html=True,
         )
 
-    # ── Two-column hero: gauge | history chart ─────────────────────────────
-    col_gauge, col_hist = st.columns([1, 1.65], gap="medium")
-
-    with col_gauge:
-        st.markdown(
-            f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#DCE4F0;margin:0 0 4px">Risk Gauge</p>',
-            unsafe_allow_html=True,
-        )
+    # ── Gauge: full-width dominant centerpiece ────────────────────────────
+    # Render full-width so it takes the entire center column — prominent by design.
+    # History chart stacks below as a compact 220px strip.
+    _gauge_col, _gauge_meta = st.columns([1.6, 1.0], gap="small")
+    with _gauge_col:
         svg_gauge = _build_speedometer_svg(score, color, label, delta)
+        # Override max-height to let the SVG breathe at full column width
+        svg_gauge = svg_gauge.replace(
+            'style="width:100%;max-height:315px;display:block"',
+            'style="width:100%;max-height:400px;display:block"',
+        )
         st.markdown(svg_gauge, unsafe_allow_html=True)
         st.markdown(
-            f'<p style="{_M}font-size:10px;color:#C8D4E0;margin:.3rem 0 0;'
+            f'<p style="{_M}font-size:9px;color:#A8B8C8;margin:.2rem 0 0;'
             f'padding:0 2px">40% CIS&nbsp;·&nbsp;35% TPS&nbsp;·&nbsp;25% MCS</p>',
             unsafe_allow_html=True,
         )
-
-    with col_hist:
+    with _gauge_meta:
+        # Score decomposition inline next to gauge
         st.markdown(
-            f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#DCE4F0;margin:0 0 0">'
-            f'Historical Risk Score'
-            f'<span style="font-weight:400;letter-spacing:.06em;color:#A8B8C8;'
-            f'margin-left:8px;text-transform:none">market-observable proxy · corr · oil-gold · vol</span>'
-            f'</p>',
+            f'<div style="padding:.5rem 0">'
+            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#8890a1;margin-bottom:10px">Score Layers</div>',
             unsafe_allow_html=True,
         )
-        if score_history is not None and not score_history.empty:
-            fig_hist = plot_risk_history(score_history, height=310)
-            fig_hist.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font={"color": "#DCE4F0", "family": "JetBrains Mono, monospace", "size": 12},
-                title_text="",
-                margin=dict(l=44, r=16, t=6, b=28),
-                xaxis=dict(
-                    showgrid=False,
-                    tickfont={"size": 11, "color": "#C8D4E0", "family": "JetBrains Mono"},
-                    linecolor="#1e1e1e",
-                ),
-                yaxis=dict(
-                    showgrid=True,
-                    gridcolor="#1a1a1a",
-                    tickfont={"size": 11, "color": "#C8D4E0", "family": "JetBrains Mono"},
-                    linecolor="#1e1e1e",
-                    title_text="",
-                    tickvals=[0, 25, 50, 75, 100],
-                    ticktext=["0", "25 LOW", "50 MOD", "75 ELEV", "100"],
-                ),
-                legend=dict(
-                    font={"size": 11, "color": "#DCE4F0"},
-                    bgcolor="rgba(0,0,0,0)",
-                    borderwidth=0,
-                ),
-            )
-            fig_hist.add_hline(
-                y=float(score),
-                line=dict(color=color, width=1.2, dash="dot"),
-                annotation_text=f'NOW {score:.0f}',
-                annotation_font={"size": 8, "color": color, "family": "JetBrains Mono"},
-                annotation_position="right",
-            )
-            st.plotly_chart(fig_hist, width="stretch",
-                            config={"displayModeBar": False})
-        else:
+        for _lbl, _val, _col in [
+            ("Conflict Intensity", cis, cis_color),
+            ("Transmission Press.", tps, tps_color),
+            ("Market Confirm.", mcs, mcs_color),
+        ]:
+            _pct = min(_val, 100)
             st.markdown(
-                f'<div style="{_F}font-size:12px;color:#A8B8C8;padding:4rem 0;'
-                f'text-align:center;border:1px solid #1a1a1a;margin-top:4px">'
-                f'No market data available - check connection or date range.</div>',
+                f'<div style="margin-bottom:10px">'
+                f'<div style="display:flex;justify-content:space-between;'
+                f'{_F}font-size:11px;margin-bottom:3px">'
+                f'<span style="color:#C8D4E0">{_lbl}</span>'
+                f'<span style="{_M}font-weight:700;color:{_col}">{_val:.0f}</span>'
+                f'</div>'
+                f'<div style="height:4px;background:#1a1a1a;border-radius:1px">'
+                f'<div style="width:{_pct:.0f}%;height:4px;background:{_col};'
+                f'border-radius:1px"></div></div></div>',
                 unsafe_allow_html=True,
             )
+        # News GPR if available
+        if news_gpr is not None:
+            st.markdown(
+                f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e1e1e">'
+                f'<div style="{_M}font-size:8px;color:#8890a1;letter-spacing:.12em;margin-bottom:3px">NEWS GPR</div>'
+                f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD}">'
+                f'{news_gpr:.0f}</div>'
+                f'<div style="{_M}font-size:9px;color:#555960">'
+                f'{"▲" if n_threat else ""}{n_threat} threat &nbsp;·&nbsp; '
+                f'{"▲" if n_act_hl else ""}{n_act_hl} act</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Score decomposition - pure CSS grid (no st.columns) ───────────────
+    # ── History chart: compact strip below the gauge ───────────────────────
+    st.markdown(
+        f'<p style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
+        f'text-transform:uppercase;color:#8890a1;margin:.4rem 0 0">'
+        f'Historical Risk Score'
+        f'<span style="font-weight:400;color:#555960;margin-left:8px">'
+        f'corr · oil-gold · vol proxy</span></p>',
+        unsafe_allow_html=True,
+    )
+    if score_history is not None and not score_history.empty:
+        fig_hist = plot_risk_history(score_history, height=220)
+        fig_hist.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font={"color": "#DCE4F0", "family": "JetBrains Mono, monospace", "size": 11},
+            title_text="",
+            margin=dict(l=44, r=16, t=4, b=24),
+            xaxis=dict(
+                showgrid=False,
+                tickfont={"size": 10, "color": "#C8D4E0", "family": "JetBrains Mono"},
+                linecolor="#1e1e1e",
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="#1a1a1a",
+                tickfont={"size": 10, "color": "#C8D4E0", "family": "JetBrains Mono"},
+                linecolor="#1e1e1e",
+                title_text="",
+                tickvals=[0, 25, 50, 75, 100],
+                ticktext=["0", "25", "50", "75", "100"],
+            ),
+            legend=dict(
+                font={"size": 10, "color": "#DCE4F0"},
+                bgcolor="rgba(0,0,0,0)",
+                borderwidth=0,
+            ),
+        )
+        fig_hist.add_hline(
+            y=float(score),
+            line=dict(color=color, width=1.2, dash="dot"),
+            annotation_text=f'NOW {score:.0f}',
+            annotation_font={"size": 8, "color": color, "family": "JetBrains Mono"},
+            annotation_position="right",
+        )
+        st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
+    else:
+        st.markdown(
+            f'<div style="{_F}font-size:12px;color:#A8B8C8;padding:2rem 0;'
+            f'text-align:center;border:1px solid #1e1e1e;margin-top:4px">'
+            f'No market data available - check connection or date range.</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Sub-component breakdown (when model provides detailed weights) ────────
     comp = risk.get("components", {})
     dw   = risk.get("weights", {})
 
     if comp:
+        # Rich sub-component grid — only when the model produces them
         bars_html = ""
         for name, val in comp.items():
             c_col  = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
@@ -762,63 +817,33 @@ def _render_geo_risk_block(
                 f'<span style="color:{"#A8B8C8" if indent else "#C8D4E0"}">{name.strip()}</span>'
                 f'<span style="{_M}font-size:12px;font-weight:700;color:{c_col}">{val:.0f}</span>'
                 f'</div>'
-                f'<div style="height:{"3" if indent else "4"}px;background:#111;border-radius:1px;margin-bottom:5px">'
+                f'<div style="height:{"3" if indent else "4"}px;background:#1a1a1a;border-radius:1px;margin-bottom:5px">'
                 f'<div style="width:{pct:.0f}%;height:{"3" if indent else "4"}px;'
                 f'background:{c_col};border-radius:1px"></div></div></div>'
             )
-        decomp_inner = (
-            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">'
-            f'{bars_html}</div>'
-        )
-    else:
-        bars_html = ""
-        for lbl, val, col in [
-            ("Conflict Intensity (CIS · 40%)",    cis, cis_color),
-            ("Transmission Pressure (TPS · 35%)", tps, tps_color),
-            ("Market Confirmation (MCS · 25%)",   mcs, mcs_color),
-        ]:
-            pct = min(val, 100)
-            bars_html += (
-                f'<div>'
-                f'<div style="display:flex;justify-content:space-between;'
-                f'{_F}font-size:12px;margin-bottom:2px">'
-                f'<span style="color:#D8E0EC">{lbl}</span>'
-                f'<span style="{_M}font-weight:700;color:{col}">{val:.0f}</span></div>'
-                f'<div style="height:4px;background:#111;border-radius:1px;margin-bottom:5px">'
-                f'<div style="width:{pct:.0f}%;height:4px;background:{col};'
-                f'border-radius:1px"></div></div></div>'
-            )
-        decomp_inner = (
-            f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 24px">'
-            f'{bars_html}</div>'
+        st.markdown(
+            f'<div style="border-top:1px solid #1e1e1e;margin-top:.2rem;padding:.25rem .4rem .1rem">'
+            f'<p style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
+            f'text-transform:uppercase;color:#8890a1;margin:0 0 .35rem">Sub-Components</p>'
+            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">{bars_html}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
 
-    wt_html = ""
     if dw:
         wt_items = "".join(
             f'<span style="{_M}font-size:10px;color:#C8D4E0">'
             f'{k.replace("_", " ")}&nbsp;<b style="color:{_GOLD}">{v*100:.0f}%</b></span>'
             for k, v in dw.items()
         )
-        wt_html = (
-            f'<div style="display:flex;gap:10px;flex-wrap:wrap;'
-            f'padding-top:5px;border-top:1px solid #111;margin-top:2px">'
-            f'<span style="{_M}font-size:11px;letter-spacing:.16em;text-transform:uppercase;'
-            f'color:#A8B8C8;align-self:center">Dynamic&nbsp;Weights</span>'
-            f'{wt_items}</div>'
+        st.markdown(
+            f'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;'
+            f'padding:.2rem .4rem;border-top:1px solid #1e1e1e;margin-top:.1rem">'
+            f'<span style="{_M}font-size:9px;letter-spacing:.14em;text-transform:uppercase;'
+            f'color:#555960">Dynamic Weights</span>'
+            f'{wt_items}</div>',
+            unsafe_allow_html=True,
         )
-
-    st.markdown(
-        f'<div style="border-top:1px solid #1e1e1e;margin-top:.2rem;'
-        f'padding:.3rem .4rem .2rem">'
-        f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .45rem">Score Decomposition</p>'
-        f'{decomp_inner}'
-        f'{wt_html}'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
     # ── Score interpretation note ─────────────────────────────────────────
     # Shown when GRS is materially below the lead conflict's CIS - i.e., when
     # a user might reasonably ask "why is the score low with active wars?"
@@ -841,7 +866,7 @@ def _render_geo_risk_block(
         _lead_cis   = _top_cis_conflict[1]["cis"]
         _gap        = _lead_cis - score
         st.markdown(
-            f'<div style="background:#080808;border-left:3px solid rgba(207,185,145,.28);'
+            f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;border-left:3px solid rgba(207,185,145,.35);'
             f'padding:.35rem .8rem .35rem;margin:.35rem 0 0">'
             f'<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">'
             f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
@@ -877,8 +902,8 @@ def _render_geo_risk_block(
     # ── KPI strip - CSS grid guarantees equal-width tiles ─────────────────
     def _kt(lbl: str, val: str, vc: str, sub: str = "") -> str:
         return (
-            f'<div style="padding:.4rem .65rem;background:#080808;'
-            f'border:1px solid #1a1a1a;border-top:2px solid {vc}">'
+            f'<div style="padding:.5rem .75rem;background:#0f0f0f;'
+            f'border:1px solid #1e1e1e;border-top:3px solid {vc}">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:#A8B8C8;margin-bottom:3px">{lbl}</div>'
             f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{vc};line-height:1.1">{val}</div>'
@@ -989,8 +1014,8 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
         )
 
     st.markdown(
-        f'<div style="background:#080808;border:1px solid #1e1e1e;'
-        f'border-left:3px solid #555960;padding:.35rem .9rem;margin-bottom:.35rem">'
+        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+        f'border-left:3px solid #555960;padding:.4rem .9rem;margin-bottom:.4rem">'
         f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:#DCE4F0;display:block;margin-bottom:6px">'
         f'Current Situation</span>'
@@ -1053,7 +1078,7 @@ def _render_risk_briefing_panel(
 
     # Situation summary
     st.markdown(
-        f'<div style="padding:0.55rem 0;border-bottom:1px solid #1a2538">'
+        f'<div style="padding:0.55rem 0;border-bottom:1px solid #111">'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
         f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
         f'color:{color};margin-bottom:4px">GEO RISK SCORE</div>'
@@ -1124,11 +1149,11 @@ def _render_risk_briefing_panel(
             bar_c = "#c0392b" if cis_v >= 65 else "#e67e22" if cis_v >= 45 else "#8890a1"
             rows_html += (
                 f'<div style="display:flex;align-items:center;gap:6px;'
-                f'padding:4px 0;border-bottom:1px solid #1a2538">'
+                f'padding:4px 0;border-bottom:1px solid #111">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
                 f'font-weight:700;color:{r["color"]};min-width:52px;white-space:nowrap">'
                 f'{r["label"][:10]}</span>'
-                f'<div style="flex:1;background:#162030;height:3px;border-radius:1px">'
+                f'<div style="flex:1;background:#111;height:3px;border-radius:1px">'
                 f'<div style="width:{cis_v:.0f}%;height:3px;background:{bar_c};border-radius:1px"></div>'
                 f'</div>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
@@ -1152,7 +1177,7 @@ def _render_risk_briefing_panel(
             ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
             st.markdown(
                 f'<div style="display:flex;gap:6px;align-items:flex-start;'
-                f'padding:3px 0;border-bottom:1px solid #1a2538">'
+                f'padding:3px 0;border-bottom:1px solid #111">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
                 f'color:{ag_col};font-weight:700;min-width:28px">{ag.get("short","?")}</span>'
                 f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;'
@@ -1167,10 +1192,312 @@ def _render_risk_briefing_panel(
     # Updated timestamp
     st.markdown(
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-        f'color:#555960;padding-top:0.5rem;border-top:1px solid #1a2538;margin-top:0.4rem">'
+        f'color:#555960;padding-top:0.5rem;border-top:1px solid #111;margin-top:0.4rem">'
         f'Updated: {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
         unsafe_allow_html=True,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § L  INTELLIGENCE FEED  (left column — Stitch-style severity card feed)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_intelligence_feed(
+    risk: dict,
+    conflict_results: dict,
+    alerts: list | None = None,
+) -> None:
+    """Left column: alert severity cards + active conflicts + agent activity."""
+    score = risk["score"]
+    color = risk["color"]
+    label = risk["label"]
+
+    # Header
+    st.markdown(
+        f'<div style="display:flex;align-items:center;justify-content:space-between;'
+        f'padding-bottom:.4rem;border-bottom:1px solid #1e1e1e;margin-bottom:.55rem">'
+        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#DCE4F0">Intelligence Feed</span>'
+        f'<span class="nx-badge nx-badge-live">LIVE</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # GRS score tile
+    if score >= 65:   sc_badge, sc_bg = "CRITICAL",  "rgba(192,57,43,0.12)"
+    elif score >= 45: sc_badge, sc_bg = "ELEVATED",  "rgba(230,126,34,0.10)"
+    else:             sc_badge, sc_bg = "NOMINAL",   "rgba(39,174,96,0.08)"
+    st.markdown(
+        f'<div style="background:{sc_bg};border:1px solid #1e1e1e;'
+        f'border-left:3px solid {color};padding:.45rem .6rem;margin-bottom:.45rem">'
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:{color};margin-bottom:3px">SYSTEMIC MONITOR</div>'
+        f'<div style="{_M}font-size:1.5rem;font-weight:700;color:{color};line-height:1">'
+        f'{score:.0f}'
+        f'<span style="font-size:.55rem;color:#8890a1;margin-left:4px">/100 · {label.upper()}</span>'
+        f'</div>'
+        f'<div style="{_M}font-size:8px;font-weight:700;background:{color};color:#000;'
+        f'display:inline-block;padding:1px 6px;margin-top:4px;letter-spacing:.12em">{sc_badge}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Alert cards (CRITICAL → ELEVATED → NORMAL)
+    all_alerts = sorted(
+        (alerts or []),
+        key=lambda a: 0 if getattr(a, "severity", "") == "critical"
+                   else 1 if getattr(a, "severity", "") == "warning" else 2,
+    )[:6]
+
+    for a in all_alerts:
+        sev = getattr(a, "severity", "warning")
+        if sev == "critical":
+            border_c, badge_bg, badge_c, badge_lbl = "#c0392b", "rgba(192,57,43,0.12)", "#e05241", "CRITICAL"
+        elif sev == "warning":
+            border_c, badge_bg, badge_c, badge_lbl = "#e67e22", "rgba(230,126,34,0.10)", "#e8902a", "ELEVATED"
+        else:
+            border_c, badge_bg, badge_c, badge_lbl = "#8890a1", "rgba(136,144,161,0.08)", "#8890a1", "NORMAL"
+
+        title  = getattr(a, "title",  str(a))[:68]
+        detail = (getattr(a, "detail", None) or getattr(a, "message", ""))[:115]
+        ts_str = datetime.datetime.now().strftime("%H:%M")
+        st.markdown(
+            f'<div style="border-left:2px solid {border_c};background:#0f0f0f;'
+            f'border-top:1px solid #1e1e1e;border-right:1px solid #1e1e1e;'
+            f'border-bottom:1px solid #1e1e1e;padding:.4rem .55rem;margin-bottom:.3rem">'
+            f'<div style="display:flex;justify-content:space-between;'
+            f'align-items:center;margin-bottom:4px">'
+            f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
+            f'background:{badge_bg};color:{badge_c};padding:1px 5px">{badge_lbl}</span>'
+            f'<span style="{_M}font-size:9px;color:#555960">{ts_str}</span>'
+            f'</div>'
+            f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;'
+            f'line-height:1.3;margin-bottom:3px">{title}</div>'
+            + (f'<div style="{_F}font-size:11px;color:#8890a1;line-height:1.45">{detail}</div>' if detail else "")
+            + f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    if not all_alerts:
+        st.markdown(
+            f'<div style="border-left:2px solid #8890a1;background:#0f0f0f;'
+            f'border:1px solid #1e1e1e;padding:.4rem .55rem;margin-bottom:.3rem">'
+            f'<span style="{_M}font-size:8px;font-weight:700;color:#8890a1;letter-spacing:.14em">NOMINAL</span>'
+            f'<div style="{_F}font-size:11px;color:#8890a1;margin-top:3px">No active alerts</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # Active conflicts
+    active = sorted(
+        [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"],
+        key=lambda x: x[1]["cis"], reverse=True,
+    )[:4]
+    if active:
+        st.markdown(
+            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+            f'margin-top:.3rem;border-top:1px solid #1e1e1e">Active Conflicts</div>',
+            unsafe_allow_html=True,
+        )
+        for cid, r in active:
+            cv    = r["cis"]
+            bar_c = "#c0392b" if cv >= 65 else "#e67e22" if cv >= 45 else "#8890a1"
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:6px;padding:5px .55rem;'
+                f'border-left:2px solid {bar_c};background:#0f0f0f;'
+                f'border-bottom:1px solid #1a1a1a;margin-bottom:2px">'
+                f'<span style="{_M}font-size:10px;font-weight:700;color:{r["color"]};'
+                f'min-width:52px;white-space:nowrap">{r["label"][:10]}</span>'
+                f'<div style="flex:1;background:#1a1a1a;height:3px;border-radius:1px">'
+                f'<div style="width:{min(cv,100):.0f}%;height:3px;background:{bar_c}"></div></div>'
+                f'<span style="{_M}font-size:10px;font-weight:700;color:{bar_c};'
+                f'min-width:22px;text-align:right">{cv:.0f}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Agent activity
+    feed = st.session_state.get("agent_activity", [])[:3]
+    if feed:
+        st.markdown(
+            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+            f'margin-top:.3rem;border-top:1px solid #1e1e1e">AI Analyst</div>',
+            unsafe_allow_html=True,
+        )
+        for entry in feed:
+            ag     = AGENTS.get(entry["agent_id"], {})
+            ag_col = ag.get("color", "#8890a1")
+            ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
+            st.markdown(
+                f'<div style="display:flex;gap:6px;align-items:flex-start;'
+                f'padding:4px 0;border-bottom:1px solid #111">'
+                f'<span style="{_M}font-size:.52rem;color:{ag_col};font-weight:700;min-width:28px">'
+                f'{ag.get("short","?")}</span>'
+                f'<span style="{_F}font-size:.62rem;color:#b8b8b8;flex:1;line-height:1.45">'
+                f'{entry.get("action","")}: {entry.get("detail","")[:52]}</span>'
+                f'<span style="{_M}font-size:.50rem;color:#555960;white-space:nowrap">{ts_str}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # ── Chokepoint Strait Watch (fills remaining left-col space) ─────────────
+    scenario = get_scenario()
+    tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Chokepoint Watch</div>',
+        unsafe_allow_html=True,
+    )
+    strait_rows = ""
+    for s in _STRAITS:
+        s_risk = min(int(s["base_risk"] * tps_mult), 100)
+        tc     = "#c0392b" if s_risk >= 70 else "#e67e22" if s_risk >= 45 else "#27ae60"
+        tier   = "HIGH" if s_risk >= 70 else "ELEV" if s_risk >= 45 else "MOD"
+        pulse_dot = (
+            f'<span class="hm-dot" style="background:{tc};flex-shrink:0"></span>'
+            if s_risk >= 70 else
+            f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
+            f'background:{tc};opacity:.7;flex-shrink:0"></span>'
+        )
+        strait_rows += (
+            f'<div style="display:flex;align-items:center;gap:6px;padding:4px 0;'
+            f'border-bottom:1px solid #111">'
+            f'{pulse_dot}'
+            f'<span style="{_M}font-size:10px;font-weight:700;color:{tc};min-width:66px;'
+            f'white-space:nowrap">{s["name"][:16]}</span>'
+            f'<div style="flex:1;background:#1a1a1a;height:3px;border-radius:1px">'
+            f'<div style="width:{s_risk}%;height:3px;background:{tc};border-radius:1px"></div></div>'
+            f'<span style="{_M}font-size:10px;color:{tc};font-weight:700;min-width:20px;'
+            f'text-align:right">{s_risk}</span>'
+            f'<span style="background:{tc};color:#000;{_M}font-size:8px;font-weight:700;'
+            f'padding:1px 4px;letter-spacing:.06em;min-width:32px;text-align:center">{tier}</span>'
+            f'</div>'
+        )
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+        f'padding:.35rem .55rem">{strait_rows}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── What-changed delta strip ──────────────────────────────────────────────
+    _dg  = st.session_state.get("_delta_geo_score")
+    _dc  = st.session_state.get("_delta_cis")
+    _dt  = st.session_state.get("_delta_tps")
+    if any(v is not None for v in [_dg, _dc, _dt]):
+        def _dchip(label, delta):
+            if delta is None:
+                return f'<span style="{_M}font-size:9px;color:#555960">{label}&nbsp;—</span>'
+            col  = "#c0392b" if delta > 0.3 else "#27ae60" if delta < -0.3 else "#555960"
+            sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else "— flat"
+            return (
+                f'<span style="{_M}font-size:9px;color:#555960">{label}&nbsp;</span>'
+                f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}</span>'
+            )
+        st.markdown(
+            f'<div style="margin-top:.35rem;padding:.3rem .55rem;background:#0f0f0f;'
+            f'border:1px solid #1e1e1e;display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+            f'<span style="{_M}font-size:8px;letter-spacing:.14em;text-transform:uppercase;'
+            f'color:#555960">Δ vs last load</span>'
+            f'{_dchip("GRS", _dg)}'
+            f'{_dchip("CIS", _dc)}'
+            f'{_dchip("TPS", _dt)}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        f'<div style="{_M}font-size:.50rem;color:#555960;padding-top:.45rem;'
+        f'border-top:1px solid #111;margin-top:.4rem">'
+        f'Updated {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R  MARKET PULSE CARDS  (right column — Stitch vertical card layout)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_market_pulse_cards() -> None:
+    """Right column: market instruments as vertical stacked cards."""
+    data = _load_market_pulse()
+    if not data:
+        return
+
+    st.markdown(
+        f'<div style="display:flex;align-items:center;justify-content:space-between;'
+        f'padding-bottom:.4rem;border-bottom:1px solid #1e1e1e;margin-bottom:.55rem">'
+        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#DCE4F0">Market Pulse</span>'
+        f'<span style="{_M}font-size:9px;color:#8890a1;letter-spacing:.10em">REAL-TIME</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    for d in data:
+        pct    = d["pct"]
+        is_vix = d["sym"] == "^VIX"
+        if abs(pct) < 0.05:
+            c, arrow = "#555960", "—"
+        elif pct > 0:
+            c, arrow = ("#c0392b" if is_vix else "#27ae60"), "▲"
+        else:
+            c, arrow = ("#27ae60" if is_vix else "#c0392b"), "▼"
+
+        val_fmt = f'{d["val"]:.2f}' if d["val"] < 10000 else f'{d["val"]:,.0f}'
+        chg_fmt = f'{arrow} {abs(pct):.2f}%'
+
+        # 5-day sparkline SVG
+        series = d.get("series", [])
+        spark_svg = ""
+        if len(series) >= 3:
+            mn, mx = min(series), max(series)
+            span   = (mx - mn) or 1.0
+            W, H   = 80, 26
+            pts    = " ".join(
+                f'{i/(len(series)-1)*W:.1f},{H - (v-mn)/span*H:.1f}'
+                for i, v in enumerate(series)
+            )
+            spark_svg = (
+                f'<svg width="{W}" height="{H}" style="display:block;margin-top:5px">'
+                f'<polyline points="{pts}" fill="none" stroke="{c}" '
+                f'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>'
+                f'</svg>'
+            )
+
+        # 5d high/low range
+        rng_html = ""
+        if len(series) >= 2:
+            lo, hi = min(series), max(series)
+            lo_fmt = f'{lo:.2f}' if lo < 10000 else f'{lo:,.0f}'
+            hi_fmt = f'{hi:.2f}' if hi < 10000 else f'{hi:,.0f}'
+            rng_html = (
+                f'<div style="{_M}font-size:9px;color:#555960;margin-top:3px">'
+                f'5d&nbsp;&nbsp;L&nbsp;<b style="color:#8890a1">{lo_fmt}</b>'
+                f'&nbsp;·&nbsp;H&nbsp;<b style="color:#8890a1">{hi_fmt}</b></div>'
+            )
+
+        st.markdown(
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+            f'border-left:3px solid {c};padding:.5rem .7rem;margin-bottom:.3rem">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center">'
+            f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.14em;'
+            f'text-transform:uppercase;color:#A8B8C8">{d["label"]}</span>'
+            f'<span style="{_M}font-size:10px;font-weight:700;color:{c}">{chg_fmt}</span>'
+            f'</div>'
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-end">'
+            f'<div>'
+            f'<div style="{_M}font-size:1.2rem;font-weight:700;color:#e8e9ed;line-height:1.1;margin-top:4px">'
+            f'{val_fmt}<span style="font-size:.6rem;color:#555960;margin-left:3px">{d["suffix"]}</span></div>'
+            f'{rng_html}'
+            f'</div>'
+            f'{spark_svg}'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1235,7 +1562,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
                 f'</div>'
             )
         st.markdown(
-            f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .8rem">'
             f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .35rem">'
             f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
@@ -1273,7 +1600,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
                     f'</div>'
                 )
             st.markdown(
-                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
+                f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .8rem">'
                 f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
                 f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
@@ -1282,7 +1609,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
             )
         else:
             st.markdown(
-                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.45rem .7rem">'
+                f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .8rem">'
                 f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
                 f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
@@ -1309,7 +1636,7 @@ _IMPACT = {
 }
 
 
-def _render_scenario_switch() -> None:
+def _render_scenario_switch(narrow: bool = False) -> None:
     current_sid = get_scenario_id()
     current_def = get_scenario()  # handles both single and compound
     is_compound = "+" in current_sid
@@ -1321,8 +1648,8 @@ def _render_scenario_switch() -> None:
     )
 
     st.markdown(
-        f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
-        f'padding:.35rem .9rem;margin:.35rem 0">'
+        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+        f'padding:.25rem .7rem;margin:.2rem 0">'
         f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
         f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:#DCE4F0">Scenario Lens</span>'
@@ -1336,11 +1663,13 @@ def _render_scenario_switch() -> None:
         unsafe_allow_html=True,
     )
 
-    cols = st.columns(len(SCENARIO_ORDER))
+    # In narrow mode (left column) render as 4-wide grid (2 rows of 4)
+    _ncols = 4 if narrow else len(SCENARIO_ORDER)
+    cols = st.columns(_ncols)
     for i, sid in enumerate(SCENARIO_ORDER):
         sdef   = SCENARIOS[sid]
         active = (not is_compound and sid == current_sid)
-        if cols[i].button(
+        if cols[i % _ncols].button(
             sdef["label"],
             key=f"scen_{sid}",
             type="primary" if active else "secondary",
@@ -1382,7 +1711,7 @@ def _render_scenario_switch() -> None:
 # § 6  WHERE TO GO NOW - live-data-driven recommendations
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _render_next_action(conflict_agg: dict, conflict_results: dict) -> None:
+def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: bool = False) -> None:
     cis         = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
     tps         = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
     scenario_id = get_scenario_id()
@@ -1445,24 +1774,39 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict) -> None:
 
     st.markdown(
         f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0;margin:.35rem 0 .2rem">'
-        f'Where To Go Now</div>'
-        f'<div style="{_F}font-size:12px;color:#C8D4E0;margin-bottom:.3rem">'
-        f'Live recommendations based on current scores - updates every refresh</div>',
+        f'text-transform:uppercase;color:#DCE4F0;margin:.2rem 0 .3rem">'
+        f'Where To Go Now</div>',
         unsafe_allow_html=True,
     )
 
     for r in recs:
-        st.markdown(
-            f'<div class="hm-rec" style="border-color:{r["color"]}">'
-            f'<span style="{_M}font-size:11px;font-weight:700;color:{r["color"]};'
-            f'white-space:nowrap">{r["tag"]}</span>'
-            f'<span style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;'
-            f'white-space:nowrap;min-width:130px">{r["label"]}</span>'
-            f'<span style="{_F}font-size:12px;color:#C8D4E0;flex:1">{r["text"]}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        if compact:
+            # Stacked card format for narrow columns
+            st.markdown(
+                f'<div style="border-left:3px solid {r["color"]};background:#0f0f0f;'
+                f'border-top:1px solid #1e1e1e;border-right:1px solid #1e1e1e;'
+                f'border-bottom:1px solid #1e1e1e;padding:.4rem .55rem;margin-bottom:.3rem">'
+                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
+                f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+                f'color:{r["color"]}">{r["tag"]}</span>'
+                f'</div>'
+                f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;margin-bottom:3px">'
+                f'{r["label"]}</div>'
+                f'<div style="{_F}font-size:11px;color:#8890a1;line-height:1.4">{r["text"]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="hm-rec" style="border-color:{r["color"]}">'
+                f'<span style="{_M}font-size:11px;font-weight:700;color:{r["color"]};'
+                f'white-space:nowrap">{r["tag"]}</span>'
+                f'<span style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;'
+                f'white-space:nowrap;min-width:130px">{r["label"]}</span>'
+                f'<span style="{_F}font-size:12px;color:#C8D4E0;flex:1">{r["text"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1515,55 +1859,52 @@ _TAG_META = {
 
 
 def _render_quickjump() -> None:
-    # Header + legend
+    # Flatten all groups into a single 4-col grid — no separate per-group st.columns calls
+    # Group identity lives in the card's top-border color; rendered as one pass.
+    all_items: list[tuple[str, str, str, str, str, str]] = []  # label, page_id, desc, tag, _sc, g_color
+    for group in _JUMP_GROUPS:
+        for item in group["items"]:
+            all_items.append((*item, group["color"]))
+
+    # Legend strip (single markdown)
     st.markdown(
-        f'<div style="display:flex;align-items:center;gap:8px;margin:.25rem 0 .2rem;flex-wrap:wrap">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">Navigate Terminal</span>'
-        f'<span style="{_F}font-size:12px;color:#C8D4E0">14 modules</span>'
-        f'<span style="margin-left:auto;display:flex;gap:8px;align-items:center">'
+        f'<div style="display:flex;gap:10px;align-items:center;'
+        f'padding:.2rem 0 .35rem;flex-wrap:wrap;border-bottom:1px solid #1e1e1e;margin-bottom:.3rem">'
+        + "".join(
+            f'<span style="display:flex;align-items:center;gap:5px">'
+            f'<span style="width:8px;height:8px;border-radius:50%;background:{g["color"]};'
+            f'flex-shrink:0;display:inline-block"></span>'
+            f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+            f'text-transform:uppercase;color:{g["color"]}">{g["group"]}</span>'
+            f'</span>'
+            for g in _JUMP_GROUPS
+        )
+        + f'<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'
         f'<span class="hm-tag hm-tag-daily">DAILY</span>'
-        f'<span style="{_M}font-size:10px;color:#C8D4E0">open every session</span>'
-        f'<span class="hm-tag hm-tag-alert" style="margin-left:4px">ON ALERT</span>'
-        f'<span style="{_M}font-size:10px;color:#C8D4E0">when a score moves</span>'
-        f'<span class="hm-tag hm-tag-deep" style="margin-left:4px">DEEP-DIVE</span>'
-        f'<span style="{_M}font-size:10px;color:#C8D4E0">research &amp; sizing</span>'
+        f'<span class="hm-tag hm-tag-alert">ON ALERT</span>'
+        f'<span class="hm-tag hm-tag-deep">DEEP-DIVE</span>'
         f'</span></div>',
         unsafe_allow_html=True,
     )
 
-    for group in _JUMP_GROUPS:
-        g_color = group["color"]
-        st.markdown(
-            f'<div style="display:flex;align-items:baseline;gap:8px;'
-            f'border-left:2px solid {g_color};padding-left:7px;margin:5px 0 3px">'
-            f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{g_color}">{group["group"]}</span>'
-            f'<span style="{_F}font-size:12px;color:#C8D4E0">{group["caption"]}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
-        items  = group["items"]
-        n_cols = min(len(items), 4)
-        cols   = st.columns(n_cols, gap="small")
-
-        for i, (label, page_id, desc, tag, _sc) in enumerate(items):
-            tag_label, tag_cls = _TAG_META.get(tag, ("", ""))
-            with cols[i % n_cols]:
-                st.markdown(
-                    f'<div class="hm-nav" style="border-top:2px solid {g_color};min-height:52px">'
-                    f'<div style="display:flex;align-items:center;margin-bottom:3px">'
-                    f'<span style="{_M}font-size:11px;font-weight:700;color:{g_color}">{label}</span>'
-                    f'<span class="hm-tag {tag_cls}">{tag_label}</span>'
-                    f'</div>'
-                    f'<div style="{_F}font-size:12px;color:#C8D4E0;line-height:1.4">{desc}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                if st.button("→", key=f"qj_{page_id}", width="stretch"):
-                    st.query_params["page"] = page_id
-                    st.rerun()
+    # One flat 4-col grid for all 14 modules
+    cols = st.columns(4, gap="small")
+    for i, (label, page_id, desc, tag, _sc, g_color) in enumerate(all_items):
+        tag_label, tag_cls = _TAG_META.get(tag, ("", ""))
+        with cols[i % 4]:
+            st.markdown(
+                f'<div class="hm-nav" style="border-top:2px solid {g_color};min-height:58px">'
+                f'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'
+                f'<span style="{_M}font-size:11px;font-weight:700;color:{g_color}">{label}</span>'
+                f'<span class="hm-tag {tag_cls}" style="font-size:7px!important">{tag_label}</span>'
+                f'</div>'
+                f'<div style="{_F}font-size:11px;color:#8890a1;line-height:1.35">{desc}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("→", key=f"qj_{page_id}", width="stretch"):
+                st.query_params["page"] = page_id
+                st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1627,6 +1968,7 @@ def _load_market_pulse() -> list[dict]:
             results.append({
                 "sym": sym, "label": label, "suffix": suffix,
                 "val": val, "chg": chg, "pct": pct,
+                "series": [float(v) for v in s.tolist()],  # up to 5 days for sparkline
             })
         return results
     except Exception:
@@ -1655,21 +1997,25 @@ def _render_market_pulse() -> None:
         val_fmt = f'{d["val"]:.2f}' if d["val"] < 10000 else f'{d["val"]:,.0f}'
         chg_fmt = f'{arrow} {abs(pct):.2f}%'
         return (
-            f'<div style="flex:1;min-width:80px;padding:.35rem .6rem;background:#080808;'
-            f'border:1px solid #1a1a1a;border-top:2px solid {c}">'
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
-            f'text-transform:uppercase;color:#A8B8C8;margin-bottom:2px">{d["label"]}</div>'
-            f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;line-height:1.1">'
-            f'{val_fmt}<span style="font-size:10px;color:#C8D4E0">{d["suffix"]}</span></div>'
-            f'<div style="{_M}font-size:10px;color:{c};margin-top:1px">{chg_fmt}</div>'
+            f'<div style="flex:1;min-width:90px;padding:.65rem .85rem;background:#0f0f0f;'
+            f'border:1px solid #1e1e1e;border-top:3px solid {c};'
+            f'transition:background .12s ease">'
+            f'<div style="{_M}font-size:9px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:#8890a1;margin-bottom:5px">{d["label"]}</div>'
+            f'<div style="{_M}font-size:16px;font-weight:700;color:#e8e9ed;line-height:1.1">'
+            f'{val_fmt}<span style="font-size:10px;color:#8890a1">{d["suffix"]}</span></div>'
+            f'<div style="{_M}font-size:10px;color:{c};font-weight:700;margin-top:4px">{chg_fmt}</div>'
             f'</div>'
         )
 
     tiles_html = "".join(_tile(d) for d in data)
     st.markdown(
-        f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#A8B8C8;margin-bottom:2px">Market Pulse</div>'
-        f'<div style="display:flex;gap:4px;flex-wrap:nowrap;margin-bottom:.3rem">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
+        f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:#8890a1">Market Pulse</span>'
+        f'<span class="nx-badge nx-badge-live">LIVE</span>'
+        f'</div>'
+        f'<div style="display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:.5rem">'
         f'{tiles_html}</div>',
         unsafe_allow_html=True,
     )
@@ -1767,7 +2113,7 @@ def _render_portfolio_pulse() -> None:
 
     with col_nav:
         st.markdown(
-            f'<div style="background:#080808;border:1px solid #1a1a1a;'
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
             f'border-top:2px solid {_GOLD};padding:.4rem .65rem">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#A8B8C8;margin-bottom:4px">Portfolio NAV</div>'
@@ -1787,7 +2133,7 @@ def _render_portfolio_pulse() -> None:
 
     with col_movers:
         st.markdown(
-            f'<div style="background:#080808;border:1px solid #1a1a1a;'
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
             f'border-top:2px solid #2a2a2a;padding:.4rem .65rem">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:#A8B8C8;margin-bottom:5px">Top Movers</div>'
@@ -1868,7 +2214,7 @@ def _render_live_signals() -> None:
 
         if first_run:
             st.markdown(
-                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
                 f'padding:.5rem .7rem;{_F}font-size:12px;color:#C8D4E0">'
                 f'Establishing baseline - deltas appear from the second visit onward.</div>',
                 unsafe_allow_html=True,
@@ -1923,7 +2269,7 @@ def _render_live_signals() -> None:
             )
 
             st.markdown(
-                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
+                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
                 f'padding:.4rem .7rem">'
                 + port_rows
                 + conf_section
@@ -1974,6 +2320,201 @@ def _render_agent_strip() -> None:
         f'</div>',
         unsafe_allow_html=True,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § L2  CORRELATION PULSE  (left column — equity-commodity sparkline)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_correlation_pulse(
+    corr_series: "pd.Series | None",
+    regimes: "pd.Series | None",
+) -> None:
+    """Left column filler: 60-day equity-commodity correlation sparkline + regime."""
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Correlation Pulse</div>',
+        unsafe_allow_html=True,
+    )
+
+    if corr_series is None or len(corr_series.dropna()) < 5:
+        st.markdown(
+            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+            f'padding:.35rem .55rem;{_M}font-size:9px;color:#555960">'
+            f'Correlation data unavailable</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    series = corr_series.dropna().iloc[-60:].tolist()
+    cur    = series[-1]
+
+    if regimes is not None and not regimes.empty:
+        r_val = int(regimes.dropna().iloc[-1])
+        if r_val == 3:   regime_lbl, regime_c = "HIGH COUPLING", "#c0392b"
+        elif r_val == 1: regime_lbl, regime_c = "DECOUPLED",     "#27ae60"
+        else:            regime_lbl, regime_c = "TRANSITIONING", "#e67e22"
+    else:
+        regime_lbl, regime_c = "COMPUTING", "#8890a1"
+
+    cur_c    = "#c0392b" if cur > 0.35 else "#27ae60" if cur < 0.0 else "#e67e22"
+    cur_sign = "+" if cur >= 0 else ""
+
+    W, H  = 200, 52
+    mn, mx = -1.0, 1.0
+    span   = 2.0
+    n      = len(series)
+
+    def _fy(v: float) -> float:
+        return H - max(0.0, min(float(H), (v - mn) / span * H))
+
+    zero_y = _fy(0.0)
+    thr_y  = _fy(0.35)
+    pts    = " ".join(
+        f'{i / max(n - 1, 1) * W:.1f},{_fy(v):.1f}'
+        for i, v in enumerate(series)
+    )
+    dot_y = _fy(cur)
+
+    svg = (
+        f'<svg width="{W}" height="{H + 12}" viewBox="0 0 {W} {H + 12}" '
+        f'style="display:block;overflow:visible">'
+        # shaded coupling zone (above 0.35 threshold)
+        f'<rect x="0" y="0" width="{W}" height="{thr_y:.1f}" '
+        f'fill="rgba(192,57,43,0.07)"/>'
+        # shaded decoupled zone (below 0)
+        f'<rect x="0" y="{zero_y:.1f}" width="{W}" height="{H - zero_y:.1f}" '
+        f'fill="rgba(39,174,96,0.05)"/>'
+        # zero reference line
+        f'<line x1="0" y1="{zero_y:.1f}" x2="{W}" y2="{zero_y:.1f}" '
+        f'stroke="#2e2e2e" stroke-width="1"/>'
+        # 0.35 high-coupling threshold
+        f'<line x1="0" y1="{thr_y:.1f}" x2="{W}" y2="{thr_y:.1f}" '
+        f'stroke="#c0392b" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
+        # correlation sparkline
+        f'<polyline points="{pts}" fill="none" stroke="{cur_c}" '
+        f'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>'
+        # terminal dot
+        f'<circle cx="{W:.1f}" cy="{dot_y:.1f}" r="3.5" fill="{cur_c}"/>'
+        # axis labels
+        f'<text x="0" y="{H + 11}" font-size="8" fill="#333333" '
+        f'font-family="JetBrains Mono,monospace">60d ago</text>'
+        f'<text x="{W}" y="{H + 11}" font-size="8" fill="#333333" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="end">now</text>'
+        # zero label
+        f'<text x="{W + 3}" y="{zero_y + 3:.1f}" font-size="7" fill="#2e2e2e" '
+        f'font-family="JetBrains Mono,monospace">0</text>'
+        f'</svg>'
+    )
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+        f'border-left:3px solid {cur_c};padding:.5rem .65rem">'
+        f'<div style="display:flex;justify-content:space-between;'
+        f'align-items:center;margin-bottom:6px">'
+        f'<div>'
+        f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{cur_c};line-height:1">'
+        f'{cur_sign}{cur:.3f}</span>'
+        f'<span style="{_M}font-size:8px;color:#555960;margin-left:5px">eq↔cmd 60d</span>'
+        f'</div>'
+        f'<span style="background:{regime_c}1a;border:1px solid {regime_c}44;'
+        f'{_M}font-size:7px;font-weight:700;letter-spacing:.10em;color:{regime_c};'
+        f'padding:1px 5px;text-transform:uppercase">{regime_lbl}</span>'
+        f'</div>'
+        f'<div style="padding-bottom:2px">{svg}</div>'
+        f'<div style="{_M}font-size:8px;color:#333;margin-top:4px">'
+        f'<span style="color:#c0392b22;border-bottom:1px dashed #c0392b55">·</span>'
+        f'&nbsp;<span style="color:#555960">0.35 coupling threshold</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R2  RISK DECOMPOSITION  (right column — component meter bars)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_risk_arc(risk: dict) -> None:
+    """Right column filler: GRS score breakdown by component (CIS / TPS / MCS)."""
+    cis   = float(risk.get("cis",   50.0))
+    tps   = float(risk.get("tps",   50.0))
+    mcs   = float(risk.get("mcs",   50.0))
+    score = float(risk.get("score", 50.0))
+
+    weights = risk.get("weights") or {}
+    w_cis = float(weights.get("cis", 0.40))
+    w_tps = float(weights.get("tps", 0.35))
+    w_mcs = float(weights.get("mcs", 0.25))
+
+    def _cc(v: float) -> str:
+        return "#c0392b" if v >= 65 else "#e67e22" if v >= 45 else "#27ae60"
+
+    def _cl(v: float) -> str:
+        return "HIGH" if v >= 65 else "ELEV" if v >= 45 else "NOM"
+
+    def _meter(label: str, wpct: int, val: float, contrib: float) -> str:
+        c   = _cc(val)
+        lbl = _cl(val)
+        bw  = min(int(val), 100)
+        # SVG sparkline-style bar with gradient fill
+        bar_svg = (
+            f'<svg width="100%" height="5" style="display:block;border-radius:2px;overflow:hidden">'
+            f'<defs><linearGradient id="bg_{label}" x1="0" y1="0" x2="1" y2="0">'
+            f'<stop offset="0%" stop-color="{c}" stop-opacity="0.85"/>'
+            f'<stop offset="100%" stop-color="{c}" stop-opacity="0.45"/>'
+            f'</linearGradient></defs>'
+            f'<rect width="100%" height="5" fill="#1a1a1a"/>'
+            f'<rect width="{bw}%" height="5" fill="url(#bg_{label})"/>'
+            f'</svg>'
+        )
+        return (
+            f'<div style="padding:.32rem 0;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;'
+            f'align-items:center;margin-bottom:5px">'
+            f'<div style="display:flex;align-items:center;gap:5px">'
+            f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.12em;'
+            f'text-transform:uppercase;color:#8890a1">{label}</span>'
+            f'<span style="background:#1a1a1a;border:1px solid #222;'
+            f'{_M}font-size:7px;color:#555960;padding:0 4px;letter-spacing:.04em">'
+            f'wt {wpct}%</span>'
+            f'</div>'
+            f'<div style="display:flex;align-items:center;gap:5px">'
+            f'<span style="{_M}font-size:1.0rem;font-weight:700;color:{c};line-height:1">'
+            f'{val:.0f}</span>'
+            f'<span style="background:{c}22;border:1px solid {c}44;'
+            f'{_M}font-size:7px;font-weight:700;color:{c};padding:1px 4px">{lbl}</span>'
+            f'</div>'
+            f'</div>'
+            f'{bar_svg}'
+            f'<div style="{_M}font-size:8px;color:#444;margin-top:4px">'
+            f'adds <b style="color:{c}">{contrib:.1f} pts</b> to composite</div>'
+            f'</div>'
+        )
+
+    score_c = _cc(score)
+    html = (
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .65rem">'
+        # header row — composite score
+        f'<div style="display:flex;justify-content:space-between;align-items:center;'
+        f'padding-bottom:.3rem;border-bottom:1px solid #1e1e1e;margin-bottom:.1rem">'
+        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
+        f'text-transform:uppercase;color:#555960">GRS · Composite</span>'
+        f'<div style="display:flex;align-items:baseline;gap:3px">'
+        f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{score_c}">'
+        f'{score:.0f}</span>'
+        f'<span style="{_M}font-size:8px;color:#555960">/100</span>'
+        f'</div>'
+        f'</div>'
+        + _meter("CIS", int(w_cis * 100), cis, cis * w_cis)
+        + _meter("TPS", int(w_tps * 100), tps, tps * w_tps)
+        + _meter("MCS", int(w_mcs * 100), mcs, mcs * w_mcs)
+        + f'<div style="{_M}font-size:8px;color:#333;margin-top:.35rem">'
+        f'CIS=Conflict Intensity · TPS=Transmission · MCS=Market</div>'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2068,10 +2609,36 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         pass
 
     # ══════════════════════════════════════════════════════════════════════
+    # PRE-RENDER: compute alerts before column split so all columns can use them
+    # ══════════════════════════════════════════════════════════════════════
+    _cached_alerts: list = st.session_state.get("_cached_alerts", [])
+    _al_regimes    = None
+    _al_regime_insuf = False
+    _al_corr       = None
+    try:
+        from src.analysis.proactive_alerts import compute_alerts
+        from src.analysis.correlations import detect_correlation_regime
+        _al_eq_r, _al_cmd_r = load_returns(start, end)
+        if not _al_eq_r.empty and not _al_cmd_r.empty:
+            _al_corr         = average_cross_corr_series(_al_eq_r, _al_cmd_r, window=60)
+            _al_regimes      = detect_correlation_regime(_al_corr)
+            _al_regime_insuf = bool(_al_regimes.attrs.get("insufficient_data", False))
+            _cached_alerts   = compute_alerts(
+                eq_r=_al_eq_r, cmd_r=_al_cmd_r,
+                avg_corr=_al_corr, regimes=_al_regimes,
+                risk_score=float(risk["score"]),
+                risk_history=_score_hist if isinstance(_score_hist, pd.Series)
+                             else pd.Series(dtype=float),
+            )
+            st.session_state["_cached_alerts"] = _cached_alerts
+    except Exception:
+        pass
+
+    # ══════════════════════════════════════════════════════════════════════
     # RENDER SECTIONS
     # ══════════════════════════════════════════════════════════════════════
 
-    # § 0.5  Data Health Banner (GAP 16 - surface silent failures)
+    # § 0.5  Data Health Banner
     try:
         from src.analysis.freshness import data_health_html
         _dh_html = data_health_html()
@@ -2080,40 +2647,37 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # § 1  Masthead
+    # § 1  Masthead — full-width above 3-col
     _render_masthead(conflict_agg)
 
-    # § 1.5  Market Pulse - macro KPI strip
-    _render_market_pulse()
+    # ── 3-col layout: intel feed | dominant gauge | market pulse cards ────────
+    # Column heights are balanced by design:
+    #   Left  = intelligence feed + scenario switch
+    #   Center = market pulse strip + geo risk block (gauge + history + decomp)
+    #   Right  = market pulse cards + where-to-go-now recommendations
+    # Context narrative + intel panel + morning briefing go BELOW as full-width.
+    # ─────────────────────────────────────────────────────────────────────────
+    _col_left, _col_ctr, _col_right = st.columns([1.0, 2.2, 1.0], gap="medium")
 
-    # § 1.6  Portfolio Pulse - NAV + 1-day P&L (conditional on upload)
-    _render_portfolio_pulse()
+    with _col_left:
+        # Intelligence feed only — scenario switch moved full-width below 3-col
+        # to prevent left col from being taller than right col (gap issue)
+        _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
+        # Correlation pulse — fills remaining left-col space with the core metric
+        _render_correlation_pulse(_al_corr, _al_regimes)
 
-    # § 2  Geopolitical Risk Score - DOMINANT ELEMENT
-    _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
-
-    # § 2.5  Proactive Alerts + Morning Briefing Chain
-    try:
-        from src.analysis.proactive_alerts import compute_alerts
-        from src.analysis.correlations import detect_correlation_regime
-        from src.ui.alert_banner import render_alert_banner
-        _al_eq_r, _al_cmd_r = load_returns(start, end)  # cache hit - already computed above
-        if not _al_eq_r.empty and not _al_cmd_r.empty:
-            _al_corr    = average_cross_corr_series(_al_eq_r, _al_cmd_r, window=60)
-            _al_regimes = detect_correlation_regime(_al_corr)
-            _al_regime_insuf = bool(_al_regimes.attrs.get("insufficient_data", False))
-            _alerts     = compute_alerts(
-                eq_r=_al_eq_r, cmd_r=_al_cmd_r,
-                avg_corr=_al_corr, regimes=_al_regimes,
-                risk_score=float(risk["score"]),
-                risk_history=_score_hist if isinstance(_score_hist, pd.Series)
-                             else pd.Series(dtype=float),
-            )
-            # Cache all alerts for risk briefing panel
-            st.session_state["_cached_alerts"] = _alerts
-            # Show only critical alerts on Home (warnings live on Overview)
-            _critical = [a for a in _alerts if a.severity == "critical"]
-            if _critical:
+    with _col_ctr:
+        # Market pulse horizontal strip
+        _render_market_pulse()
+        # Portfolio pulse (conditional — hidden unless CSV uploaded)
+        _render_portfolio_pulse()
+        # Geo risk block: gauge + history chart + decomposition — the CENTERPIECE
+        _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
+        # Critical alert banner (inline, no empty space when no alerts)
+        try:
+            from src.ui.alert_banner import render_alert_banner
+            _critical = [a for a in _cached_alerts if a.severity == "critical"]
+            if _critical and _al_regimes is not None:
                 render_alert_banner(_critical, market_context=(
                     f"Geo risk {risk['score']:.0f}/100 ({risk['label']}). "
                     f"CIS {risk['cis']:.0f} · TPS {risk['tps']:.0f}. "
@@ -2121,82 +2685,78 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                     f"{' [INSUF DATA]' if _al_regime_insuf else ''}. "
                     f"Lead conflict: {(conflict_agg.get('top_conflict') or 'none').replace('_',' ')}."
                 ))
-
-            # ── Transmission Lag Signal (GAP 12) ───────────────────────────
-            try:
-                _lag = transmission_lag_signal(_al_cmd_r, _al_eq_r)
-                if _lag["active"]:
-                    _lag_color = "#e8a838" if _lag["lag_signal"] == "In progress" else "#e74c3c"
-                    _lag_icon  = "⏳" if _lag["lag_signal"] == "In progress" else "⚡"
-                    st.markdown(
-                        f"""<div style="background:#0d0a04;border-left:3px solid {_lag_color};
-                        border-radius:4px;padding:10px 14px;margin:8px 0;">
-                        <span style="color:{_lag_color};font-family:'JetBrains Mono',monospace;
-                        font-size:11px;font-weight:700;letter-spacing:.08em;">
-                        {_lag_icon} TRANSMISSION LAG DETECTED - {_lag["lag_signal"].upper()}</span><br>
-                        <span style="color:#b0b0b0;font-family:'JetBrains Mono',monospace;font-size:11px;">
-                        {_lag["detail"]}</span><br>
-                        <span style="color:#777;font-family:'JetBrains Mono',monospace;font-size:10px;">
-                        Commodity z={_lag["commodity_z"]:+.2f} &nbsp;|&nbsp;
-                        Equity z (same day)={_lag["equity_z"]:+.2f} &nbsp;|&nbsp;
-                        Equity z (today)={_lag["equity_lag_z"]:+.2f} &nbsp;|&nbsp;
-                        Peak {_lag["peak_day_ago"]}d ago</span></div>""",
-                        unsafe_allow_html=True,
-                    )
-            except Exception:
-                pass
-
-            # Morning Briefing Chain - runs synthetically (no API key needed for the
-            # deliberation messages; API key only needed for the AI enrichment text).
-            from src.ui.agent_panel import render_morning_briefing_panel
-            _top_texts   = [getattr(a, "title", "") for a in _alerts[:3] if getattr(a, "title", "")]
-            _top_conflict = conflict_agg.get("top_conflict")
-            _risk_val     = float(risk["score"])
-            _expanded     = _risk_val >= 50
-            _panel_label  = (
-                f"⚡ AI Analyst Team - Morning Briefing (Risk {_risk_val:.0f}/100)"
-                if _expanded else
-                f"AI Analyst Team - Morning Briefing (Risk {_risk_val:.0f}/100)"
-            )
-            with st.expander(_panel_label, expanded=_expanded):
-                render_morning_briefing_panel(
-                    risk_score=_risk_val,
-                    top_alerts=_top_texts,
-                    top_conflict=_top_conflict,
-                    auto_run=True,
-                    start=start,
-                    end=end,
+        except Exception:
+            pass
+        # Transmission lag signal (only shown when active)
+        try:
+            _lag = transmission_lag_signal(_al_cmd_r, _al_eq_r)
+            if _lag["active"]:
+                _lc = "#e8a838" if _lag["lag_signal"] == "In progress" else "#e74c3c"
+                _li = "⏳" if _lag["lag_signal"] == "In progress" else "⚡"
+                st.markdown(
+                    f'<div style="background:#0d0c04;border-left:3px solid {_lc};'
+                    f'border:1px solid {_lc}33;padding:8px 14px;margin:6px 0">'
+                    f'<span style="color:{_lc};{_M}font-size:11px;font-weight:700;'
+                    f'letter-spacing:.08em">{_li} TRANSMISSION LAG · {_lag["lag_signal"].upper()}</span><br>'
+                    f'<span style="color:#b0b0b0;{_M}font-size:11px">{_lag["detail"]}</span></div>',
+                    unsafe_allow_html=True,
                 )
+        except Exception:
+            pass
+
+    with _col_right:
+        # Market pulse vertical instrument cards — primary real-time data
+        _render_market_pulse_cards()
+        # Risk decomposition — diagnostic: what's driving the composite score
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_risk_arc(risk)
+        # Where to go now — action routing, comes after diagnosis
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_next_action(conflict_agg, conflict_results, compact=True)
+
+    # ── Full-width below 3-col ────────────────────────────────────────────────
+    st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
+
+    # Scenario switch — full-width, 8 buttons in one row
+    _render_scenario_switch()
+
+    # Context narrative + Intel panel — collapsed by default to save space
+    with st.expander("Context & Intelligence  ·  Narrative · Conflict Monitor · Channels", expanded=False):
+        _col_ctx, _col_intel = st.columns([1.2, 1.0], gap="medium")
+        with _col_ctx:
+            _render_context_narrative(risk, conflict_results)
+        with _col_intel:
+            _render_intel_panel(conflict_results)
+
+    # Morning Briefing Chain — full-width expander
+    try:
+        from src.ui.agent_panel import render_morning_briefing_panel
+        _top_texts    = [getattr(a, "title", "") for a in _cached_alerts[:3] if getattr(a, "title", "")]
+        _top_conflict = conflict_agg.get("top_conflict")
+        _risk_val     = float(risk["score"])
+        _expanded     = _risk_val >= 50
+        _panel_label  = (
+            f"⚡ AI Analyst Team · Morning Briefing (Risk {_risk_val:.0f}/100)"
+            if _expanded else
+            f"AI Analyst Team · Morning Briefing (Risk {_risk_val:.0f}/100)"
+        )
+        with st.expander(_panel_label, expanded=_expanded):
+            render_morning_briefing_panel(
+                risk_score=_risk_val,
+                top_alerts=_top_texts,
+                top_conflict=_top_conflict,
+                auto_run=True,
+                start=start,
+                end=end,
+            )
     except Exception:
         pass
 
-    # ── § 3 + § 3.5  Nexus 2-column split: context (main) | risk briefing (right) ──
-    _col_ctx, _col_brief = st.columns([2.0, 1.0], gap="medium")
-    with _col_ctx:
-        # § 3  Context Narrative
-        _render_context_narrative(risk, conflict_results)
-        # § 4  Intel Panel (inside main column so it stays readable width)
-        _render_intel_panel(conflict_results)
-    with _col_brief:
-        # § 3.5  Risk Officer Briefing (Nexus right panel)
-        _computed_alerts = st.session_state.get("_cached_alerts", [])
-        _render_risk_briefing_panel(risk, conflict_results, alerts=_computed_alerts)
+    # Navigate Terminal — collapsed by default; open when switching pages
+    with st.expander("Navigate Terminal  ·  14 modules", expanded=False):
+        _render_quickjump()
 
-    # § 5  Scenario Switch
-    _render_scenario_switch()
-
-    # § 6  Where To Go Now
-    _render_next_action(conflict_agg, conflict_results)
-
-    # § 7  Navigate Terminal
-    st.markdown('<hr class="hm-rule">', unsafe_allow_html=True)
-    _render_quickjump()
-
-    # § 8  Live Signals
-    st.markdown('<hr class="hm-rule">', unsafe_allow_html=True)
-    _render_live_signals()
-
-    # § 9  AI Agent Activity (optional strip)
+    # AI Agent Activity strip (optional — only shown when agents are active)
     _render_agent_strip()
 
     _page_footer()
