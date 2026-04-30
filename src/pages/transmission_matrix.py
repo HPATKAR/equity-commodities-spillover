@@ -109,7 +109,7 @@ def _render_weighted_heatmap(results: dict) -> None:
         ),
     ))
     fig.update_layout(
-        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        paper_bgcolor="#000", plot_bgcolor="#080808",
         margin=dict(l=10, r=10, t=10, b=60),
         height=max(200, len(conflict_ids) * 42),
         xaxis=dict(
@@ -163,7 +163,7 @@ def _render_channel_dominance(results: dict) -> None:
         hovertemplate="%{y}: %{x:.0%}<extra></extra>",
     ))
     fig.update_layout(
-        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        paper_bgcolor="#000", plot_bgcolor="#080808",
         margin=dict(l=10, r=50, t=10, b=10),
         height=320,
         xaxis=dict(range=[0, 1.25], tickformat=".0%",
@@ -269,7 +269,7 @@ def _render_sankey(results: dict) -> None:
         ),
     ))
     fig.update_layout(
-        paper_bgcolor="#0a0a0a",
+        paper_bgcolor="#000",
         font=dict(family="JetBrains Mono, monospace", size=8, color="#8E9AAA"),
         margin=dict(l=10, r=10, t=10, b=10),
         height=340,

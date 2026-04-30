@@ -275,7 +275,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                             _rows_g += '<div style="background:rgba(136,144,161,0.05);text-align:center;padding:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#555960">—</div>'
                     _rows_g += '</div>'
                 st.markdown(
-                    f'<div style="background:#0d1219;border:1px solid #1e2d40;padding:0.6rem;margin-bottom:0.4rem">'
+                    f'<div style="background:#000000;border:1px solid #1e1e1e;padding:0.6rem;margin-bottom:0.4rem">'
                     f'{_hdr}{_rows_g}'
                     f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;color:#555960;margin-top:6px">'
                     f'Red = Holm-significant (p&lt;0.05). Row causes column.</div>'
@@ -289,7 +289,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         _reg_c   = _REGIME_COLORS.get(current_r, "#8890a1")
         _reg_lbl = _REGIME_NAMES.get(current_r, "—")
         st.markdown(
-            f'<div style="background:#111d2e;border:1px solid #1e2d40;'
+            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
             f'border-left:2px solid {_reg_c};padding:0.55rem 0.75rem;margin-top:0.4rem">'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.52rem;font-weight:700;'
             f'text-transform:uppercase;letter-spacing:0.14em;color:#555960;margin-bottom:3px">'
@@ -489,7 +489,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             )
             fig_tm.update_layout(
                 template="purdue", height=260,
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
+                paper_bgcolor="#000", plot_bgcolor="#080808",
                 font=dict(color="#e8e9ed"),
                 margin=dict(l=90, r=60, t=20, b=80),
                 xaxis=dict(title="To Regime", tickfont=dict(size=10, color="#8890a1"), rangeslider=dict(visible=False)),
@@ -593,7 +593,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 # Nexus-style event table header
                 _th_s = ("font-family:'JetBrains Mono',monospace;font-size:0.54rem;font-weight:700;"
                          "letter-spacing:0.10em;text-transform:uppercase;color:#8890a1;"
-                         "padding:4px 10px;text-align:left;border-bottom:1px solid #1e2d40;background:#0d1219")
+                         "padding:4px 10px;text-align:left;border-bottom:1px solid #1e1e1e;background:#000000")
                 _th_html = (
                     f'<tr><th style="{_th_s}">Source</th>'
                     f'<th style="{_th_s}">Target</th>'
@@ -603,7 +603,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     f'<th style="{_th_s}">Signal</th></tr>'
                 )
                 _td_s = ("font-family:'JetBrains Mono',monospace;font-size:0.58rem;"
-                         "padding:5px 10px;border-bottom:1px solid #162030")
+                         "padding:5px 10px;border-bottom:1px solid #1a1a1a")
                 _rows_ev = ""
                 for _, row in _sig.iterrows():
                     _pv    = float(row["p_value"])
@@ -629,7 +629,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                     f'<span class="nx-panel-title">&#x1F4C5; Significant Spillover Events</span>'
                     f'<span class="nx-badge nx-badge-live">LIVE MONITORING</span>'
                     f'</div>'
-                    f'<div style="background:#0d1219;border:1px solid #1e2d40;overflow-x:auto">'
+                    f'<div style="background:#000000;border:1px solid #1e1e1e;overflow-x:auto">'
                     f'<table style="width:100%;border-collapse:collapse">'
                     f'<thead>{_th_html}</thead>'
                     f'<tbody>{_rows_ev}</tbody>'

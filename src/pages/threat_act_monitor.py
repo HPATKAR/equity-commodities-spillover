@@ -285,7 +285,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
     # ── Row 2: headline counts ─────────────────────────────────────────────
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0 12px;'
-        f'padding:6px 12px;background:#111d2e;border:1px solid #1e2d40">'
+        f'padding:6px 12px;background:#0d0d0d;border:1px solid #1e1e1e">'
         f'<span class="nx-live-dot"></span>'
         f'<span class="nx-badge nx-badge-warning">THREAT &nbsp;{n_threat}</span>'
         f'<span class="nx-badge nx-badge-critical">ACT &nbsp;{n_act}</span>'

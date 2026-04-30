@@ -21,9 +21,9 @@ _BLACK  = "#000000"
 
 # ── Plotly template ────────────────────────────────────────────────────────
 
-_BG       = "#0d1219"    # page background — deep navy terminal
-_BG_WARM  = "#111923"    # chart plot area — slightly lifted navy
-_GRID     = "#162030"    # grid lines — navy-tinted, structural only
+_BG       = "#000000"    # page background — pitch black
+_BG_WARM  = "#080808"    # chart plot area — near-black
+_GRID     = "#1a1a1a"    # grid lines — structural
 _TICK     = "#555960"    # axis tick labels — muted
 _LEGEND   = "#8890a1"    # legend text
 
@@ -753,6 +753,12 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
     """
     import streamlit.components.v1 as _cmp
     _cmp.html('<script>window.parent.scrollTo({top:0,behavior:"instant"});</script>', height=0)
+    # Global pitch-black background — injected once per page via the header
+    st.markdown("""<style>
+[data-testid="stAppViewContainer"],[data-testid="stMain"],.main,
+[data-testid="stSidebar"],.stApp,body{background:#000!important}
+[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid #1a1a1a!important}
+</style>""", unsafe_allow_html=True)
     _Fh = "font-family:'DM Sans',sans-serif;"
     _Mh = "font-family:'JetBrains Mono',monospace;"
     _eye = eyebrow or "Cross-Asset Spillover Monitor \u00b7 Purdue Daniels \u00b7 MGMT 69000-120"

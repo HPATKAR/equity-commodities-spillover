@@ -477,7 +477,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                                         font=dict(size=8)),
                             yaxis=dict(tickfont=dict(size=8)),
                             xaxis=dict(tickfont=dict(size=8)),
-                            paper_bgcolor="#111111", plot_bgcolor="#111111",
+                            paper_bgcolor="#000", plot_bgcolor="#080808",
                         )
                         _chart(_fig_iv)
                 st.markdown(
@@ -917,7 +917,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             fig_heat.update_layout(
                 template="purdue",
                 height=420,
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
+                paper_bgcolor="#000", plot_bgcolor="#080808",
                 font=dict(color="#e8e9ed"),
                 xaxis=dict(tickangle=-40, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                 yaxis=dict(tickfont=dict(size=8, color="#8890a1")),

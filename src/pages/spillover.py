@@ -183,7 +183,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 ))
                 fig_gc.update_layout(
                     template="purdue", height=320,
-                    paper_bgcolor="#111111", plot_bgcolor="#111111",
+                    paper_bgcolor="#000", plot_bgcolor="#080808",
                     font=dict(color="#e8e9ed"),
                     xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                     yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
@@ -285,7 +285,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             ))
             fig_te.update_layout(
                 template="purdue", height=320,
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
+                paper_bgcolor="#000", plot_bgcolor="#080808",
                 font=dict(color="#e8e9ed"),
                 xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"), rangeslider=dict(visible=False)),
                 yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
@@ -429,7 +429,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 ))
                 fig_dy.update_layout(
                     template="purdue", height=340,
-                    paper_bgcolor="#111111", plot_bgcolor="#111111",
+                    paper_bgcolor="#000", plot_bgcolor="#080808",
                     font=dict(color="#e8e9ed"),
                     xaxis=dict(tickangle=-35, tickfont=dict(size=8, color="#8890a1"),
                                rangeslider=dict(visible=False)),
@@ -702,7 +702,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     ))
                     _hub_fig.update_layout(
                         template="purdue", height=280,
-                        paper_bgcolor="#111111", plot_bgcolor="#111111",
+                        paper_bgcolor="#000", plot_bgcolor="#080808",
                         font=dict(color="#e8e9ed"),
                         xaxis=dict(title="# significant Granger links",
                                    tickfont=dict(size=8, color="#8890a1")),
@@ -1006,7 +1006,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                                       annotation_text="Flat", annotation_font_size=8)
                     _fc_fig.update_layout(
                         template="purdue", height=200,
-                        paper_bgcolor="#111111", plot_bgcolor="#111111",
+                        paper_bgcolor="#000", plot_bgcolor="#080808",
                         font=dict(color="#e8e9ed"),
                         xaxis=dict(tickfont=dict(size=8, color="#8890a1")),
                         yaxis=dict(title="Basis %", tickfont=dict(size=8, color="#8890a1"),

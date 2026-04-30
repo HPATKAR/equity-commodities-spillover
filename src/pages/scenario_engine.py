@@ -457,8 +457,8 @@ def _waterfall_chart(impact: dict[str, float], height: int = 420) -> go.Figure:
     fig.update_layout(
         template="plotly_dark",
         height=height,
-        paper_bgcolor="#111111",
-        plot_bgcolor="#111111",
+        paper_bgcolor="#000",
+        plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=11),
         xaxis=dict(
             title="Estimated Return Impact (%)",
@@ -505,8 +505,8 @@ def _tail_risk_chart(
     fig.update_layout(
         template="plotly_dark",
         height=height,
-        paper_bgcolor="#111111",
-        plot_bgcolor="#111111",
+        paper_bgcolor="#000",
+        plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=11),
         xaxis=dict(tickangle=-35, showgrid=False),
         yaxis=dict(title="Loss (% of position)", showgrid=True, gridcolor="#1e1e1e"),
@@ -636,8 +636,8 @@ def _scenario_comparison_chart(
     fig.update_layout(
         template="plotly_dark",
         height=height,
-        paper_bgcolor="#111111",
-        plot_bgcolor="#111111",
+        paper_bgcolor="#000",
+        plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=11),
         xaxis=dict(tickangle=-35, showgrid=False),
         yaxis=dict(title="Estimated Return Impact (%)", showgrid=True, gridcolor="#1e1e1e",
@@ -1327,7 +1327,7 @@ def page_scenario_engine(
                 ))
                 _sec_fig.update_layout(
                     template="purdue", height=350,
-                    paper_bgcolor="#111111", plot_bgcolor="#111111",
+                    paper_bgcolor="#000", plot_bgcolor="#080808",
                     font=dict(color="#e8e9ed"),
                     xaxis=dict(title="Estimated 1-day return %",
                                zeroline=True, zerolinecolor="#555",

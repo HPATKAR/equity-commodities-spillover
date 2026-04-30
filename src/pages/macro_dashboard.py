@@ -1287,7 +1287,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                                    annotation_font=dict(size=8, color="#CFB991"),
                                    annotation_position="top right")
             _fig_hy.update_layout(
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
+                paper_bgcolor="#000", plot_bgcolor="#080808",
                 template="purdue", height=300,
                 title=dict(text="HY OAS - ICE BofA US High Yield (FRED)", font=dict(size=10, color="#e8e9ed")),
                 yaxis=dict(title="Spread (bps)", tickfont=dict(color="#8890a1"), gridcolor="#1e1e1e"),
@@ -1330,7 +1330,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                         ))
             _fig_pc.add_hline(y=100, line=dict(color="#2a2a2a", width=1))
             _fig_pc.update_layout(
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
+                paper_bgcolor="#000", plot_bgcolor="#080808",
                 template="purdue", height=300,
                 title=dict(text="BKLN & BDC Basket vs S&P 500 (normalised, 1Y)", font=dict(size=10, color="#e8e9ed")),
                 yaxis=dict(title="Indexed (base=100)", tickfont=dict(color="#8890a1"), gridcolor="#1e1e1e"),

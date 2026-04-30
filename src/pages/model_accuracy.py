@@ -1203,7 +1203,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             ))
             fig_cm.update_layout(
                 template="purdue", height=240,
-                paper_bgcolor="#111111", plot_bgcolor="#111111",
+                paper_bgcolor="#000", plot_bgcolor="#080808",
                 font=dict(color="#e8e9ed"),
                 title=dict(text=f"Confusion Matrix (VIX>{vix_threshold})", font=dict(size=10, color="#CFB991")),
                 margin=dict(l=110, r=10, t=40, b=70),
@@ -1347,7 +1347,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         ))
                         fig_ml_cm.update_layout(
                             template="purdue", height=260,
-                            paper_bgcolor="#111111", plot_bgcolor="#111111",
+                            paper_bgcolor="#000", plot_bgcolor="#080808",
                             font=dict(color="#e8e9ed"),
                             title=dict(text="ML Confusion Matrix", font=dict(size=10, color="#CFB991")),
                             margin=dict(l=110, r=10, t=40, b=70),

@@ -995,7 +995,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 font=dict(size=8, family="JetBrains Mono"),
                 bgcolor="rgba(0,0,0,0)",
             ),
-            paper_bgcolor="#111111",
+            paper_bgcolor="#000",
         )
         _chart(_style_fig(fig, height=height))
         _insight_note(s["ships_context"])

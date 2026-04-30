@@ -815,7 +815,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     fig_hm.update_layout(
         template="purdue",
         height=max(300, len(results) * 30 + 80),
-        paper_bgcolor="#111111", plot_bgcolor="#111111",
+        paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(color="#e8e9ed"),
         xaxis=dict(side="top", tickfont=dict(size=10, color="#8890a1"), rangeslider=dict(visible=False)),
         yaxis=dict(

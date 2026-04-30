@@ -178,7 +178,7 @@ def _render_intensity_breakdown(selected_id: str, selected: dict) -> None:
         hovertemplate="%{y}: %{x:.2f}<extra></extra>",
     ))
     fig.update_layout(
-        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        paper_bgcolor="#000", plot_bgcolor="#080808",
         margin=dict(l=10, r=40, t=10, b=10),
         height=220,
         xaxis=dict(range=[0, 1.15], tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
@@ -233,7 +233,7 @@ def _render_tps_channels(selected_id: str) -> None:
         hovertemplate="%{y}: %{x:.0%}<extra></extra>",
     ))
     fig.update_layout(
-        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        paper_bgcolor="#000", plot_bgcolor="#080808",
         margin=dict(l=10, r=50, t=10, b=10),
         height=220,
         xaxis=dict(range=[0, 1.20], tickformat=".0%",
@@ -430,7 +430,7 @@ def _render_transmission_heatmap(results: dict) -> None:
         ),
     ))
     fig.update_layout(
-        paper_bgcolor="#0a0a0a", plot_bgcolor="#0a0a0a",
+        paper_bgcolor="#000", plot_bgcolor="#080808",
         margin=dict(l=10, r=10, t=10, b=50),
         height=max(180, len(conflict_ids) * 38),
         xaxis=dict(

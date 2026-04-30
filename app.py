@@ -40,9 +40,9 @@ st.markdown("""
     --ink-soft:   #c8c8c8;
     --ink-muted:  #b8b8b8;
     --ink-faint:  #8890a1;
-    --bg:         #0d1219;
-    --bg-warm:    #111d2e;
-    --rule:       #1e2d40;
+    --bg:         #000000;
+    --bg-warm:    #0d0d0d;
+    --rule:       #1e1e1e;
     --red:        #c0392b;
     --green:      #2e7d32;
 }
@@ -95,7 +95,7 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
 
 /* ── Metric cards ── */
 [data-testid="metric-container"] {
-    background: #111d2e !important; border: 1px solid #1e2d40 !important;
+    background: #0d0d0d !important; border: 1px solid #1e1e1e !important;
     border-radius: 4px; padding: 0.6rem 0.8rem; transition: box-shadow 0.2s;
 }
 [data-testid="metric-container"]:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.4); border-color: var(--gold) !important; }
@@ -109,7 +109,7 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
 
 /* ── Tabs ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    border-bottom: 1px solid #1e2d40 !important; gap: 0; background: #0d1219 !important;
+    border-bottom: 1px solid #1e1e1e !important; gap: 0; background: #000000 !important;
 }
 [data-testid="stTabs"] button[role="tab"] {
     font-size: 0.7rem !important; font-weight: 500 !important;
@@ -123,7 +123,7 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
 
 /* ── Buttons ── */
 .stButton > button {
-    background: #111d2e !important; color: var(--gold) !important;
+    background: #0d0d0d !important; color: var(--gold) !important;
     border: 1px solid #CFB991 !important; border-radius: 3px !important;
     font-size: 0.68rem !important; font-weight: 600 !important;
     letter-spacing: 0.06em !important; text-transform: uppercase !important;
@@ -138,16 +138,16 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
     letter-spacing: 0.08em !important; text-transform: uppercase !important; color: #8890a1 !important;
 }
 [data-baseweb="select"] > div, [data-baseweb="input"] > div {
-    background: #111d2e !important; border-color: #1e2d40 !important; color: #e8e9ed !important;
+    background: #0d0d0d !important; border-color: #1e1e1e !important; color: #e8e9ed !important;
 }
 [data-baseweb="select"] input, [data-baseweb="input"] input { color: #e8e9ed !important; }
-[data-baseweb="popover"] > div { background: #111d2e !important; }
-[role="option"] { background: #111d2e !important; color: #e8e9ed !important; }
-[role="option"]:hover { background: #1a2d44 !important; }
-[data-baseweb="tag"] { background: #1a2d44 !important; color: #CFB991 !important; }
-[data-testid="stExpander"] { border-color: #1e2d40 !important; background: #111d2e !important; }
+[data-baseweb="popover"] > div { background: #0d0d0d !important; }
+[role="option"] { background: #0d0d0d !important; color: #e8e9ed !important; }
+[role="option"]:hover { background: #151515 !important; }
+[data-baseweb="tag"] { background: #151515 !important; color: #CFB991 !important; }
+[data-testid="stExpander"] { border-color: #1e1e1e !important; background: #0d0d0d !important; }
 [data-testid="stExpander"] summary { color: #CFB991 !important; }
-[data-testid="stExpander"] > div { background: #111d2e !important; }
+[data-testid="stExpander"] > div { background: #0d0d0d !important; }
 [data-testid="stMarkdownContainer"] * { color: #e8e9ed; }
 [data-testid="stMarkdownContainer"] h1,
 [data-testid="stMarkdownContainer"] h2,
@@ -434,8 +434,8 @@ button[data-testid="baseButton-primary"] {
 
 /* ── Nexus card panel ── */
 .nx-panel {
-    background: #111d2e;
-    border: 1px solid #1e2d40;
+    background: #0d0d0d;
+    border: 1px solid #1e1e1e;
     padding: 1rem 1.1rem;
     margin-bottom: 1rem;
 }
@@ -443,7 +443,7 @@ button[data-testid="baseButton-primary"] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #1e2d40;
+    border-bottom: 1px solid #1e1e1e;
     padding-bottom: 0.55rem;
     margin-bottom: 0.75rem;
 }
@@ -467,7 +467,7 @@ button[data-testid="baseButton-primary"] {
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.55rem 0;
-    border-bottom: 1px solid #1a2538;
+    border-bottom: 1px solid #111111;
 }
 .nx-intel-row:last-child { border-bottom: none; }
 .nx-intel-ts {
@@ -499,8 +499,8 @@ button[data-testid="baseButton-primary"] {
 
 /* ── Nexus KPI ticker tile ── */
 .nx-kpi-tile {
-    background: #111d2e;
-    border: 1px solid #1e2d40;
+    background: #0d0d0d;
+    border: 1px solid #1e1e1e;
     padding: 0.65rem 0.85rem;
     position: relative;
 }
@@ -529,7 +529,7 @@ button[data-testid="baseButton-primary"] {
     align-items: center;
     justify-content: space-between;
     padding: 0.45rem 0;
-    border-bottom: 1px solid #1a2538;
+    border-bottom: 1px solid #111111;
 }
 .nx-route-row:last-child { border-bottom: none; }
 .nx-route-name {
@@ -540,9 +540,9 @@ button[data-testid="baseButton-primary"] {
 
 /* ── Scenario library card ── */
 .nx-scenario-card {
-    background: #0d1219;
-    border: 1px solid #1e2d40;
-    border-left: 2px solid #1e2d40;
+    background: #000000;
+    border: 1px solid #1e1e1e;
+    border-left: 2px solid #1e1e1e;
     padding: 0.6rem 0.75rem;
     margin-bottom: 0.5rem;
     cursor: pointer;
@@ -566,9 +566,9 @@ button[data-testid="baseButton-primary"] {
 
 /* ── Right-side sidebar feed panel ── */
 .nx-feed-panel {
-    background: #111d2e;
-    border: 1px solid #1e2d40;
-    border-left: 2px solid #1e2d40;
+    background: #0d0d0d;
+    border: 1px solid #1e1e1e;
+    border-left: 2px solid #1e1e1e;
     height: 100%;
 }
 .nx-feed-panel-header {
@@ -576,11 +576,11 @@ button[data-testid="baseButton-primary"] {
     align-items: center;
     justify-content: space-between;
     padding: 0.6rem 0.85rem;
-    border-bottom: 1px solid #1e2d40;
+    border-bottom: 1px solid #1e1e1e;
 }
 .nx-feed-item {
     padding: 0.55rem 0.85rem;
-    border-bottom: 1px solid #1a2538;
+    border-bottom: 1px solid #111111;
     border-left: 2px solid transparent;
 }
 .nx-feed-item:last-child { border-bottom: none; }
@@ -1366,7 +1366,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     'xaxis.title.font.color':       '#8890a1',
     'xaxis.rangeselector.bgcolor':  '#1e1e1e',
     'xaxis.rangeselector.font.color':'#c8c8c8',
-    'xaxis.rangeselector.activecolor':'#2a3050',
+    'xaxis.rangeselector.activecolor':'#1a1a1a',
     'yaxis.gridcolor':              '#2a2a2a',
     'yaxis.zerolinecolor':          '#2a2a2a',
     'yaxis.linecolor':              '#2a2a2a',
