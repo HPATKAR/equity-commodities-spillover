@@ -4238,34 +4238,34 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _col_left, _col_ctr, _col_right = st.columns([1.0, 2.2, 1.0], gap="medium")
 
     with _col_left:
-        # Intelligence feed only — scenario switch moved full-width below 3-col
-        # to prevent left col from being taller than right col (gap issue)
+        # § L1  Intelligence feed — live alerts + morning briefing + chokepoint watch
         _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
-        # Correlation pulse — 60-day equity↔commodity sparkline + regime badge
+        # § L2  Threat radar — visually striking showpiece directly under intel feed
+        #        polar scatter: CIS radius × TPS angle, animated pulse on top conflict
+        try:
+            _render_threat_radar(conflict_results, risk)
+        except Exception:
+            pass
+        # § L3  Correlation pulse — 60-day equity↔commodity sparkline + regime badge
         _render_correlation_pulse(_al_corr, _al_regimes)
-        # Conflict landscape — CIS×TPS scatter of all tracked conflicts
+        # § L4  Conflict landscape — CIS×TPS 2-D scatter of all tracked conflicts
         _render_conflict_landscape(conflict_results)
-        # Escalation tracker — trend/escalation status per active conflict
+        # § L5  Escalation tracker — trend/escalation velocity per active conflict
         _render_escalation_tracker(conflict_results)
-        # Top commodities — exposure-weighted commodity risk ranking
+        # § L6  Top commodities — exposure-weighted commodity risk ranking
         _render_top_commodities(conflict_results)
-        # Regime history — 60-day day-by-day correlation regime strip
+        # § L7  Regime history — 60-day day-by-day correlation regime colour strip
         _render_regime_history(_al_regimes)
-        # Alert summary — severity breakdown of active proactive alerts
+        # § L8  Alert summary — severity breakdown of active proactive alerts
         _render_alert_summary(_cached_alerts)
-        # Commodity sector returns — Energy / Metals / Agri 5-day performance
+        # § L9  Commodity sector returns — Energy / Metals / Agri 5-day performance
         try:
             _render_commodity_sector_returns(_al_cmd_r)
         except Exception:
             pass
-        # Lead-lag bars — does commodity lead or lag equity at each lag 0-5d?
+        # § L10 Lead-lag bars — CMD→EQ cross-correlation at lags 0–5d
         try:
             _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
-        except Exception:
-            pass
-        # Threat radar — polar scatter of active conflicts (CIS radius × TPS angle)
-        try:
-            _render_threat_radar(conflict_results, risk)
         except Exception:
             pass
 
@@ -4308,15 +4308,22 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             pass
 
     with _col_right:
-        # Market pulse vertical instrument cards — primary real-time data
+        # § R1  Market pulse cards — 6 live instrument cards with sparklines
         _render_market_pulse_cards()
-        # Risk decomposition — diagnostic: what's driving the composite score
+        # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_risk_arc(risk)
-        # Where to go now — action routing, comes after diagnosis
+        # § R3  Risk convergence — showpiece directly under risk arc:
+        #        60d overlapping area chart of GRS / coupling / VIX stress signals
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_risk_convergence(_score_hist, _al_corr)
+        except Exception:
+            pass
+        # § R4  Next action — routing recommendation based on dominant risk driver
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_next_action(conflict_agg, conflict_results, compact=True)
-        # Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
+        # § R5  Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _corr_cur = (
             float(_al_corr.dropna().iloc[-1])
@@ -4324,30 +4331,24 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             else None
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
-        # 5-day returns heatmap — asset performance grid
+        # § R6  Returns heatmap — 5-day day-over-day asset return grid
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_returns_heatmap()
-        # Transmission channels — how conflicts flow into commodity markets
+        # § R7  Transmission channels — CIS-weighted channel pressure breakdown
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_transmission_channels(conflict_results, risk)
-        # GRS 60-day trend sparkline — is composite risk rising or falling?
+        # § R8  GRS trend — 60-day composite risk score sparkline with zone bands
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_grs_trend(_score_hist if isinstance(_score_hist, __import__("pandas").Series) else None)
-        # Macro snapshot — VIX / 10Y / DXY / WTI regime grid
+        # § R9  Macro snapshot — VIX / 10Y / DXY / WTI 2×2 regime grid
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_macro_snapshot()
-        # Yield curve snapshot — 3M / 5Y / 10Y / 30Y shape (normal / inverted / flat)
+        # § R10 Yield curve — 3M / 5Y / 10Y / 30Y shape (normal / inverted / flat)
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_yield_curve_snap()
-        # Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
+        # § R11 Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_vol_trio()
-        # Risk convergence — GRS / Coupling / VIX as overlapping area chart (60d)
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
-        try:
-            _render_risk_convergence(_score_hist, _al_corr)
-        except Exception:
-            pass
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
