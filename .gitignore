@@ -26,3 +26,9 @@ env/
 
 # Runtime logs — session LLM trace data, not source
 logs/
+
+# Submission / course documents — PDFs, Word docs, generator scripts
+*.pdf
+*.docx
+generate_*.py
+docs/CAPSTONE_FINAL.md

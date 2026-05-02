@@ -4081,6 +4081,139 @@ def _render_risk_convergence(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# §C0  Top Cross-Asset Correlation Pairs — full-width ranked bar panel
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Ranked horizontal bars for top 10 equity × commodity correlation pairs (60d)."""
+    _HDR = (
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
+        'TOP CROSS-ASSET CORRELATION PAIRS · 60D</div>'
+    )
+    try:
+        import pandas as _pd, itertools as _it
+
+        _EQ  = {"^GSPC":"SPX","^IXIC":"NDX","^DJI":"DOW","^RUT":"RUT",
+                "EEM":"EEM","GLD":"GLD","^VIX":"VIX"}
+        _CMD = {"CL=F":"WTI","GC=F":"Gold","SI=F":"Silv","NG=F":"NatG",
+                "ZW=F":"Wht","ZC=F":"Corn","BZ=F":"Brent","HG=F":"Cu"}
+
+        eq_cols  = list((eq_r.columns  if eq_r  is not None and not eq_r.empty  else []))[:5]
+        cmd_cols = list((cmd_r.columns if cmd_r is not None and not cmd_r.empty else []))[:5]
+
+        if not eq_cols or not cmd_cols:
+            raise ValueError("no data")
+
+        combined = _pd.concat(
+            [eq_r[eq_cols].rename(columns=_EQ),
+             cmd_r[cmd_cols].rename(columns=_CMD)],
+            axis=1,
+        ).dropna()
+        if len(combined) > 60:
+            combined = combined.iloc[-60:]
+
+        eq_lbs  = [_EQ.get(c, c[:4])  for c in eq_cols]
+        cmd_lbs = [_CMD.get(c, c[:4]) for c in cmd_cols]
+
+        pairs: list[tuple[float, str, str]] = []
+        for e, k in zip(eq_cols, eq_lbs):
+            for c2, k2 in zip(cmd_cols, cmd_lbs):
+                ec = _EQ.get(e, e[:4])
+                cc = _CMD.get(c2, c2[:4])
+                if ec in combined.columns and cc in combined.columns:
+                    v = float(combined[ec].corr(combined[cc]))
+                    if not (v != v):  # skip NaN
+                        pairs.append((v, ec, cc))
+
+        if not pairs:
+            raise ValueError("no pairs")
+
+        pairs.sort(key=lambda x: -abs(x[0]))
+        top = pairs[:10]
+
+        BAR_H   = 12
+        GAP     = 5
+        LABEL_W = 68
+        BAR_MAX = 220
+        VAL_W   = 34
+        PAD_X   = 8
+        PAD_Y   = 6
+        W  = PAD_X * 2 + LABEL_W + BAR_MAX + VAL_W
+        H  = PAD_Y * 2 + len(top) * (BAR_H + GAP) - GAP
+
+        # center tick
+        cx = PAD_X + LABEL_W + BAR_MAX // 2
+
+        grid = (
+            f'<line x1="{cx}" y1="0" x2="{cx}" y2="{H}" '
+            f'stroke="#2a2a3a" stroke-width="0.8"/>'
+        )
+        for pct in (25, 75):
+            gx = PAD_X + LABEL_W + BAR_MAX * pct // 100
+            grid += (
+                f'<line x1="{gx}" y1="0" x2="{gx}" y2="{H}" '
+                f'stroke="#1e1e2e" stroke-width="0.5"/>'
+            )
+
+        bars = grid
+        for i, (v, eq_l, cmd_l) in enumerate(top):
+            y   = PAD_Y + i * (BAR_H + GAP)
+            lbl = f"{eq_l}×{cmd_l}"
+            half = BAR_MAX // 2
+
+            if v >= 0:
+                bx = cx
+                bw = min(v * half, half)
+                col = "#c0392b" if v >= 0.7 else "#e67e22" if v >= 0.4 else "#e8a838"
+            else:
+                bw  = min(abs(v) * half, half)
+                bx  = cx - bw
+                col = "#2980b9" if v <= -0.4 else "#5dade2"
+
+            bars += (
+                # track
+                f'<rect x="{PAD_X + LABEL_W}" y="{y}" width="{BAR_MAX}" height="{BAR_H}" '
+                f'fill="#111120" rx="2"/>'
+                # bar
+                f'<rect x="{bx:.1f}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
+                f'fill="{col}" opacity="0.85" rx="2"/>'
+                # label
+                f'<text x="{PAD_X + LABEL_W - 4}" y="{y + BAR_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="7.5" '
+                f'fill="#9a9ab0" text-anchor="end">{lbl}</text>'
+                # value
+                f'<text x="{PAD_X + LABEL_W + BAR_MAX + 4}" y="{y + BAR_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="7.5" '
+                f'fill="{col}">{v:+.2f}</text>'
+            )
+
+        # axis labels
+        axis = (
+            f'<text x="{PAD_X + LABEL_W}" y="{H}" '
+            f'font-family="JetBrains Mono,monospace" font-size="7" fill="#444">-1.0</text>'
+            f'<text x="{cx}" y="{H}" text-anchor="middle" '
+            f'font-family="JetBrains Mono,monospace" font-size="7" fill="#444">0</text>'
+            f'<text x="{PAD_X + LABEL_W + BAR_MAX}" y="{H}" text-anchor="end" '
+            f'font-family="JetBrains Mono,monospace" font-size="7" fill="#444">+1.0</text>'
+        )
+
+        svg = (
+            f'<svg width="100%" viewBox="0 0 {W} {H + 10}" xmlns="http://www.w3.org/2000/svg">'
+            f'{bars}{axis}</svg>'
+        )
+        st.markdown(
+            _HDR +
+            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
+            'padding:.5rem .6rem .4rem;border-radius:2px">'
+            + svg + "</div>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # §C1  Asset Correlation Heatmap — center-column mini heatmap
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -4740,6 +4873,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                     f'<span style="color:#b0b0b0;{_M}font-size:11px">{_lag["detail"]}</span></div>',
                     unsafe_allow_html=True,
                 )
+        except Exception:
+            pass
+        # § C0  Top cross-asset correlation pairs — full-width ranked bar chart
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_top_corr_pairs(_al_eq_r, _al_cmd_r)
         except Exception:
             pass
         # § C1–C4  2-column sub-grid: each panel ~half the center width (~340px)
