@@ -4273,13 +4273,13 @@ def _render_risk_signal_waterfall(
         signals.append(("ACTIVE CONFLICTS", conf_pct, conf_col, f"{n_conflicts} tracked"))
 
         # Render SVG waterfall
-        BAR_H  = 14
-        GAP    = 8
-        LABEL_W = 145
-        BAR_W   = 160
-        PAD_Y   = 8
+        BAR_H  = 12
+        GAP    = 6
+        LABEL_W = 120
+        BAR_W   = 120
+        PAD_Y   = 6
         H = PAD_Y * 2 + len(signals) * (BAR_H + GAP) - GAP
-        W = LABEL_W + BAR_W + 50
+        W = LABEL_W + BAR_W + 45
 
         bars = ""
         for i, (lbl, pct, col, note) in enumerate(signals):
@@ -4457,52 +4457,40 @@ def _render_geo_event_timeline(conflict_results) -> None:
         if not active:
             raise ValueError("no data")
 
-        W, H = 460, len(active) * 26 + 24
-        BAR_MAX = 300
-        LABEL_W = 120
-        SCORE_W = 32
+        W, H = 310, len(active) * 22 + 20
+        BAR_MAX = 170
+        LABEL_W = 90
+        SCORE_W = 28
 
         bars = (
-            # axis title
-            f'<text x="{LABEL_W}" y="14" font-family="JetBrains Mono,monospace" '
-            f'font-size="7.5" fill="#555">CIS</text>'
-            f'<text x="{LABEL_W + BAR_MAX//2}" y="14" font-family="JetBrains Mono,monospace" '
-            f'font-size="7.5" fill="#555" text-anchor="middle">← CONFLICT INTENSITY SCORE →</text>'
+            f'<text x="{LABEL_W + BAR_MAX//2}" y="12" font-family="JetBrains Mono,monospace" '
+            f'font-size="7" fill="#555" text-anchor="middle">CIS ← → TPS</text>'
         )
+        ROW_H = 22
         for i, c in enumerate(active):
-            y    = 20 + i * 26
+            y    = 16 + i * ROW_H
             cis  = float(c.get("cis", 0))
             tps  = float(c.get("tps", 0))
-            name = c.get("name", "").replace("_", " ")[:14]
-            short = name + "…" if len(c.get("name", "")) > 14 else name
+            name = c.get("name", "").replace("_", " ")
+            short = name[:11] + "…" if len(name) > 11 else name
             bw   = cis / 100 * BAR_MAX
 
-            # gradient via two rects
             col1 = "#c0392b" if cis >= 70 else "#e67e22" if cis >= 45 else "#e8a838"
-            col2 = "#7b241c" if cis >= 70 else "#935116" if cis >= 45 else "#9a7d0a"
-
-            # TPS overlay dot
             tps_x = LABEL_W + tps / 100 * BAR_MAX
-
             bg = "#0e1420" if i % 2 == 0 else "#0a1018"
             bars += (
-                f'<rect x="0" y="{y}" width="{W}" height="24" fill="{bg}"/>'
-                # label
-                f'<text x="{LABEL_W - 6}" y="{y + 15}" '
-                f'font-family="JetBrains Mono,monospace" font-size="8.5" '
+                f'<rect x="0" y="{y}" width="{W}" height="{ROW_H}" fill="{bg}"/>'
+                f'<text x="{LABEL_W - 4}" y="{y + 13}" '
+                f'font-family="JetBrains Mono,monospace" font-size="7.5" '
                 f'fill="#c0c0d0" text-anchor="end">{short}</text>'
-                # track
-                f'<rect x="{LABEL_W}" y="{y + 6}" width="{BAR_MAX}" height="12" '
+                f'<rect x="{LABEL_W}" y="{y + 5}" width="{BAR_MAX}" height="10" '
                 f'fill="#1a1a2a" rx="2"/>'
-                # bar fill
-                f'<rect x="{LABEL_W}" y="{y + 6}" width="{bw:.1f}" height="12" '
+                f'<rect x="{LABEL_W}" y="{y + 5}" width="{bw:.1f}" height="10" '
                 f'fill="{col1}" opacity="0.8" rx="2"/>'
-                # TPS overlay
-                f'<line x1="{tps_x:.1f}" y1="{y + 4}" x2="{tps_x:.1f}" y2="{y + 20}" '
+                f'<line x1="{tps_x:.1f}" y1="{y + 3}" x2="{tps_x:.1f}" y2="{y + 17}" '
                 f'stroke="#CFB991" stroke-width="1.5" opacity="0.9"/>'
-                # CIS value
-                f'<text x="{LABEL_W + BAR_MAX + 5}" y="{y + 15}" '
-                f'font-family="JetBrains Mono,monospace" font-size="8.5" '
+                f'<text x="{LABEL_W + BAR_MAX + 4}" y="{y + 13}" '
+                f'font-family="JetBrains Mono,monospace" font-size="7.5" '
                 f'fill="{col1}">{cis:.0f}</text>'
             )
 
@@ -4754,30 +4742,33 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 )
         except Exception:
             pass
-        # § C1  Asset Correlation Heatmap — 60d rolling matrix of top equity+commodity pairs
+        # § C1–C4  2-column sub-grid: each panel ~half the center width (~340px)
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
-        try:
-            _render_corr_heatmap(_al_eq_r, _al_cmd_r)
-        except Exception:
-            pass
-        # § C2  Cross-Model Signal Waterfall — all analytical layers in one bar stack
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
-        try:
-            _render_risk_signal_waterfall(risk, conflict_results, _al_regimes, _cached_alerts)
-        except Exception:
-            pass
-        # § C3  Conflict × Commodity Impact Matrix — exposure-weighted intensity grid
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
-        try:
-            _render_conflict_commodity_matrix(conflict_results)
-        except Exception:
-            pass
-        # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per active conflict
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
-        try:
-            _render_geo_event_timeline(conflict_results)
-        except Exception:
-            pass
+        _cc_l, _cc_r = st.columns(2, gap="small")
+        with _cc_l:
+            # § C1  Asset Correlation Heatmap
+            try:
+                _render_corr_heatmap(_al_eq_r, _al_cmd_r)
+            except Exception:
+                pass
+            st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+            # § C3  Conflict × Commodity Impact Matrix
+            try:
+                _render_conflict_commodity_matrix(conflict_results)
+            except Exception:
+                pass
+        with _cc_r:
+            # § C2  Cross-Model Signal Waterfall
+            try:
+                _render_risk_signal_waterfall(risk, conflict_results, _al_regimes, _cached_alerts)
+            except Exception:
+                pass
+            st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+            # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per conflict
+            try:
+                _render_geo_event_timeline(conflict_results)
+            except Exception:
+                pass
 
     with _col_right:
         # § R1  Market pulse cards — 6 live instrument cards with sparklines
