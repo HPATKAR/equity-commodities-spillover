@@ -4081,6 +4081,454 @@ def _render_risk_convergence(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# §C1  Asset Correlation Heatmap — center-column mini heatmap
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """60-day rolling correlation heatmap for top equity + commodity pairs."""
+    _HDR = (
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
+        'ASSET CORRELATION MATRIX · 60D</div>'
+    )
+    try:
+        import numpy as _np
+        import pandas as _pd
+
+        _EQ_LABELS  = {"^GSPC": "SPX", "^IXIC": "NDX", "^DJI": "DOW",
+                       "^RUT": "RUT", "EEM": "EEM", "GLD": "GLD"}
+        _CMD_LABELS = {"CL=F": "WTI", "GC=F": "Gold", "SI=F": "Silver",
+                       "NG=F": "NatGas", "ZW=F": "Wheat", "ZC=F": "Corn"}
+
+        frames: list["pd.DataFrame"] = []
+        labels: list[str] = []
+
+        if eq_r is not None and not eq_r.empty:
+            for col in eq_r.columns[:4]:
+                lbl = _EQ_LABELS.get(col, col[:5])
+                frames.append(eq_r[col].rename(lbl))
+                labels.append(lbl)
+
+        if cmd_r is not None and not cmd_r.empty:
+            for col in cmd_r.columns[:4]:
+                lbl = _CMD_LABELS.get(col, col[:5])
+                frames.append(cmd_r[col].rename(lbl))
+                labels.append(lbl)
+
+        if len(frames) < 2:
+            raise ValueError("insufficient data")
+
+        combined = _pd.concat(frames, axis=1).dropna()
+        if len(combined) > 60:
+            combined = combined.iloc[-60:]
+        corr = combined.corr()
+        n    = len(corr)
+
+        CELL = 28
+        PAD  = 52
+        W    = PAD + n * CELL
+        H    = PAD + n * CELL
+
+        def _corr_color(v: float) -> str:
+            if v >= 0.7:  return "#c0392b"
+            if v >= 0.4:  return "#e67e22"
+            if v >= 0.1:  return "#f1c40f"
+            if v >= -0.1: return "#7f8c8d"
+            if v >= -0.4: return "#2980b9"
+            return "#1a5276"
+
+        cells = ""
+        for i, ri in enumerate(corr.index):
+            for j, ci in enumerate(corr.columns):
+                v   = corr.loc[ri, ci]
+                col = _corr_color(v)
+                x   = PAD + j * CELL
+                y   = PAD + i * CELL
+                op  = 0.25 if i == j else max(0.3, abs(v) * 0.9)
+                txt = "1.0" if i == j else f"{v:+.2f}"[1:] if abs(v) >= 0.1 else f"{v:+.2f}"
+                cells += (
+                    f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" '
+                    f'fill="{col}" opacity="{op:.2f}" rx="2"/>'
+                    f'<text x="{x + CELL//2}" y="{y + CELL//2 + 4}" '
+                    f'font-family="JetBrains Mono,monospace" font-size="7.5" '
+                    f'fill="white" text-anchor="middle">{txt}</text>'
+                )
+
+        row_labels = ""
+        col_labels = ""
+        for i, lbl in enumerate(corr.index):
+            row_labels += (
+                f'<text x="{PAD - 4}" y="{PAD + i * CELL + CELL//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="#a0a0b0" text-anchor="end">{lbl}</text>'
+            )
+            col_labels += (
+                f'<text x="{PAD + i * CELL + CELL//2}" y="{PAD - 6}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="#a0a0b0" text-anchor="middle">{lbl}</text>'
+            )
+
+        legend = (
+            '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">'
+            + "".join(
+                f'<span style="font-family:JetBrains Mono,monospace;font-size:8px;'
+                f'color:#a0a0b0"><span style="display:inline-block;width:8px;height:8px;'
+                f'background:{c};border-radius:1px;margin-right:2px;vertical-align:middle">'
+                f'</span>{lbl}</span>'
+                for c, lbl in [
+                    ("#c0392b","≥0.7"), ("#e67e22","0.4–0.7"),
+                    ("#f1c40f","0.1–0.4"), ("#7f8c8d","-0.1–0.1"),
+                    ("#2980b9","-0.4–-0.1"), ("#1a5276","≤-0.4"),
+                ]
+            )
+            + "</div>"
+        )
+
+        svg = (
+            f'<svg width="100%" viewBox="0 0 {W} {H}" '
+            f'xmlns="http://www.w3.org/2000/svg">'
+            f'{cells}{row_labels}{col_labels}'
+            f'</svg>'
+        )
+        st.markdown(
+            _HDR +
+            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
+            'padding:.5rem .55rem .35rem;border-radius:2px">'
+            + svg + legend + "</div>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        st.markdown(
+            _HDR +
+            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
+            'padding:.5rem;border-radius:2px;color:#555;font-family:JetBrains Mono,monospace;'
+            'font-size:10px">Insufficient data for correlation matrix</div>',
+            unsafe_allow_html=True,
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §C2  Risk Signal Waterfall — multi-model signal stack
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_risk_signal_waterfall(
+    risk: dict,
+    conflict_results,
+    regimes: "pd.Series | None",
+    alerts: list,
+) -> None:
+    """Stacked signal bars from all analytical layers — geo / regime / vol / FI."""
+    _HDR = (
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
+        'CROSS-MODEL SIGNAL STACK</div>'
+    )
+    try:
+        import numpy as _np
+        if isinstance(conflict_results, dict):
+            conflict_results = list(conflict_results.values())
+
+        # Gather signals from available data
+        signals: list[tuple[str, float, str, str]] = []  # (label, 0-100, color, note)
+
+        # 1. Geo Risk Score
+        grs = float(risk.get("score", 0))
+        grs_col = "#c0392b" if grs >= 70 else "#e67e22" if grs >= 45 else "#27ae60"
+        signals.append(("GEO RISK", grs, grs_col, f"{grs:.0f}/100"))
+
+        # 2. Conflict Intensity Score
+        cis = float(risk.get("cis", 0))
+        cis_col = "#c0392b" if cis >= 70 else "#e67e22" if cis >= 45 else "#27ae60"
+        signals.append(("CONFLICT INTENSITY", cis, cis_col, f"{cis:.0f}/100"))
+
+        # 3. Transmission Pressure
+        tps = float(risk.get("tps", 0))
+        tps_col = "#c0392b" if tps >= 70 else "#e67e22" if tps >= 45 else "#2980b9"
+        signals.append(("TRANSMISSION PRESSURE", tps, tps_col, f"{tps:.0f}/100"))
+
+        # 4. Market Coupling Score
+        mcs = float(risk.get("mcs", 0))
+        mcs_col = "#c0392b" if mcs >= 70 else "#e67e22" if mcs >= 45 else "#27ae60"
+        signals.append(("MARKET COUPLING", mcs, mcs_col, f"{mcs:.0f}/100"))
+
+        # 5. Correlation regime (1=Decoupled, 2=Transitioning, 3=High Coupling)
+        if regimes is not None and not regimes.empty:
+            reg = int(regimes.dropna().iloc[-1]) if len(regimes.dropna()) > 0 else 1
+            reg_pct = (reg - 1) / 2 * 100
+            reg_col = "#27ae60" if reg == 1 else "#e8a838" if reg == 2 else "#c0392b"
+            reg_lbl = ["DECOUPLED", "TRANSITIONING", "HIGH COUPLING"][reg - 1]
+            signals.append(("REGIME", reg_pct, reg_col, reg_lbl))
+
+        # 6. Active critical alerts pressure
+        crit = len([a for a in alerts if getattr(a, "severity", "") == "critical"])
+        high = len([a for a in alerts if getattr(a, "severity", "") == "high"])
+        alert_pct = min((crit * 25 + high * 10), 100)
+        alert_col = "#c0392b" if crit >= 3 else "#e67e22" if crit >= 1 else "#27ae60"
+        signals.append(("ALERT PRESSURE", alert_pct, alert_col, f"{crit}c {high}h alerts"))
+
+        # 7. Active conflicts pressure
+        n_conflicts = len([c for c in conflict_results if c.get("active", True)])
+        conf_pct = min(n_conflicts / 10 * 100, 100)
+        conf_col = "#c0392b" if n_conflicts >= 6 else "#e67e22" if n_conflicts >= 3 else "#27ae60"
+        signals.append(("ACTIVE CONFLICTS", conf_pct, conf_col, f"{n_conflicts} tracked"))
+
+        # Render SVG waterfall
+        BAR_H  = 14
+        GAP    = 8
+        LABEL_W = 145
+        BAR_W   = 160
+        PAD_Y   = 8
+        H = PAD_Y * 2 + len(signals) * (BAR_H + GAP) - GAP
+        W = LABEL_W + BAR_W + 50
+
+        bars = ""
+        for i, (lbl, pct, col, note) in enumerate(signals):
+            y    = PAD_Y + i * (BAR_H + GAP)
+            bw   = max(pct / 100 * BAR_W, 2)
+            bars += (
+                # label
+                f'<text x="{LABEL_W - 6}" y="{y + BAR_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="#8a8a9a" text-anchor="end">{lbl}</text>'
+                # track
+                f'<rect x="{LABEL_W}" y="{y}" width="{BAR_W}" height="{BAR_H}" '
+                f'fill="#1a1a2a" rx="2"/>'
+                # bar
+                f'<rect x="{LABEL_W}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
+                f'fill="{col}" opacity="0.85" rx="2"/>'
+                # note
+                f'<text x="{LABEL_W + BAR_W + 5}" y="{y + BAR_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="{col}">{note}</text>'
+            )
+
+        svg = (
+            f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
+            f'{bars}</svg>'
+        )
+        st.markdown(
+            _HDR +
+            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
+            'padding:.5rem .55rem .35rem;border-radius:2px">'
+            + svg + "</div>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §C3  Conflict × Commodity Impact Matrix
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_conflict_commodity_matrix(conflict_results) -> None:
+    """Grid of active conflicts × commodity groups with impact intensity cells."""
+    _HDR = (
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
+        'CONFLICT × COMMODITY IMPACT MATRIX</div>'
+    )
+    try:
+        if isinstance(conflict_results, dict):
+            conflict_results = [{"name": k, **v} for k, v in conflict_results.items()]
+        GROUPS = ["ENERGY", "METALS", "AGRI", "FI/FX"]
+        # Map commodity names to groups
+        _G = {
+            "WTI Crude Oil": "ENERGY", "Brent Crude": "ENERGY",
+            "Natural Gas": "ENERGY", "Heating Oil": "ENERGY",
+            "Gold": "METALS", "Silver": "METALS", "Copper": "METALS",
+            "Platinum": "METALS", "Palladium": "METALS",
+            "Wheat": "AGRI", "Corn": "AGRI", "Soybeans": "AGRI",
+            "Sugar": "AGRI", "Cotton": "AGRI",
+        }
+
+        active = [c for c in conflict_results if c.get("cis", 0) > 10][:8]
+        if not active:
+            raise ValueError("no conflicts")
+
+        # Build matrix: conflict × group → max exposure score
+        import numpy as _np
+        matrix = _np.zeros((len(active), len(GROUPS)))
+        for i, c in enumerate(active):
+            for exp in c.get("commodity_exposures", []):
+                cname = exp.get("commodity", "")
+                score = float(exp.get("exposure_score", 0))
+                g = _G.get(cname)
+                if g and g in GROUPS:
+                    j = GROUPS.index(g)
+                    matrix[i, j] = max(matrix[i, j], score * float(c.get("cis", 50)) / 100)
+
+        CELL_W = 48
+        CELL_H = 20
+        LABEL_W = 100
+        HDR_H   = 22
+        W = LABEL_W + len(GROUPS) * CELL_W + 4
+        H = HDR_H + len(active) * CELL_H + 4
+
+        def _cell_col(v: float) -> tuple[str, float]:
+            if v >= 60: return "#c0392b", 0.9
+            if v >= 40: return "#e67e22", 0.8
+            if v >= 20: return "#e8a838", 0.7
+            if v >  5:  return "#2980b9", 0.5
+            return "#1a1a2a", 1.0
+
+        cells = ""
+        # Column headers
+        for j, g in enumerate(GROUPS):
+            x = LABEL_W + j * CELL_W
+            cells += (
+                f'<rect x="{x}" y="0" width="{CELL_W}" height="{HDR_H}" '
+                f'fill="#1e2a3a" rx="0"/>'
+                f'<text x="{x + CELL_W//2}" y="{HDR_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="#CFB991" text-anchor="middle" font-weight="700">{g}</text>'
+            )
+        # Rows
+        for i, c in enumerate(active):
+            y = HDR_H + i * CELL_H
+            name = c.get("name", f"Conflict {i+1}").replace("_", " ")
+            short = name[:12] + "…" if len(name) > 12 else name
+            cis_v = float(c.get("cis", 0))
+            cis_col = "#c0392b" if cis_v >= 70 else "#e67e22" if cis_v >= 45 else "#8a8a9a"
+            bg = "#0e1420" if i % 2 == 0 else "#0a1018"
+            cells += (
+                f'<rect x="0" y="{y}" width="{W}" height="{CELL_H}" fill="{bg}"/>'
+                f'<text x="4" y="{y + CELL_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="#c0c0d0">{short}</text>'
+                f'<text x="{LABEL_W - 5}" y="{y + CELL_H//2 + 4}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8" '
+                f'fill="{cis_col}" text-anchor="end">{cis_v:.0f}</text>'
+            )
+            for j in range(len(GROUPS)):
+                v = matrix[i, j]
+                col, op = _cell_col(v)
+                x = LABEL_W + j * CELL_W
+                txt = f"{v:.0f}" if v > 5 else "·"
+                cells += (
+                    f'<rect x="{x+1}" y="{y+1}" width="{CELL_W-2}" height="{CELL_H-2}" '
+                    f'fill="{col}" opacity="{op:.2f}" rx="2"/>'
+                    f'<text x="{x + CELL_W//2}" y="{y + CELL_H//2 + 4}" '
+                    f'font-family="JetBrains Mono,monospace" font-size="8.5" '
+                    f'fill="white" text-anchor="middle" font-weight="700">{txt}</text>'
+                )
+
+        svg = (
+            f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
+            f'{cells}</svg>'
+        )
+        note = (
+            '<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
+            'color:#555;margin-top:3px">cell value = exposure × CIS/100 · '
+            '<span style="color:#c0392b">■</span> ≥60 '
+            '<span style="color:#e67e22">■</span> 40-60 '
+            '<span style="color:#e8a838">■</span> 20-40 '
+            '<span style="color:#2980b9">■</span> 5-20</div>'
+        )
+        st.markdown(
+            _HDR +
+            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
+            'padding:.5rem .55rem .35rem;border-radius:2px">'
+            + svg + note + "</div>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §C4  Regime × Signal Heatmap Ticker — scrolling ticker of regime-signal pairs
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_geo_event_timeline(conflict_results) -> None:
+    """Horizontal timeline of conflict severity with intensity gradient bars."""
+    _HDR = (
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
+        'CONFLICT SEVERITY TIMELINE</div>'
+    )
+    try:
+        if isinstance(conflict_results, dict):
+            conflict_results = [{"name": k, **v} for k, v in conflict_results.items()]
+        active = sorted(
+            [c for c in conflict_results if c.get("cis", 0) > 5],
+            key=lambda x: -x.get("cis", 0),
+        )[:10]
+        if not active:
+            raise ValueError("no data")
+
+        W, H = 460, len(active) * 26 + 24
+        BAR_MAX = 300
+        LABEL_W = 120
+        SCORE_W = 32
+
+        bars = (
+            # axis title
+            f'<text x="{LABEL_W}" y="14" font-family="JetBrains Mono,monospace" '
+            f'font-size="7.5" fill="#555">CIS</text>'
+            f'<text x="{LABEL_W + BAR_MAX//2}" y="14" font-family="JetBrains Mono,monospace" '
+            f'font-size="7.5" fill="#555" text-anchor="middle">← CONFLICT INTENSITY SCORE →</text>'
+        )
+        for i, c in enumerate(active):
+            y    = 20 + i * 26
+            cis  = float(c.get("cis", 0))
+            tps  = float(c.get("tps", 0))
+            name = c.get("name", "").replace("_", " ")[:14]
+            short = name + "…" if len(c.get("name", "")) > 14 else name
+            bw   = cis / 100 * BAR_MAX
+
+            # gradient via two rects
+            col1 = "#c0392b" if cis >= 70 else "#e67e22" if cis >= 45 else "#e8a838"
+            col2 = "#7b241c" if cis >= 70 else "#935116" if cis >= 45 else "#9a7d0a"
+
+            # TPS overlay dot
+            tps_x = LABEL_W + tps / 100 * BAR_MAX
+
+            bg = "#0e1420" if i % 2 == 0 else "#0a1018"
+            bars += (
+                f'<rect x="0" y="{y}" width="{W}" height="24" fill="{bg}"/>'
+                # label
+                f'<text x="{LABEL_W - 6}" y="{y + 15}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8.5" '
+                f'fill="#c0c0d0" text-anchor="end">{short}</text>'
+                # track
+                f'<rect x="{LABEL_W}" y="{y + 6}" width="{BAR_MAX}" height="12" '
+                f'fill="#1a1a2a" rx="2"/>'
+                # bar fill
+                f'<rect x="{LABEL_W}" y="{y + 6}" width="{bw:.1f}" height="12" '
+                f'fill="{col1}" opacity="0.8" rx="2"/>'
+                # TPS overlay
+                f'<line x1="{tps_x:.1f}" y1="{y + 4}" x2="{tps_x:.1f}" y2="{y + 20}" '
+                f'stroke="#CFB991" stroke-width="1.5" opacity="0.9"/>'
+                # CIS value
+                f'<text x="{LABEL_W + BAR_MAX + 5}" y="{y + 15}" '
+                f'font-family="JetBrains Mono,monospace" font-size="8.5" '
+                f'fill="{col1}">{cis:.0f}</text>'
+            )
+
+        legend = (
+            '<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
+            'color:#555;margin-top:3px">'
+            '■ bar = CIS (conflict intensity) · '
+            '<span style="color:#CFB991">│</span> = TPS (transmission pressure)'
+            '</div>'
+        )
+        svg = (
+            f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
+            f'{bars}</svg>'
+        )
+        st.markdown(
+            _HDR +
+            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
+            'padding:.5rem .55rem .35rem;border-radius:2px">'
+            + svg + legend + "</div>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -4304,6 +4752,30 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                     f'<span style="color:#b0b0b0;{_M}font-size:11px">{_lag["detail"]}</span></div>',
                     unsafe_allow_html=True,
                 )
+        except Exception:
+            pass
+        # § C1  Asset Correlation Heatmap — 60d rolling matrix of top equity+commodity pairs
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_corr_heatmap(_al_eq_r, _al_cmd_r)
+        except Exception:
+            pass
+        # § C2  Cross-Model Signal Waterfall — all analytical layers in one bar stack
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_risk_signal_waterfall(risk, conflict_results, _al_regimes, _cached_alerts)
+        except Exception:
+            pass
+        # § C3  Conflict × Commodity Impact Matrix — exposure-weighted intensity grid
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_conflict_commodity_matrix(conflict_results)
+        except Exception:
+            pass
+        # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per active conflict
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_geo_event_timeline(conflict_results)
         except Exception:
             pass
 
