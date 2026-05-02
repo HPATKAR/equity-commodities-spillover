@@ -3104,6 +3104,312 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § L6  REGIME HISTORY — 60-day colour-coded regime strip
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_regime_history(regimes: "pd.Series | None") -> None:
+    """Left column: 60-day day-by-day correlation-regime strip."""
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Regime History · 60d</div>',
+        unsafe_allow_html=True,
+    )
+
+    _REG_COL = {1: "#27ae60", 2: "#e8a838", 3: "#c0392b"}
+    _REG_LAB = {1: "DECOUPLED", 2: "TRANSITIONING", 3: "HIGH COUPLING"}
+
+    if regimes is None or len(regimes.dropna()) < 5:
+        st.markdown(
+            f'<div style="{_M}font-size:9px;color:#555960;padding:.3rem 0">Regime data unavailable</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    vals = list(regimes.dropna().astype(int).iloc[-60:])
+    N    = len(vals)
+    W, H, gap = 210, 18, 1
+    cell_w = max(1, (W - gap * (N - 1)) / N)
+
+    cells = ""
+    for i, v in enumerate(vals):
+        c = _REG_COL.get(v, "#333")
+        x = i * (cell_w + gap)
+        # fade older cells slightly
+        op = 0.45 + 0.55 * (i / max(N - 1, 1))
+        cells += f'<rect x="{x:.1f}" y="0" width="{cell_w:.1f}" height="{H}" fill="{c}" opacity="{op:.2f}" rx="1"/>'
+
+    # current regime badge
+    cur_v   = int(vals[-1]) if vals else 1
+    cur_col = _REG_COL.get(cur_v, "#555")
+    cur_lbl = _REG_LAB.get(cur_v, "UNKNOWN")
+
+    # count of days in each regime
+    from collections import Counter
+    cnt = Counter(vals)
+
+    legend = ""
+    for rv, rc in _REG_COL.items():
+        n = cnt.get(rv, 0)
+        lx = (rv - 1) * 72
+        legend += (
+            f'<rect x="{lx}" y="0" width="8" height="8" fill="{rc}" rx="1" opacity=".8"/>'
+            f'<text x="{lx + 11}" y="8" font-size="7.5" fill="#8890a1" font-family="JetBrains Mono,monospace">'
+            f'{_REG_LAB[rv][:4]} {n}d</text>'
+        )
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+        f'<svg width="{W}" height="{H}" style="display:block">{cells}</svg>'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem">'
+        f'<svg width="216" height="12">{legend}</svg>'
+        f'</div>'
+        f'<div style="margin-top:.3rem;{_M}font-size:8.5px;font-weight:700;color:{cur_col}">'
+        f'NOW: {cur_lbl}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § L7  ALERT SUMMARY — severity breakdown of proactive alerts
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_alert_summary(alerts: list) -> None:
+    """Left column: compact count of alerts by severity + most recent message."""
+    if not alerts:
+        return
+
+    from collections import Counter, OrderedDict
+    sev_order = ["critical", "high", "medium", "low"]
+    sev_col   = {"critical": "#c0392b", "high": "#e67e22", "medium": "#e8a838", "low": "#2980b9"}
+    cnt = Counter(getattr(a, "severity", "low") for a in alerts)
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Active Alerts · {len(alerts)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    badges = ""
+    for sev in sev_order:
+        n = cnt.get(sev, 0)
+        if n == 0:
+            continue
+        c = sev_col[sev]
+        badges += (
+            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:.28rem">'
+            f'<span style="background:{c}22;border:1px solid {c}66;'
+            f'{_M}font-size:8px;font-weight:700;color:{c};padding:1px 6px;'
+            f'border-radius:2px;letter-spacing:.08em;min-width:20px;text-align:center">{n}</span>'
+            f'<span style="{_M}font-size:9px;color:#8890a1;text-transform:uppercase;'
+            f'letter-spacing:.08em">{sev}</span>'
+            f'</div>'
+        )
+
+    # Most recent alert message
+    recent = alerts[0]
+    msg    = (getattr(recent, "message", "") or "")[:80]
+    rc     = sev_col.get(getattr(recent, "severity", "low"), "#555")
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+        f'{badges}'
+        f'<div style="border-top:1px solid #1a1a1a;margin-top:.3rem;padding-top:.3rem">'
+        f'<span style="{_M}font-size:8.5px;color:{rc};font-weight:600">LATEST:</span>'
+        f'<span style="{_M}font-size:8.5px;color:#8890a1;margin-left:4px">{msg}</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R6  GRS TREND — 60-day composite risk score sparkline
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_grs_trend(score_hist: "pd.Series | None") -> None:
+    """Right column: 60-day GRS sparkline with risk zone bands and delta."""
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Risk Score Trend · 60d</div>',
+        unsafe_allow_html=True,
+    )
+
+    import pandas as _pd
+    if score_hist is None or (isinstance(score_hist, _pd.Series) and len(score_hist.dropna()) < 5):
+        st.markdown(
+            f'<div style="{_M}font-size:9px;color:#555960;padding:.3rem 0">Score history unavailable</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    vals = list(score_hist.dropna().iloc[-60:])
+    N    = len(vals)
+    W, H = 210, 56
+    ML, MR, MT, MB = 4, 4, 4, 4
+    PW = W - ML - MR
+    PH = H - MT - MB
+
+    def _fx(i):   return ML + i / max(N - 1, 1) * PW
+    def _fy(v):   return MT + (1.0 - max(0.0, min(1.0, v / 100.0))) * PH
+
+    cur   = vals[-1]
+    delta = cur - vals[max(0, N - 30)] if N >= 5 else 0.0
+    d_col = "#c0392b" if delta > 0 else "#27ae60"
+    d_sym = "▲" if delta > 0 else "▼"
+    s_col = "#c0392b" if cur >= 70 else "#e8a838" if cur >= 45 else "#27ae60"
+
+    # zone bands
+    y_high = _fy(70)
+    y_mid  = _fy(45)
+    bands  = (
+        f'<rect x="{ML}" y="{MT}" width="{PW}" height="{y_high - MT}" '
+        f'fill="#c0392b" opacity=".06" rx="0"/>'
+        f'<rect x="{ML}" y="{y_high}" width="{PW}" height="{y_mid - y_high}" '
+        f'fill="#e8a838" opacity=".06" rx="0"/>'
+        f'<rect x="{ML}" y="{y_mid}" width="{PW}" height="{MT + PH - y_mid}" '
+        f'fill="#27ae60" opacity=".05" rx="0"/>'
+    )
+
+    # threshold lines
+    lines = (
+        f'<line x1="{ML}" y1="{y_high:.1f}" x2="{ML + PW}" y2="{y_high:.1f}" '
+        f'stroke="#c0392b" stroke-width=".6" stroke-dasharray="3,3" opacity=".5"/>'
+        f'<line x1="{ML}" y1="{y_mid:.1f}" x2="{ML + PW}" y2="{y_mid:.1f}" '
+        f'stroke="#e8a838" stroke-width=".6" stroke-dasharray="3,3" opacity=".4"/>'
+    )
+
+    pts = " ".join(f'{_fx(i):.1f},{_fy(v):.1f}' for i, v in enumerate(vals))
+
+    # fill polygon under line
+    fill_pts = (
+        f'{_fx(0):.1f},{MT + PH} ' + pts + f' {_fx(N-1):.1f},{MT + PH}'
+    )
+
+    # current dot
+    dot_x, dot_y = _fx(N - 1), _fy(cur)
+
+    svg = (
+        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
+        f'{bands}{lines}'
+        f'<polygon points="{fill_pts}" fill="{s_col}" opacity=".08"/>'
+        f'<polyline points="{pts}" fill="none" stroke="{s_col}" '
+        f'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>'
+        f'<circle cx="{dot_x:.1f}" cy="{dot_y:.1f}" r="3" fill="{s_col}" opacity="1"/>'
+        f'</svg>'
+    )
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+        f'{svg}'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.3rem">'
+        f'<span style="{_M}font-size:8.5px;color:#555960">GRS NOW</span>'
+        f'<span style="{_M}font-size:11px;font-weight:700;color:{s_col}">{cur:.1f}</span>'
+        f'<span style="{_M}font-size:8.5px;color:{d_col}">{d_sym} {abs(delta):.1f} vs 30d</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R7  MACRO SNAPSHOT — 4-cell grid: VIX / 10Y / DXY / WTI
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_macro_snapshot() -> None:
+    """Right column: 2×2 grid of macro regime indicators from pulse tickers."""
+    data = _load_market_pulse()
+    if not data:
+        return
+
+    by_sym = {d["sym"]: d for d in data}
+
+    def _cell(sym, label, fmt_fn, regime_fn):
+        d = by_sym.get(sym)
+        if not d:
+            return None
+        val   = d["val"]
+        pct   = d["pct"]
+        vstr  = fmt_fn(val)
+        reg, rc = regime_fn(val)
+        arr   = "▲" if pct > 0.05 else "▼" if pct < -0.05 else "—"
+        ac    = "#c0392b" if arr == "▲" else "#27ae60" if arr == "▼" else "#555960"
+        # flip colour for VIX (up = bad)
+        if sym == "^VIX":
+            ac = "#c0392b" if arr == "▲" else "#27ae60" if arr == "▼" else "#555960"
+        return (label, vstr, reg, rc, arr, ac)
+
+    vix_cell = _cell("^VIX",   "VIX",
+        fmt_fn=lambda v: f"{v:.1f}",
+        regime_fn=lambda v: ("CALM", "#27ae60") if v < 15 else
+                            ("NORMAL", "#8890a1") if v < 25 else
+                            ("ELEVATED", "#e8a838") if v < 35 else
+                            ("STRESS", "#c0392b"))
+
+    tny_cell = _cell("^TNX",   "10Y YLD",
+        fmt_fn=lambda v: f"{v:.2f}%",
+        regime_fn=lambda v: ("LOW", "#2980b9") if v < 3.0 else
+                            ("NORMAL", "#8890a1") if v < 4.5 else
+                            ("HIGH", "#e8a838") if v < 5.5 else
+                            ("EXTREME", "#c0392b"))
+
+    dxy_cell = _cell("DX-Y.NYB", "DXY",
+        fmt_fn=lambda v: f"{v:.1f}",
+        regime_fn=lambda v: ("WEAK", "#27ae60") if v < 98 else
+                            ("NEUTRAL", "#8890a1") if v < 104 else
+                            ("STRONG", "#e8a838") if v < 110 else
+                            ("EXTREME", "#c0392b"))
+
+    wti_cell = _cell("CL=F",   "WTI",
+        fmt_fn=lambda v: f"${v:.1f}",
+        regime_fn=lambda v: ("LOW", "#27ae60") if v < 60 else
+                            ("MID", "#8890a1") if v < 80 else
+                            ("HIGH", "#e8a838") if v < 100 else
+                            ("SPIKE", "#c0392b"))
+
+    cells = [vix_cell, tny_cell, dxy_cell, wti_cell]
+    if not any(cells):
+        return
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Macro Snapshot</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Render 2×2 grid
+    grid_rows = [cells[:2], cells[2:]]
+    for row in grid_rows:
+        cols_html = ""
+        for cell in row:
+            if cell is None:
+                cols_html += '<div style="flex:1"></div>'
+                continue
+            label, vstr, reg, rc, arr, ac = cell
+            cols_html += (
+                f'<div style="flex:1;background:#0d0d0d;border:1px solid #1a1a1a;'
+                f'padding:.4rem .5rem;border-radius:2px;min-width:0">'
+                f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.12em;'
+                f'color:#555960;text-transform:uppercase;margin-bottom:2px">{label}</div>'
+                f'<div style="{_M}font-size:1.0rem;font-weight:700;color:#e8e9ed;line-height:1">{vstr}</div>'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">'
+                f'<span style="{_M}font-size:7.5px;font-weight:700;color:{rc};'
+                f'letter-spacing:.08em">{reg}</span>'
+                f'<span style="{_M}font-size:9px;font-weight:700;color:{ac}">{arr}</span>'
+                f'</div>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div style="display:flex;gap:4px;margin-bottom:4px">{cols_html}</div>',
+            unsafe_allow_html=True,
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -3272,6 +3578,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_escalation_tracker(conflict_results)
         # Top commodities — exposure-weighted commodity risk ranking
         _render_top_commodities(conflict_results)
+        # Regime history — 60-day day-by-day correlation regime strip
+        _render_regime_history(_al_regimes)
+        # Alert summary — severity breakdown of active proactive alerts
+        _render_alert_summary(_cached_alerts)
 
     with _col_ctr:
         # Market pulse horizontal strip
@@ -3334,6 +3644,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # Transmission channels — how conflicts flow into commodity markets
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_transmission_channels(conflict_results, risk)
+        # GRS 60-day trend sparkline — is composite risk rising or falling?
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_grs_trend(_score_hist if isinstance(_score_hist, __import__("pandas").Series) else None)
+        # Macro snapshot — VIX / 10Y / DXY / WTI regime grid
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_macro_snapshot()
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
