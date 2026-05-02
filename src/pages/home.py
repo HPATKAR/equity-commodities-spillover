@@ -3104,6 +3104,55 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § EXTRA DATA FETCHERS  (cached; warm after first load)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _load_yield_curve() -> dict[str, float]:
+    """Fetch 4 yield-curve points: 3M / 5Y / 10Y / 30Y via yfinance."""
+    try:
+        import yfinance as yf
+        syms = {"3M": "^IRX", "5Y": "^FVX", "10Y": "^TNX", "30Y": "^TYX"}
+        raw  = yf.download(list(syms.values()), period="5d",
+                           auto_adjust=True, progress=False, threads=True)
+        close = raw["Close"] if "Close" in raw.columns else raw
+        result = {}
+        for label, sym in syms.items():
+            if sym in close.columns:
+                s = close[sym].dropna()
+                if len(s):
+                    result[label] = float(s.iloc[-1])
+        return result
+    except Exception:
+        return {}
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _load_vol_trio() -> dict[str, dict]:
+    """Fetch VIX / OVX / GVZ with 1-year high/low for gauge normalisation."""
+    try:
+        import yfinance as yf
+        syms = {"VIX": "^VIX", "OVX": "^OVX", "GVZ": "^GVZ"}
+        raw  = yf.download(list(syms.values()), period="1y",
+                           auto_adjust=True, progress=False, threads=True)
+        close = raw["Close"] if "Close" in raw.columns else raw
+        result = {}
+        for label, sym in syms.items():
+            if sym in close.columns:
+                s = close[sym].dropna()
+                if len(s) >= 2:
+                    result[label] = {
+                        "cur": float(s.iloc[-1]),
+                        "lo":  float(s.min()),
+                        "hi":  float(s.max()),
+                        "pct_rank": float((s.iloc[-1] - s.min()) / max(s.max() - s.min(), 0.01)),
+                    }
+        return result
+    except Exception:
+        return {}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # § L6  REGIME HISTORY — 60-day colour-coded regime strip
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -3410,6 +3459,329 @@ def _render_macro_snapshot() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § L8  COMMODITY SECTOR RETURNS — Energy / Metals / Agri 5-day performance
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
+    """Left column: 5-day average return by commodity sector group."""
+    import pandas as _pd
+    if cmd_r is None or (isinstance(cmd_r, _pd.DataFrame) and cmd_r.empty):
+        return
+
+    from src.data.config import COMMODITY_GROUPS, COMMODITY_TICKERS
+    rev_map = {v: k for k, v in COMMODITY_TICKERS.items()}
+
+    # map column names (could be ticker or asset name) to group
+    group_rets: dict[str, list[float]] = {g: [] for g in COMMODITY_GROUPS}
+    for col in cmd_r.columns:
+        asset = col if col in COMMODITY_TICKERS else rev_map.get(col, col)
+        for g, members in COMMODITY_GROUPS.items():
+            if asset in members:
+                s = cmd_r[col].dropna()
+                if len(s) >= 5:
+                    ret5 = float((s.iloc[-1] / s.iloc[-5] - 1) * 100) if s.iloc[-5] != 0 else 0.0
+                    group_rets[g].append(ret5)
+                break
+
+    rows_html = ""
+    _G_COL = {
+        "Energy":           "#e67e22",
+        "Precious Metals":  "#f1c40f",
+        "Industrial Metals":"#95a5a6",
+        "Agriculture":      "#27ae60",
+    }
+    for g, rets in group_rets.items():
+        if not rets:
+            continue
+        avg = sum(rets) / len(rets)
+        col = "#27ae60" if avg >= 0 else "#c0392b"
+        bar_w  = min(abs(avg) / 5.0 * 100, 100)   # cap at ±5% full width
+        bar_dir = "right" if avg >= 0 else "left"
+        sign   = "+" if avg >= 0 else ""
+        gc     = _G_COL.get(g, "#8890a1")
+        abbr   = {"Energy": "ENGY", "Precious Metals": "PREC",
+                  "Industrial Metals": "INDU", "Agriculture": "AGRI"}.get(g, g[:4].upper())
+        rows_html += (
+            f'<div style="padding:.28rem .55rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+            f'<span style="{_M}font-size:8px;font-weight:700;color:{gc}">{abbr}</span>'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}{avg:.2f}%</span>'
+            f'</div>'
+            f'<div style="background:#1a1a1a;height:4px;border-radius:2px;overflow:hidden">'
+            f'<div style="float:{bar_dir};width:{bar_w:.0f}%;height:4px;'
+            f'background:{col};border-radius:2px;opacity:.85"></div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    if not rows_html:
+        return
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Commodity Sectors · 5d Rtn</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § L9  CROSS-CORRELATION LAG — does commodity lead or lag equity?
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Left column: cross-correlation of avg equity vs avg commodity at lags 0–5."""
+    import pandas as _pd, numpy as _np
+    if eq_r is None or cmd_r is None:
+        return
+    if isinstance(eq_r, _pd.DataFrame) and eq_r.empty:
+        return
+    if isinstance(cmd_r, _pd.DataFrame) and cmd_r.empty:
+        return
+
+    try:
+        avg_eq  = eq_r.mean(axis=1).dropna()
+        avg_cmd = cmd_r.mean(axis=1).dropna()
+        idx     = avg_eq.index.intersection(avg_cmd.index)
+        if len(idx) < 30:
+            return
+        eq_s  = avg_eq.loc[idx]
+        cmd_s = avg_cmd.loc[idx]
+
+        lags = list(range(0, 6))
+        corrs = []
+        for lag in lags:
+            shifted = cmd_s.shift(lag)
+            aligned = _pd.concat([eq_s, shifted], axis=1).dropna()
+            if len(aligned) >= 20:
+                corrs.append(float(aligned.iloc[:, 0].corr(aligned.iloc[:, 1])))
+            else:
+                corrs.append(0.0)
+    except Exception:
+        return
+
+    peak_lag = int(lags[corrs.index(max(corrs, key=abs))])
+    peak_cor = corrs[peak_lag]
+
+    W, H  = 210, 52
+    ML, MR, MT, MB = 22, 8, 6, 16
+    PW    = W - ML - MR
+    PH    = H - MT - MB
+    n     = len(lags)
+    bw    = PW / n * 0.55
+    gap   = PW / n
+
+    bars_svg = ""
+    for i, (lag, cor) in enumerate(zip(lags, corrs)):
+        bh   = max(abs(cor) * PH, 1.5)
+        col  = "#27ae60" if cor >= 0 else "#c0392b"
+        op   = 1.0 if lag == peak_lag else 0.5
+        x    = ML + i * gap + gap / 2 - bw / 2
+        y    = MT + PH / 2 - bh / 2 if cor >= 0 else MT + PH / 2
+        bars_svg += f'<rect x="{x:.1f}" y="{y:.1f}" width="{bw:.1f}" height="{bh:.1f}" fill="{col}" opacity="{op}" rx="1"/>'
+
+    # midline
+    mid_y = MT + PH / 2
+    bars_svg += f'<line x1="{ML}" y1="{mid_y:.1f}" x2="{ML+PW}" y2="{mid_y:.1f}" stroke="#333" stroke-width=".6"/>'
+
+    # x-axis lag labels
+    for i, lag in enumerate(lags):
+        lx = ML + i * gap + gap / 2
+        bars_svg += f'<text x="{lx:.1f}" y="{H-2}" font-size="7" fill="#555960" text-anchor="middle" font-family="JetBrains Mono,monospace">+{lag}d</text>'
+
+    # y-axis ticks (+0.5 / 0 / -0.5)
+    for yv, yt in [(0.5, MT + PH * 0.0), (0.0, MT + PH * 0.5), (-0.5, MT + PH * 1.0)]:
+        bars_svg += f'<text x="{ML-2}" y="{yt:.1f}" font-size="6.5" fill="#444" text-anchor="end" font-family="JetBrains Mono,monospace" dominant-baseline="middle">{yv:+.1f}</text>'
+
+    lead_msg = (
+        f"CMD leads EQ by {peak_lag}d" if peak_lag > 0
+        else "Contemporaneous (lag 0 peak)"
+    )
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">CMD→EQ Lead-Lag · 60d</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">{bars_svg}</svg>'
+        f'<div style="display:flex;justify-content:space-between;margin-top:.25rem">'
+        f'<span style="{_M}font-size:8px;color:#8890a1">{lead_msg}</span>'
+        f'<span style="{_M}font-size:8px;font-weight:700;color:{"#27ae60" if peak_cor>=0 else "#c0392b"}">'
+        f'ρ={peak_cor:.2f}</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R8  YIELD CURVE SNAPSHOT — 3M / 5Y / 10Y / 30Y shape
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_yield_curve_snap() -> None:
+    """Right column: live yield curve shape across 4 tenors."""
+    yc = _load_yield_curve()
+    tenors  = ["3M", "5Y", "10Y", "30Y"]
+    present = [(t, yc[t]) for t in tenors if t in yc]
+    if len(present) < 2:
+        return
+
+    W, H  = 210, 60
+    ML, MR, MT, MB = 28, 8, 8, 18
+    PW    = W - ML - MR
+    PH    = H - MT - MB
+
+    vals  = [v for _, v in present]
+    mn    = min(vals) - 0.1
+    mx    = max(vals) + 0.1
+    span  = mx - mn or 0.5
+
+    def _fx(i):  return ML + i / (len(present) - 1) * PW
+    def _fy(v):  return MT + (1.0 - (v - mn) / span) * PH
+
+    pts = " ".join(f"{_fx(i):.1f},{_fy(v):.1f}" for i, (_, v) in enumerate(present))
+
+    # colour by slope: short-end vs long-end
+    slope = present[-1][1] - present[0][1]
+    line_col = "#27ae60" if slope > 0.1 else "#c0392b" if slope < -0.1 else "#e8a838"
+    shape_lbl = "NORMAL" if slope > 0.1 else "INVERTED" if slope < -0.1 else "FLAT"
+
+    # fill under curve
+    fill_pts = f"{_fx(0):.1f},{MT+PH} " + pts + f" {_fx(len(present)-1):.1f},{MT+PH}"
+
+    # dots + labels
+    dots = ""
+    for i, (t, v) in enumerate(present):
+        dx, dy = _fx(i), _fy(v)
+        la = "start" if i == 0 else "end" if i == len(present)-1 else "middle"
+        dots += (
+            f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="2.5" fill="{line_col}" opacity=".9"/>'
+            f'<text x="{dx:.1f}" y="{H-2}" font-size="7.5" fill="#555960" text-anchor="middle" '
+            f'font-family="JetBrains Mono,monospace">{t}</text>'
+            f'<text x="{dx:.1f}" y="{dy-6:.1f}" font-size="7" fill="#8890a1" text-anchor="{la}" '
+            f'font-family="JetBrains Mono,monospace">{v:.2f}</text>'
+        )
+
+    # y-axis tick lines
+    grid = ""
+    for yv in [mn + span * 0.25, mn + span * 0.5, mn + span * 0.75]:
+        gy = _fy(yv)
+        grid += f'<line x1="{ML}" y1="{gy:.1f}" x2="{ML+PW}" y2="{gy:.1f}" stroke="#1a1a1a" stroke-width=".6"/>'
+        grid += f'<text x="{ML-3}" y="{gy:.1f}" font-size="6.5" fill="#444" text-anchor="end" dominant-baseline="middle" font-family="JetBrains Mono,monospace">{yv:.1f}</text>'
+
+    svg = (
+        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
+        f'{grid}'
+        f'<polygon points="{fill_pts}" fill="{line_col}" opacity=".07"/>'
+        f'<polyline points="{pts}" fill="none" stroke="{line_col}" stroke-width="1.8" '
+        f'stroke-linecap="round" stroke-linejoin="round"/>'
+        f'{dots}'
+        f'</svg>'
+    )
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Yield Curve</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+        f'{svg}'
+        f'<div style="display:flex;justify-content:space-between;margin-top:.2rem">'
+        f'<span style="{_M}font-size:8.5px;font-weight:700;color:{line_col}">{shape_lbl}</span>'
+        f'<span style="{_M}font-size:8px;color:#555960">'
+        f'spread {slope:+.2f}% (3M→30Y)</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R9  VOL REGIME TRIO — VIX / OVX / GVZ gauge bars
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_vol_trio() -> None:
+    """Right column: VIX / OVX / GVZ as gauge bars normalised to 1-year range."""
+    vols = _load_vol_trio()
+    if not vols:
+        return
+
+    _VOL_DESC = {
+        "VIX": ("Equity Vol", lambda v: ("CALM",     "#27ae60") if v < 15 else
+                                         ("NORMAL",   "#8890a1") if v < 25 else
+                                         ("ELEVATED", "#e8a838") if v < 35 else
+                                         ("STRESS",   "#c0392b")),
+        "OVX": ("Oil Vol",    lambda v: ("LOW",      "#27ae60") if v < 25 else
+                                         ("MID",      "#8890a1") if v < 45 else
+                                         ("HIGH",     "#e8a838") if v < 65 else
+                                         ("EXTREME",  "#c0392b")),
+        "GVZ": ("Gold Vol",   lambda v: ("LOW",      "#27ae60") if v < 12 else
+                                         ("MID",      "#8890a1") if v < 20 else
+                                         ("HIGH",     "#e8a838") if v < 30 else
+                                         ("EXTREME",  "#c0392b")),
+    }
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Volatility Regime · VIX / OVX / GVZ</div>',
+        unsafe_allow_html=True,
+    )
+
+    rows_html = ""
+    for key in ["VIX", "OVX", "GVZ"]:
+        d = vols.get(key)
+        if not d:
+            continue
+        sub_lbl, reg_fn = _VOL_DESC[key]
+        reg, rc = reg_fn(d["cur"])
+        pct_r   = d["pct_rank"]          # 0..1 position in 1-year range
+        bar_w   = int(pct_r * 100)
+        lo_str  = f'{d["lo"]:.1f}'
+        hi_str  = f'{d["hi"]:.1f}'
+        rows_html += (
+            f'<div style="padding:.32rem .55rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+            f'<div>'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:#DCE4F0">{key}</span>'
+            f'<span style="{_M}font-size:7.5px;color:#555960;margin-left:5px">{sub_lbl}</span>'
+            f'</div>'
+            f'<div style="text-align:right">'
+            f'<span style="{_M}font-size:10px;font-weight:700;color:{rc}">{d["cur"]:.1f}</span>'
+            f'<span style="{_M}font-size:7.5px;font-weight:700;color:{rc};'
+            f'margin-left:5px;letter-spacing:.06em">{reg}</span>'
+            f'</div>'
+            f'</div>'
+            # gauge track
+            f'<div style="position:relative;background:#1a1a1a;height:5px;border-radius:3px">'
+            f'<div style="position:absolute;left:0;top:0;width:{bar_w}%;height:5px;'
+            f'background:{rc};border-radius:3px;opacity:.8"></div>'
+            f'</div>'
+            # range labels
+            f'<div style="display:flex;justify-content:space-between;margin-top:2px">'
+            f'<span style="{_M}font-size:7px;color:#333">{lo_str}</span>'
+            f'<span style="{_M}font-size:7px;color:#333">1y range</span>'
+            f'<span style="{_M}font-size:7px;color:#333">{hi_str}</span>'
+            f'</div>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -3582,6 +3954,16 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_regime_history(_al_regimes)
         # Alert summary — severity breakdown of active proactive alerts
         _render_alert_summary(_cached_alerts)
+        # Commodity sector returns — Energy / Metals / Agri 5-day performance
+        try:
+            _render_commodity_sector_returns(_al_cmd_r)
+        except Exception:
+            pass
+        # Lead-lag bars — does commodity lead or lag equity at each lag 0-5d?
+        try:
+            _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
+        except Exception:
+            pass
 
     with _col_ctr:
         # Market pulse horizontal strip
@@ -3650,6 +4032,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # Macro snapshot — VIX / 10Y / DXY / WTI regime grid
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_macro_snapshot()
+        # Yield curve snapshot — 3M / 5Y / 10Y / 30Y shape (normal / inverted / flat)
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_yield_curve_snap()
+        # Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        _render_vol_trio()
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
