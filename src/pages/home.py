@@ -3782,6 +3782,305 @@ def _render_vol_trio() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § L10  THREAT RADAR — polar scatter: conflicts plotted by CIS (radius) × TPS (angle)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
+    """Left column: radar-style polar scatter of active conflicts (CIS=radius, TPS=angle)."""
+    import math
+    active = [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"]
+    if not active:
+        return
+
+    CX, CY, R = 105, 98, 80
+    W, H       = 210, 210
+
+    grs   = float(risk.get("score", 50))
+    g_col = "#c0392b" if grs >= 70 else "#e8a838" if grs >= 45 else "#27ae60"
+
+    # ── background ────────────────────────────────────────────────────────────
+    # risk zone rings
+    bg = (
+        f'<circle cx="{CX}" cy="{CY}" r="{R}" fill="#c0392b" opacity=".055"/>'
+        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.65)}" fill="#e8a838" opacity=".07"/>'
+        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.32)}" fill="#27ae60" opacity=".10"/>'
+    )
+    # ring outlines
+    for ri in [R, int(R*0.65), int(R*0.32)]:
+        bg += f'<circle cx="{CX}" cy="{CY}" r="{ri}" fill="none" stroke="#222" stroke-width=".7"/>'
+
+    # radial spokes (every 45°)
+    spokes = ""
+    for deg in range(0, 360, 45):
+        rad = math.radians(deg)
+        spokes += (
+            f'<line x1="{CX}" y1="{CY}" '
+            f'x2="{CX + R*math.cos(rad):.1f}" y2="{CY + R*math.sin(rad):.1f}" '
+            f'stroke="#1e1e1e" stroke-width=".8"/>'
+        )
+
+    # ring labels (CIS values)
+    ring_labels = ""
+    for pct, label in [(0.32, "25"), (0.65, "50"), (1.0, "75+")]:
+        lx = CX + R * pct + 2
+        ring_labels += (
+            f'<text x="{lx:.1f}" y="{CY-2}" font-size="6.5" fill="#333" '
+            f'font-family="JetBrains Mono,monospace">{label}</text>'
+        )
+
+    # ── conflict blips ────────────────────────────────────────────────────────
+    blips = ""
+    pulse_css = ""
+    top_conflict = max(active, key=lambda x: x[1].get("cis", 0))
+
+    for cid, r in active:
+        cis   = float(r.get("cis", 50))
+        tps   = float(r.get("tps", 50))
+        color = r.get("color", "#e8a838")
+        label = (r.get("label") or cid).replace("_", " ")[:12]
+
+        # angle: TPS maps 0→360, starting from 12 o'clock (−90°)
+        theta = math.radians(tps / 100.0 * 360.0 - 90.0)
+        rad_r = cis / 100.0 * R
+        bx    = CX + rad_r * math.cos(theta)
+        by    = CY + rad_r * math.sin(theta)
+        dot_r = 4.5 + cis / 100.0 * 5.5
+
+        is_top = (cid == top_conflict[0])
+
+        # glow ring for top conflict
+        if is_top:
+            blips += (
+                f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r+5:.1f}" '
+                f'fill="none" stroke="{color}" stroke-width="1" opacity=".3" '
+                f'class="radar-pulse"/>'
+                f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r+10:.1f}" '
+                f'fill="none" stroke="{color}" stroke-width=".5" opacity=".15" '
+                f'class="radar-pulse2"/>'
+            )
+
+        blips += (
+            f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r:.1f}" '
+            f'fill="{color}" opacity=".85"/>'
+            f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r:.1f}" '
+            f'fill="none" stroke="{color}" stroke-width="1.2" opacity=".5"/>'
+        )
+
+        # label placement: push outward from center
+        lrad = rad_r + dot_r + 5
+        lx   = CX + lrad * math.cos(theta)
+        ly   = CY + lrad * math.sin(theta)
+        anchor = "start" if math.cos(theta) >= 0 else "end"
+        blips += (
+            f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="7" fill="{color}" '
+            f'text-anchor="{anchor}" dominant-baseline="middle" '
+            f'font-family="DM Sans,sans-serif" font-weight="700">{label[:10]}</text>'
+        )
+
+    # ── centre GRS ────────────────────────────────────────────────────────────
+    centre = (
+        f'<circle cx="{CX}" cy="{CY}" r="18" fill="#0a0a0a" stroke="{g_col}" stroke-width="1.5"/>'
+        f'<text x="{CX}" y="{CY-3}" font-size="13" font-weight="700" fill="{g_col}" '
+        f'text-anchor="middle" font-family="JetBrains Mono,monospace">{grs:.0f}</text>'
+        f'<text x="{CX}" y="{CY+9}" font-size="6" fill="#555960" '
+        f'text-anchor="middle" font-family="JetBrains Mono,monospace">GRS</text>'
+    )
+
+    # compass labels
+    compass = (
+        f'<text x="{CX}" y="{CY-R-5}" font-size="7" fill="#333" text-anchor="middle" '
+        f'font-family="JetBrains Mono,monospace">TPS 0</text>'
+        f'<text x="{CX+R+4}" y="{CY+3}" font-size="7" fill="#333" text-anchor="start" '
+        f'font-family="JetBrains Mono,monospace">90</text>'
+        f'<text x="{CX}" y="{CY+R+12}" font-size="7" fill="#333" text-anchor="middle" '
+        f'font-family="JetBrains Mono,monospace">180</text>'
+        f'<text x="{CX-R-4}" y="{CY+3}" font-size="7" fill="#333" text-anchor="end" '
+        f'font-family="JetBrains Mono,monospace">270</text>'
+    )
+
+    pulse_style = (
+        "<style>"
+        "@keyframes radar-pulse{0%{opacity:.3;r:10}50%{opacity:.05;r:18}100%{opacity:.3;r:10}}"
+        "@keyframes radar-pulse2{0%{opacity:.15;r:18}50%{opacity:.02;r:26}100%{opacity:.15;r:18}}"
+        ".radar-pulse{animation:radar-pulse 2s ease-in-out infinite}"
+        ".radar-pulse2{animation:radar-pulse2 2s ease-in-out infinite .4s}"
+        "</style>"
+    )
+
+    svg = (
+        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
+        f'{pulse_style}'
+        f'{bg}{spokes}{ring_labels}'
+        f'{blips}{centre}{compass}'
+        f'</svg>'
+    )
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Threat Radar  ·  CIS × TPS</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'padding:.4rem .3rem .2rem;border-radius:2px;text-align:center">'
+        f'{svg}'
+        f'<div style="display:flex;justify-content:center;gap:14px;margin-top:.15rem">'
+        f'<span style="{_M}font-size:7px;color:#333">● radius = CIS</span>'
+        f'<span style="{_M}font-size:7px;color:#333">● angle = TPS</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# § R10  RISK CONVERGENCE — GRS / Coupling / Vol stress area overlay (60d)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_risk_convergence(
+    score_hist: "pd.Series | None",
+    corr_series: "pd.Series | None",
+) -> None:
+    """Right column: 3 risk signals as overlapping filled area charts (60 days)."""
+    import pandas as _pd, math as _math
+
+    st.markdown(
+        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Risk Signal Convergence · 60d</div>',
+        unsafe_allow_html=True,
+    )
+
+    W, H  = 210, 90
+    ML, MR, MT, MB = 20, 8, 6, 16
+    PW    = W - ML - MR
+    PH    = H - MT - MB
+    N     = 60
+
+    def _norm(s: "_pd.Series", lo: float = 0, hi: float = 100) -> list[float]:
+        s = s.dropna().iloc[-N:]
+        mn, mx = float(s.min()), float(s.max())
+        span   = mx - mn or 1.0
+        return [lo + (float(v) - mn) / span * (hi - lo) for v in s]
+
+    def _pts(vals: list[float]) -> str:
+        n = len(vals)
+        return " ".join(
+            f'{ML + i/(n-1)*PW:.1f},{MT + (1 - v/100)*PH:.1f}'
+            for i, v in enumerate(vals)
+        )
+
+    def _fill(vals: list[float]) -> str:
+        n = len(vals)
+        base_y = MT + PH
+        return (
+            f'{ML:.1f},{base_y} '
+            + " ".join(f'{ML + i/(n-1)*PW:.1f},{MT + (1 - v/100)*PH:.1f}' for i, v in enumerate(vals))
+            + f' {ML + PW:.1f},{base_y}'
+        )
+
+    series_data = []
+
+    # Series 1: GRS (0–100 native)
+    if isinstance(score_hist, _pd.Series) and len(score_hist.dropna()) >= 10:
+        v1 = _norm(score_hist, 0, 100)
+        if len(v1) >= 5:
+            series_data.append(("GRS", v1, "#c0392b", float(v1[-1])))
+
+    # Series 2: Coupling (avg_corr → 0–100 via percentile rank)
+    if isinstance(corr_series, _pd.Series) and len(corr_series.dropna()) >= 10:
+        v2 = _norm(corr_series, 0, 100)
+        if len(v2) >= 5:
+            series_data.append(("COUP", v2, "#2980b9", float(v2[-1])))
+
+    # Series 3: vol stress proxy from pulse (VIX current → flat line as baseline context)
+    try:
+        pulse = _load_market_pulse()
+        vix_d = next((d for d in pulse if d["sym"] == "^VIX"), None)
+        if vix_d and len(vix_d.get("series", [])) >= 3:
+            vix_s = _pd.Series(vix_d["series"])
+            # normalise using 5-day series and scale to 0-100 (VIX 40 = 100)
+            vix_norm = [min(v / 40.0 * 100.0, 100.0) for v in vix_d["series"]]
+            # pad to N by repeating first value
+            while len(vix_norm) < 5:
+                vix_norm.insert(0, vix_norm[0])
+            series_data.append(("VIX", vix_norm, "#27ae60", float(vix_norm[-1])))
+    except Exception:
+        pass
+
+    if not series_data:
+        st.markdown(
+            f'<div style="{_M}font-size:9px;color:#555960;padding:.3rem 0">Signal data unavailable</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # grid lines
+    grid = ""
+    for pct in [25, 50, 75]:
+        gy = MT + (1 - pct/100) * PH
+        grid += (
+            f'<line x1="{ML}" y1="{gy:.1f}" x2="{ML+PW}" y2="{gy:.1f}" '
+            f'stroke="#181818" stroke-width=".7" stroke-dasharray="3,3"/>'
+            f'<text x="{ML-3}" y="{gy:.1f}" font-size="6.5" fill="#2e2e2e" '
+            f'text-anchor="end" dominant-baseline="middle" '
+            f'font-family="JetBrains Mono,monospace">{pct}</text>'
+        )
+
+    areas = ""
+    lines = ""
+    end_dots = ""
+    legend_items = ""
+
+    for name, vals, col, cur in series_data:
+        n = len(vals)
+        pts  = _pts(vals)
+        fill = _fill(vals)
+        areas += f'<polygon points="{fill}" fill="{col}" opacity=".12"/>'
+        lines += (
+            f'<polyline points="{pts}" fill="none" stroke="{col}" '
+            f'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>'
+        )
+        ex = ML + PW
+        ey = MT + (1 - cur/100) * PH
+        end_dots += (
+            f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{col}"/>'
+            f'<text x="{ex+4}" y="{ey:.1f}" font-size="7" fill="{col}" '
+            f'dominant-baseline="middle" font-family="JetBrains Mono,monospace">'
+            f'{cur:.0f}</text>'
+        )
+        legend_items += (
+            f'<span style="display:inline-flex;align-items:center;gap:3px;margin-right:10px">'
+            f'<svg width="12" height="4"><line x1="0" y1="2" x2="12" y2="2" '
+            f'stroke="{col}" stroke-width="2"/></svg>'
+            f'<span style="{_M}font-size:7.5px;color:{col}">{name}</span>'
+            f'</span>'
+        )
+
+    # x-axis: just label start and end
+    x_labels = (
+        f'<text x="{ML}" y="{H-2}" font-size="7" fill="#333" font-family="JetBrains Mono,monospace">−60d</text>'
+        f'<text x="{ML+PW}" y="{H-2}" font-size="7" fill="#333" text-anchor="end" font-family="JetBrains Mono,monospace">NOW</text>'
+    )
+
+    svg = (
+        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
+        f'{grid}{areas}{lines}{end_dots}{x_labels}'
+        f'</svg>'
+    )
+
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'padding:.5rem .55rem .35rem;border-radius:2px">'
+        f'{svg}'
+        f'<div style="display:flex;flex-wrap:wrap;margin-top:.3rem">{legend_items}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -3964,6 +4263,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
         except Exception:
             pass
+        # Threat radar — polar scatter of active conflicts (CIS radius × TPS angle)
+        try:
+            _render_threat_radar(conflict_results, risk)
+        except Exception:
+            pass
 
     with _col_ctr:
         # Market pulse horizontal strip
@@ -4038,6 +4342,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
         st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
         _render_vol_trio()
+        # Risk convergence — GRS / Coupling / VIX as overlapping area chart (60d)
+        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        try:
+            _render_risk_convergence(_score_hist, _al_corr)
+        except Exception:
+            pass
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
