@@ -1233,7 +1233,7 @@ def _render_intelligence_feed(
         f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{color};margin-bottom:3px">SYSTEMIC MONITOR</div>'
         f'<div style="{_M}font-size:1.5rem;font-weight:700;color:{color};line-height:1">'
-        f'{score:.0f}'
+        f'{score:.1f}'
         f'<span style="font-size:.55rem;color:#8890a1;margin-left:4px">/100 · {label.upper()}</span>'
         f'</div>'
         f'<div style="{_M}font-size:8px;font-weight:700;background:{color};color:#000;'
