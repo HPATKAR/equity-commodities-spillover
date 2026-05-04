@@ -139,7 +139,10 @@ def _check_cot(cot_df: pd.DataFrame) -> list[Alert]:
         if sub.empty:
             continue
         latest_pct  = float(sub["net_spec_pct"].iloc[-1])
-        days_stale  = (date.today() - sub["date"].iloc[-1].date()).days
+        _last_date  = sub["date"].iloc[-1]
+        if not pd.notna(_last_date):
+            continue
+        days_stale  = (date.today() - _last_date.date()).days
         if days_stale > 14:   # skip stale data
             continue
 

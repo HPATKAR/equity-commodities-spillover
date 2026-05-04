@@ -67,7 +67,7 @@ _STRAITS = [
             "US carrier strike group (persistent)",
             "Lloyd's war-risk surcharge 4–8%",
         ],
-        "as_of": "Q1 2026",
+        "as_of": "Q2 2026",
     },
     {
         "id":               "red_sea",
@@ -96,7 +96,7 @@ _STRAITS = [
             "Insurance refusals (void clauses active)",
             "Cape rerouting cost $1–2M/voyage",
         ],
-        "as_of": "Q1 2026",
+        "as_of": "Q2 2026",
     },
     {
         "id":               "bab_el_mandeb",
@@ -125,7 +125,7 @@ _STRAITS = [
             "Naval mine risk",
             "Void clauses in marine insurance",
         ],
-        "as_of": "Q1 2026",
+        "as_of": "Q2 2026",
     },
     {
         "id":               "malacca",
@@ -152,7 +152,7 @@ _STRAITS = [
         "active_risks":     [
             "Low-level piracy (non-material)",
         ],
-        "as_of": "Q1 2026",
+        "as_of": "Q2 2026",
     },
     {
         "id":               "turkish",
@@ -182,7 +182,7 @@ _STRAITS = [
             "Turkish inspection regime",
             "Ukraine maritime drone risk",
         ],
-        "as_of": "Q1 2026",
+        "as_of": "Q2 2026",
     },
 ]
 
@@ -274,18 +274,19 @@ def page_strait_watch(start: str, end: str) -> None:
             live = _live_straits.get(sid, {})
 
             if live.get("source") == "PortWatch live" and live.get("ships_current") is not None:
-                _live_total = live["ships_current"]
-                _live_delta = live["ships_24h_change"] or 0
-                _live_date  = live["as_of"] or "live"
-                _live_7d    = live["ships_7d_avg"]
+                _live_total = live.get("ships_current")
+                _live_delta = live.get("ships_24h_change") or 0
+                _live_date  = live.get("as_of") or "live"
+                _live_7d    = live.get("ships_7d_avg", "n/a")
 
                 s["ships_current"]    = _live_total
                 s["ships_24h_change"] = _live_delta
                 s["_live"]            = True
                 s["_live_date"]       = _live_date
                 s["ships_context"] = (
-                    f"IMF PortWatch (live · {_live_date}): {_live_total} tankers/day "
-                    f"({'↓' if _live_delta < 0 else '↑'}{abs(_live_delta)} vs yesterday). "
+                    f"IMF PortWatch (as of {_live_date} · ~7d publication lag): "
+                    f"{_live_total} tankers/day "
+                    f"({'↓' if _live_delta < 0 else '↑'}{abs(_live_delta)} vs prior day). "
                     f"7-day avg: {_live_7d}. "
                     f"Baseline: {s['ships_baseline']}/day."
                 )
@@ -451,7 +452,7 @@ def page_strait_watch(start: str, end: str) -> None:
         cur      = s["ships_current"]
         base     = s["ships_baseline"]
         chg_24h  = s["ships_24h_change"]
-        pct_chg  = round((cur - base) / base * 100)
+        pct_chg  = round((cur - base) / base * 100) if base else 0
         chg_col  = "#27ae60" if chg_24h > 0 else "#c0392b" if chg_24h < 0 else "#8890a1"
         chg_sym  = "▲" if chg_24h > 0 else "▼" if chg_24h < 0 else "-"
         pct_col  = "#27ae60" if pct_chg >= 0 else "#e67e22" if pct_chg > -30 else "#c0392b"
@@ -740,7 +741,7 @@ def page_strait_watch(start: str, end: str) -> None:
             "notes":    "Lloyd's JWC Listed Area. Additional Premium (AP) applies to all "
                         "vessels transiting. War-risk H&M (Hull & Machinery) and P&I cover "
                         "must be separately endorsed. AP is negotiated per-voyage, per-vessel class.",
-            "as_of":    "Q1 2026",
+            "as_of":    "Q2 2026",
         },
         {
             "strait":   "Red Sea / Gulf of Aden",
@@ -752,7 +753,7 @@ def page_strait_watch(start: str, end: str) -> None:
             "notes":    "Houthi anti-ship missile and drone threat. Most major P&I clubs now require "
                         "24h pre-transit notice and enhanced crew clauses. AP rising from 0.5% in "
                         "Jan 2024 to current 1.2% mid-range due to persistent attack cadence.",
-            "as_of":    "Q1 2026",
+            "as_of":    "Q2 2026",
         },
         {
             "strait":   "Black Sea",
@@ -765,7 +766,7 @@ def page_strait_watch(start: str, end: str) -> None:
                         "since Feb 2022. Ukrainian Grain Initiative corridor has partial "
                         "coverage under temporary UN/Lloyd's scheme but remains prohibitively "
                         "expensive for non-grain vessels.",
-            "as_of":    "Q1 2026",
+            "as_of":    "Q2 2026",
         },
     ]
 

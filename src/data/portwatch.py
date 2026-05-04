@@ -168,7 +168,8 @@ def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
     if "date" not in df.columns or "n_tanker" not in df.columns:
         return pd.DataFrame()
 
-    df["date"] = pd.to_datetime(df["date"], unit="ms", utc=True).dt.tz_localize(None)
+    # API returns ISO date strings ("2026-04-26"), not epoch milliseconds
+    df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
     df["oil_tanker"] = (df["n_tanker"] * _OIL_TANKER_FRAC).round().astype(int)
 
@@ -232,7 +233,7 @@ def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
     if "date" not in df.columns or "n_tanker" not in df.columns:
         return pd.DataFrame()
 
-    df["date"] = pd.to_datetime(df["date"], unit="ms", utc=True).dt.tz_localize(None)
+    df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
     df["oil_tanker"] = (df["n_tanker"] * _OIL_TANKER_FRAC).round().astype(int)
 
