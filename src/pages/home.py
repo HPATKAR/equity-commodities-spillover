@@ -1497,16 +1497,7 @@ def _render_market_pulse_cards() -> None:
     if not data:
         return
 
-    st.markdown(
-        f'<div style="display:flex;align-items:center;justify-content:space-between;'
-        f'padding-bottom:.4rem;border-bottom:1px solid #1e1e1e;margin-bottom:.55rem">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">Market Pulse</span>'
-        f'<span style="{_M}font-size:9px;color:#8890a1;letter-spacing:.10em">REAL-TIME</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
+    body = ""
     for d in data:
         pct    = d["pct"]
         is_vix = d["sym"] == "^VIX"
@@ -1550,9 +1541,9 @@ def _render_market_pulse_cards() -> None:
                 f'&nbsp;·&nbsp;H&nbsp;<b style="color:#8890a1">{hi_fmt}</b></div>'
             )
 
-        st.markdown(
-            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
-            f'border-left:3px solid {c};padding:.5rem .7rem;margin-bottom:.3rem">'
+        body += (
+            f'<div style="border-left:3px solid {c};padding:.4rem .5rem;margin-bottom:.3rem;'
+            f'background:{_C["card2"]};border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};border-bottom:1px solid {_C["border"]}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center">'
             f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.14em;'
             f'text-transform:uppercase;color:#A8B8C8">{d["label"]}</span>'
@@ -1561,14 +1552,14 @@ def _render_market_pulse_cards() -> None:
             f'<div style="display:flex;justify-content:space-between;align-items:flex-end">'
             f'<div>'
             f'<div style="{_M}font-size:1.2rem;font-weight:700;color:#e8e9ed;line-height:1.1;margin-top:4px">'
-            f'{val_fmt}<span style="font-size:.6rem;color:#555960;margin-left:3px">{d["suffix"]}</span></div>'
+            f'{val_fmt}<span style="font-size:.6rem;color:{_C["muted"]};margin-left:3px">{d["suffix"]}</span></div>'
             f'{rng_html}'
             f'</div>'
             f'{spark_svg}'
             f'</div>'
-            f'</div>',
-            unsafe_allow_html=True,
+            f'</div>'
         )
+    _card("MARKET PULSE · REAL-TIME", body)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2402,20 +2393,7 @@ def _render_correlation_pulse(
     regimes: "pd.Series | None",
 ) -> None:
     """Left column filler: 60-day equity-commodity correlation sparkline + regime."""
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Correlation Pulse</div>',
-        unsafe_allow_html=True,
-    )
-
     if corr_series is None or len(corr_series.dropna()) < 5:
-        st.markdown(
-            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
-            f'padding:.35rem .55rem;{_M}font-size:9px;color:#555960">'
-            f'Correlation data unavailable</div>',
-            unsafe_allow_html=True,
-        )
         return
 
     series = corr_series.dropna().iloc[-60:].tolist()
@@ -2479,27 +2457,25 @@ def _render_correlation_pulse(
         f'</svg>'
     )
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
-        f'border-left:3px solid {cur_c};padding:.5rem .65rem">'
+    _card("CORRELATION PULSE",
+        f'<div style="border-left:3px solid {cur_c};padding-left:.4rem;margin-bottom:4px">'
         f'<div style="display:flex;justify-content:space-between;'
         f'align-items:center;margin-bottom:6px">'
         f'<div>'
         f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{cur_c};line-height:1">'
         f'{cur_sign}{cur:.3f}</span>'
-        f'<span style="{_M}font-size:8px;color:#555960;margin-left:5px">eq↔cmd 60d</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]};margin-left:5px">eq↔cmd 60d</span>'
         f'</div>'
         f'<span style="background:{regime_c}1a;border:1px solid {regime_c}44;'
         f'{_M}font-size:7px;font-weight:700;letter-spacing:.10em;color:{regime_c};'
         f'padding:1px 5px;text-transform:uppercase">{regime_lbl}</span>'
         f'</div>'
         f'<div style="padding-bottom:2px">{svg}</div>'
-        f'<div style="{_M}font-size:8px;color:#333;margin-top:4px">'
-        f'<span style="color:#c0392b22;border-bottom:1px dashed #c0392b55">·</span>'
-        f'&nbsp;<span style="color:#555960">0.35 coupling threshold</span>'
         f'</div>'
+        f'<div style="{_M}font-size:8px;color:#333;margin-top:2px">'
+        f'<span style="color:#c0392b22;border-bottom:1px dashed #c0392b55">·</span>'
+        f'&nbsp;<span style="color:{_C["muted"]}">0.35 coupling threshold</span>'
         f'</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -2565,17 +2541,13 @@ def _render_risk_arc(risk: dict) -> None:
         )
 
     score_c = _cc(score)
-    html = (
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .65rem">'
-        # header row — composite score
+    body = (
         f'<div style="display:flex;justify-content:space-between;align-items:center;'
-        f'padding-bottom:.3rem;border-bottom:1px solid #1e1e1e;margin-bottom:.1rem">'
-        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
-        f'text-transform:uppercase;color:#555960">GRS · Composite</span>'
+        f'padding-bottom:.3rem;border-bottom:1px solid {_C["border"]};margin-bottom:.1rem">'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">GRS · Composite</span>'
         f'<div style="display:flex;align-items:baseline;gap:3px">'
-        f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{score_c}">'
-        f'{score:.0f}</span>'
-        f'<span style="{_M}font-size:8px;color:#555960">/100</span>'
+        f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{score_c}">{score:.0f}</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">/100</span>'
         f'</div>'
         f'</div>'
         + _meter("CIS", int(w_cis * 100), cis, cis * w_cis)
@@ -2583,9 +2555,8 @@ def _render_risk_arc(risk: dict) -> None:
         + _meter("MCS", int(w_mcs * 100), mcs, mcs * w_mcs)
         + f'<div style="{_M}font-size:8px;color:#333;margin-top:.35rem">'
         f'CIS=Conflict Intensity · TPS=Transmission · MCS=Market</div>'
-        f'</div>'
     )
-    st.markdown(html, unsafe_allow_html=True)
+    _card("GRS RISK DECOMPOSITION", body)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2600,13 +2571,6 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
     ]
     if not active:
         return
-
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Escalation Tracker</div>',
-        unsafe_allow_html=True,
-    )
 
     rows = ""
     for cid, r in sorted(active, key=lambda x: x[1].get("cis", 0), reverse=True):
@@ -2654,10 +2618,7 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
             f'</div>'
         )
 
-    st.markdown(
-        f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;overflow:hidden">{rows}</div>',
-        unsafe_allow_html=True,
-    )
+    _card("ESCALATION TRACKER", rows)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2686,13 +2647,6 @@ def _render_top_commodities(conflict_results: dict) -> None:
     top = ctr.most_common(6)
     max_score = top[0][1] if top else 1.0
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Commodity Exposure</div>',
-        unsafe_allow_html=True,
-    )
-
     rows = ""
     for com, score in top:
         n_c   = conflict_count.get(com, 1)
@@ -2720,10 +2674,7 @@ def _render_top_commodities(conflict_results: dict) -> None:
             f'</div>'
         )
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows}</div>',
-        unsafe_allow_html=True,
-    )
+    _card("COMMODITY EXPOSURE", rows)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2965,25 +2916,16 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     )
 
     severity_lbl = "HIGH" if score >= 65 else "ELEVATED" if score >= 45 else "NOMINAL"
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Risk Compass</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .65rem">'
+    _card("RISK COMPASS",
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-        f'<span style="{_M}font-size:8px;color:#555960">5-dimension risk profile</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">5-dimension risk profile</span>'
         f'<span style="background:{fill_c}1a;border:1px solid {fill_c}44;'
         f'{_M}font-size:7px;font-weight:700;letter-spacing:.10em;color:{fill_c};'
         f'padding:1px 5px">{severity_lbl}</span>'
         f'</div>'
         f'{svg}'
         f'<div style="{_M}font-size:7.5px;color:#2e2e2e;margin-top:3px">'
-        f'VOL=VIX stress · COUP=eq↔cmd coupling · MCS=market conditions</div>'
-        f'</div>',
-        unsafe_allow_html=True,
+        f'VOL=VIX stress · COUP=eq↔cmd coupling · MCS=market conditions</div>',
     )
 
 
@@ -3076,22 +3018,13 @@ def _render_returns_heatmap() -> None:
             + cells + f'</tr>'
         )
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Daily Returns</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">'
+    _card("DAILY RETURNS · 5D",
         f'<table style="width:100%;border-collapse:collapse">'
         f'<thead style="background:#0a0a0a;border-bottom:1px solid #1e1e1e">{header}</thead>'
         f'<tbody>{tbody}</tbody>'
         f'</table>'
         f'<div style="{_M}font-size:7px;color:#2a2a2a;padding:3px 6px">'
-        f'day-over-day % · VIX inverted (↑ VIX = red)</div>'
-        f'</div>',
-        unsafe_allow_html=True,
+        f'day-over-day % · VIX inverted (↑ VIX = red)</div>',
     )
 
 
@@ -3143,13 +3076,6 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
 
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Transmission Channels</div>',
-        unsafe_allow_html=True,
-    )
-
     rows = ""
     for group, score in sorted_scores:
         bw = int(score)
@@ -3168,10 +3094,7 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
             f'</div>'
         )
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows}</div>',
-        unsafe_allow_html=True,
-    )
+    _card("TRANSMISSION CHANNELS", rows)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3229,21 +3152,10 @@ def _load_vol_trio() -> dict[str, dict]:
 
 def _render_regime_history(regimes: "pd.Series | None") -> None:
     """Left column: 60-day day-by-day correlation-regime strip."""
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Regime History · 60d</div>',
-        unsafe_allow_html=True,
-    )
-
     _REG_COL = {1: "#27ae60", 2: "#e8a838", 3: "#c0392b"}
     _REG_LAB = {1: "DECOUPLED", 2: "TRANSITIONING", 3: "HIGH COUPLING"}
 
     if regimes is None or len(regimes.dropna()) < 5:
-        st.markdown(
-            f'<div style="{_M}font-size:9px;color:#555960;padding:.3rem 0">Regime data unavailable</div>',
-            unsafe_allow_html=True,
-        )
         return
 
     vals = list(regimes.dropna().astype(int).iloc[-60:])
@@ -3278,16 +3190,13 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
             f'{_REG_LAB[rv][:4]} {n}d</text>'
         )
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+    _card("REGIME HISTORY · 60D",
         f'<svg width="{W}" height="{H}" style="display:block">{cells}</svg>'
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem">'
         f'<svg width="216" height="12">{legend}</svg>'
         f'</div>'
         f'<div style="margin-top:.3rem;{_M}font-size:8.5px;font-weight:700;color:{cur_col}">'
-        f'NOW: {cur_lbl}</div>'
-        f'</div>',
-        unsafe_allow_html=True,
+        f'NOW: {cur_lbl}</div>',
     )
 
 
@@ -3304,13 +3213,6 @@ def _render_alert_summary(alerts: list) -> None:
     sev_order = ["critical", "high", "medium", "low"]
     sev_col   = {"critical": "#c0392b", "high": "#e67e22", "medium": "#e8a838", "low": "#2980b9"}
     cnt = Counter(getattr(a, "severity", "low") for a in alerts)
-
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Active Alerts · {len(alerts)}</div>',
-        unsafe_allow_html=True,
-    )
 
     badges = ""
     for sev in sev_order:
@@ -3333,15 +3235,12 @@ def _render_alert_summary(alerts: list) -> None:
     msg    = (getattr(recent, "message", "") or "")[:80]
     rc     = sev_col.get(getattr(recent, "severity", "low"), "#555")
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+    _card(f"ACTIVE ALERTS · {len(alerts)}",
         f'{badges}'
         f'<div style="border-top:1px solid #1a1a1a;margin-top:.3rem;padding-top:.3rem">'
         f'<span style="{_M}font-size:8.5px;color:{rc};font-weight:600">LATEST:</span>'
         f'<span style="{_M}font-size:8.5px;color:#8890a1;margin-left:4px">{msg}</span>'
-        f'</div>'
         f'</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -3351,19 +3250,8 @@ def _render_alert_summary(alerts: list) -> None:
 
 def _render_grs_trend(score_hist: "pd.Series | None") -> None:
     """Right column: 60-day GRS sparkline with risk zone bands and delta."""
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Risk Score Trend · 60d</div>',
-        unsafe_allow_html=True,
-    )
-
     import pandas as _pd
     if score_hist is None or (isinstance(score_hist, _pd.Series) and len(score_hist.dropna()) < 5):
-        st.markdown(
-            f'<div style="{_M}font-size:9px;color:#555960;padding:.3rem 0">Score history unavailable</div>',
-            unsafe_allow_html=True,
-        )
         return
 
     vals = list(score_hist.dropna().iloc[-60:])
@@ -3422,16 +3310,13 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
         f'</svg>'
     )
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+    _card("RISK SCORE TREND · 60D",
         f'{svg}'
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.3rem">'
         f'<span style="{_M}font-size:8.5px;color:#555960">GRS NOW</span>'
         f'<span style="{_M}font-size:11px;font-weight:700;color:{s_col}">{cur:.1f}</span>'
         f'<span style="{_M}font-size:8.5px;color:{d_col}">{d_sym} {abs(delta):.1f} vs 30d</span>'
-        f'</div>'
         f'</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -3494,14 +3379,7 @@ def _render_macro_snapshot() -> None:
     if not any(cells):
         return
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Macro Snapshot</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Render 2×2 grid
+    body = ""
     grid_rows = [cells[:2], cells[2:]]
     for row in grid_rows:
         cols_html = ""
@@ -3511,10 +3389,10 @@ def _render_macro_snapshot() -> None:
                 continue
             label, vstr, reg, rc, arr, ac = cell
             cols_html += (
-                f'<div style="flex:1;background:#0d0d0d;border:1px solid #1a1a1a;'
+                f'<div style="flex:1;background:{_C["card2"]};border:1px solid {_C["border2"]};'
                 f'padding:.4rem .5rem;border-radius:2px;min-width:0">'
                 f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.12em;'
-                f'color:#555960;text-transform:uppercase;margin-bottom:2px">{label}</div>'
+                f'color:{_C["muted"]};text-transform:uppercase;margin-bottom:2px">{label}</div>'
                 f'<div style="{_M}font-size:1.0rem;font-weight:700;color:#e8e9ed;line-height:1">{vstr}</div>'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">'
                 f'<span style="{_M}font-size:7.5px;font-weight:700;color:{rc};'
@@ -3523,10 +3401,8 @@ def _render_macro_snapshot() -> None:
                 f'</div>'
                 f'</div>'
             )
-        st.markdown(
-            f'<div style="display:flex;gap:4px;margin-bottom:4px">{cols_html}</div>',
-            unsafe_allow_html=True,
-        )
+        body += f'<div style="display:flex;gap:4px;margin-bottom:4px">{cols_html}</div>'
+    _card("MACRO SNAPSHOT", body)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3588,16 +3464,7 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
     if not rows_html:
         return
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Commodity Sectors · 5d Rtn</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows_html}</div>',
-        unsafe_allow_html=True,
-    )
+    _card("COMMODITY SECTORS · 5D RTN", rows_html)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3673,22 +3540,13 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
         else "Contemporaneous (lag 0 peak)"
     )
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">CMD→EQ Lead-Lag · 60d</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+    _card("CMD→EQ LEAD-LAG · 60D",
         f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">{bars_svg}</svg>'
         f'<div style="display:flex;justify-content:space-between;margin-top:.25rem">'
         f'<span style="{_M}font-size:8px;color:#8890a1">{lead_msg}</span>'
         f'<span style="{_M}font-size:8px;font-weight:700;color:{"#27ae60" if peak_cor>=0 else "#c0392b"}">'
         f'ρ={peak_cor:.2f}</span>'
-        f'</div>'
         f'</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -3757,22 +3615,13 @@ def _render_yield_curve_snap() -> None:
         f'</svg>'
     )
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Yield Curve</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.45rem .55rem;border-radius:2px">'
+    _card("YIELD CURVE",
         f'{svg}'
         f'<div style="display:flex;justify-content:space-between;margin-top:.2rem">'
         f'<span style="{_M}font-size:8.5px;font-weight:700;color:{line_col}">{shape_lbl}</span>'
         f'<span style="{_M}font-size:8px;color:#555960">'
         f'spread {slope:+.2f}% (3M→30Y)</span>'
-        f'</div>'
         f'</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -3800,13 +3649,6 @@ def _render_vol_trio() -> None:
                                          ("HIGH",     "#e8a838") if v < 30 else
                                          ("EXTREME",  "#c0392b")),
     }
-
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Volatility Regime · VIX / OVX / GVZ</div>',
-        unsafe_allow_html=True,
-    )
 
     rows_html = ""
     for key in ["VIX", "OVX", "GVZ"]:
@@ -3846,10 +3688,7 @@ def _render_vol_trio() -> None:
             f'</div>'
         )
 
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;overflow:hidden">{rows_html}</div>',
-        unsafe_allow_html=True,
-    )
+    _card("VOLATILITY REGIME · VIX / OVX / GVZ", rows_html)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3986,22 +3825,14 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         f'</svg>'
     )
 
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Threat Radar  ·  CIS × TPS</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div style="background:#080808;border:1px solid #1e1e1e;'
-        f'padding:.4rem .3rem .2rem;border-radius:2px;text-align:center">'
+    _card("THREAT RADAR · CIS × TPS",
+        f'<div style="text-align:center">'
         f'{svg}'
         f'<div style="display:flex;justify-content:center;gap:14px;margin-top:.15rem">'
         f'<span style="{_M}font-size:7px;color:#333">● radius = CIS</span>'
         f'<span style="{_M}font-size:7px;color:#333">● angle = TPS</span>'
         f'</div>'
         f'</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -4015,13 +3846,6 @@ def _render_risk_convergence(
 ) -> None:
     """Right column: 3 risk signals as overlapping filled area charts (60 days)."""
     import pandas as _pd, math as _math
-
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Risk Signal Convergence · 60d</div>',
-        unsafe_allow_html=True,
-    )
 
     W, H  = 210, 90
     ML, MR, MT, MB = 20, 8, 6, 16
@@ -4081,10 +3905,6 @@ def _render_risk_convergence(
         pass
 
     if not series_data:
-        st.markdown(
-            f'<div style="{_M}font-size:9px;color:#555960;padding:.3rem 0">Signal data unavailable</div>',
-            unsafe_allow_html=True,
-        )
         return
 
     # grid lines
@@ -4141,13 +3961,9 @@ def _render_risk_convergence(
         f'</svg>'
     )
 
-    st.markdown(
-        f'<div style="background:#080808;border:1px solid #1e1e1e;'
-        f'padding:.5rem .55rem .35rem;border-radius:2px">'
+    _card("RISK SIGNAL CONVERGENCE · 60D",
         f'{svg}'
-        f'<div style="display:flex;flex-wrap:wrap;margin-top:.3rem">{legend_items}</div>'
-        f'</div>',
-        unsafe_allow_html=True,
+        f'<div style="display:flex;flex-wrap:wrap;margin-top:.3rem">{legend_items}</div>',
     )
 
 
