@@ -40,91 +40,162 @@ _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
 _GOLD = "#CFB991"
 
+# ── Design tokens ─────────────────────────────────────────────────────────────
+# Single source of truth for all colors used in inline HTML/SVG panels.
+_C = {
+    # Semantic status
+    "danger":  "#c0392b",
+    "warn":    "#e8a838",
+    "safe":    "#27ae60",
+    "info":    "#2980b9",
+    # Brand
+    "gold":    "#CFB991",
+    "navy":    "#1E3A5F",
+    # Surface
+    "bg":      "#08080f",
+    "card":    "#0d0d18",
+    "card2":   "#111120",
+    "border":  "#1e1e2e",
+    "border2": "#2a2a3e",
+    # Text
+    "text":    "#c0c8d8",
+    "muted":   "#6a6a8a",
+    "label":   "#8a8aaa",
+}
+
+# ── Shared style helpers ───────────────────────────────────────────────────────
+# Panel header — consistent across every SVG/HTML panel.
+def _ph(title: str, accent: str = "") -> str:
+    """Render a standardised panel header label."""
+    color = accent if accent else _C["label"]
+    return (
+        f'<div style="{_M}font-size:9.5px;font-weight:700;letter-spacing:.12em;'
+        f'text-transform:uppercase;color:{color};margin-bottom:5px;'
+        f'padding-bottom:4px;border-bottom:1px solid {_C["border"]}">'
+        f'{title}</div>'
+    )
+
+
+# Unified card wrapper — every panel goes through this.
+def _card(title: str, body: str, accent: str = "") -> None:
+    """Render a panel card with consistent header and surface styling."""
+    st.markdown(
+        f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
+        f'border-radius:3px;padding:.55rem .6rem .45rem;margin-bottom:6px">'
+        f'{_ph(title, accent)}'
+        f'{body}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# Status badge — one shape everywhere.
+def _badge(label: str, color: str) -> str:
+    return (
+        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.1em;'
+        f'text-transform:uppercase;color:{color};background:{color}18;'
+        f'border:1px solid {color}44;border-radius:2px;padding:1px 5px">'
+        f'{label}</span>'
+    )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CSS - one block, loaded once
 # ─────────────────────────────────────────────────────────────────────────────
 
 _STYLE = """<style>
-/*
-  Typography system - Command Center
-  T1  Section header  Mono 10px 700 uppercase .18em  #DCE4F0
-  T2  Panel label     Mono 10px 600 uppercase .12em  #C8D4E0
-  T3  Body text       Sans 12px 400            -     #C8D4E0
-  T4  Data value      Mono 12px 700            -     (state-colored)
-  T5  Caption / meta  Mono 10px 400            -     #A8B8C8
-*/
-/* T1 - section header */
-.hm-label{font-family:'JetBrains Mono',monospace!important;font-size:10px!important;
-  font-weight:700!important;text-transform:uppercase;letter-spacing:.18em;
-  color:#DCE4F0!important;display:block}
-/* T3 - body text */
+/* ── Base resets ── */
+html,body,[data-testid="stAppViewContainer"]{background:#08080f!important}
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] li{
+  font-family:'DM Sans',sans-serif!important;font-size:12px;
+  color:#c0c8d8!important;line-height:1.6}
+/* hide Streamlit top decoration & footer */
+#MainMenu,footer,[data-testid="stDecoration"]{display:none!important}
+header[data-testid="stHeader"]{background:transparent!important;height:0!important}
+/* ── Block container ── */
+.block-container{padding-top:.6rem!important;padding-bottom:1rem!important}
+[data-testid="stVerticalBlock"]{gap:.4rem!important}
+/* ── Typography classes ── */
+.hm-label{font-family:'JetBrains Mono',monospace!important;font-size:9.5px!important;
+  font-weight:700!important;text-transform:uppercase;letter-spacing:.12em;
+  color:#8a8aaa!important;display:block}
 .hm-sub{font-family:'DM Sans',sans-serif!important;font-size:12px!important;
-  color:#C8D4E0!important;display:block;line-height:1.6}
-/* T4 - delta values */
-.hm-up{font-family:'JetBrains Mono',monospace!important;font-size:12px!important;
+  color:#c0c8d8!important;display:block;line-height:1.6}
+.hm-up{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
   font-weight:700!important;color:#c0392b!important}
-.hm-dn{font-family:'JetBrains Mono',monospace!important;font-size:12px!important;
+.hm-dn{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
   font-weight:700!important;color:#27ae60!important}
-.hm-fl{font-family:'JetBrains Mono',monospace!important;font-size:12px!important;
-  font-weight:700!important;color:#DCE4F0!important}
-/* ── Section rule ── */
-.hm-rule{border:none;border-top:1px solid #1e1e1e;margin:.3rem 0 .25rem}
+.hm-fl{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
+  font-weight:700!important;color:#c0c8d8!important}
+/* ── Panel card ── */
+.hm-card{background:#0d0d18;border:1px solid #1e1e2e;border-radius:3px;
+  padding:.55rem .6rem .45rem;margin-bottom:6px}
+.hm-card-title{font-family:'JetBrains Mono',monospace!important;font-size:9.5px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#8a8aaa;
+  padding-bottom:4px;border-bottom:1px solid #1e1e2e;margin-bottom:5px;display:block}
+/* ── Section rule — use sparingly, only between major sections ── */
+.hm-rule{border:none;border-top:1px solid #1a1a28;margin:.25rem 0}
+/* ── Status badge ── */
+.hm-badge{font-family:'JetBrains Mono',monospace!important;font-size:8px!important;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  border-radius:2px;padding:1px 5px;display:inline-block}
 /* ── Conflict table rows ── */
-.hm-crow{display:flex;align-items:center;gap:10px;padding:8px 10px;
-  border-bottom:1px solid #111;border-left:3px solid transparent;
-  background:#0a0a0a;transition:background .12s ease,border-left-color .12s ease}
-.hm-crow:hover{background:#0f0f0f;border-left-color:#CFB991}
+.hm-crow{display:flex;align-items:center;gap:10px;padding:7px 10px;
+  border-bottom:1px solid #111118;border-left:3px solid transparent;
+  background:#0a0a14;transition:background .1s,border-left-color .1s}
+.hm-crow:hover{background:#0f0f1e;border-left-color:#CFB991}
 /* ── Nav card ── */
-.hm-nav{background:#0f0f0f;border:1px solid #1e1e1e;
-  padding:12px 14px;margin-bottom:5px;min-height:72px;
+.hm-nav{background:#0d0d18;border:1px solid #1e1e2e;border-radius:2px;
+  padding:10px 13px;margin-bottom:5px;min-height:68px;
   display:flex;flex-direction:column;justify-content:space-between;
-  transition:box-shadow .15s ease,border-color .15s ease,background .15s ease}
-.hm-nav:hover{box-shadow:0 0 0 1px #CFB991,inset 0 0 14px rgba(207,185,145,.09);
-  border-color:#CFB991!important;background:rgba(20,20,20,0.9)!important}
+  transition:box-shadow .12s,border-color .12s,background .12s}
+.hm-nav:hover{box-shadow:0 0 0 1px #CFB991;border-color:#CFB991!important;
+  background:rgba(20,20,30,0.95)!important}
 .hm-nav:hover .hm-sc{border-color:#CFB991!important;color:#CFB991!important}
 /* ── Use-case tags ── */
 .hm-tag{display:inline-block;font-family:'JetBrains Mono',monospace!important;
-  font-size:10px!important;font-weight:700!important;letter-spacing:.12em;
-  text-transform:uppercase;padding:1px 4px;border-radius:1px;margin-left:3px;
+  font-size:9px!important;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:1px 4px;border-radius:2px;margin-left:3px;
   vertical-align:middle}
-.hm-tag-daily{background:#0a1a2e;color:#2980b9!important}
+.hm-tag-daily{background:#0a1428;color:#2980b9!important}
 .hm-tag-alert{background:#1a0a00;color:#e67e22!important}
-.hm-tag-deep {background:#0a1a0a;color:#27ae60!important}
-/* ── Shortcut hint (static badge) ── */
+.hm-tag-deep {background:#0a180a;color:#27ae60!important}
+/* ── Shortcut hint ── */
 .hm-sc{display:inline-block;font-family:'JetBrains Mono',monospace!important;
-  font-size:10px!important;font-weight:700;color:#C8D4E0!important;
-  border:1px solid #2a2a2a;border-radius:2px;padding:0 3px;
+  font-size:9px!important;font-weight:700;color:#c0c8d8!important;
+  border:1px solid #2a2a3e;border-radius:2px;padding:0 3px;
   margin-left:3px;vertical-align:middle;line-height:1.6}
-/* ── Nav arrow buttons inside .hm-nav cards ── */
-.hm-nav+div [data-testid="stButton"]>button{
-  width:100%!important;text-align:center!important}
 /* ── Recommendation row ── */
-.hm-rec{border-left:3px solid;padding:.35rem .8rem;margin-bottom:4px;
-  background:#0f0f0f;border-top:1px solid #1e1e1e;border-bottom:1px solid #1e1e1e;
+.hm-rec{border-left:3px solid;padding:.3rem .7rem;margin-bottom:3px;
+  background:#0d0d18;border-top:1px solid #1e1e2e;border-bottom:1px solid #1e1e2e;
   display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-/* ── Pulse dot for high-risk ── */
+/* ── Pulse dot ── */
 @keyframes hm-pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.hm-dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+.hm-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
   animation:hm-pulse 1.8s ease-in-out infinite;vertical-align:middle;margin-right:4px}
-/* ── Terminal-style buttons (scenario pills + nav arrows) ── */
+/* ── Terminal buttons ── */
 [data-testid="stButton"]>button{
   font-family:'JetBrains Mono',monospace!important;
   font-size:9px!important;font-weight:700!important;
-  letter-spacing:.05em!important;text-transform:uppercase!important;
-  border-radius:1px!important;padding:3px 5px!important;
+  letter-spacing:.06em!important;text-transform:uppercase!important;
+  border-radius:2px!important;padding:3px 6px!important;
   height:auto!important;min-height:0!important;line-height:1.5!important;
   white-space:normal!important;overflow-wrap:break-word!important}
 [data-testid="stButton"]>button[kind="secondary"]{
-  background:transparent!important;border:1px solid #2a2a2a!important;color:#C8D4E0!important}
+  background:transparent!important;border:1px solid #2a2a3e!important;color:#c0c8d8!important}
 [data-testid="stButton"]>button[kind="secondary"]:hover{
   border-color:#CFB991!important;color:#CFB991!important;background:rgba(207,185,145,.04)!important}
 [data-testid="stButton"]>button[kind="primary"]{
-  background:#0f0f0f!important;border:1px solid #CFB991!important;color:#CFB991!important}
-[data-testid="stButton"]>button[kind="primary"]:hover{
-  background:rgba(207,185,145,.08)!important}
-/* ── Reduce top page padding only ── */
-.block-container{padding-top:1rem!important}
+  background:#0d0d18!important;border:1px solid #CFB991!important;color:#CFB991!important}
+[data-testid="stButton"]>button[kind="primary"]:hover{background:rgba(207,185,145,.08)!important}
+/* ── Streamlit selectbox / expander cleanup ── */
+[data-testid="stExpander"]{border:1px solid #1e1e2e!important;border-radius:3px!important;
+  background:#0d0d18!important}
+[data-testid="stExpander"] summary{font-family:'JetBrains Mono',monospace!important;
+  font-size:10px!important;font-weight:700!important;letter-spacing:.08em!important;
+  text-transform:uppercase!important;color:#8a8aaa!important}
+[data-testid="stHorizontalBlock"]{gap:.4rem!important}
 </style>"""
 
 
@@ -4086,11 +4157,6 @@ def _render_risk_convergence(
 
 def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
     """Ranked horizontal bars for top 10 equity × commodity correlation pairs (60d)."""
-    _HDR = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
-        'TOP CROSS-ASSET CORRELATION PAIRS · 60D</div>'
-    )
     try:
         import pandas as _pd, itertools as _it
 
@@ -4202,13 +4268,7 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
             f'<svg width="100%" viewBox="0 0 {W} {H + 10}" xmlns="http://www.w3.org/2000/svg">'
             f'{bars}{axis}</svg>'
         )
-        st.markdown(
-            _HDR +
-            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
-            'padding:.5rem .6rem .4rem;border-radius:2px">'
-            + svg + "</div>",
-            unsafe_allow_html=True,
-        )
+        _card("TOP CROSS-ASSET CORRELATION PAIRS · 60D", svg)
     except Exception:
         pass
 
@@ -4219,11 +4279,6 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
 def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
     """60-day rolling correlation heatmap for top equity + commodity pairs."""
-    _HDR = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
-        'ASSET CORRELATION MATRIX · 60D</div>'
-    )
     try:
         import numpy as _np
         import pandas as _pd
@@ -4323,21 +4378,10 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
             f'{cells}{row_labels}{col_labels}'
             f'</svg>'
         )
-        st.markdown(
-            _HDR +
-            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
-            'padding:.5rem .55rem .35rem;border-radius:2px">'
-            + svg + legend + "</div>",
-            unsafe_allow_html=True,
-        )
+        _card("ASSET CORRELATION MATRIX · 60D", svg + legend)
     except Exception:
-        st.markdown(
-            _HDR +
-            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
-            'padding:.5rem;border-radius:2px;color:#555;font-family:JetBrains Mono,monospace;'
-            'font-size:10px">Insufficient data for correlation matrix</div>',
-            unsafe_allow_html=True,
-        )
+        _card("ASSET CORRELATION MATRIX · 60D",
+              f'<span style="{_M}font-size:9px;color:{_C["muted"]}">Insufficient data</span>')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4351,11 +4395,6 @@ def _render_risk_signal_waterfall(
     alerts: list,
 ) -> None:
     """Stacked signal bars from all analytical layers — geo / regime / vol / FI."""
-    _HDR = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
-        'CROSS-MODEL SIGNAL STACK</div>'
-    )
     try:
         import numpy as _np
         if isinstance(conflict_results, dict):
@@ -4439,13 +4478,7 @@ def _render_risk_signal_waterfall(
             f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
             f'{bars}</svg>'
         )
-        st.markdown(
-            _HDR +
-            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
-            'padding:.5rem .55rem .35rem;border-radius:2px">'
-            + svg + "</div>",
-            unsafe_allow_html=True,
-        )
+        _card("CROSS-MODEL SIGNAL STACK", svg)
     except Exception:
         pass
 
@@ -4456,11 +4489,6 @@ def _render_risk_signal_waterfall(
 
 def _render_conflict_commodity_matrix(conflict_results) -> None:
     """Grid of active conflicts × commodity groups with impact intensity cells."""
-    _HDR = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
-        'CONFLICT × COMMODITY IMPACT MATRIX</div>'
-    )
     try:
         if isinstance(conflict_results, dict):
             conflict_results = [{"name": k, **v} for k, v in conflict_results.items()]
@@ -4558,28 +4586,17 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
             '<span style="color:#e8a838">■</span> 20-40 '
             '<span style="color:#2980b9">■</span> 5-20</div>'
         )
-        st.markdown(
-            _HDR +
-            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
-            'padding:.5rem .55rem .35rem;border-radius:2px">'
-            + svg + note + "</div>",
-            unsafe_allow_html=True,
-        )
+        _card("CONFLICT × COMMODITY IMPACT MATRIX", svg + note)
     except Exception:
         pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# §C4  Regime × Signal Heatmap Ticker — scrolling ticker of regime-signal pairs
+# §C4  Conflict Severity Timeline
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_geo_event_timeline(conflict_results) -> None:
     """Horizontal timeline of conflict severity with intensity gradient bars."""
-    _HDR = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-        'font-weight:700;letter-spacing:.1em;color:#8a8a9a;margin-bottom:4px">'
-        'CONFLICT SEVERITY TIMELINE</div>'
-    )
     try:
         if isinstance(conflict_results, dict):
             conflict_results = [{"name": k, **v} for k, v in conflict_results.items()]
@@ -4638,13 +4655,7 @@ def _render_geo_event_timeline(conflict_results) -> None:
             f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
             f'{bars}</svg>'
         )
-        st.markdown(
-            _HDR +
-            '<div style="background:#0a0a14;border:1px solid #1e1e2e;'
-            'padding:.5rem .55rem .35rem;border-radius:2px">'
-            + svg + legend + "</div>",
-            unsafe_allow_html=True,
-        )
+        _card("CONFLICT SEVERITY TIMELINE", svg + legend)
     except Exception:
         pass
 
@@ -4876,13 +4887,13 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         except Exception:
             pass
         # § C0  Top cross-asset correlation pairs — full-width ranked bar chart
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         try:
             _render_top_corr_pairs(_al_eq_r, _al_cmd_r)
         except Exception:
             pass
         # § C1–C4  2-column sub-grid: each panel ~half the center width (~340px)
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _cc_l, _cc_r = st.columns(2, gap="small")
         with _cc_l:
             # § C1  Asset Correlation Heatmap
@@ -4913,20 +4924,20 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # § R1  Market pulse cards — 6 live instrument cards with sparklines
         _render_market_pulse_cards()
         # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_risk_arc(risk)
         # § R3  Risk convergence — showpiece directly under risk arc:
         #        60d overlapping area chart of GRS / coupling / VIX stress signals
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         try:
             _render_risk_convergence(_score_hist, _al_corr)
         except Exception:
             pass
         # § R4  Next action — routing recommendation based on dominant risk driver
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_next_action(conflict_agg, conflict_results, compact=True)
         # § R5  Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _corr_cur = (
             float(_al_corr.dropna().iloc[-1])
             if _al_corr is not None and len(_al_corr.dropna()) >= 1
@@ -4934,22 +4945,22 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
         # § R6  Returns heatmap — 5-day day-over-day asset return grid
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_returns_heatmap()
         # § R7  Transmission channels — CIS-weighted channel pressure breakdown
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_transmission_channels(conflict_results, risk)
         # § R8  GRS trend — 60-day composite risk score sparkline with zone bands
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_grs_trend(_score_hist if isinstance(_score_hist, __import__("pandas").Series) else None)
         # § R9  Macro snapshot — VIX / 10Y / DXY / WTI 2×2 regime grid
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_macro_snapshot()
         # § R10 Yield curve — 3M / 5Y / 10Y / 30Y shape (normal / inverted / flat)
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_yield_curve_snap()
         # § R11 Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
-        st.markdown('<hr class="hm-rule" style="margin:.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_vol_trio()
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
