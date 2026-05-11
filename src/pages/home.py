@@ -1459,6 +1459,11 @@ def _render_intel_panel(conflict_results: dict) -> None:
             f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
             f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
             + col_header + rows
+            + f'<div style="border-top:1px solid #1a1a1a;margin-top:4px;padding-top:3px">'
+            f'<span style="{_M}font-size:8px;color:#383838">'
+            f'CIS scores: manual scenario assumptions unless ACLED/GDELT source shown on scorecard. '
+            f'Transmission channel weights: always manual scenario assumptions.</span>'
+            f'</div>'
             + f'</div>',
             unsafe_allow_html=True,
         )

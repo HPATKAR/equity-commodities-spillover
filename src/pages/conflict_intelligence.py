@@ -131,7 +131,7 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;'
                     f'color:{_tps_color(r["tps"])}">{r["tps"]:.0f}</span></div>'
                     f'<div style="margin-left:auto;text-align:right">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">CONF</span><br>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">CONF · analyst est.</span><br>'
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#CFB991">'
                     f'{r["confidence"]:.0%}</span></div>'
                     f'</div>'
@@ -141,6 +141,10 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'color:{trend_col}">{trend_sym} {r["trend"].upper()}</span>'
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
                     f'color:{_freshness_color(r["freshness"])}">{r["freshness"].upper()}</span>'
+                    f'</div>'
+                    f'<div style="margin-top:2px">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:6px;color:#383838">'
+                    f'Last updated: {r.get("last_updated", "—")}</span>'
                     f'</div>'
                     # CIS source provenance badge
                     + _cis_source_badge(r.get("cis_source", "static"))
@@ -181,15 +185,34 @@ def _render_intensity_breakdown(selected_id: str, selected: dict) -> None:
         "Source Coverage":      float(conflict_raw.get("source_coverage",      0.7)),
     }
 
+    # Per-dimension source annotation
+    _LABEL_TO_KEY = {
+        "Deadliness":       "deadliness",
+        "Civilian Danger":  "civilian_danger",
+        "Geo Diffusion":    "geographic_diffusion",
+        "Fragmentation":    "fragmentation",
+        "Escalation Trend": "escalation_trend",
+        "Recency":          None,  # always computed from last_updated
+        "Source Coverage":  "source_coverage",
+    }
+    _live_keys = {d.split(" ")[0] for d in selected.get("live_dims", [])}
+
+    def _src_tag(lbl: str) -> str:
+        key = _LABEL_TO_KEY.get(lbl)
+        if key is None:
+            return " · computed"
+        return " · live" if key in _live_keys else " · manual"
+
     labels = list(dims.keys())[::-1]
     values = [dims[k] for k in labels]
+    annotated_labels = [f"{lbl}{_src_tag(lbl)}" for lbl in labels]
     bar_colors = [
         "#c0392b" if v >= 0.7 else "#e67e22" if v >= 0.45 else "#CFB991" if v >= 0.25 else "#8E9AAA"
         for v in values
     ]
 
     fig = go.Figure(go.Bar(
-        x=values, y=labels, orientation="h",
+        x=values, y=annotated_labels, orientation="h",
         marker_color=bar_colors,
         text=[f"{v:.2f}" for v in values],
         textposition="outside",
@@ -249,7 +272,7 @@ def _render_tps_channels(selected_id: str) -> None:
         text=[f"{v:.0%}" for v in weights],
         textposition="outside",
         textfont=dict(family="JetBrains Mono, monospace", size=9, color="#8E9AAA"),
-        hovertemplate="%{y}: %{x:.0%}<extra></extra>",
+        hovertemplate="%{y}: %{x:.0%} · manual scenario assumption<extra></extra>",
     ))
     fig.update_layout(
         paper_bgcolor="#000", plot_bgcolor="#080808",
@@ -549,6 +572,29 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 else:
                     st.caption("No GDELT data rows to display.")
 
+    except Exception:
+        pass
+
+    # ── Registry validation warnings ───────────────────────────────────────
+    try:
+        from src.analysis.conflict_model import _REGISTRY_WARNINGS
+        if _REGISTRY_WARNINGS:
+            with st.expander(
+                f"⚠ {len(_REGISTRY_WARNINGS)} conflict registry warning(s) — schema or staleness issues",
+                expanded=False,
+            ):
+                st.markdown(
+                    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                    'color:#e67e22">These warnings are generated at app startup by validating '
+                    'the CONFLICTS registry against schema rules and staleness thresholds. '
+                    'They do not block scoring — review and update config.py if stale.</span>',
+                    unsafe_allow_html=True,
+                )
+                for w in _REGISTRY_WARNINGS:
+                    st.markdown(
+                        f'<code style="font-size:9px;color:#CFB991">{w}</code>',
+                        unsafe_allow_html=True,
+                    )
     except Exception:
         pass
 
