@@ -51,17 +51,18 @@ def _panel_note(txt: str) -> None:
 
 def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Spillover Network",
-                 "Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph")
+                 "Step 4a of 7 · Direction Test · Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph")
     _no_api_key_banner("AI spillover interpretation")
     _page_intro(
-        "Correlation tells you <em>that</em> two markets move together. Spillover tells you <em>why</em> - "
-        "and more importantly, <strong>which market is driving which.</strong> "
-        "This is the analytical core of the dashboard. Granger causality tests whether past equity returns "
-        "statistically predict future commodity returns (or the reverse). Transfer entropy measures "
-        "directional information flow without assuming linearity. Diebold-Yilmaz decomposes forecast error "
-        "variance to assign a transmitter/receiver score to every asset. When equities rank as net "
-        "transmitters to commodities, the spillover is equity-led - a risk-off equity selloff is leaking "
-        "into commodity markets before prices reflect it."
+        "<strong>Research question for this page: which market is statistically leading the other — "
+        "are equity returns Granger-preceding commodity returns, or the reverse?</strong> "
+        "Correlation (on the previous page) tells you <em>that</em> two markets move together. "
+        "Spillover analysis tests <em>which direction the statistical lead runs</em>. "
+        "Granger causality tests whether past equity returns statistically precede future commodity returns. "
+        "Transfer entropy measures directional information flow without assuming linearity. "
+        "Diebold-Yilmaz decomposes forecast error variance to assign a net transmitter or receiver "
+        "score to every asset. The dominant direction here — equity-led or commodity-led — is the "
+        "key input to the regime classification on the Overview page."
     )
 
     # ── Conflict transmission context banner ──────────────────────────────────
@@ -197,10 +198,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 _chart(fig_gc)
                 _panel_note("Red = strong lead (low p-value). Energy commodities typically lead equities by 1–3 days.")
                 _insight_note(
-                    "Red cells indicate the column commodity statistically 'Granger-causes' the row "
-                    "equity - meaning its past price moves help predict where that equity is heading. "
-                    "This is not coincidence: it means commodity price changes consistently arrive "
-                    "before equity price changes, giving a 1–3 day early warning window."
+                    "Red cells indicate the column commodity statistically Granger-precedes the row "
+                    "equity — meaning its past price moves are associated with subsequent equity moves "
+                    "in this sample. Commodity price changes have historically preceded equity price "
+                    "changes in these pairs, suggesting a 1–3 day predictive association (not established causation)."
                 )
             else:
                 _panel_note("No significant Commodity → Equity Granger links with current selection.")
@@ -249,9 +250,9 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Panel 2: Transfer Entropy ──────────────────────────────────────────
     _thread(
-        "Granger causality tells you whether a predictive relationship exists. Transfer entropy "
-        "below goes further - it measures how much information is actually flowing in each "
-        "direction, filtering out spurious correlations and isolating the true signal channel."
+        "Granger causality tests whether a linear predictive relationship exists. Transfer entropy "
+        "below complements it — it measures directional information flow without assuming linearity, "
+        "capturing asymmetric associations that linear tests may miss."
     )
     with col_te:
         _label("Transfer Entropy: Net Information Flow")
@@ -334,6 +335,23 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         dy_dir    = dy_result["direction_label"]
         if not dy_table.empty:
             G_dy = build_dy_graph(dy_table, threshold=dy_thresh)
+
+    # ── Stationarity warning badge ────────────────────────────────────────
+    _ns_assets = dy_result.get("non_stationary_assets", []) if dy_result else []
+    if _ns_assets:
+        _ns_list = ", ".join(_ns_assets)
+        st.markdown(
+            f'<div style="background:#1a1000;border:1px solid #5a3e00;'
+            f'border-left:3px solid #e67e22;padding:.45rem .85rem;'
+            f'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:10px">'
+            f'<span style="color:#e67e22;font-weight:700">⚠ STATIONARITY WARNING</span>'
+            f'<span style="color:#8E9AAA;margin-left:.6rem">'
+            f'ADF test did not reject unit root for: '
+            f'<span style="color:#CFB991">{_ns_list}</span> — '
+            f'VAR inference on I(1) series without differencing may be unreliable.'
+            f'</span></div>',
+            unsafe_allow_html=True,
+        )
 
     # ── DY Headline banner (full-width, above panels) ─────────────────────
     if not dy_table.empty and np.isfinite(total_sp):

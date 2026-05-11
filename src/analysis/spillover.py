@@ -23,7 +23,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import streamlit as st
-from statsmodels.tsa.stattools import grangercausalitytests
+from statsmodels.tsa.stattools import grangercausalitytests, adfuller
 from statsmodels.tsa.api import VAR
 from typing import Optional
 
@@ -55,6 +55,36 @@ def _require_obs(n: int, required: int, context: str) -> None:
             )
         except Exception:
             pass
+
+
+# ── Stationarity pre-check ────────────────────────────────────────────────
+
+def check_stationarity(df: pd.DataFrame, significance: float = 0.05) -> dict:
+    """
+    Augmented Dickey-Fuller test on each column of df.
+
+    Financial returns are typically I(0); price levels are I(1).  Running VAR
+    on non-stationary (I(1)) series without differencing produces spurious
+    inference (Granger & Newbold 1974).  This check flags the issue so the
+    caller can surface a warning rather than silently report unreliable stats.
+
+    Returns:
+      "stationary"     : {col: bool}  — True if ADF p < significance
+      "non_stationary" : list[str]    — columns where unit root is not rejected
+    """
+    stationary_map: dict[str, bool] = {}
+    for col in df.columns:
+        series = df[col].dropna()
+        if len(series) < 20:
+            stationary_map[col] = True  # too short to test; assume stationary
+            continue
+        try:
+            _, pval, *_ = adfuller(series, autolag="AIC")
+            stationary_map[col] = bool(pval < significance)
+        except Exception:
+            stationary_map[col] = True  # assume stationary on error
+    non_stationary = [c for c, is_stat in stationary_map.items() if not is_stat]
+    return {"stationary": stationary_map, "non_stationary": non_stationary}
 
 
 # ── Granger causality ──────────────────────────────────────────────────────
@@ -383,7 +413,7 @@ def diebold_yilmaz(
     returns: pd.DataFrame,
     lag_order: int = 4,
     horizon: int = 10,
-    top_n: int = 6,
+    top_n: int = 0,
 ) -> dict:
     """
     Diebold-Yilmaz (2012) forecast error variance decomposition spillover index.
@@ -397,6 +427,14 @@ def diebold_yilmaz(
     NET[i]  = TO[i] - FROM[i]  (positive = transmitter, negative = receiver)
     Total spillover index = mean(FROM) = (sum of all off-diagonal) / N
 
+    Parameters
+    ----------
+    top_n : int
+        If > 0, selects the top_n highest-variance columns before VAR estimation.
+        Selection is by variance descending so the most volatile assets (which carry
+        the most spillover signal) are included.  0 = use all columns (default).
+        The included asset names are returned in ``assets_used`` for transparency.
+
     Returns:
       spillover_table  : pd.DataFrame (n×n) — raw FEVD in %
       from_spillover   : pd.Series — received variance from others per asset (%)
@@ -406,20 +444,34 @@ def diebold_yilmaz(
       top_transmitter  : str — asset with highest net positive spillover
       top_receiver     : str — asset with most negative net spillover
       direction_label  : str — "Commodity → Equity dominant" or "Equity → Commodity dominant"
+      assets_used      : list[str] — columns actually included in the VAR
     """
-    data = returns.dropna(how="all").iloc[:, :top_n]
-    data = data.dropna()
+    cleaned = returns.dropna(how="all").dropna()
+    if top_n > 0 and top_n < len(cleaned.columns):
+        # Select by variance descending — highest-signal assets first
+        variances = cleaned.var().sort_values(ascending=False)
+        cleaned = cleaned[variances.index[:top_n]]
+    data = cleaned
 
     _empty = {
-        "spillover_table": pd.DataFrame(),
-        "from_spillover":  pd.Series(dtype=float),
-        "to_spillover":    pd.Series(dtype=float),
-        "net_spillover":   pd.Series(dtype=float),
-        "total_spillover": np.nan,
-        "top_transmitter": "",
-        "top_receiver":    "",
-        "direction_label": "",
+        "spillover_table":      pd.DataFrame(),
+        "from_spillover":       pd.Series(dtype=float),
+        "to_spillover":         pd.Series(dtype=float),
+        "net_spillover":        pd.Series(dtype=float),
+        "total_spillover":      np.nan,
+        "top_transmitter":      "",
+        "top_receiver":         "",
+        "direction_label":      "",
+        "assets_used":          [],
+        "non_stationary_assets": [],
     }
+
+    # ADF pre-check: VAR on I(1) series without differencing produces spurious
+    # inference.  Flag the issue in the return dict; caller surfaces the warning.
+    stationarity = check_stationarity(data)
+    non_stat = stationarity["non_stationary"]
+    if non_stat:
+        _require_obs(0, 1, f"diebold_yilmaz: non-stationary series detected: {non_stat}")
 
     n_obs = len(data)
     if n_obs < lag_order * 10:
@@ -437,11 +489,14 @@ def diebold_yilmaz(
             result = model.fit(lag_order)
         fevd   = result.fevd(horizon)
 
-        n = len(data.columns)
-        # fevd.decomp[-1] shape: (n_variables, n_variables)
-        # table[i, j] = % of asset i's variance explained by asset j's shock
+        # fevd.decomp shape: (n_vars, n_steps, n_vars) in statsmodels ≥ 0.14
+        # decomp[i, h, j] = fraction of variable i's forecast variance at horizon h
+        #                    attributable to shocks from variable j.
+        # We want the full matrix at the terminal horizon: decomp[:, -1, :]
+        # (Not decomp[-1], which is the last *variable's* row over all horizons —
+        # accidentally square only when n_vars == horizon, but semantically wrong.)
         table = pd.DataFrame(
-            fevd.decomp[-1] * 100,
+            fevd.decomp[:, -1, :] * 100,
             index=data.columns,
             columns=data.columns,
         )
@@ -485,14 +540,16 @@ def diebold_yilmaz(
         top_rx  = str(net_sp.idxmin())
 
         return {
-            "spillover_table": table.round(2),
-            "from_spillover":  from_sp.round(2),
-            "to_spillover":    to_sp.round(2),
-            "net_spillover":   net_sp.round(2),
-            "total_spillover": round(total_sp, 2),
-            "top_transmitter": top_tx,
-            "top_receiver":    top_rx,
-            "direction_label": direction,
+            "spillover_table":       table.round(2),
+            "from_spillover":        from_sp.round(2),
+            "to_spillover":          to_sp.round(2),
+            "net_spillover":         net_sp.round(2),
+            "total_spillover":       round(total_sp, 2),
+            "top_transmitter":       top_tx,
+            "top_receiver":          top_rx,
+            "direction_label":       direction,
+            "assets_used":           list(data.columns),
+            "non_stationary_assets": non_stat,
         }
     except Exception:
         return _empty
@@ -537,7 +594,7 @@ def rolling_diebold_yilmaz(
             fevd   = result.fevd(horizon)
             n      = len(chunk.columns)
             tbl    = pd.DataFrame(
-                fevd.decomp[-1] * 100,
+                fevd.decomp[:, -1, :] * 100,
                 index=chunk.columns, columns=chunk.columns,
             )
             np.fill_diagonal(tbl.values, 0.0)
@@ -604,7 +661,7 @@ def regime_conditional_spillover(
                 result = model.fit(lag_order)
             fevd   = result.fevd(horizon)
             tbl    = pd.DataFrame(
-                fevd.decomp[-1] * 100,
+                fevd.decomp[:, -1, :] * 100,
                 index=subset.columns, columns=subset.columns,
             )
             np.fill_diagonal(tbl.values, 0.0)

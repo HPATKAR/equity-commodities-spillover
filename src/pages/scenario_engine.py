@@ -1,10 +1,10 @@
 """
-Scenario Engine - Forward-Looking Parametric Shock Propagation
+Scenario Engine - OLS-Beta Parametric Shock Simulation
 Purdue University · Daniels School of Business
 
 Allows the user to shock oil, gold, yields, DXY, credit spreads, or a
-geopolitical disruption factor and see estimated spillover into equities
-and commodities with VaR 95/99 and ES 95/99 under each scenario.
+geopolitical disruption factor and see scenario-based price-impact estimates
+for equities and commodities with VaR 95/99 and ES 95/99 under each scenario.
 """
 
 from __future__ import annotations
@@ -714,9 +714,9 @@ def page_scenario_engine(
     _page_header("Geopolitical Scenario Simulator",
                  "Geopolitical scenario lens · Geo multiplier · Vol multiplier · Safe-haven / short-bias overlays")
     _page_intro(
-        "Forward-looking parametric shock propagation. Shock any combination of oil, gold, "
+        "OLS-beta scenario shock simulation. Shock any combination of oil, gold, "
         "interest rates, the US dollar, credit spreads, or a geopolitical disruption factor "
-        "and observe the estimated cross-asset spillover. VaR and Expected Shortfall at 95% "
+        "and observe the estimated cross-asset price impact. VaR and Expected Shortfall at 95% "
         "and 99% are computed via historical simulation on the selected date window."
     )
 

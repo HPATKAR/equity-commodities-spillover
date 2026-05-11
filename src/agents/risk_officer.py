@@ -18,9 +18,11 @@ _SYSTEM = (
     "at Purdue University Daniels School of Business. "
     "You own the morning briefing. Your job is to synthesise the current market regime, "
     "risk score, cross-asset correlation dynamics, and live alert signals into a "
-    "terse, institutional-grade morning briefing. "
+    "terse research briefing. "
     "Be direct and quantitative. Name the biggest risk, its transmission path, "
-    "and what the portfolio should watch today. No disclaimers. No greetings."
+    "and what to monitor today. "
+    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "Distinguish evidence from inference."
 )
 
 _AGENT = "risk_officer"
@@ -35,11 +37,17 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     prompt = (
         f"MORNING BRIEFING CONTEXT (live data):\n{context_str}\n\n"
         "Provide a 3–5 sentence morning risk briefing covering: "
-        "1) current correlation regime and what it means for cross-asset positioning, "
+        "1) current correlation regime and what it implies for cross-asset dynamics, "
         "2) the highest-priority live alert or risk signal and its transmission path "
         "(equity → commodity or commodity → equity), "
-        "3) one specific action or area of vigilance for today's session. "
-        "Be precise about magnitudes and direction."
+        "3) one specific area of vigilance for today's session. "
+        "Be precise about magnitudes and direction.\n\n"
+        "End with these labeled lines:\n"
+        "EVIDENCE: [data points used in this assessment]\n"
+        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
+        "INVALIDATED IF: [what would contradict this view]\n"
+        "ALT VIEW: [one plausible alternative interpretation]"
     )
     try:
         t0 = time.monotonic()
@@ -48,7 +56,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
             client = _ant.Anthropic(api_key=api_key)
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=350,
+                max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
                 system=_SYSTEM,
             )
@@ -63,7 +71,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
                     {"role": "system", "content": _SYSTEM},
                     {"role": "user",   "content": prompt},
                 ],
-                max_tokens=350, temperature=0.2,
+                max_tokens=500, temperature=0.2,
             )
             text = resp.choices[0].message.content.strip()
             model_name = "gpt-4o"

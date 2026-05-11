@@ -18,7 +18,8 @@ _SYSTEM = (
     "You design and interpret stress scenarios: commodity supply shocks, equity crashes, "
     "rate spikes, and combined tail events. "
     "Be quantitative and concise. Identify the most dangerous transmission path. "
-    "No disclaimers. No greetings."
+    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "Distinguish evidence from inference."
 )
 
 _AGENT = "stress_engineer"
@@ -28,10 +29,16 @@ _AGENT = "stress_engineer"
 def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     prompt = (
         f"STRESS TEST RESULTS (live scenarios):\n{context_str}\n\n"
-        "Provide a 3–5 sentence stress assessment covering: "
-        "1) the scenario with the worst expected portfolio drawdown, "
+        "Provide a 3–5 sentence stress research assessment covering: "
+        "1) the scenario with the worst modeled impact, "
         "2) which asset class is the primary transmission vector, "
-        "3) what hedge or risk-reduction action is most impactful right now."
+        "3) which risk-reduction approach is most analytically relevant in this scenario.\n\n"
+        "End with these labeled lines:\n"
+        "EVIDENCE: [data points used in this assessment]\n"
+        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
+        "INVALIDATED IF: [what would contradict this view]\n"
+        "ALT VIEW: [one plausible alternative interpretation]"
     )
     import time
     from src.analysis.trace_logger import log_trace
@@ -42,7 +49,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
             client = _ant.Anthropic(api_key=api_key)
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=350,
+                max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
                 system=_SYSTEM,
             )
@@ -57,7 +64,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
                     {"role": "system", "content": _SYSTEM},
                     {"role": "user",   "content": prompt},
                 ],
-                max_tokens=350, temperature=0.2,
+                max_tokens=500, temperature=0.2,
             )
             text = resp.choices[0].message.content.strip()
             model_name = "gpt-4o"

@@ -79,15 +79,39 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
                 f'<span style="{_M}font-size:0.48rem;font-weight:700;letter-spacing:0.10em;'
                 f'color:{sev_color}">SEVERITY: {sev_text}</span>'
             )
-        elif "CONFIDENCE:" in stripped.upper():
+        elif stripped.upper().startswith("CONFIDENCE:"):
             fmt_lines.append(
                 f'<span style="{_M}font-size:0.46rem;color:#555960">{line}</span>'
+            )
+        elif stripped.upper().startswith("EVIDENCE:"):
+            fmt_lines.append(
+                f'<span style="{_M}font-size:0.46rem;color:#8890a1">{line}</span>'
+            )
+        elif stripped.upper().startswith("KEY UNCERTAINTY:"):
+            fmt_lines.append(
+                f'<span style="{_M}font-size:0.46rem;color:#e67e22">{line}</span>'
+            )
+        elif stripped.upper().startswith("INVALIDATED IF:"):
+            fmt_lines.append(
+                f'<span style="{_M}font-size:0.46rem;color:#8890a1">{line}</span>'
+            )
+        elif stripped.upper().startswith("ALT VIEW:"):
+            fmt_lines.append(
+                f'<span style="{_M}font-size:0.46rem;color:#8890a1">{line}</span>'
             )
         else:
             fmt_lines.append(line)
     formatted = "<br>".join(fmt_lines)
 
     conf_html = _conf_bar(conf) if conf is not None else ""
+
+    disclaimer_html = (
+        f'<div style="border-top:1px solid #1a1a1a;margin-top:0.45rem;padding-top:0.3rem">'
+        f'<span style="{_M}font-size:0.40rem;color:#383838;letter-spacing:0.05em">'
+        f'RESEARCH ONLY · Not investment advice · Academic analysis dashboard · '
+        f'Verify with primary sources before acting</span>'
+        f'</div>'
+    )
 
     st.markdown(
         f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
@@ -112,7 +136,7 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
         f'<div style="{_F}font-size:0.72rem;color:#c8c8c8;line-height:1.78">'
         f'{formatted}</div>'
 
-        + conf_html +
+        + conf_html + disclaimer_html +
         f'</div>',
         unsafe_allow_html=True,
     )

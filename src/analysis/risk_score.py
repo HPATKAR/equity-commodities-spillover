@@ -2,19 +2,18 @@
 Geopolitical Risk Score — 3-Layer Architecture.
 
 Top-level score:
-  Global Geo Risk = 40% Conflict Intensity + 35% Transmission Pressure + 25% Market Confirmation
+  Global Geo Risk = 35% Conflict Intensity + 30% Transmission Pressure + 35% Market Confirmation
 
-Layer 1 — Conflict Intensity (40%)
+Layer 1 — Conflict Intensity (35%)
   Delegated to conflict_model.py (CIS/TPS per-conflict, then portfolio aggregate).
 
-Layer 2 — Transmission Pressure (35%)
+Layer 2 — Transmission Pressure (30%)
   Portfolio TPS from conflict_model.py.
 
-Layer 3 — Market Confirmation (25%)
-  Orthogonalized market signals: equity vol, rates vol, commodity vol residual,
-  safe-haven behavior, cross-asset spillover, oil-gold signal.
-  EWM z-scores (span=60) to avoid procyclicality.
-  Signals are residualized to remove double-counting of shared factor.
+Layer 3 — Market Confirmation (35%)
+  Market signals: equity vol, rates vol, commodity vol, safe-haven behavior,
+  oil-gold joint signal, correlation velocity.
+  EWM z-scores (span=252) against a one-year baseline.
 
 Confidence overlay:
   Blends conflict model confidence, market signal agreement, and data freshness.
@@ -104,8 +103,20 @@ def _ewm_zscore(series: pd.Series, span: int = 252) -> pd.Series:
 
 
 def _zscore_to_score(z: float, scale: float = 15.0) -> float:
-    """Map EWM z-score → [0, 100]. z=0 → 50, z=+2 → ~80, z=−2 → ~20."""
-    return float(np.clip(50.0 + float(z) * scale, 0.0, 100.0))
+    """
+    Map EWM z-score → [0, 100] via logistic sigmoid.
+
+    Sigmoid replaces the prior linear + hard-clip: the logistic naturally
+    bounds the output in (0, 100) with no clipping artefacts at extremes.
+    Steepness k = scale/25 matches the slope of the old linear function at
+    z=0 (the most common operating range), so on-centre behaviour is unchanged.
+
+    z=0 → 50.0 (by construction)
+    z=+2 → ~77 (scale=15), ~69 (scale=10)  [linear was 80, 70]
+    z=+5 → ~95+ — saturates smoothly instead of hard-capping at 100
+    """
+    k = scale / 25.0
+    return float(100.0 / (1.0 + np.exp(-k * float(z))))
 
 
 # ── Market Confirmation Layer ─────────────────────────────────────────────────
@@ -295,7 +306,7 @@ def _market_confirmation_score(
     eq_r: pd.DataFrame | None = None,
 ) -> tuple[float, dict]:
     """
-    Market Confirmation Score (MCS) — 5 orthogonalized signals.
+    Market Confirmation Score (MCS) — 6 market signals, EWM z-scored.
     Weights sum to 1.0. Returns (score, component_dict).
     """
     eq_vol     = _equity_vol_score(eq_r)
@@ -338,9 +349,9 @@ def compute_risk_score(
     Compute composite geopolitical risk score (0–100).
 
     Architecture:
-      40% Conflict Intensity Score (conflict_model.py)
-      35% Transmission Pressure Score (conflict_model.py)
-      25% Market Confirmation Score (orthogonalized market signals)
+      35% Conflict Intensity Score (conflict_model.py)
+      30% Transmission Pressure Score (conflict_model.py)
+      35% Market Confirmation Score (market signals)
 
     Scenario multiplier from session_state["scenario"] applied after assembly.
     Returns dict with score, label, color, components, confidence, and detail.
@@ -447,12 +458,12 @@ def compute_risk_score(
         "top_conflict":    conflict_agg.get("top_conflict"),
         "mcs_components":  mcs_components,
         # Legacy fields (kept for backward compat with existing pages)
-        "weights": {"conflict_intensity": 0.40, "transmission": 0.35, "market_conf": 0.25},
+        "weights": {"conflict_intensity": 0.35, "transmission": 0.30, "market_conf": 0.35},
         "corr_pct": round(_corr_accel_score(avg_corr), 1),
         "components": {
-            f"Conflict Intensity (40%)":    round(cis_portfolio, 1),
-            f"Transmission Pressure (35%)": round(tps_portfolio, 1),
-            f"Market Confirmation (25%)":   round(mcs, 1),
+            "Conflict Intensity (35%)":    round(cis_portfolio, 1),
+            "Transmission Pressure (30%)": round(tps_portfolio, 1),
+            "Market Confirmation (35%)":   round(mcs, 1),
             **{f"  {k}": v for k, v in mcs_components.items()},
         },
     }
@@ -615,8 +626,19 @@ def plot_risk_history(
     score_series: pd.Series,
     events: list[dict] | None = None,
     height: int = 300,
+    conflict_start: str | None = None,
 ) -> go.Figure:
-    """Line chart of historical risk score with regime bands and event markers."""
+    """
+    Line chart of historical risk score with regime bands and event markers.
+
+    Parameters
+    ----------
+    conflict_start : str | None
+        ISO date string (YYYY-MM-DD) from which the full 3-layer GRS (CIS + TPS + MCS)
+        is included.  Everything before this date is MCS-proxy only.  When provided, a
+        vertical boundary line and shaded region are added to annotate the distinction.
+        None (default) = entire series labelled as proxy with a chart annotation.
+    """
     if events is None:
         events = GEOPOLITICAL_EVENTS
 
@@ -632,7 +654,54 @@ def plot_risk_history(
                       layer="below", line_width=0)
         fig.add_hline(y=y0, line=dict(color="rgba(150,150,150,0.25)", width=0.5, dash="dot"))
 
+    # ── Proxy boundary annotation ──────────────────────────────────────────
+    # risk_score_history() uses only the MCS (market confirmation) layer —
+    # CIS and TPS cannot be reconstructed at daily frequency from public data.
+    # Make this explicit so a reviewer is not misled into thinking the full
+    # 3-layer model applies to the entire historical series.
     idx = score_series.index
+    if conflict_start and len(idx) > 0:
+        cs_ts = pd.Timestamp(conflict_start)
+        if idx[0] < cs_ts < idx[-1]:
+            # Left region: MCS proxy only; right region: full GRS
+            fig.add_vrect(
+                x0=str(idx[0]), x1=conflict_start,
+                fillcolor="rgba(100,100,100,0.06)", opacity=1.0,
+                layer="below", line_width=0,
+            )
+            fig.add_vline(
+                x=conflict_start,
+                line=dict(color="#CFB991", width=1.2, dash="dashdot"),
+            )
+            fig.add_annotation(
+                x=conflict_start, y=92,
+                text="← MCS proxy only · Full model →",
+                showarrow=False,
+                font=dict(size=7.5, color="#CFB991", family="JetBrains Mono, monospace"),
+                xanchor="center", yanchor="top",
+                bgcolor="rgba(10,12,20,0.75)", borderpad=2,
+            )
+        else:
+            # Entire series is proxy — add a single corner label
+            fig.add_annotation(
+                x=0.01, y=0.97, xref="paper", yref="paper",
+                text="Historical: MCS proxy only (market signals — conflict layer excluded)",
+                showarrow=False,
+                font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
+                xanchor="left", yanchor="top",
+                bgcolor="rgba(10,12,20,0.65)", borderpad=2,
+            )
+    else:
+        # No boundary provided — label the whole chart as a proxy
+        fig.add_annotation(
+            x=0.01, y=0.97, xref="paper", yref="paper",
+            text="Historical: MCS proxy only (market signals — conflict layer excluded)",
+            showarrow=False,
+            font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
+            xanchor="left", yanchor="top",
+            bgcolor="rgba(10,12,20,0.65)", borderpad=2,
+        )
+
     for ev in events:
         if not score_series.empty and (
             pd.Timestamp(ev["start"]) < idx[0] or pd.Timestamp(ev["start"]) > idx[-1]

@@ -190,7 +190,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     _hdr_col, _btn_col = st.columns([5, 1])
     with _hdr_col:
         _page_header("Market Spillover Command Center",
-                     "15 equity indices · 17 commodity futures · Correlation regimes · Geopolitical risk · Spillover signals")
+                     "Step 5 of 7 · Regime Classification · 15 equity indices · 17 commodity futures · Correlation regimes · AI briefing")
     with _btn_col:
         _stale_color = "#c0392b" if _stale else "#27ae60"
         st.markdown(
@@ -211,11 +211,13 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.rerun()
     _no_api_key_banner("AI analyst and agent-generated insights")
     _page_intro(
-        "The central research question of this dashboard: <strong>do equity market shocks spill into "
-        "commodities - and in which direction?</strong> This page is your live answer. The regime badge "
-        "tells you whether equity-commodity co-movement is currently amplifying or absorbing risk. "
-        "The KPIs quantify how tight the spillover channel is right now. The heatmap shows which "
-        "specific equity-commodity pairs are most coupled. Start here before reading any other page."
+        "<strong>Research question for this page: what correlation regime are we in right now, "
+        "and is the equity-commodity channel amplifying or absorbing risk?</strong> "
+        "The regime badge (Normal / Elevated / Crisis) is the answer in one word. "
+        "The KPIs quantify how tight the spillover channel is at this moment. "
+        "The heatmap shows which specific equity-commodity pairs are most coupled. "
+        "Read this page after Correlation and Spillover — it synthesises their outputs "
+        "into a single regime classification and hands the finding to the AI briefing."
     )
 
     # ── Portfolio Pulse (shows when a portfolio has been imported) ─────────────

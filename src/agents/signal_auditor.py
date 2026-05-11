@@ -18,7 +18,9 @@ _SYSTEM = (
     "at Purdue University Daniels School of Business. "
     "You review signal model performance, Granger causality hit rates, and "
     "calibrate confidence scores across the AI workforce. "
-    "Be rigorous. Identify signal decay and overfit risk. No disclaimers."
+    "Be rigorous. Identify signal decay and overfit risk. "
+    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "Distinguish evidence from inference."
 )
 
 _AGENT = "signal_auditor"
@@ -31,7 +33,13 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
         "Provide a 3–5 sentence signal audit covering: "
         "1) which Granger pairs have the strongest and weakest recent directional accuracy, "
         "2) whether model confidence scores need upward or downward calibration, "
-        "3) any signs of signal decay or regime mismatch that reduce reliability."
+        "3) any signs of signal decay or regime mismatch that reduce reliability.\n\n"
+        "End with these labeled lines:\n"
+        "EVIDENCE: [data points used in this assessment]\n"
+        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
+        "INVALIDATED IF: [what would contradict this view]\n"
+        "ALT VIEW: [one plausible alternative interpretation]"
     )
     import time
     from src.analysis.trace_logger import log_trace
@@ -42,7 +50,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
             client = _ant.Anthropic(api_key=api_key)
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=350,
+                max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
                 system=_SYSTEM,
             )
@@ -57,7 +65,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
                     {"role": "system", "content": _SYSTEM},
                     {"role": "user",   "content": prompt},
                 ],
-                max_tokens=350, temperature=0.2,
+                max_tokens=500, temperature=0.2,
             )
             text = resp.choices[0].message.content.strip()
             model_name = "gpt-4o"

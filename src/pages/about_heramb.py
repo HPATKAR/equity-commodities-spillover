@@ -270,18 +270,18 @@ def page_about_heramb() -> None:
             f"</span>"
             f"<ul style='margin:0 0 10px;padding-left:14px;list-style:disc;'>"
             f"<li style='margin-bottom:4px;'><span class='ah-body'>"
-            f"Built an institutional-grade cross-asset analytics dashboard tracking "
+            f"Built a research-grade cross-asset analytics dashboard tracking "
             f"spillover dynamics across 15 equity indices, 17 commodity futures, "
             f"fixed income, and FX - 24 pages total including documentation and team profiles</span></li>"
             f"<li style='margin-bottom:4px;'><span class='ah-body'>"
-            f"Implemented the full quantitative engine: DCC-GARCH regime detection, "
+            f"Implemented the full quantitative engine: DCC-style dynamic correlation, "
             f"Diebold-Yilmaz FEVD connectedness, Granger causality, Hidden Markov Model "
             f"regime detection, and transfer entropy</span></li>"
             f"<li style='margin-bottom:4px;'><span class='ah-body'>"
             f"Architected an 8-agent AI orchestration pipeline (Risk Officer, Macro Strategist, "
             f"Geo Analyst, Commodities Specialist, Stress Engineer, Signal Auditor, Trade Structurer, CQO) with "
             f"a 4-round dependency-ordered execution pipeline that auto-generates morning "
-            f"briefings, stress outputs, and regime-filtered trade signals</span></li>"
+            f"briefings, stress outputs, and regime-filtered illustrative trade structures</span></li>"
             f"<li style='margin-bottom:4px;'><span class='ah-body'>"
             f"Built a 6-source live intelligence layer: yfinance (50+ tickers), FRED (24 macro "
             f"series), GDELT 2.0 (conflict media escalation), EIA Open Data (petroleum inventories), "
@@ -406,9 +406,9 @@ def page_about_heramb() -> None:
                 "Purdue Daniels &middot; MGMT 69000-120 (Prof. C. Zhang)",
                 "",
                 [
-                    "Built an institutional-grade cross-asset analytics dashboard tracking spillover "
+                    "Built a research-grade cross-asset analytics dashboard tracking spillover "
                     "dynamics across 15 equity indices, 17 commodity futures, fixed income, and FX.",
-                    "Integrates DCC-GARCH regime detection, Diebold-Yilmaz FEVD connectedness, "
+                    "Integrates DCC-style dynamic correlation, Diebold-Yilmaz FEVD connectedness, "
                     "Granger causality, and transfer entropy with a 7-agent AI orchestration pipeline.",
                 ],
             )
@@ -419,7 +419,7 @@ def page_about_heramb() -> None:
                 [
                     "Built a quantitative dashboard for JGB repricing as the BOJ exits YCC, using "
                     "regime filters (MS/HMM/GARCH), yield PCA, DCC spillovers, and cross-asset "
-                    "transfer entropy to auto-generate trade signals.",
+                    "transfer entropy to generate illustrative research signals.",
                 ],
             )
             + _exp(

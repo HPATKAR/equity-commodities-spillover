@@ -66,6 +66,22 @@ _TPS_WEIGHTS: dict[str, float] = {
 }
 
 
+# ── CIS dimension provenance ──────────────────────────────────────────────────
+# Which CIS dimensions are always manual (no live replacement path),
+# and which can be replaced by ACLED/GDELT when those APIs respond.
+_CIS_ALWAYS_MANUAL: list[str] = [
+    "civilian_danger",   # no reliable live event proxy
+    "fragmentation",     # actor-count judgment; manual update required
+    "source_coverage",   # analyst estimate of data quality
+]
+_CIS_LIVE_REPLACEABLE: list[str] = [
+    "deadliness",            # ACLED: fatality/event counts replace this
+    "geographic_diffusion",  # ACLED: event-spread index replaces this
+    "escalation_trend",      # ACLED + GDELT corroboration replaces this
+]
+# All TPS transmission channel weights are always manual scenario assumptions.
+_TPS_BASIS = "manual scenario assumption"
+
 # ── State multipliers ─────────────────────────────────────────────────────────
 
 _STATE_MULT: dict[str, float] = {
@@ -90,6 +106,95 @@ _CM_CONFIG: dict = {
     "staleness_cap_days":   180,  # hard cap applied
     "staleness_cis_cap":    65.0, # CIS capped at this value when stale
 }
+
+
+# ── Conflict registry validator ────────────────────────────────────────────────
+
+_VALID_STATES      = {"active", "latent", "frozen"}
+_VALID_ESCALATION  = {"escalating", "stable", "de-escalating"}
+_DIM_FIELDS        = {
+    "deadliness", "civilian_danger", "geographic_diffusion",
+    "fragmentation", "source_coverage", "data_confidence",
+}
+_TPS_CHANNEL_KEYS  = set(_TPS_WEIGHTS.keys())
+
+
+def _validate_conflict_registry(conflicts: list[dict]) -> list[str]:
+    """
+    Validate every entry in the CONFLICTS registry at import time.
+
+    Checks:
+      - intensity dimensions in [0, 1]
+      - transmission channel values in [0, 1]
+      - escalation_trend in allowed enum
+      - state in allowed enum
+      - staleness warning if last_updated > staleness_warn_days
+
+    Returns a list of human-readable warning strings (empty if all clean).
+    Logs each warning via trace_logger if available.
+    """
+    warnings: list[str] = []
+    today = datetime.date.today()
+    warn_days = _CM_CONFIG["staleness_warn_days"]
+
+    for c in conflicts:
+        cid = c.get("id", "<unknown>")
+
+        # escalation_trend enum
+        et = c.get("escalation_trend", "stable")
+        if et not in _VALID_ESCALATION:
+            warnings.append(
+                f"[{cid}] escalation_trend='{et}' not in {_VALID_ESCALATION}"
+            )
+
+        # state enum
+        st_val = c.get("state", "active")
+        if st_val not in _VALID_STATES:
+            warnings.append(f"[{cid}] state='{st_val}' not in {_VALID_STATES}")
+
+        # intensity dimension bounds
+        for field in _DIM_FIELDS:
+            val = c.get(field)
+            if val is not None and not (0.0 <= float(val) <= 1.0):
+                warnings.append(
+                    f"[{cid}] {field}={val} outside [0, 1]"
+                )
+
+        # transmission channel bounds
+        tx = c.get("transmission", {})
+        for ch, val in tx.items():
+            if not (0.0 <= float(val) <= 1.0):
+                warnings.append(
+                    f"[{cid}] transmission[{ch}]={val} outside [0, 1]"
+                )
+            if ch not in _TPS_CHANNEL_KEYS:
+                warnings.append(
+                    f"[{cid}] transmission key '{ch}' not in TPS weight map"
+                )
+
+        # staleness
+        lu = c.get("last_updated")
+        if lu is not None:
+            age_days = (today - lu).days
+            if age_days > warn_days:
+                warnings.append(
+                    f"[{cid}] last_updated={lu} is {age_days}d ago "
+                    f"(>{warn_days}d staleness threshold)"
+                )
+
+    if warnings:
+        try:
+            from src.analysis.trace_logger import log_failure
+            for w in warnings:
+                log_failure("conflict_registry", "SchemaValidation", w)
+        except Exception:
+            pass
+
+    return warnings
+
+
+# Run once at import — catches schema drift before it silently corrupts scores.
+_REGISTRY_WARNINGS: list[str] = _validate_conflict_registry(CONFLICTS)
 
 
 # ── Recency decay ─────────────────────────────────────────────────────────────
@@ -415,6 +520,21 @@ def score_all_conflicts() -> dict[str, dict]:
         cis, cis_source = compute_cis(c)
         tps  = compute_tps(c)
         conf = compute_confidence(c)
+
+        # Derive provenance: which CIS dims were live-replaced vs manual assumption
+        if cis_source == "acled+gdelt":
+            live_dims   = [f"{d} (ACLED)" for d in ("deadliness", "geographic_diffusion")] + ["escalation_trend (ACLED+GDELT)"]
+            manual_dims = list(_CIS_ALWAYS_MANUAL)
+        elif cis_source == "acled":
+            live_dims   = [f"{d} (ACLED)" for d in _CIS_LIVE_REPLACEABLE]
+            manual_dims = list(_CIS_ALWAYS_MANUAL)
+        elif cis_source == "gdelt":
+            live_dims   = ["escalation_trend (GDELT)"]
+            manual_dims = _CIS_ALWAYS_MANUAL + ["deadliness", "geographic_diffusion"]
+        else:  # "static"
+            live_dims   = []
+            manual_dims = _CIS_ALWAYS_MANUAL + list(_CIS_LIVE_REPLACEABLE)
+
         results[cid] = {
             "id":           cid,
             "name":         c["name"],
@@ -430,6 +550,11 @@ def score_all_conflicts() -> dict[str, dict]:
             "freshness":    _freshness_label(c),
             "escalation":   c.get("escalation_trend", "stable"),
             "market_freshness": 1.0,   # updated by apply_market_freshness()
+            # Provenance metadata
+            "live_dims":         live_dims,
+            "manual_dims":       manual_dims,
+            "transmission_basis": _TPS_BASIS,
+            "scoring_basis":      c.get("scoring_basis", "manual scenario assumption"),
             # Pass through for display
             "transmission": c.get("transmission", {}),
             "affected_commodities": c.get("affected_commodities", []),

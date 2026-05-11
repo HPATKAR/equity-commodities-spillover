@@ -10,10 +10,31 @@ from datetime import date
 # Separate from GEOPOLITICAL_EVENTS (event-window analysis) - this is the live
 # conflict tracking layer for the scoring architecture.
 #
-# Transmission channel values: 0–1 (how much this conflict affects this channel).
-# Intensity dimensions: 0–1 (current state; update when situation changes).
-# escalation_trend: "escalating" | "stable" | "de-escalating"
-# state: "active" | "latent" | "frozen"
+# FIELD PROVENANCE — what is live vs manual:
+#
+#   ALWAYS MANUAL SCENARIO ASSUMPTIONS (human-authored, no live replacement):
+#     civilian_danger       — humanitarian risk judgment; no reliable live proxy
+#     fragmentation         — actor-count assessment; manual update required
+#     source_coverage       — analyst estimate of data quality
+#     data_confidence       — analyst estimate of scoring reliability
+#     transmission.*        — all 12 channel weights are manual structural assumptions
+#     affected_equities, affected_commodities, affected_fx, hedge_assets — manual lists
+#
+#   LIVE-REPLACEABLE (overwritten when ACLED/GDELT respond; fall back to manual):
+#     deadliness            — ACLED: fatality/event counts (last 30d), else manual
+#     geographic_diffusion  — ACLED: event-spread index, else manual
+#     escalation_trend      — ACLED + GDELT corroboration, else GDELT alone, else manual
+#
+#   ALWAYS COMPUTED (not stored here):
+#     recency               — derived from conflict.start vs today
+#     CIS, TPS, confidence  — computed by conflict_model.py at runtime
+#
+# scoring_basis: "manual scenario assumption" — present on every entry as a machine-
+#   readable flag. When cis_source == "static" in conflict_model output, all CIS
+#   dimensions fell back to these manual values.
+#
+# last_updated: date the analyst last reviewed and updated this entry.
+#   Used by the staleness cap: entries older than 180d have CIS capped at 65.
 #
 # NOTE: Update last_updated and dimension values when the situation changes.
 # All other scoring is computed dynamically by conflict_model.py.
@@ -68,6 +89,7 @@ CONFLICTS: list[dict] = [
         "hedge_assets":         ["Gold", "Silver"],
 
         "data_confidence": 0.88,
+        "scoring_basis":   "manual scenario assumption",  # all dims are manual unless ACLED/GDELT respond
         "acled_id":        "ukraine_russia",   # maps to src/data/acled.py _ACLED_CONFLICT_MAP
     },
 
@@ -116,6 +138,7 @@ CONFLICTS: list[dict] = [
         "hedge_assets":         ["Gold"],
 
         "data_confidence": 0.80,
+        "scoring_basis":   "manual scenario assumption",
         "acled_id":        "red_sea_houthi",
     },
 
@@ -163,6 +186,7 @@ CONFLICTS: list[dict] = [
         "hedge_assets":         ["Gold", "US 20Y+ Treasury (TLT)"],
 
         "data_confidence": 0.87,
+        "scoring_basis":   "manual scenario assumption",
         "acled_id":        "israel_hamas",
     },
 
@@ -218,6 +242,7 @@ CONFLICTS: list[dict] = [
 
         "acled_id":        "iran_regional",    # maps to src/data/acled.py + gdelt.py
         "data_confidence": 0.88,
+        "scoring_basis":   "manual scenario assumption",
     },
 
     {
@@ -265,6 +290,7 @@ CONFLICTS: list[dict] = [
 
         "acled_id":        "india_pakistan",    # maps to src/data/acled.py + gdelt.py
         "data_confidence": 0.75,
+        "scoring_basis":   "manual scenario assumption",
     },
 
     {
@@ -314,6 +340,7 @@ CONFLICTS: list[dict] = [
 
         "acled_id":        "taiwan_strait",     # maps to src/data/acled.py + gdelt.py
         "data_confidence": 0.72,
+        "scoring_basis":   "manual scenario assumption",
     },
 ]
 

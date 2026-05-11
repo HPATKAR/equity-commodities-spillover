@@ -34,7 +34,7 @@ from src.analysis.freshness import freshness_badge_html, record_fetch
 from src.data.loader import load_returns
 from src.analysis.correlations import average_cross_corr_series
 from src.analysis.risk_score import risk_score_history, plot_risk_history
-from src.ui.shared import _page_header, _page_footer
+from src.ui.shared import _page_header, _page_footer, _section_header
 
 _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
@@ -43,24 +43,20 @@ _GOLD = "#CFB991"
 # ── Design tokens ─────────────────────────────────────────────────────────────
 # Single source of truth for all colors used in inline HTML/SVG panels.
 _C = {
-    # Semantic status
     "danger":  "#c0392b",
-    "warn":    "#e8a838",
+    "warn":    "#e67e22",
     "safe":    "#27ae60",
     "info":    "#2980b9",
-    # Brand
     "gold":    "#CFB991",
     "navy":    "#1E3A5F",
-    # Surface
-    "bg":      "#08080f",
-    "card":    "#0d0d18",
-    "card2":   "#111120",
-    "border":  "#1e1e2e",
-    "border2": "#2a2a3e",
-    # Text
-    "text":    "#c0c8d8",
-    "muted":   "#6a6a8a",
-    "label":   "#8a8aaa",
+    "bg":      "#000000",
+    "card":    "#0d0d0d",
+    "card2":   "#141414",
+    "border":  "#1e1e1e",
+    "border2": "#2a2a2a",
+    "text":    "#e8e9ed",
+    "muted":   "#555960",
+    "label":   "#8890a1",
 }
 
 # ── Shared style helpers ───────────────────────────────────────────────────────
@@ -70,8 +66,8 @@ def _ph(title: str, accent: str = "") -> str:
     color = accent if accent else _C["label"]
     return (
         f'<div style="{_M}font-size:9.5px;font-weight:700;letter-spacing:.12em;'
-        f'text-transform:uppercase;color:{color};margin-bottom:5px;'
-        f'padding-bottom:4px;border-bottom:1px solid {_C["border"]}">'
+        f'text-transform:uppercase;color:{color};margin-bottom:8px;'
+        f'padding-bottom:5px;border-bottom:1px solid {_C["border"]}">'
         f'{title}</div>'
     )
 
@@ -80,8 +76,9 @@ def _ph(title: str, accent: str = "") -> str:
 def _card(title: str, body: str, accent: str = "") -> None:
     """Render a panel card with consistent header and surface styling."""
     st.markdown(
-        f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
-        f'border-radius:3px;padding:.55rem .6rem .45rem;margin-bottom:6px">'
+        f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
+        f'border-left:2px solid rgba(207,185,145,0.22);'
+        f'padding:.7rem .75rem .6rem;margin-bottom:10px">'
         f'{_ph(title, accent)}'
         f'{body}'
         f'</div>',
@@ -94,7 +91,7 @@ def _badge(label: str, color: str) -> str:
     return (
         f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.1em;'
         f'text-transform:uppercase;color:{color};background:{color}18;'
-        f'border:1px solid {color}44;border-radius:2px;padding:1px 5px">'
+        f'border:1px solid {color}44;border-radius:2px;padding:2px 7px">'
         f'{label}</span>'
     )
 
@@ -104,71 +101,71 @@ def _badge(label: str, color: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _STYLE = """<style>
-/* ── Base resets ── */
-html,body,[data-testid="stAppViewContainer"]{background:#08080f!important}
+/* ── Base resets — aligned to app-wide neutral dark palette ── */
+html,body,[data-testid="stAppViewContainer"]{background:#000!important}
 [data-testid="stAppViewContainer"] p,
 [data-testid="stAppViewContainer"] li{
   font-family:'DM Sans',sans-serif!important;font-size:12px;
-  color:#c0c8d8!important;line-height:1.6}
+  color:#e8e9ed!important;line-height:1.6}
 /* hide Streamlit top decoration & footer */
 #MainMenu,footer,[data-testid="stDecoration"]{display:none!important}
-header[data-testid="stHeader"]{background:transparent!important;height:0!important}
+header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid #1a1a1a!important}
 /* ── Block container ── */
 .block-container{padding-top:.6rem!important;padding-bottom:1rem!important}
 [data-testid="stVerticalBlock"]{gap:.4rem!important}
 /* ── Typography classes ── */
 .hm-label{font-family:'JetBrains Mono',monospace!important;font-size:9.5px!important;
   font-weight:700!important;text-transform:uppercase;letter-spacing:.12em;
-  color:#8a8aaa!important;display:block}
+  color:#8890a1!important;display:block}
 .hm-sub{font-family:'DM Sans',sans-serif!important;font-size:12px!important;
-  color:#c0c8d8!important;display:block;line-height:1.6}
+  color:#e8e9ed!important;display:block;line-height:1.6}
 .hm-up{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
   font-weight:700!important;color:#c0392b!important}
 .hm-dn{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
   font-weight:700!important;color:#27ae60!important}
 .hm-fl{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
-  font-weight:700!important;color:#c0c8d8!important}
+  font-weight:700!important;color:#e8e9ed!important}
 /* ── Panel card ── */
-.hm-card{background:#0d0d18;border:1px solid #1e1e2e;border-radius:3px;
-  padding:.55rem .6rem .45rem;margin-bottom:6px}
+.hm-card{background:#141414;border:1px solid #1e1e1e;border-left:2px solid rgba(207,185,145,0.22);
+  padding:.7rem .75rem .6rem;margin-bottom:10px}
 .hm-card-title{font-family:'JetBrains Mono',monospace!important;font-size:9.5px;
-  font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#8a8aaa;
-  padding-bottom:4px;border-bottom:1px solid #1e1e2e;margin-bottom:5px;display:block}
-/* ── Section rule — use sparingly, only between major sections ── */
-.hm-rule{border:none;border-top:1px solid #1a1a28;margin:.25rem 0}
+  font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#8890a1;
+  padding-bottom:5px;border-bottom:1px solid #1e1e1e;margin-bottom:8px;display:block}
+/* ── Section rule ── */
+.hm-rule{border:none;border-top:1px solid #1a1a1a;margin:.25rem 0}
 /* ── Status badge ── */
 .hm-badge{font-family:'JetBrains Mono',monospace!important;font-size:8px!important;
   font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  border-radius:2px;padding:1px 5px;display:inline-block}
+  border-radius:2px;padding:2px 6px;display:inline-block}
 /* ── Conflict table rows ── */
 .hm-crow{display:flex;align-items:center;gap:10px;padding:7px 10px;
-  border-bottom:1px solid #111118;border-left:3px solid transparent;
-  background:#0a0a14;transition:background .1s,border-left-color .1s}
-.hm-crow:hover{background:#0f0f1e;border-left-color:#CFB991}
+  border-bottom:1px solid #1e1e1e;border-left:3px solid transparent;
+  background:#141414;transition:background .1s,border-left-color .1s}
+.hm-crow:hover{background:#1a1a1a;border-left-color:#CFB991}
 /* ── Nav card ── */
-.hm-nav{background:#0d0d18;border:1px solid #1e1e2e;border-radius:2px;
-  padding:10px 13px;margin-bottom:5px;min-height:68px;
+.hm-nav{background:#141414;border:1px solid #1e1e1e;border-left:2px solid rgba(207,185,145,0.18);
+  border-radius:2px;padding:10px 13px;margin-bottom:5px;min-height:68px;
   display:flex;flex-direction:column;justify-content:space-between;
   transition:box-shadow .12s,border-color .12s,background .12s}
 .hm-nav:hover{box-shadow:0 0 0 1px #CFB991;border-color:#CFB991!important;
-  background:rgba(20,20,30,0.95)!important}
+  background:#1a1a1a!important}
 .hm-nav:hover .hm-sc{border-color:#CFB991!important;color:#CFB991!important}
 /* ── Use-case tags ── */
 .hm-tag{display:inline-block;font-family:'JetBrains Mono',monospace!important;
   font-size:9px!important;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;padding:1px 4px;border-radius:2px;margin-left:3px;
   vertical-align:middle}
-.hm-tag-daily{background:#0a1428;color:#2980b9!important}
-.hm-tag-alert{background:#1a0a00;color:#e67e22!important}
-.hm-tag-deep {background:#0a180a;color:#27ae60!important}
+.hm-tag-daily{background:#0a1020;color:#2980b9!important}
+.hm-tag-alert{background:#180a00;color:#e67e22!important}
+.hm-tag-deep {background:#0a1808;color:#27ae60!important}
 /* ── Shortcut hint ── */
 .hm-sc{display:inline-block;font-family:'JetBrains Mono',monospace!important;
-  font-size:9px!important;font-weight:700;color:#c0c8d8!important;
-  border:1px solid #2a2a3e;border-radius:2px;padding:0 3px;
+  font-size:9px!important;font-weight:700;color:#e8e9ed!important;
+  border:1px solid #2a2a2a;border-radius:2px;padding:0 3px;
   margin-left:3px;vertical-align:middle;line-height:1.6}
 /* ── Recommendation row ── */
-.hm-rec{border-left:3px solid;padding:.3rem .7rem;margin-bottom:3px;
-  background:#0d0d18;border-top:1px solid #1e1e2e;border-bottom:1px solid #1e1e2e;
+.hm-rec{border-left:3px solid;padding:.3rem .7rem;margin-bottom:4px;
+  background:#141414;border-top:1px solid #1e1e1e;border-bottom:1px solid #1e1e1e;
   display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 /* ── Pulse dot ── */
 @keyframes hm-pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -183,18 +180,18 @@ header[data-testid="stHeader"]{background:transparent!important;height:0!importa
   height:auto!important;min-height:0!important;line-height:1.5!important;
   white-space:normal!important;overflow-wrap:break-word!important}
 [data-testid="stButton"]>button[kind="secondary"]{
-  background:transparent!important;border:1px solid #2a2a3e!important;color:#c0c8d8!important}
+  background:transparent!important;border:1px solid #2a2a2a!important;color:#e8e9ed!important}
 [data-testid="stButton"]>button[kind="secondary"]:hover{
   border-color:#CFB991!important;color:#CFB991!important;background:rgba(207,185,145,.04)!important}
 [data-testid="stButton"]>button[kind="primary"]{
-  background:#0d0d18!important;border:1px solid #CFB991!important;color:#CFB991!important}
+  background:#0d0d0d!important;border:1px solid #CFB991!important;color:#CFB991!important}
 [data-testid="stButton"]>button[kind="primary"]:hover{background:rgba(207,185,145,.08)!important}
-/* ── Streamlit selectbox / expander cleanup ── */
-[data-testid="stExpander"]{border:1px solid #1e1e2e!important;border-radius:3px!important;
-  background:#0d0d18!important}
+/* ── Expander cleanup ── */
+[data-testid="stExpander"]{border:1px solid #1e1e1e!important;border-radius:3px!important;
+  background:#0d0d0d!important}
 [data-testid="stExpander"] summary{font-family:'JetBrains Mono',monospace!important;
   font-size:10px!important;font-weight:700!important;letter-spacing:.08em!important;
-  text-transform:uppercase!important;color:#8a8aaa!important}
+  text-transform:uppercase!important;color:#8890a1!important}
 [data-testid="stHorizontalBlock"]{gap:.4rem!important}
 </style>"""
 
@@ -276,18 +273,18 @@ def _render_masthead(conflict_agg: dict) -> None:
     ))
 
     if cis >= 70:
-        sit_color, sit_label = "#c0392b", "CRITICAL"
+        sit_color, sit_label = _C["danger"], "CRITICAL"
     elif cis >= 50:
-        sit_color, sit_label = "#e67e22", "ELEVATED"
+        sit_color, sit_label = _C["warn"], "ELEVATED"
     else:
-        sit_color, sit_label = "#27ae60", "MODERATE"
+        sit_color, sit_label = _C["safe"], "MODERATE"
 
     scenario    = get_scenario()
     scenario_id = get_scenario_id()
     sc_note     = (
         f'SCENARIO: <b style="color:{scenario["color"]}">{scenario["label"].upper()}</b>'
         if scenario_id != "base"
-        else f'SCENARIO: <span style="color:#C8D4E0">BASE</span>'
+        else f'SCENARIO: <span style="color:{_C["text"]}">BASE</span>'
     )
 
     _logo = _home_logo_b64()
@@ -305,16 +302,16 @@ def _render_masthead(conflict_agg: dict) -> None:
     )
 
     # ── Status bar ────────────────────────────────────────────────────────
-    _sit_rgb = {"#c0392b": "192,57,43", "#e67e22": "230,126,34", "#27ae60": "39,174,96"}.get(sit_color, "207,185,145")
+    _sit_rgb = {_C["danger"]: "192,57,43", _C["warn"]: "230,126,34", _C["safe"]: "39,174,96"}.get(sit_color, "207,185,145")
     st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+        f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
         f'border-left:3px solid {sit_color};'
         f'padding:.4rem 1rem;display:flex;align-items:center;gap:16px;'
-        f'flex-wrap:wrap;margin-bottom:.5rem">'
+        f'flex-wrap:wrap;margin-bottom:.75rem">'
         f'<span class="nx-live-dot"></span>'
-        f'<span style="{_M}font-size:11px;color:#C8D4E0;letter-spacing:.02em">'
+        f'<span style="{_M}font-size:11px;color:{_C["text"]};letter-spacing:.02em">'
         f'{now.strftime("%a %d %b %Y")}&nbsp;'
-        f'<span style="color:#2a2a2a">│</span>&nbsp;'
+        f'<span style="color:{_C["border2"]}">│</span>&nbsp;'
         f'{now.strftime("%H:%M")} LOCAL'
         f'</span>'
         f'<span style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
@@ -322,8 +319,8 @@ def _render_masthead(conflict_agg: dict) -> None:
         f'{_M}font-size:9px;font-weight:700;padding:2px 9px;letter-spacing:.14em;border-radius:1px">'
         f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE'
         f'</span>'
-        f'<span style="{_M}font-size:10px;color:#A8B8C8">{sc_note}</span>'
-        f'<span style="{_M}font-size:10px;color:#A8B8C8">'
+        f'<span style="{_M}font-size:10px;color:{_C["label"]}">{sc_note}</span>'
+        f'<span style="{_M}font-size:10px;color:{_C["label"]}">'
         f'CIS&nbsp;<b style="color:{sit_color}">{cis:.0f}</b>'
         f'</span>'
         f'<span style="margin-left:auto;background:{sit_color};color:#000;'
@@ -342,7 +339,7 @@ def _sparkline_svg(
     values: list,
     width: int = 90,
     height: int = 28,
-    line_color: str = "#CFB991",
+    line_color: str = _GOLD,
 ) -> str:
     if len(values) < 2:
         return ""
@@ -356,9 +353,9 @@ def _sparkline_svg(
     path = "M " + " L ".join(pts)
     lx, ly = pts[-1].split(",")
     velocity = values[-1] - values[0]
-    if velocity > 1.5:   v_col, v_lbl = "#c0392b", "▲ RISING"
-    elif velocity < -1.5: v_col, v_lbl = "#27ae60", "▼ FALLING"
-    else:                v_col, v_lbl = "#8E9AAA", "- STABLE"
+    if velocity > 1.5:   v_col, v_lbl = _C["danger"], "▲ RISING"
+    elif velocity < -1.5: v_col, v_lbl = _C["safe"], "▼ FALLING"
+    else:                v_col, v_lbl = _C["label"], "- STABLE"
     return (
         f'<svg width="{width}" height="{height}" style="overflow:visible;vertical-align:middle;margin-left:8px">'
         f'<path d="{path} L{_x(n-1):.1f},{height} L{_x(0):.1f},{height} Z" '
@@ -378,16 +375,16 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
     weighted_contribution = value * weight
     return (
         f'<div style="display:flex;align-items:center;gap:7px;padding:5px 0;'
-        f'border-bottom:1px solid #111">'
-        f'<span style="{_M}font-size:10px;color:#DCE4F0;min-width:95px;white-space:nowrap">'
+        f'border-bottom:1px solid {_C["border"]}">'
+        f'<span style="{_M}font-size:10px;color:{_C["text"]};min-width:95px;white-space:nowrap">'
         f'{label}</span>'
-        f'<div style="flex:1;background:#111;height:5px;border-radius:1px">'
+        f'<div style="flex:1;background:{_C["card2"]};height:5px;border-radius:1px">'
         f'<div style="width:{pct:.0f}%;height:5px;background:{color};border-radius:1px"></div></div>'
         f'<span style="{_M}font-size:12px;font-weight:700;color:{color};'
         f'min-width:26px;text-align:right">{value:.0f}</span>'
-        f'<span style="{_M}font-size:10px;color:#A8B8C8;min-width:52px">'
+        f'<span style="{_M}font-size:10px;color:{_C["label"]};min-width:52px">'
         f'×{weight:.0%}={weighted_contribution:.0f}</span>'
-        f'<span style="{_F}font-size:12px;color:#C8D4E0">{note}</span>'
+        f'<span style="{_F}font-size:12px;color:{_C["text"]}">{note}</span>'
         f'</div>'
     )
 
@@ -438,9 +435,9 @@ def _build_speedometer_svg(
 
     # ── Zone table ────────────────────────────────────────────────────────
     zones = [
-        (180, 135, "#091f10", "#27ae60", 157.5, "LOW"),
+        (180, 135, "#091f10", _C["safe"], 157.5, "LOW"),
         (135,  90, "#201a07", "#c9a800", 112.5, "MOD"),
-        ( 90,  45, "#281200", "#e67e22",  67.5, "ELEV"),
+        ( 90,  45, "#281200", _C["warn"],  67.5, "ELEV"),
         ( 45,   0, "#280505", "#e74c3c",  22.5, "HIGH"),
     ]
 
@@ -450,7 +447,7 @@ def _build_speedometer_svg(
     elif delta > 0:
         delta_str, dcol = f"▲ +{delta:.1f}", "#e74c3c"
     else:
-        delta_str, dcol = f"▼ {delta:.1f}", "#27ae60"
+        delta_str, dcol = f"▼ {delta:.1f}", _C["safe"]
 
     # ── Needle ───────────────────────────────────────────────────────────
     sc       = max(0.5, min(score, 99.5))
@@ -533,7 +530,7 @@ def _build_speedometer_svg(
         x2, y2 = pt(R_OUT + 2, sep)
         S.append(
             f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
-            f'stroke="#0d0d0d" stroke-width="4.5"/>'
+            f'stroke=_C["card"] stroke-width="4.5"/>'
         )
 
     # Zone labels - inside band at arc centerline
@@ -660,10 +657,10 @@ def _render_geo_risk_block(
     from src.analysis.freshness import get_status
     rs_status = get_status("risk_score")
     if is_fallback:
-        freshness_color = "#e67e22"
+        freshness_color = _C["warn"]
         freshness_text  = f"CONFLICT MODEL ONLY · No market data · {computed_at[11:16] if computed_at else '-'}"
     elif is_eod:
-        freshness_color = "#CFB991"
+        freshness_color = _GOLD
         freshness_text  = f"EOD Close · {data_date} · computed {computed_at[11:16] if computed_at else '-'}"
     else:
         freshness_color = rs_status["color"]
@@ -705,10 +702,10 @@ def _render_geo_risk_block(
         mcs_note = top_mcs_sig.replace("_", " ")
 
     # Color per layer
-    cis_color = "#c0392b" if cis >= 65 else "#e67e22" if cis >= 45 else "#8E9AAA"
-    tps_color = "#c0392b" if tps >= 65 else "#e67e22" if tps >= 45 else "#CFB991"
-    mcs_color = "#c0392b" if mcs >= 65 else "#e67e22" if mcs >= 45 else "#8E9AAA"
-    conf_color = "#27ae60" if conf >= 0.7 else "#e67e22" if conf >= 0.5 else "#c0392b"
+    cis_color = _C["danger"] if cis >= 65 else _C["warn"] if cis >= 45 else _C["label"]
+    tps_color = _C["danger"] if tps >= 65 else _C["warn"] if tps >= 45 else _GOLD
+    mcs_color = _C["danger"] if mcs >= 65 else _C["warn"] if mcs >= 45 else _C["label"]
+    conf_color = _C["safe"] if conf >= 0.7 else _C["warn"] if conf >= 0.5 else _C["danger"]
 
     top_c_disp  = top_c.replace("_", " ").title() if top_c and top_c != "-" else "-"
     top_ch_disp = top_ch.replace("_", " ").upper() if top_ch != "-" else "-"
@@ -720,13 +717,13 @@ def _render_geo_risk_block(
     with _hdr_col:
         st.markdown(
             f'<div style="display:flex;align-items:center;gap:10px;'
-            f'border-top:3px solid {color};border-bottom:1px solid #1e1e1e;'
+            f'border-top:3px solid {color};border-bottom:1px solid {_C["border"]};'
             f'background:#0f0f0f;padding:.4rem .9rem;margin-bottom:.1rem">'
             f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#DCE4F0">Geopolitical Risk Score</span>'
+            f'text-transform:uppercase;color:{_C["text"]}">Geopolitical Risk Score</span>'
             f'<span style="background:{color};color:#000;{_M}font-size:11px;font-weight:700;'
             f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.1f}</span>'
-            f'<span style="{_M}font-size:10px;color:#C8D4E0;margin-left:4px">'
+            f'<span style="{_M}font-size:10px;color:{_C["text"]};margin-left:4px">'
             f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
             f'&nbsp;·&nbsp;{spark_html}</span>'
             f'<span style="margin-left:auto">{freshness}</span>'
@@ -744,8 +741,8 @@ def _render_geo_risk_block(
     # ── Fallback warning - shown only when market data was unavailable ──────
     if is_fallback:
         st.markdown(
-            f'<div style="background:#1a0a00;border:1px solid #e67e22;border-left:3px solid #e67e22;'
-            f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:#e67e22">'
+            f'<div style="background:#1a0a00;border:1px solid {_C["warn"]};border-left:3px solid {_C["warn"]};'
+            f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:{_C["warn"]}">'
             f'⚠ MARKET DATA UNAVAILABLE - score is Conflict Model estimate only '
             f'(40% CIS + 35% TPS). MCS layer set to neutral 50. '
             f'Hit ↻ to retry.</div>',
@@ -753,8 +750,8 @@ def _render_geo_risk_block(
         )
     elif is_eod:
         st.markdown(
-            f'<div style="background:#0d0d08;border:1px solid #CFB991;border-left:3px solid #CFB991;'
-            f'padding:.2rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:#CFB991">'
+            f'<div style="background:#0d0d08;border:1px solid {_GOLD};border-left:3px solid {_GOLD};'
+            f'padding:.2rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:{_GOLD}">'
             f'Latest market close: {data_date} · Market Confirmation layer uses prior-day prices.</div>',
             unsafe_allow_html=True,
         )
@@ -772,16 +769,16 @@ def _render_geo_risk_block(
         )
         st.markdown(svg_gauge, unsafe_allow_html=True)
         st.markdown(
-            f'<p style="{_M}font-size:9px;color:#A8B8C8;margin:.2rem 0 0;'
+            f'<p style="{_M}font-size:9px;color:{_C["label"]};margin:.2rem 0 0;'
             f'padding:0 2px">40% CIS&nbsp;·&nbsp;35% TPS&nbsp;·&nbsp;25% MCS</p>',
             unsafe_allow_html=True,
         )
     with _gauge_meta:
         # Score decomposition inline next to gauge
         st.markdown(
-            f'<div style="padding:.5rem 0">'
             f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#8890a1;margin-bottom:10px">Score Layers</div>',
+            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:10px;'
+            f'padding-top:.5rem">Score Layers</div>',
             unsafe_allow_html=True,
         )
         for _lbl, _val, _col in [
@@ -794,7 +791,7 @@ def _render_geo_risk_block(
                 f'<div style="margin-bottom:10px">'
                 f'<div style="display:flex;justify-content:space-between;'
                 f'{_F}font-size:11px;margin-bottom:3px">'
-                f'<span style="color:#C8D4E0">{_lbl}</span>'
+                f'<span style="color:{_C["text"]}">{_lbl}</span>'
                 f'<span style="{_M}font-weight:700;color:{_col}">{_val:.0f}</span>'
                 f'</div>'
                 f'<div style="height:4px;background:#1a1a1a;border-radius:1px">'
@@ -805,25 +802,26 @@ def _render_geo_risk_block(
         # News GPR if available
         if news_gpr is not None:
             st.markdown(
-                f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e1e1e">'
-                f'<div style="{_M}font-size:8px;color:#8890a1;letter-spacing:.12em;margin-bottom:3px">NEWS GPR</div>'
+                f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid {_C["border"]}">'
+                f'<div style="{_M}font-size:8px;color:{_C["label"]};letter-spacing:.12em;margin-bottom:3px">NEWS GPR</div>'
                 f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD}">'
                 f'{news_gpr:.0f}</div>'
-                f'<div style="{_M}font-size:9px;color:#555960">'
+                f'<div style="{_M}font-size:9px;color:{_C["muted"]}">'
                 f'{"▲" if n_threat else ""}{n_threat} threat &nbsp;·&nbsp; '
                 f'{"▲" if n_act_hl else ""}{n_act_hl} act</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
-        st.markdown('</div>', unsafe_allow_html=True)
-
     # ── History chart: compact strip below the gauge ───────────────────────
     st.markdown(
-        f'<p style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
-        f'text-transform:uppercase;color:#8890a1;margin:.4rem 0 0">'
-        f'Historical Risk Score'
-        f'<span style="font-weight:400;color:#555960;margin-left:8px">'
-        f'corr · oil-gold · vol proxy</span></p>',
+        f'<div style="margin:.6rem 0 .4rem;padding:.3rem .6rem;'
+        f'background:{_C["card"]};border-top:1px solid {_C["border"]};'
+        f'border-bottom:1px solid {_C["border"]}">'
+        f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
+        f'text-transform:uppercase;color:{_C["label"]}">Historical Risk Score</span>'
+        f'<span style="{_M}font-weight:400;font-size:9px;color:{_C["muted"]};margin-left:8px">'
+        f'corr · oil-gold · vol proxy</span>'
+        f'</div>',
         unsafe_allow_html=True,
     )
     if score_history is not None and not score_history.empty:
@@ -831,25 +829,25 @@ def _render_geo_risk_block(
         fig_hist.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font={"color": "#DCE4F0", "family": "JetBrains Mono, monospace", "size": 11},
+            font={"color": _C["text"], "family": "JetBrains Mono, monospace", "size": 11},
             title_text="",
-            margin=dict(l=44, r=16, t=4, b=24),
+            margin=dict(l=44, r=16, t=10, b=24),
             xaxis=dict(
                 showgrid=False,
-                tickfont={"size": 10, "color": "#C8D4E0", "family": "JetBrains Mono"},
-                linecolor="#1e1e1e",
+                tickfont={"size": 10, "color": _C["text"], "family": "JetBrains Mono"},
+                linecolor=_C["border"],
             ),
             yaxis=dict(
                 showgrid=True,
                 gridcolor="#1a1a1a",
-                tickfont={"size": 10, "color": "#C8D4E0", "family": "JetBrains Mono"},
-                linecolor="#1e1e1e",
+                tickfont={"size": 10, "color": _C["text"], "family": "JetBrains Mono"},
+                linecolor=_C["border"],
                 title_text="",
                 tickvals=[0, 25, 50, 75, 100],
                 ticktext=["0", "25", "50", "75", "100"],
             ),
             legend=dict(
-                font={"size": 10, "color": "#DCE4F0"},
+                font={"size": 10, "color": _C["text"]},
                 bgcolor="rgba(0,0,0,0)",
                 borderwidth=0,
             ),
@@ -861,11 +859,11 @@ def _render_geo_risk_block(
             annotation_font={"size": 8, "color": color, "family": "JetBrains Mono"},
             annotation_position="right",
         )
-        st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
     else:
         st.markdown(
-            f'<div style="{_F}font-size:12px;color:#A8B8C8;padding:2rem 0;'
-            f'text-align:center;border:1px solid #1e1e1e;margin-top:4px">'
+            f'<div style="{_F}font-size:12px;color:{_C["label"]};padding:2rem 0;'
+            f'text-align:center;border:1px solid {_C["border"]};margin-top:4px">'
             f'No market data available - check connection or date range.</div>',
             unsafe_allow_html=True,
         )
@@ -878,24 +876,25 @@ def _render_geo_risk_block(
         # Rich sub-component grid — only when the model produces them
         bars_html = ""
         for name, val in comp.items():
-            c_col  = "#c0392b" if val > 70 else "#e67e22" if val > 45 else "#2e7d32"
+            c_col  = _C["danger"] if val > 70 else _C["warn"] if val > 45 else "#2e7d32"
             pct    = min(val, 100)
             indent = name.startswith("  ")
+            _ind = f'padding-left:10px;border-left:2px solid {_C["border"]};' if indent else ''
             bars_html += (
-                f'<div style="{"padding-left:10px;border-left:2px solid #1e1e1e;" if indent else ""}">'
+                f'<div style="{_ind}">'
                 f'<div style="display:flex;justify-content:space-between;'
                 f'{_F}font-size:{"11" if indent else "12"}px;margin-bottom:2px">'
-                f'<span style="color:{"#A8B8C8" if indent else "#C8D4E0"}">{name.strip()}</span>'
+                f'<span style="color:{_C["label"] if indent else _C["text"]}">{name.strip()}</span>'
                 f'<span style="{_M}font-size:12px;font-weight:700;color:{c_col}">{val:.0f}</span>'
                 f'</div>'
-                f'<div style="height:{"3" if indent else "4"}px;background:#1a1a1a;border-radius:1px;margin-bottom:5px">'
-                f'<div style="width:{pct:.0f}%;height:{"3" if indent else "4"}px;'
+                f'<div style="height:4px;background:#1a1a1a;border-radius:1px;margin-bottom:5px">'
+                f'<div style="width:{pct:.0f}%;height:4px;'
                 f'background:{c_col};border-radius:1px"></div></div></div>'
             )
         st.markdown(
-            f'<div style="border-top:1px solid #1e1e1e;margin-top:.2rem;padding:.25rem .4rem .1rem">'
+            f'<div style="border-top:1px solid {_C["border"]};margin-top:.2rem;padding:.25rem .4rem .1rem">'
             f'<p style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
-            f'text-transform:uppercase;color:#8890a1;margin:0 0 .35rem">Sub-Components</p>'
+            f'text-transform:uppercase;color:{_C["label"]};margin:0 0 .35rem">Sub-Components</p>'
             f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">{bars_html}</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -903,15 +902,15 @@ def _render_geo_risk_block(
 
     if dw:
         wt_items = "".join(
-            f'<span style="{_M}font-size:10px;color:#C8D4E0">'
+            f'<span style="{_M}font-size:10px;color:{_C["text"]}">'
             f'{k.replace("_", " ")}&nbsp;<b style="color:{_GOLD}">{v*100:.0f}%</b></span>'
             for k, v in dw.items()
         )
         st.markdown(
             f'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;'
-            f'padding:.2rem .4rem;border-top:1px solid #1e1e1e;margin-top:.1rem">'
+            f'padding:.2rem .4rem;border-top:1px solid {_C["border"]};margin-top:.1rem">'
             f'<span style="{_M}font-size:9px;letter-spacing:.14em;text-transform:uppercase;'
-            f'color:#555960">Dynamic Weights</span>'
+            f'color:{_C["muted"]}">Dynamic Weights</span>'
             f'{wt_items}</div>',
             unsafe_allow_html=True,
         )
@@ -937,15 +936,15 @@ def _render_geo_risk_block(
         _lead_cis   = _top_cis_conflict[1]["cis"]
         _gap        = _lead_cis - score
         st.markdown(
-            f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;border-left:3px solid rgba(207,185,145,.35);'
+            f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};border-left:3px solid rgba(207,185,145,.35);'
             f'padding:.35rem .8rem .35rem;margin:.35rem 0 0">'
             f'<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">'
-            f'<span style="{_M}font-size:7px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:rgba(207,185,145,.45);flex-shrink:0">'
+            f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:rgba(207,185,145,.65);flex-shrink:0">'
             f'SCORING NOTE</span>'
-            f'<span style="{_F}font-size:11px;color:#6E7A8A;line-height:1.58">'
-            f'GRS is <b style="color:#8E9AAA">{score:.0f}</b> vs. '
-            f'{_lead_name}\'s CIS of <b style="color:#8E9AAA">{_lead_cis:.0f}</b> '
+            f'<span style="{_F}font-size:11px;color:{_C["muted"]};line-height:1.58">'
+            f'GRS is <b style="color:{_C["label"]}">{score:.0f}</b> vs. '
+            f'{_lead_name}\'s CIS of <b style="color:{_C["label"]}">{_lead_cis:.0f}</b> '
             f'({_gap:.0f}-pt gap) because the score is market-corroborated: '
             f'the MCS layer ({mcs:.0f}/100, 25% weight) anchors to <em>relative</em> '
             f'volatility via EWM z-scores - {_mcs_phrase}. '
@@ -974,20 +973,20 @@ def _render_geo_risk_block(
     def _kt(lbl: str, val: str, vc: str, sub: str = "") -> str:
         return (
             f'<div style="padding:.5rem .75rem;background:#0f0f0f;'
-            f'border:1px solid #1e1e1e;border-top:3px solid {vc}">'
+            f'border:1px solid {_C["border"]};border-top:3px solid {vc}">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
-            f'text-transform:uppercase;color:#A8B8C8;margin-bottom:3px">{lbl}</div>'
+            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:3px">{lbl}</div>'
             f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{vc};line-height:1.1">{val}</div>'
-            + (f'<div style="{_M}font-size:11px;color:#C8D4E0;margin-top:2px">{sub}</div>' if sub else "")
+            + (f'<div style="{_M}font-size:11px;color:{_C["text"]};margin-top:2px">{sub}</div>' if sub else "")
             + f'</div>'
         )
 
     st.markdown(
         f'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;'
-        f'margin-top:.3rem;padding-top:.3rem;border-top:1px solid #1e1e1e">'
-        + _kt("Conflict Intensity",    f'{cis:.0f}',       cis_color, "CIS · 40% weight")
-        + _kt("Transmission Pressure", f'{tps:.0f}',       tps_color, "TPS · 35% weight")
-        + _kt("Market Confirmation",   f'{mcs:.0f}',       mcs_color, mcs_note or "MCS · 25% weight")
+        f'margin-top:.3rem;padding-top:.3rem;border-top:1px solid {_C["border"]}">'
+        + _kt("Conflict Intensity",    f'{cis:.0f}',       cis_color, "CIS (Conflict Intensity Score) · 40%")
+        + _kt("Transmission Pressure", f'{tps:.0f}',       tps_color, "TPS (Transmission Pressure Score) · 35%")
+        + _kt("Market Confirmation",   f'{mcs:.0f}',       mcs_color, mcs_note or "MCS (Market Confirmation) · 25%")
         + _kt("Lead Conflict",         top_c_disp,         color,     _lead_mf_sub)
         + _kt("News GPR",              news_gpr_val,       _GOLD,     news_gpr_sub)
         + _kt("Scenario",              sc_label.upper(),   sc_color,  f'geo ×{geo_mult:.2f}')
@@ -1085,188 +1084,19 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
         )
 
     st.markdown(
-        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
-        f'border-left:3px solid #555960;padding:.4rem .9rem;margin-bottom:.4rem">'
+        f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
+        f'border-left:3px solid {_C["muted"]};padding:.4rem .9rem;margin-bottom:.4rem">'
         f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0;display:block;margin-bottom:6px">'
+        f'text-transform:uppercase;color:{_C["text"]};display:block;margin-bottom:6px">'
         f'Current Situation</span>'
-        f'<p style="{_F}font-size:13px;color:#D8E0EC;line-height:1.65;margin:0 0 4px">'
+        f'<p style="{_F}font-size:13px;color:{_C["text"]};line-height:1.65;margin:0 0 4px">'
         f'{s1}</p>'
-        f'<p style="{_F}font-size:13px;color:#C8D4E0;line-height:1.65;margin:0">'
+        f'<p style="{_F}font-size:13px;color:{_C["text"]};line-height:1.65;margin:0">'
         f'{s2}</p>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# § 3.5  RISK BRIEFING PANEL  (right column — Nexus "Risk Officer Briefing")
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _render_risk_briefing_panel(
-    risk: dict,
-    conflict_results: dict,
-    alerts: list | None = None,
-) -> None:
-    """
-    Compact right-column panel matching Nexus 'Risk Officer Briefing'.
-    Shows: status + top narrative sentence + top 3 critical alerts as feed items
-    + live conflict scores + agent activity.
-    """
-    score    = risk["score"]
-    color    = risk["color"]
-    label    = risk["label"]
-    cis      = risk["cis"]
-    tps      = risk["tps"]
-    top_c    = (risk.get("top_conflict") or "-").replace("_", " ").title()
-
-    # Severity level for badge
-    if score >= 65:
-        badge_level, badge_text = "critical", "CRITICAL"
-    elif score >= 45:
-        badge_level, badge_text = "warning", "ELEVATED"
-    else:
-        badge_level, badge_text = "nominal", "NOMINAL"
-
-    # Top transmission channel
-    ch_scores: dict[str, float] = {}
-    for r in conflict_results.values():
-        if r.get("state") != "active":
-            continue
-        w = r["cis"] / 100
-        for ch, v in r.get("transmission", {}).items():
-            ch_scores[ch] = ch_scores.get(ch, 0.0) + v * w
-    top_ch = max(ch_scores, key=ch_scores.get).replace("_", " ") if ch_scores else "—"
-
-    # Header
-    st.markdown(
-        f'<div class="nx-panel-header">'
-        f'<span class="nx-panel-title">&#x26A0; Risk Officer Briefing</span>'
-        f'<span class="nx-badge nx-badge-{badge_level}">{badge_text}</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Situation summary
-    st.markdown(
-        f'<div style="padding:0.55rem 0;border-bottom:1px solid #111">'
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
-        f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
-        f'color:{color};margin-bottom:4px">GEO RISK SCORE</div>'
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.60rem;'
-        f'font-weight:700;color:{color};line-height:1">{score:.0f}'
-        f'<span style="font-size:0.62rem;color:#8890a1">/100 · {label}</span></div>'
-        f'<div style="margin-top:6px;display:flex;gap:12px">'
-        f'<span style="font-size:0.58rem;font-family:\'JetBrains Mono\',monospace;color:#8890a1">'
-        f'CIS <b style="color:#e8e9ed">{cis:.0f}</b></span>'
-        f'<span style="font-size:0.58rem;font-family:\'JetBrains Mono\',monospace;color:#8890a1">'
-        f'TPS <b style="color:#e8e9ed">{tps:.0f}</b></span>'
-        f'<span style="font-size:0.58rem;font-family:\'JetBrains Mono\',monospace;color:#8890a1">'
-        f'CH <b style="color:#CFB991">{top_ch[:16]}</b></span>'
-        f'</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Critical alerts as feed items
-    critical_alerts = [a for a in (alerts or []) if getattr(a, "severity", "") == "critical"][:3]
-    warning_alerts  = [a for a in (alerts or []) if getattr(a, "severity", "") == "warning"][:2]
-
-    if critical_alerts or warning_alerts:
-        st.markdown(
-            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-            'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
-            'color:#CFB991;padding:0.45rem 0 0.3rem">Active Alerts</div>',
-            unsafe_allow_html=True,
-        )
-        for a in critical_alerts:
-            st.markdown(
-                f'<div class="nx-feed-item critical" style="padding:0.4rem 0">'
-                f'<div class="nx-feed-item-header">'
-                f'<span class="nx-feed-item-type">ALARM</span>'
-                f'</div>'
-                f'<div class="nx-feed-item-body" style="line-height:1.5">'
-                f'{getattr(a, "title", str(a))[:110]}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-        for a in warning_alerts:
-            st.markdown(
-                f'<div class="nx-feed-item warning" style="padding:0.4rem 0">'
-                f'<div class="nx-feed-item-header">'
-                f'<span class="nx-feed-item-type" style="color:#e67e22">WARNING</span>'
-                f'</div>'
-                f'<div class="nx-feed-item-body" style="line-height:1.5">'
-                f'{getattr(a, "title", str(a))[:110]}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-    # Top 4 active conflicts as compact intel rows
-    active = sorted(
-        [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"],
-        key=lambda x: x[1]["cis"], reverse=True,
-    )[:4]
-    if active:
-        st.markdown(
-            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-            'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
-            'color:#CFB991;padding:0.45rem 0 0.3rem">Active Conflicts</div>',
-            unsafe_allow_html=True,
-        )
-        rows_html = ""
-        for cid, r in active:
-            cis_v = r["cis"]
-            bar_c = "#c0392b" if cis_v >= 65 else "#e67e22" if cis_v >= 45 else "#8890a1"
-            rows_html += (
-                f'<div style="display:flex;align-items:center;gap:6px;'
-                f'padding:4px 0;border-bottom:1px solid #111">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
-                f'font-weight:700;color:{r["color"]};min-width:52px;white-space:nowrap">'
-                f'{r["label"][:10]}</span>'
-                f'<div style="flex:1;background:#111;height:3px;border-radius:1px">'
-                f'<div style="width:{cis_v:.0f}%;height:3px;background:{bar_c};border-radius:1px"></div>'
-                f'</div>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.58rem;'
-                f'font-weight:700;color:{bar_c};min-width:24px;text-align:right">{cis_v:.0f}</span>'
-                f'</div>'
-            )
-        st.markdown(rows_html, unsafe_allow_html=True)
-
-    # Agent activity (last 3 events)
-    feed = st.session_state.get("agent_activity", [])[:3]
-    if feed:
-        st.markdown(
-            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-            'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
-            'color:#CFB991;padding:0.45rem 0 0.3rem">AI Analyst Activity</div>',
-            unsafe_allow_html=True,
-        )
-        for entry in feed:
-            ag     = AGENTS.get(entry["agent_id"], {})
-            ag_col = ag.get("color", "#8890a1")
-            ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
-            st.markdown(
-                f'<div style="display:flex;gap:6px;align-items:flex-start;'
-                f'padding:3px 0;border-bottom:1px solid #111">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
-                f'color:{ag_col};font-weight:700;min-width:28px">{ag.get("short","?")}</span>'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;'
-                f'color:#b8b8b8;flex:1;line-height:1.45">'
-                f'{entry.get("action","")}: {entry.get("detail","")[:52]}</span>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-                f'color:#555960;white-space:nowrap">{ts_str}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-    # Updated timestamp
-    st.markdown(
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-        f'color:#555960;padding-top:0.5rem;border-top:1px solid #111;margin-top:0.4rem">'
-        f'Updated: {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
-        unsafe_allow_html=True,
-    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1286,9 +1116,9 @@ def _render_intelligence_feed(
     # Header
     st.markdown(
         f'<div style="display:flex;align-items:center;justify-content:space-between;'
-        f'padding-bottom:.4rem;border-bottom:1px solid #1e1e1e;margin-bottom:.55rem">'
+        f'padding-bottom:.4rem;border-bottom:1px solid {_C["border"]};margin-bottom:.55rem">'
         f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">Intelligence Feed</span>'
+        f'text-transform:uppercase;color:{_C["text"]}">Intelligence Feed</span>'
         f'<span class="nx-badge nx-badge-live">LIVE</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -1299,13 +1129,13 @@ def _render_intelligence_feed(
     elif score >= 45: sc_badge, sc_bg = "ELEVATED",  "rgba(230,126,34,0.10)"
     else:             sc_badge, sc_bg = "NOMINAL",   "rgba(39,174,96,0.08)"
     st.markdown(
-        f'<div style="background:{sc_bg};border:1px solid #1e1e1e;'
+        f'<div style="background:{sc_bg};border:1px solid {_C["border"]};'
         f'border-left:3px solid {color};padding:.45rem .6rem;margin-bottom:.45rem">'
         f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{color};margin-bottom:3px">SYSTEMIC MONITOR</div>'
         f'<div style="{_M}font-size:1.5rem;font-weight:700;color:{color};line-height:1">'
         f'{score:.1f}'
-        f'<span style="font-size:.55rem;color:#8890a1;margin-left:4px">/100 · {label.upper()}</span>'
+        f'<span style="font-size:.55rem;color:{_C["label"]};margin-left:4px">/100 · {label.upper()}</span>'
         f'</div>'
         f'<div style="{_M}font-size:8px;font-weight:700;background:{color};color:#000;'
         f'display:inline-block;padding:1px 6px;margin-top:4px;letter-spacing:.12em">{sc_badge}</div>'
@@ -1323,38 +1153,38 @@ def _render_intelligence_feed(
     for a in all_alerts:
         sev = getattr(a, "severity", "warning")
         if sev == "critical":
-            border_c, badge_bg, badge_c, badge_lbl = "#c0392b", "rgba(192,57,43,0.12)", "#e05241", "CRITICAL"
+            border_c, badge_bg, badge_c, badge_lbl = _C["danger"], "rgba(192,57,43,0.12)", "#e05241", "CRITICAL"
         elif sev == "warning":
-            border_c, badge_bg, badge_c, badge_lbl = "#e67e22", "rgba(230,126,34,0.10)", "#e8902a", "ELEVATED"
+            border_c, badge_bg, badge_c, badge_lbl = _C["warn"], "rgba(230,126,34,0.10)", "#e8902a", "ELEVATED"
         else:
-            border_c, badge_bg, badge_c, badge_lbl = "#8890a1", "rgba(136,144,161,0.08)", "#8890a1", "NORMAL"
+            border_c, badge_bg, badge_c, badge_lbl = _C["label"], "rgba(136,144,161,0.08)", _C["label"], "NORMAL"
 
         title  = getattr(a, "title",  str(a))[:68]
         detail = (getattr(a, "detail", None) or getattr(a, "message", ""))[:115]
         ts_str = datetime.datetime.now().strftime("%H:%M")
         st.markdown(
-            f'<div style="border-left:2px solid {border_c};background:#0f0f0f;'
-            f'border-top:1px solid #1e1e1e;border-right:1px solid #1e1e1e;'
-            f'border-bottom:1px solid #1e1e1e;padding:.4rem .55rem;margin-bottom:.3rem">'
+            f'<div style="border-left:2px solid {border_c};background:{_C["card"]};'
+            f'border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};'
+            f'border-bottom:1px solid {_C["border"]};padding:.4rem .55rem;margin-bottom:.3rem">'
             f'<div style="display:flex;justify-content:space-between;'
             f'align-items:center;margin-bottom:4px">'
             f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
-            f'background:{badge_bg};color:{badge_c};padding:1px 5px">{badge_lbl}</span>'
-            f'<span style="{_M}font-size:9px;color:#555960">{ts_str}</span>'
+            f'background:{badge_bg};color:{badge_c};padding:2px 6px">{badge_lbl}</span>'
+            f'<span style="{_M}font-size:9px;color:{_C["muted"]}">{ts_str}</span>'
             f'</div>'
-            f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;'
+            f'<div style="{_M}font-size:11px;font-weight:700;color:{_C["text"]};'
             f'line-height:1.3;margin-bottom:3px">{title}</div>'
-            + (f'<div style="{_F}font-size:11px;color:#8890a1;line-height:1.45">{detail}</div>' if detail else "")
+            + (f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.45">{detail}</div>' if detail else "")
             + f'</div>',
             unsafe_allow_html=True,
         )
 
     if not all_alerts:
         st.markdown(
-            f'<div style="border-left:2px solid #8890a1;background:#0f0f0f;'
-            f'border:1px solid #1e1e1e;padding:.4rem .55rem;margin-bottom:.3rem">'
-            f'<span style="{_M}font-size:8px;font-weight:700;color:#8890a1;letter-spacing:.14em">NOMINAL</span>'
-            f'<div style="{_F}font-size:11px;color:#8890a1;margin-top:3px">No active alerts</div>'
+            f'<div style="border-left:2px solid {_C["label"]};background:{_C["card"]};'
+            f'border:1px solid {_C["border"]};padding:.4rem .55rem;margin-bottom:.3rem">'
+            f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["label"]};letter-spacing:.14em">NOMINAL</span>'
+            f'<div style="{_F}font-size:11px;color:{_C["label"]};margin-top:3px">No active alerts</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -1367,21 +1197,21 @@ def _render_intelligence_feed(
     if active:
         st.markdown(
             f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-            f'margin-top:.3rem;border-top:1px solid #1e1e1e">Active Conflicts</div>',
+            f'text-transform:uppercase;color:{_GOLD};padding:.4rem 0 .3rem;'
+            f'margin-top:.3rem;border-top:1px solid {_C["border"]}">Active Conflicts</div>',
             unsafe_allow_html=True,
         )
         for cid, r in active:
             cv    = r["cis"]
-            bar_c = "#c0392b" if cv >= 65 else "#e67e22" if cv >= 45 else "#8890a1"
+            bar_c = _C["danger"] if cv >= 65 else _C["warn"] if cv >= 45 else _C["label"]
             st.markdown(
                 f'<div style="display:flex;align-items:center;gap:6px;padding:5px .55rem;'
-                f'border-left:2px solid {bar_c};background:#0f0f0f;'
-                f'border-bottom:1px solid #1a1a1a;margin-bottom:2px">'
+                f'border-left:2px solid {bar_c};background:{_C["card"]};'
+                f'border-bottom:1px solid {_C["border"]};margin-bottom:2px">'
                 f'<span style="{_M}font-size:10px;font-weight:700;color:{r["color"]};'
                 f'min-width:52px;white-space:nowrap">{r["label"][:10]}</span>'
-                f'<div style="flex:1;background:#1a1a1a;height:3px;border-radius:1px">'
-                f'<div style="width:{min(cv,100):.0f}%;height:3px;background:{bar_c}"></div></div>'
+                f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
+                f'<div style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c}"></div></div>'
                 f'<span style="{_M}font-size:10px;font-weight:700;color:{bar_c};'
                 f'min-width:22px;text-align:right">{cv:.0f}</span>'
                 f'</div>',
@@ -1393,13 +1223,13 @@ def _render_intelligence_feed(
     if feed:
         st.markdown(
             f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-            f'margin-top:.3rem;border-top:1px solid #1e1e1e">AI Analyst</div>',
+            f'text-transform:uppercase;color:{_GOLD};padding:.4rem 0 .3rem;'
+            f'margin-top:.3rem;border-top:1px solid {_C["border"]}">AI Analyst</div>',
             unsafe_allow_html=True,
         )
         for entry in feed:
             ag     = AGENTS.get(entry["agent_id"], {})
-            ag_col = ag.get("color", "#8890a1")
+            ag_col = ag.get("color", _C["label"])
             ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
             st.markdown(
                 f'<div style="display:flex;gap:6px;align-items:flex-start;'
@@ -1408,7 +1238,7 @@ def _render_intelligence_feed(
                 f'{ag.get("short","?")}</span>'
                 f'<span style="{_F}font-size:.62rem;color:#b8b8b8;flex:1;line-height:1.45">'
                 f'{entry.get("action","")}: {entry.get("detail","")[:52]}</span>'
-                f'<span style="{_M}font-size:.50rem;color:#555960;white-space:nowrap">{ts_str}</span>'
+                f'<span style="{_M}font-size:.50rem;color:{_C["muted"]};white-space:nowrap">{ts_str}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1418,14 +1248,14 @@ def _render_intelligence_feed(
     tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
     st.markdown(
         f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid #1e1e1e">Chokepoint Watch</div>',
+        f'text-transform:uppercase;color:{_GOLD};padding:.4rem 0 .3rem;'
+        f'margin-top:.35rem;border-top:1px solid {_C["border"]}">Chokepoint Watch</div>',
         unsafe_allow_html=True,
     )
     strait_rows = ""
     for s in _STRAITS:
         s_risk = min(int(s["base_risk"] * tps_mult), 100)
-        tc     = "#c0392b" if s_risk >= 70 else "#e67e22" if s_risk >= 45 else "#27ae60"
+        tc     = _C["danger"] if s_risk >= 70 else _C["warn"] if s_risk >= 45 else _C["safe"]
         tier   = "HIGH" if s_risk >= 70 else "ELEV" if s_risk >= 45 else "MOD"
         pulse_dot = (
             f'<span class="hm-dot" style="background:{tc};flex-shrink:0"></span>'
@@ -1435,12 +1265,12 @@ def _render_intelligence_feed(
         )
         strait_rows += (
             f'<div style="display:flex;align-items:center;gap:6px;padding:4px 0;'
-            f'border-bottom:1px solid #111">'
+            f'border-bottom:1px solid {_C["border"]}">'
             f'{pulse_dot}'
             f'<span style="{_M}font-size:10px;font-weight:700;color:{tc};min-width:66px;'
             f'white-space:nowrap">{s["name"][:16]}</span>'
-            f'<div style="flex:1;background:#1a1a1a;height:3px;border-radius:1px">'
-            f'<div style="width:{s_risk}%;height:3px;background:{tc};border-radius:1px"></div></div>'
+            f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
+            f'<div style="width:{s_risk}%;height:4px;background:{tc};border-radius:1px"></div></div>'
             f'<span style="{_M}font-size:10px;color:{tc};font-weight:700;min-width:20px;'
             f'text-align:right">{s_risk}</span>'
             f'<span style="background:{tc};color:#000;{_M}font-size:8px;font-weight:700;'
@@ -1448,7 +1278,7 @@ def _render_intelligence_feed(
             f'</div>'
         )
     st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+        f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
         f'padding:.35rem .55rem">{strait_rows}</div>',
         unsafe_allow_html=True,
     )
@@ -1460,18 +1290,18 @@ def _render_intelligence_feed(
     if any(v is not None for v in [_dg, _dc, _dt]):
         def _dchip(label, delta):
             if delta is None:
-                return f'<span style="{_M}font-size:9px;color:#555960">{label}&nbsp;—</span>'
-            col  = "#c0392b" if delta > 0.3 else "#27ae60" if delta < -0.3 else "#555960"
+                return f'<span style="{_M}font-size:9px;color:{_C["muted"]}">{label}&nbsp;—</span>'
+            col  = _C["danger"] if delta > 0.3 else _C["safe"] if delta < -0.3 else _C["muted"]
             sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else "— flat"
             return (
-                f'<span style="{_M}font-size:9px;color:#555960">{label}&nbsp;</span>'
+                f'<span style="{_M}font-size:9px;color:{_C["muted"]}">{label}&nbsp;</span>'
                 f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}</span>'
             )
         st.markdown(
-            f'<div style="margin-top:.35rem;padding:.3rem .55rem;background:#0f0f0f;'
-            f'border:1px solid #1e1e1e;display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+            f'<div style="margin-top:.35rem;padding:.3rem .55rem;background:{_C["card"]};'
+            f'border:1px solid {_C["border"]};display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
             f'<span style="{_M}font-size:8px;letter-spacing:.14em;text-transform:uppercase;'
-            f'color:#555960">Δ vs last load</span>'
+            f'color:{_C["muted"]}">Δ vs last load</span>'
             f'{_dchip("GRS", _dg)}'
             f'{_dchip("CIS", _dc)}'
             f'{_dchip("TPS", _dt)}'
@@ -1480,7 +1310,7 @@ def _render_intelligence_feed(
         )
 
     st.markdown(
-        f'<div style="{_M}font-size:.50rem;color:#555960;padding-top:.45rem;'
+        f'<div style="{_M}font-size:.50rem;color:{_C["muted"]};padding-top:.45rem;'
         f'border-top:1px solid #111;margin-top:.4rem">'
         f'Updated {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
         unsafe_allow_html=True,
@@ -1502,11 +1332,11 @@ def _render_market_pulse_cards() -> None:
         pct    = d["pct"]
         is_vix = d["sym"] == "^VIX"
         if abs(pct) < 0.05:
-            c, arrow = "#555960", "—"
+            c, arrow = _C["muted"], "—"
         elif pct > 0:
-            c, arrow = ("#c0392b" if is_vix else "#27ae60"), "▲"
+            c, arrow = (_C["danger"] if is_vix else _C["safe"]), "▲"
         else:
-            c, arrow = ("#27ae60" if is_vix else "#c0392b"), "▼"
+            c, arrow = (_C["safe"] if is_vix else _C["danger"]), "▼"
 
         val_fmt = f'{d["val"]:.2f}' if d["val"] < 10000 else f'{d["val"]:,.0f}'
         chg_fmt = f'{arrow} {abs(pct):.2f}%'
@@ -1536,22 +1366,22 @@ def _render_market_pulse_cards() -> None:
             lo_fmt = f'{lo:.2f}' if lo < 10000 else f'{lo:,.0f}'
             hi_fmt = f'{hi:.2f}' if hi < 10000 else f'{hi:,.0f}'
             rng_html = (
-                f'<div style="{_M}font-size:9px;color:#555960;margin-top:3px">'
-                f'5d&nbsp;&nbsp;L&nbsp;<b style="color:#8890a1">{lo_fmt}</b>'
-                f'&nbsp;·&nbsp;H&nbsp;<b style="color:#8890a1">{hi_fmt}</b></div>'
+                f'<div style="{_M}font-size:9px;color:{_C["muted"]};margin-top:3px">'
+                f'5d&nbsp;&nbsp;L&nbsp;<b style="color:{_C["label"]}">{lo_fmt}</b>'
+                f'&nbsp;·&nbsp;H&nbsp;<b style="color:{_C["label"]}">{hi_fmt}</b></div>'
             )
 
         body += (
-            f'<div style="border-left:3px solid {c};padding:.4rem .5rem;margin-bottom:.3rem;'
+            f'<div style="border-left:3px solid {c};padding:.5rem .6rem;margin-bottom:.4rem;'
             f'background:{_C["card2"]};border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};border-bottom:1px solid {_C["border"]}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center">'
             f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.14em;'
-            f'text-transform:uppercase;color:#A8B8C8">{d["label"]}</span>'
+            f'text-transform:uppercase;color:{_C["label"]}">{d["label"]}</span>'
             f'<span style="{_M}font-size:10px;font-weight:700;color:{c}">{chg_fmt}</span>'
             f'</div>'
             f'<div style="display:flex;justify-content:space-between;align-items:flex-end">'
             f'<div>'
-            f'<div style="{_M}font-size:1.2rem;font-weight:700;color:#e8e9ed;line-height:1.1;margin-top:4px">'
+            f'<div style="{_M}font-size:1.2rem;font-weight:700;color:{_C["text"]};line-height:1.1;margin-top:4px">'
             f'{val_fmt}<span style="font-size:.6rem;color:{_C["muted"]};margin-left:3px">{d["suffix"]}</span></div>'
             f'{rng_html}'
             f'</div>'
@@ -1584,12 +1414,12 @@ def _render_intel_panel(conflict_results: dict) -> None:
     # ── Left: Conflict table ───────────────────────────────────────────────
     with col_left:
         _TREND_I = {"rising": "▲", "stable": "-", "falling": "▼"}
-        _TREND_C = {"rising": "#c0392b", "stable": "#8E9AAA", "falling": "#27ae60"}
+        _TREND_C = {"rising": _C["danger"], "stable": _C["label"], "falling": _C["safe"]}
 
-        _TH = f'{_M}font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#A8B8C8'
+        _TH = f'{_M}font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:{_C["label"]}'
         col_header = (
             f'<div style="display:flex;gap:8px;padding:0 0 4px;'
-            f'border-bottom:1px solid #1e1e1e;margin-bottom:3px">'
+            f'border-bottom:1px solid {_C["border"]};margin-bottom:3px">'
             f'<span style="{_TH};min-width:70px">Conflict</span>'
             f'<span style="{_TH};flex:1">CIS Intensity</span>'
             f'<span style="{_TH};min-width:26px;text-align:right">Val</span>'
@@ -1603,10 +1433,10 @@ def _render_intel_panel(conflict_results: dict) -> None:
             tx      = r.get("transmission", {})
             top_ch  = max(tx, key=tx.get) if tx else "-"
             t_icon  = _TREND_I.get(r.get("trend", "stable"), "-")
-            t_color = _TREND_C.get(r.get("trend", "stable"), "#8E9AAA")
-            cis_col = "#c0392b" if r["cis"] >= 65 else "#e67e22" if r["cis"] >= 45 else "#8E9AAA"
+            t_color = _TREND_C.get(r.get("trend", "stable"), _C["label"])
+            cis_col = _C["danger"] if r["cis"] >= 65 else _C["warn"] if r["cis"] >= 45 else _C["label"]
             tps_val = r.get("tps", r.get("transmission_pressure", 50))
-            tps_col = "#c0392b" if tps_val >= 65 else "#e67e22" if tps_val >= 45 else "#8E9AAA"
+            tps_col = _C["danger"] if tps_val >= 65 else _C["warn"] if tps_val >= 45 else _C["label"]
             rows += (
                 f'<div class="hm-crow">'
                 f'<span style="{_M}font-size:11px;font-weight:700;color:{r["color"]};'
@@ -1619,14 +1449,14 @@ def _render_intel_panel(conflict_results: dict) -> None:
                 f'<span style="{_M}font-size:12px;color:{t_color};min-width:16px">{t_icon}</span>'
                 f'<span style="{_M}font-size:11px;color:{tps_col};min-width:34px">'
                 f'TPS {tps_val:.0f}</span>'
-                f'<span style="{_F}font-size:12px;color:#C8D4E0">'
+                f'<span style="{_F}font-size:12px;color:{_C["text"]}">'
                 f'{top_ch.replace("_", " ")}</span>'
                 f'</div>'
             )
         st.markdown(
-            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .8rem">'
+            f'<div style="background:#0f0f0f;border:1px solid {_C["border"]};padding:.5rem .8rem">'
             f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .35rem">'
+            f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
             f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
             + col_header + rows
             + f'</div>',
@@ -1648,11 +1478,11 @@ def _render_intel_panel(conflict_results: dict) -> None:
             rows_ch = ""
             for ch, val in ranked:
                 pct    = min(val / max_val * 100, 100)
-                ch_col = "#c0392b" if pct >= 80 else "#e67e22" if pct >= 55 else _GOLD
+                ch_col = _C["danger"] if pct >= 80 else _C["warn"] if pct >= 55 else _GOLD
                 rows_ch += (
                     f'<div style="display:flex;align-items:center;gap:7px;padding:3px 0;'
                     f'border-bottom:1px solid #111">'
-                    f'<span style="{_M}font-size:10px;color:#C8D4E0;min-width:90px;'
+                    f'<span style="{_M}font-size:10px;color:{_C["text"]};min-width:90px;'
                     f'white-space:nowrap">{ch.replace("_", " ").upper()}</span>'
                     f'<div style="flex:1;background:#111;height:4px;border-radius:1px">'
                     f'<div style="width:{pct:.0f}%;height:4px;background:{ch_col};'
@@ -1662,20 +1492,20 @@ def _render_intel_panel(conflict_results: dict) -> None:
                     f'</div>'
                 )
             st.markdown(
-                f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .8rem">'
+                f'<div style="background:#0f0f0f;border:1px solid {_C["border"]};padding:.5rem .8rem">'
                 f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-                f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .35rem">'
+                f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
                 f'{rows_ch}</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .8rem">'
+                f'<div style="background:#0f0f0f;border:1px solid {_C["border"]};padding:.5rem .8rem">'
                 f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-                f'text-transform:uppercase;color:#DCE4F0;margin:0 0 .35rem">'
+                f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
-                f'<span style="{_F}font-size:12px;color:#A8B8C8">'
+                f'<span style="{_F}font-size:12px;color:{_C["label"]}">'
                 f'No active transmission data.</span></div>',
                 unsafe_allow_html=True,
             )
@@ -1705,22 +1535,22 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     impact      = (_IMPACT.get(current_sid, "") if not is_compound
                    else f"geo ×{current_def.get('geo_mult', 1):.2f} · vol ×{current_def.get('vol_mult', 1):.2f}")
     _compound_badge = (
-        f'<span style="{_M}font-size:8px;color:#c0392b;letter-spacing:.1em">COMPOUND</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["danger"]};letter-spacing:.1em">COMPOUND</span>'
         if is_compound else ""
     )
 
     st.markdown(
-        f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+        f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
         f'padding:.25rem .7rem;margin:.2rem 0">'
         f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
         f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0">Scenario Lens</span>'
+        f'text-transform:uppercase;color:{_C["text"]}">Scenario Lens</span>'
         f'<span style="background:{current_def["color"]};color:#000;'
         f'{_M}font-size:10px;font-weight:700;padding:1px 6px;letter-spacing:.10em">'
         f'{current_def["label"].upper()}</span>'
         f'{_compound_badge}'
-        f'<span style="{_F}font-size:12px;color:#D8E0EC">{current_def["desc"]}</span>'
-        f'<span style="{_M}font-size:11px;color:#C8D4E0;margin-left:auto">{impact}</span>'
+        f'<span style="{_F}font-size:12px;color:{_C["text"]}">{current_def["desc"]}</span>'
+        f'<span style="{_M}font-size:11px;color:{_C["text"]};margin-left:auto">{impact}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1743,7 +1573,7 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     # Compound scenario presets (GAP 14 fix)
     with st.expander("Compound Scenarios - stack multiple shocks simultaneously", expanded=False):
         st.markdown(
-            f'<p style="{_F}font-size:0.60rem;color:#8E9AAA;margin:0 0 6px">'
+            f'<p style="{_F}font-size:0.60rem;color:{_C["label"]};margin:0 0 6px">'
             f'Compound scenarios multiply their multipliers (geo, vol, CIS, TPS) - '
             f'enabling realistic combined shocks like Iran military escalation AND Hormuz blockade.</p>',
             unsafe_allow_html=True,
@@ -1766,6 +1596,16 @@ def _render_scenario_switch(narrow: bool = False) -> None:
                 set_scenario("base")
                 st.rerun()
 
+    # Scenario assumption disclosure
+    _calib = current_def.get("calibration_note", "")
+    st.markdown(
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        f'color:#555960;margin:.3rem 0 0;line-height:1.5">'
+        f'⚠ Scenario multipliers are <b>manual scenario assumptions</b> — '
+        f'not statistically calibrated against historical episodes. '
+        f'{_calib}</p>',
+        unsafe_allow_html=True,
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -1783,22 +1623,22 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
     if cis >= 55:
         top_c = (conflict_agg.get("top_conflict") or "active conflict").replace("_"," ").title()
         recs.append({
-            "color": "#c0392b", "tag": "⚡ ALERT",
+            "color": _C["danger"], "tag": "⚡ ALERT",
             "label": "Conflict Intel", "page_id": "conflict_intelligence",
             "text": (
-                f"Portfolio CIS is <b style='color:#c0392b'>{cis:.0f}/100</b>. "
-                f"<b>{top_c}</b> is the lead driver. "
-                f"Full CIS/TPS scorecard and per-channel breakdown."
+                f'Portfolio CIS is <b style="color:{_C["danger"]}">{cis:.0f}/100</b>. '
+                f'<b>{top_c}</b> is the lead driver. '
+                f'Full CIS/TPS scorecard and per-channel breakdown.'
             ),
         })
     if tps >= 55:
         recs.append({
-            "color": "#e67e22", "tag": "⚡ ALERT",
+            "color": _C["warn"], "tag": "⚡ ALERT",
             "label": "Transmission Matrix", "page_id": "transmission_matrix",
             "text": (
-                f"Transmission Pressure at <b style='color:#e67e22'>{tps:.0f}/100</b>. "
-                f"Risk is actively flowing through commodity and equity channels. "
-                f"Matrix heatmap shows exactly which channels are open and at what velocity."
+                f'Transmission Pressure at <b style="color:{_C["warn"]}">{tps:.0f}/100</b>. '
+                f'Risk is actively flowing through commodity and equity channels. '
+                f'Matrix heatmap shows exactly which channels are open and at what velocity.'
             ),
         })
     if scenario_id != "base":
@@ -1814,21 +1654,23 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
     n_pending = st.session_state.get("_stored_pending", 0) or 0
     if n_pending > 0:
         recs.append({
-            "color": "#27ae60", "tag": "📋 ACTION",
+            "color": _C["safe"], "tag": "📋 ACTION",
             "label": "Trade Ideas", "page_id": "trade_ideas",
             "text": (
-                f"<b style='color:#27ae60'>{n_pending} trade idea"
+                f'<b style="color:{_C["safe"]}">{n_pending} trade idea'
                 f"{'s' if n_pending != 1 else ''}</b> awaiting review. "
-                f"Conflict-driven candidates filtered to current regime with payoff tables."
+                f'Conflict-driven candidates filtered to current regime with payoff tables.'
             ),
         })
     if not recs:
         recs.append({
-            "color": "#2980b9", "tag": "▶ START HERE",
-            "label": "Overview", "page_id": "overview",
+            "color": _C["info"], "tag": "▶ READING ORDER",
+            "label": "Correlation → Spillover → Overview",
+            "page_id": "correlation",
             "text": (
-                "Risk environment is contained. Start with <b>Overview</b> - "
-                "regime classification, correlation heatmap, and the AI analyst morning briefing."
+                "Risk environment is contained. Follow the reading guide above: "
+                "<b>Correlation</b> (channel open?) → <b>Spillover</b> (direction?) → "
+                "<b>Overview</b> (regime classification and AI briefing)."
             ),
         })
 
@@ -1836,8 +1678,8 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
 
     st.markdown(
         f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#DCE4F0;margin:.2rem 0 .3rem">'
-        f'Where To Go Now</div>',
+        f'text-transform:uppercase;color:{_C["text"]};margin:.2rem 0 .3rem">'
+        f'Suggested Next Step</div>',
         unsafe_allow_html=True,
     )
 
@@ -1846,15 +1688,15 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
             # Stacked card format for narrow columns
             st.markdown(
                 f'<div style="border-left:3px solid {r["color"]};background:#0f0f0f;'
-                f'border-top:1px solid #1e1e1e;border-right:1px solid #1e1e1e;'
-                f'border-bottom:1px solid #1e1e1e;padding:.4rem .55rem;margin-bottom:.3rem">'
+                f'border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};'
+                f'border-bottom:1px solid {_C["border"]};padding:.4rem .55rem;margin-bottom:.3rem">'
                 f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
                 f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
                 f'color:{r["color"]}">{r["tag"]}</span>'
                 f'</div>'
-                f'<div style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;margin-bottom:3px">'
+                f'<div style="{_M}font-size:11px;font-weight:700;color:{_C["text"]};margin-bottom:3px">'
                 f'{r["label"]}</div>'
-                f'<div style="{_F}font-size:11px;color:#8890a1;line-height:1.4">{r["text"]}</div>'
+                f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.4">{r["text"]}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1863,9 +1705,9 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
                 f'<div class="hm-rec" style="border-color:{r["color"]}">'
                 f'<span style="{_M}font-size:11px;font-weight:700;color:{r["color"]};'
                 f'white-space:nowrap">{r["tag"]}</span>'
-                f'<span style="{_M}font-size:11px;font-weight:700;color:#e8e9ed;'
+                f'<span style="{_M}font-size:11px;font-weight:700;color:{_C["text"]};'
                 f'white-space:nowrap;min-width:130px">{r["label"]}</span>'
-                f'<span style="{_F}font-size:12px;color:#C8D4E0;flex:1">{r["text"]}</span>'
+                f'<span style="{_F}font-size:12px;color:{_C["text"]};flex:1">{r["text"]}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1877,38 +1719,38 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
 
 _JUMP_GROUPS = [
     {
-        "group":   "Market Analysis",
-        "color":   "#2980b9",
-        "caption": "Daily: regime · correlations · spillover direction · map exposure.",
+        "group":   "Core Analysis",
+        "color":   _C["info"],
+        "caption": "Read these in order on every session — they answer the four core research questions.",
         "items": [
-            ("Overview",       "overview",       "Regime · risk score · AI briefing",      "daily", "1"),
-            ("Correlation",    "correlation",    "Rolling cross-asset correlation",         "daily", "2"),
-            ("Spillover",      "spillover",      "Diebold-Yilmaz directional flows",       "deep",  "3"),
-            ("War Impact Map", "war_impact_map", "Conflict → asset exposure overlay",      "alert", "4"),
+            ("Correlation",    "correlation",    "Step 4b · Is the equity-commodity channel open?", "daily", "1"),
+            ("Spillover",      "spillover",      "Step 4a · Which market is statistically leading?", "deep", "2"),
+            ("Overview",       "overview",       "Step 5 · What correlation regime are we in?",      "daily", "3"),
+            ("War Impact Map", "war_impact_map", "Step 3 · Which equity markets are exposed?",       "alert", "4"),
         ],
     },
     {
         "group":   "Geopolitical Intelligence",
-        "color":   "#CFB991",
-        "caption": "Open when a conflict score moves or a headline requires deeper context.",
+        "color":   _GOLD,
+        "caption": "Open when a conflict score rises, a scenario changes, or a headline appears.",
         "items": [
-            ("Conflict Intel",   "conflict_intelligence", "CIS/TPS breakdown per conflict",     "alert", "5"),
-            ("Threat vs Act",    "threat_act_monitor",    "Live news GPR · threat/act signal",  "alert", "6"),
-            ("Transmission",     "transmission_matrix",   "Active transmission channel heatmap","alert", "7"),
-            ("Exposure Scoring", "exposure_scoring",      "Per-asset scenario-adjusted SAS",    "deep",  "8"),
-            ("Geopolitical",     "geopolitical",          "Event history · RSS · GPR timeline", "deep",  "9"),
-            ("Strait Watch",     "strait_watch",          "Chokepoint disruption monitor",      "alert", "10"),
+            ("Conflict Intel",   "conflict_intelligence", "CIS/TPS scorecard per active conflict",    "alert", "5"),
+            ("Threat vs Act",    "threat_act_monitor",    "Live news GPR · threat vs. action signal", "alert", "6"),
+            ("Transmission",     "transmission_matrix",   "Which channels are open and at what pressure", "alert", "7"),
+            ("Exposure Scoring", "exposure_scoring",      "Step 3 · Per-asset scenario-adjusted score", "deep", "8"),
+            ("Geopolitical",     "geopolitical",          "Historical event windows · GPR timeline",  "deep",  "9"),
+            ("Strait Watch",     "strait_watch",          "Chokepoint disruption risk monitor",        "alert", "10"),
         ],
     },
     {
-        "group":   "Strategy Tools",
-        "color":   "#27ae60",
-        "caption": "Use when you have a view and need to size, stress-test, or structure a position.",
+        "group":   "Strategy & Research",
+        "color":   _C["safe"],
+        "caption": "Use after reading the analysis pages — for scenario simulation and AI conclusions.",
         "items": [
-            ("Trade Ideas",     "trade_ideas",     "Conflict-driven regime-filtered trades", "daily", "11"),
-            ("Scenario Engine", "scenario_engine", "Scenario P&L · what-if simulation",     "deep",  "12"),
-            ("Stress Test",     "stress_test",     "Portfolio drawdown under shock events",  "deep",  "13"),
-            ("Macro Dashboard", "macro_dashboard", "Rates · inflation · yield curve",        "daily", "14"),
+            ("Scenario Engine", "scenario_engine", "What-if shock simulation under active scenario", "deep",  "11"),
+            ("Stress Test",     "stress_test",     "Portfolio drawdown under commodity shock events", "deep", "12"),
+            ("Trade Ideas",     "trade_ideas",     "Step 6 · AI-generated illustrative structures",  "daily", "13"),
+            ("Macro Dashboard", "macro_dashboard", "Rates · inflation · yield curve context",         "daily", "14"),
         ],
     },
 ]
@@ -1931,7 +1773,7 @@ def _render_quickjump() -> None:
     # Legend strip (single markdown)
     st.markdown(
         f'<div style="display:flex;gap:10px;align-items:center;'
-        f'padding:.2rem 0 .35rem;flex-wrap:wrap;border-bottom:1px solid #1e1e1e;margin-bottom:.3rem">'
+        f'padding:.2rem 0 .35rem;flex-wrap:wrap;border-bottom:1px solid {_C["border"]};margin-bottom:.3rem">'
         + "".join(
             f'<span style="display:flex;align-items:center;gap:5px">'
             f'<span style="width:8px;height:8px;border-radius:50%;background:{g["color"]};'
@@ -1960,7 +1802,7 @@ def _render_quickjump() -> None:
                 f'<span style="{_M}font-size:11px;font-weight:700;color:{g_color}">{label}</span>'
                 f'<span class="hm-tag {tag_cls}" style="font-size:7px!important">{tag_label}</span>'
                 f'</div>'
-                f'<div style="{_F}font-size:11px;color:#8890a1;line-height:1.35">{desc}</div>'
+                f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.35">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1974,17 +1816,17 @@ def _render_quickjump() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _STRAITS = [
-    {"name": "Strait of Hormuz",  "base_risk": 82, "conflict": "Iran/Hormuz",      "flow": "~20% global oil",    "color": "#c0392b"},
-    {"name": "Bab-el-Mandeb",     "base_risk": 68, "conflict": "Red Sea / Houthi", "flow": "~10% global trade",  "color": "#e67e22"},
-    {"name": "Taiwan Strait",     "base_risk": 44, "conflict": "Taiwan",            "flow": "~50% container",     "color": "#2980b9"},
-    {"name": "Suez Canal",        "base_risk": 55, "conflict": "Red Sea",           "flow": "~12% global trade",  "color": "#e67e22"},
-    {"name": "Strait of Malacca", "base_risk": 28, "conflict": "Taiwan / India",    "flow": "~25% global oil",    "color": "#8E9AAA"},
+    {"name": "Strait of Hormuz",  "base_risk": 82, "conflict": "Iran/Hormuz",      "flow": "~20% global oil",    "color": _C["danger"]},
+    {"name": "Bab-el-Mandeb",     "base_risk": 68, "conflict": "Red Sea / Houthi", "flow": "~10% global trade",  "color": _C["warn"]},
+    {"name": "Taiwan Strait",     "base_risk": 44, "conflict": "Taiwan",            "flow": "~50% container",     "color": _C["info"]},
+    {"name": "Suez Canal",        "base_risk": 55, "conflict": "Red Sea",           "flow": "~12% global trade",  "color": _C["warn"]},
+    {"name": "Strait of Malacca", "base_risk": 28, "conflict": "Taiwan / India",    "flow": "~25% global oil",    "color": _C["label"]},
 ]
 
 
 def _delta_html(delta, unit: str = "") -> str:
     if delta is None:
-        return f'<span style="{_M}font-size:11px;color:#A8B8C8">- first run</span>'
+        return f'<span style="{_M}font-size:11px;color:{_C["label"]}">- first run</span>'
     if abs(delta) < 0.3:
         return f'<span class="hm-fl">- flat</span>'
     if delta > 0:
@@ -2050,22 +1892,22 @@ def _render_market_pulse() -> None:
         # For VIX specifically, invert: rising VIX = red
         is_vix = d["sym"] == "^VIX"
         if abs(pct) < 0.05:
-            c, arrow = "#555960", "-"
+            c, arrow = _C["muted"], "-"
         elif pct > 0:
-            c, arrow = ("#c0392b" if is_vix else "#27ae60"), "▲"
+            c, arrow = (_C["danger"] if is_vix else _C["safe"]), "▲"
         else:
-            c, arrow = ("#27ae60" if is_vix else "#c0392b"), "▼"
+            c, arrow = (_C["safe"] if is_vix else _C["danger"]), "▼"
 
         val_fmt = f'{d["val"]:.2f}' if d["val"] < 10000 else f'{d["val"]:,.0f}'
         chg_fmt = f'{arrow} {abs(pct):.2f}%'
         return (
             f'<div style="flex:1;min-width:90px;padding:.65rem .85rem;background:#0f0f0f;'
-            f'border:1px solid #1e1e1e;border-top:3px solid {c};'
+            f'border:1px solid {_C["border"]};border-top:3px solid {c};'
             f'transition:background .12s ease">'
             f'<div style="{_M}font-size:9px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#8890a1;margin-bottom:5px">{d["label"]}</div>'
-            f'<div style="{_M}font-size:16px;font-weight:700;color:#e8e9ed;line-height:1.1">'
-            f'{val_fmt}<span style="font-size:10px;color:#8890a1">{d["suffix"]}</span></div>'
+            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:5px">{d["label"]}</div>'
+            f'<div style="{_M}font-size:16px;font-weight:700;color:{_C["text"]};line-height:1.1">'
+            f'{val_fmt}<span style="font-size:10px;color:{_C["label"]}">{d["suffix"]}</span></div>'
             f'<div style="{_M}font-size:10px;color:{c};font-weight:700;margin-top:4px">{chg_fmt}</div>'
             f'</div>'
         )
@@ -2074,7 +1916,7 @@ def _render_market_pulse() -> None:
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
         f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.20em;'
-        f'text-transform:uppercase;color:#8890a1">Market Pulse</span>'
+        f'text-transform:uppercase;color:{_C["label"]}">Market Pulse</span>'
         f'<span class="nx-badge nx-badge-live">LIVE</span>'
         f'</div>'
         f'<div style="display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:.5rem">'
@@ -2140,7 +1982,7 @@ def _render_portfolio_pulse() -> None:
     port_ret  = sum(p["weight"] * day_ret.get(p["ticker"], 0.0) for p in positions)
     dollar_pl = port_ret / 100 * total_usd
 
-    pl_color  = "#27ae60" if dollar_pl >= 0 else "#c0392b"
+    pl_color  = _C["safe"] if dollar_pl >= 0 else _C["danger"]
     pl_arrow  = "▲" if dollar_pl >= 0 else "▼"
     pl_sign   = "+" if dollar_pl >= 0 else ""
 
@@ -2152,7 +1994,7 @@ def _render_portfolio_pulse() -> None:
     )[:3]
 
     def _mover_html(p: dict, ret: float) -> str:
-        col   = "#27ae60" if ret >= 0 else "#c0392b"
+        col   = _C["safe"] if ret >= 0 else _C["danger"]
         arrow = "▲" if ret >= 0 else "▼"
         w_pct = p["weight"] * 100
         return (
@@ -2160,7 +2002,7 @@ def _render_portfolio_pulse() -> None:
             f'padding:3px 0;border-bottom:1px solid #0f0f0f">'
             f'<span style="{_M}font-size:11px;font-weight:700;color:{col};min-width:52px">'
             f'{p["ticker"]}</span>'
-            f'<span style="{_M}font-size:10px;color:#C8D4E0;flex:1">'
+            f'<span style="{_M}font-size:10px;color:{_C["text"]};flex:1">'
             f'wt {w_pct:.1f}%</span>'
             f'<span style="{_M}font-size:11px;color:{col};font-weight:700">'
             f'{arrow} {abs(ret):.2f}%</span>'
@@ -2168,24 +2010,24 @@ def _render_portfolio_pulse() -> None:
         )
 
     movers_html = "".join(_mover_html(p, r) for p, r in movers) if movers else (
-        f'<span style="{_M}font-size:11px;color:#A8B8C8">Returns pending…</span>'
+        f'<span style="{_M}font-size:11px;color:{_C["label"]}">Returns pending…</span>'
     )
 
     col_nav, col_movers = st.columns([1, 1], gap="small")
 
     with col_nav:
         st.markdown(
-            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
+            f'<div style="background:#0f0f0f;border:1px solid {_C["border"]};'
             f'border-top:2px solid {_GOLD};padding:.4rem .65rem">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#A8B8C8;margin-bottom:4px">Portfolio NAV</div>'
+            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:4px">Portfolio NAV</div>'
             f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD};line-height:1.1">'
             f'${total_usd:,.0f}</div>'
-            f'<div style="{_M}font-size:10px;color:#C8D4E0;margin-top:2px">'
+            f'<div style="{_M}font-size:10px;color:{_C["text"]};margin-top:2px">'
             f'{n} positions &nbsp;·&nbsp; as of {loaded_at}</div>'
             f'<div style="margin-top:.4rem;padding-top:.35rem;border-top:1px solid #1a1a1a">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
-            f'text-transform:uppercase;color:#A8B8C8;margin-bottom:2px">Est. 1-Day P&amp;L</div>'
+            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:2px">Est. 1-Day P&amp;L</div>'
             f'<div style="{_M}font-size:0.95rem;font-weight:700;color:{pl_color}">'
             f'{pl_arrow} {pl_sign}${dollar_pl:,.0f}'
             f'<span style="font-size:11px;margin-left:5px">{pl_sign}{port_ret:.2f}%</span>'
@@ -2195,10 +2037,10 @@ def _render_portfolio_pulse() -> None:
 
     with col_movers:
         st.markdown(
-            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
-            f'border-top:2px solid #2a2a2a;padding:.4rem .65rem">'
+            f'<div style="background:#0f0f0f;border:1px solid {_C["border"]};'
+            f'border-top:2px solid {_C["border2"]};padding:.4rem .65rem">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#A8B8C8;margin-bottom:5px">Top Movers</div>'
+            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:5px">Top Movers</div>'
             f'{movers_html}</div>',
             unsafe_allow_html=True,
         )
@@ -2211,9 +2053,9 @@ def _render_live_signals() -> None:
     with col_straits:
         st.markdown(
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#DCE4F0;margin-bottom:2px">'
+            f'text-transform:uppercase;color:{_C["text"]};margin-bottom:2px">'
             f'Chokepoint Disruption Snapshot</div>'
-            f'<div style="{_F}font-size:12px;color:#C8D4E0;margin-bottom:3px">'
+            f'<div style="{_F}font-size:12px;color:{_C["text"]};margin-bottom:3px">'
             f'Strait disruption raises energy and food costs within 2–6 weeks. '
             f'Score: conflict intensity × routing dependence.</div>',
             unsafe_allow_html=True,
@@ -2225,8 +2067,8 @@ def _render_live_signals() -> None:
         for s in _STRAITS:
             risk = min(int(s["base_risk"] * tps_mult), 100)
             if risk >= 70:   tier, tc = "HIGH",     s["color"]
-            elif risk >= 45: tier, tc = "ELEVATED", "#e67e22"
-            else:            tier, tc = "MODERATE", "#27ae60"
+            elif risk >= 45: tier, tc = "ELEVATED", _C["warn"]
+            else:            tier, tc = "MODERATE", _C["safe"]
             pulse = (
                 f'<span class="hm-dot" style="background:{tc}"></span>'
                 if risk >= 70 else
@@ -2236,7 +2078,7 @@ def _render_live_signals() -> None:
             )
             rows_s += (
                 f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;'
-                f'border-bottom:1px solid #0d0d0d">'
+                f'border-bottom:1px solid {_C["card"]}">'
                 + pulse
                 + f'<span style="{_M}font-size:11px;font-weight:700;color:{tc};'
                 f'min-width:75px;white-space:nowrap">{s["name"][:18]}</span>'
@@ -2247,12 +2089,12 @@ def _render_live_signals() -> None:
                 f'<span style="background:{tc};color:#000;{_M}font-size:11px;'
                 f'font-weight:700;padding:1px 4px;letter-spacing:.08em;min-width:46px;'
                 f'text-align:center">{tier}</span>'
-                f'<span style="{_F}font-size:10px;color:#C8D4E0">{s["flow"]}</span>'
+                f'<span style="{_F}font-size:10px;color:{_C["text"]}">{s["flow"]}</span>'
                 f'</div>'
             )
 
         st.markdown(
-            f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;padding:.4rem .7rem">'
+            f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};padding:.4rem .7rem">'
             f'{rows_s}</div>',
             unsafe_allow_html=True,
         )
@@ -2261,9 +2103,9 @@ def _render_live_signals() -> None:
     with col_delta:
         st.markdown(
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:#DCE4F0;margin-bottom:2px">'
+            f'text-transform:uppercase;color:{_C["text"]};margin-bottom:2px">'
             f'What Changed Since Last Run</div>'
-            f'<div style="{_F}font-size:12px;color:#C8D4E0;margin-bottom:3px">'
+            f'<div style="{_F}font-size:12px;color:{_C["text"]};margin-bottom:3px">'
             f'Deltas vs your previous page load. '
             f'First load shows baseline.</div>',
             unsafe_allow_html=True,
@@ -2276,8 +2118,8 @@ def _render_live_signals() -> None:
 
         if first_run:
             st.markdown(
-                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
-                f'padding:.5rem .7rem;{_F}font-size:12px;color:#C8D4E0">'
+                f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
+                f'padding:.5rem .7rem;{_F}font-size:12px;color:{_C["text"]}">'
                 f'Establishing baseline - deltas appear from the second visit onward.</div>',
                 unsafe_allow_html=True,
             )
@@ -2300,7 +2142,7 @@ def _render_live_signals() -> None:
                 port_rows += (
                     f'<div style="display:flex;align-items:baseline;gap:6px;'
                     f'padding:3px 0;border-bottom:1px solid #111">'
-                    f'<span style="{_F}font-size:12px;color:#D8E0EC;min-width:120px">'
+                    f'<span style="{_F}font-size:12px;color:{_C["text"]};min-width:120px">'
                     f'{lbl}</span>'
                     f'{_delta_html(delta, unit)}</div>'
                 )
@@ -2315,23 +2157,23 @@ def _render_live_signals() -> None:
                 any_c = True
                 conf_rows += (
                     f'<div style="display:flex;align-items:baseline;gap:6px;'
-                    f'padding:2px 0 2px 8px;border-left:2px solid #1e1e1e;margin-bottom:2px">'
+                    f'padding:2px 0 2px 8px;border-left:2px solid {_C["border"]};margin-bottom:2px">'
                     f'<span style="{_M}font-size:10px;color:{_GOLD};min-width:75px">'
                     f'{display}</span>'
-                    f'<span style="{_M}font-size:10px;color:#C8D4E0">'
+                    f'<span style="{_M}font-size:10px;color:{_C["text"]}">'
                     f'CIS {prev:.0f}</span>'
                     f'{_delta_html(d, "")}</div>'
                 )
 
             conf_section = (
                 f'<div style="{_M}font-size:11px;text-transform:uppercase;letter-spacing:.14em;'
-                f'color:#A8B8C8;margin:5px 0 3px">Per-Conflict CIS</div>'
+                f'color:{_C["label"]};margin:5px 0 3px">Per-Conflict CIS</div>'
                 + conf_rows
                 if any_c else ""
             )
 
             st.markdown(
-                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+                f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
                 f'padding:.4rem .7rem">'
                 + port_rows
                 + conf_section
@@ -2354,13 +2196,13 @@ def _render_agent_strip() -> None:
         f'<span class="nx-badge nx-badge-warning">{n_pending} PENDING</span>'
         if n_pending else
         '<span class="nx-live-dot"></span><span style="font-family:\'JetBrains Mono\',monospace;'
-        'font-size:0.50rem;color:#27ae60;letter-spacing:0.10em">ALL PROCESSED</span>'
+        'font-size:0.50rem;color:{_C["safe"]};letter-spacing:0.10em">ALL PROCESSED</span>'
     )
 
     rows_html = ""
     for entry in feed:
         ag     = AGENTS.get(entry["agent_id"], {})
-        color  = ag.get("color", "#8E9AAA")
+        color  = ag.get("color", _C["label"])
         ts_str = entry["ts"].strftime("%H:%M:%S") if isinstance(entry["ts"], datetime.datetime) else "-"
         action = entry.get("action", "")
         detail = entry.get("detail", "")[:72]
@@ -2401,13 +2243,13 @@ def _render_correlation_pulse(
 
     if regimes is not None and not regimes.empty:
         r_val = int(regimes.dropna().iloc[-1])
-        if r_val == 3:   regime_lbl, regime_c = "HIGH COUPLING", "#c0392b"
-        elif r_val == 1: regime_lbl, regime_c = "DECOUPLED",     "#27ae60"
-        else:            regime_lbl, regime_c = "TRANSITIONING", "#e67e22"
+        if r_val == 3:   regime_lbl, regime_c = "HIGH COUPLING", _C["danger"]
+        elif r_val == 1: regime_lbl, regime_c = "DECOUPLED",     _C["safe"]
+        else:            regime_lbl, regime_c = "TRANSITIONING", _C["warn"]
     else:
-        regime_lbl, regime_c = "COMPUTING", "#8890a1"
+        regime_lbl, regime_c = "COMPUTING", _C["label"]
 
-    cur_c    = "#c0392b" if cur > 0.35 else "#27ae60" if cur < 0.0 else "#e67e22"
+    cur_c    = _C["danger"] if cur > 0.35 else _C["safe"] if cur < 0.0 else _C["warn"]
     cur_sign = "+" if cur >= 0 else ""
 
     W, H  = 200, 52
@@ -2440,7 +2282,7 @@ def _render_correlation_pulse(
         f'stroke="#2e2e2e" stroke-width="1"/>'
         # 0.35 high-coupling threshold
         f'<line x1="0" y1="{thr_y:.1f}" x2="{W}" y2="{thr_y:.1f}" '
-        f'stroke="#c0392b" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
+        f'stroke=_C["danger"] stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
         # correlation sparkline
         f'<polyline points="{pts}" fill="none" stroke="{cur_c}" '
         f'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>'
@@ -2452,8 +2294,8 @@ def _render_correlation_pulse(
         f'<text x="{W}" y="{H + 11}" font-size="8" fill="#333333" '
         f'font-family="JetBrains Mono,monospace" text-anchor="end">now</text>'
         # zero label
-        f'<text x="{W + 3}" y="{zero_y + 3:.1f}" font-size="7" fill="#2e2e2e" '
-        f'font-family="JetBrains Mono,monospace">0</text>'
+        f'<text x="{W - 3}" y="{zero_y + 3:.1f}" font-size="7" fill="#2e2e2e" '
+        f'font-family="JetBrains Mono,monospace" text-anchor="end">0</text>'
         f'</svg>'
     )
 
@@ -2472,9 +2314,9 @@ def _render_correlation_pulse(
         f'</div>'
         f'<div style="padding-bottom:2px">{svg}</div>'
         f'</div>'
-        f'<div style="{_M}font-size:8px;color:#333;margin-top:2px">'
-        f'<span style="color:#c0392b22;border-bottom:1px dashed #c0392b55">·</span>'
-        f'&nbsp;<span style="color:{_C["muted"]}">0.35 coupling threshold</span>'
+        f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:.4rem">'
+        f'<span style="color:{_C["danger"]}55;border-bottom:1px dashed {_C["danger"]}55">·</span>'
+        f'&nbsp;0.35 coupling threshold'
         f'</div>',
     )
 
@@ -2496,7 +2338,7 @@ def _render_risk_arc(risk: dict) -> None:
     w_mcs = float(weights.get("mcs", 0.25))
 
     def _cc(v: float) -> str:
-        return "#c0392b" if v >= 65 else "#e67e22" if v >= 45 else "#27ae60"
+        return _C["danger"] if v >= 65 else _C["warn"] if v >= 45 else _C["safe"]
 
     def _cl(v: float) -> str:
         return "HIGH" if v >= 65 else "ELEV" if v >= 45 else "NOM"
@@ -2517,46 +2359,41 @@ def _render_risk_arc(risk: dict) -> None:
             f'</svg>'
         )
         return (
-            f'<div style="padding:.32rem 0;border-bottom:1px solid #111">'
+            f'<div style="padding:.42rem 0;border-bottom:1px solid #111">'
             f'<div style="display:flex;justify-content:space-between;'
-            f'align-items:center;margin-bottom:5px">'
-            f'<div style="display:flex;align-items:center;gap:5px">'
+            f'align-items:center;margin-bottom:6px">'
+            f'<div style="display:flex;align-items:center;gap:6px">'
             f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.12em;'
-            f'text-transform:uppercase;color:#8890a1">{label}</span>'
+            f'text-transform:uppercase;color:{_C["label"]}">{label}</span>'
             f'<span style="background:#1a1a1a;border:1px solid #222;'
-            f'{_M}font-size:7px;color:#555960;padding:0 4px;letter-spacing:.04em">'
+            f'{_M}font-size:7.5px;color:{_C["muted"]};padding:1px 5px;letter-spacing:.04em">'
             f'wt {wpct}%</span>'
             f'</div>'
-            f'<div style="display:flex;align-items:center;gap:5px">'
+            f'<div style="display:flex;align-items:center;gap:6px">'
             f'<span style="{_M}font-size:1.0rem;font-weight:700;color:{c};line-height:1">'
             f'{val:.0f}</span>'
             f'<span style="background:{c}22;border:1px solid {c}44;'
-            f'{_M}font-size:7px;font-weight:700;color:{c};padding:1px 4px">{lbl}</span>'
+            f'{_M}font-size:8px;font-weight:700;color:{c};padding:2px 6px">{lbl}</span>'
             f'</div>'
             f'</div>'
             f'{bar_svg}'
-            f'<div style="{_M}font-size:8px;color:#444;margin-top:4px">'
+            f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:5px">'
             f'adds <b style="color:{c}">{contrib:.1f} pts</b> to composite</div>'
             f'</div>'
         )
 
     score_c = _cc(score)
     body = (
-        f'<div style="display:flex;justify-content:space-between;align-items:center;'
-        f'padding-bottom:.3rem;border-bottom:1px solid {_C["border"]};margin-bottom:.1rem">'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">GRS · Composite</span>'
-        f'<div style="display:flex;align-items:baseline;gap:3px">'
-        f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{score_c}">{score:.0f}</span>'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">/100</span>'
-        f'</div>'
-        f'</div>'
-        + _meter("CIS", int(w_cis * 100), cis, cis * w_cis)
+        _meter("CIS", int(w_cis * 100), cis, cis * w_cis)
         + _meter("TPS", int(w_tps * 100), tps, tps * w_tps)
         + _meter("MCS", int(w_mcs * 100), mcs, mcs * w_mcs)
-        + f'<div style="{_M}font-size:8px;color:#333;margin-top:.35rem">'
+        + f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:.45rem">'
         f'CIS=Conflict Intensity · TPS=Transmission · MCS=Market</div>'
     )
-    _card("GRS RISK DECOMPOSITION", body)
+    _card(
+        f'GRS DECOMPOSITION  ·  <span style="color:{score_c}">{score:.0f}/100</span>',
+        body,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2577,26 +2414,26 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
         trend     = r.get("trend", "stable")
         esc       = r.get("escalation", "stable")
         cis_v     = float(r.get("cis", 0))
-        col       = r.get("color", "#8890a1")
+        col       = r.get("color", _C["label"])
         lbl       = r.get("label", cid)
 
         if trend == "rising":
-            t_icon, t_col = "▲", "#c0392b"
+            t_icon, t_col = "▲", _C["danger"]
         elif trend == "falling":
-            t_icon, t_col = "▼", "#27ae60"
+            t_icon, t_col = "▼", _C["safe"]
         else:
-            t_icon, t_col = "→", "#e67e22"
+            t_icon, t_col = "→", _C["warn"]
 
         if esc == "escalating":
             esc_bg, esc_c, esc_txt = "rgba(192,57,43,0.12)", "#e05241", "ESC ↑"
         elif esc == "de-escalating":
-            esc_bg, esc_c, esc_txt = "rgba(39,174,96,0.10)", "#27ae60", "DE-ESC"
+            esc_bg, esc_c, esc_txt = "rgba(39,174,96,0.10)", _C["safe"], "DE-ESC"
         else:
-            esc_bg, esc_c, esc_txt = "rgba(136,144,161,0.08)", "#8890a1", "STABLE"
+            esc_bg, esc_c, esc_txt = "rgba(136,144,161,0.08)", _C["label"], "STABLE"
 
         bar_w = min(int(cis_v), 100)
         rows += (
-            f'<div style="display:flex;align-items:center;gap:6px;padding:5px .55rem;'
+            f'<div style="display:flex;align-items:center;gap:8px;padding:7px .65rem;'
             f'border-bottom:1px solid #111;background:#0f0f0f">'
             # trend arrow
             f'<span style="{_M}font-size:11px;font-weight:700;color:{t_col};'
@@ -2606,14 +2443,14 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
             f'min-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
             f'{lbl[:14]}</span>'
             # bar
-            f'<div style="flex:1;background:#1a1a1a;height:3px;border-radius:1px;min-width:20px">'
-            f'<div style="width:{bar_w}%;height:3px;background:{col};border-radius:1px;opacity:.8"></div></div>'
+            f'<div style="flex:1;background:#1a1a1a;height:4px;border-radius:2px;min-width:20px">'
+            f'<div style="width:{bar_w}%;height:4px;background:{col};border-radius:2px;opacity:.8"></div></div>'
             # CIS value
             f'<span style="{_M}font-size:9px;font-weight:700;color:{col};min-width:22px;text-align:right">'
             f'{cis_v:.0f}</span>'
             # escalation badge
             f'<span style="background:{esc_bg};border:1px solid {esc_c}44;'
-            f'{_M}font-size:7px;font-weight:700;color:{esc_c};padding:1px 4px;'
+            f'{_M}font-size:8px;font-weight:700;color:{esc_c};padding:2px 6px;'
             f'letter-spacing:.06em;flex-shrink:0">{esc_txt}</span>'
             f'</div>'
         )
@@ -2653,23 +2490,23 @@ def _render_top_commodities(conflict_results: dict) -> None:
         bar_w = int(score / max_score * 100)
         # Color by exposure level
         if score / max_score > 0.66:
-            bar_c = "#c0392b"
+            bar_c = _C["danger"]
         elif score / max_score > 0.33:
-            bar_c = "#e67e22"
+            bar_c = _C["warn"]
         else:
-            bar_c = "#8890a1"
+            bar_c = _C["label"]
 
         rows += (
-            f'<div style="padding:.3rem .55rem;border-bottom:1px solid #111">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:#C8D4E0;'
+            f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{_C["text"]};'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">'
             f'{com}</span>'
             f'<span style="{_M}font-size:8px;color:{bar_c}">'
             f'{n_c} conflict{"s" if n_c > 1 else ""}</span>'
             f'</div>'
-            f'<div style="background:#1a1a1a;height:3px;border-radius:1px">'
-            f'<div style="width:{bar_w}%;height:3px;background:{bar_c};border-radius:1px;opacity:.85"></div>'
+            f'<div style="background:#1a1a1a;height:4px;border-radius:2px">'
+            f'<div style="width:{bar_w}%;height:4px;background:{bar_c};border-radius:2px;opacity:.85"></div>'
             f'</div>'
             f'</div>'
         )
@@ -2683,18 +2520,7 @@ def _render_top_commodities(conflict_results: dict) -> None:
 
 def _render_conflict_landscape(conflict_results: dict) -> None:
     """Left column: scatter of all tracked conflicts on a CIS × TPS plane."""
-    st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:#CFB991;padding:.4rem 0 .3rem;'
-        f'margin-top:.4rem;border-top:1px solid #1e1e1e">Conflict Landscape</div>',
-        unsafe_allow_html=True,
-    )
     if not conflict_results:
-        st.markdown(
-            f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
-            f'padding:.35rem .55rem;{_M}font-size:9px;color:#555960">No conflicts tracked</div>',
-            unsafe_allow_html=True,
-        )
         return
 
     # Canvas
@@ -2721,7 +2547,7 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
     grid = ""
     for v in (25, 50, 75):
         gx, gy = _fx(v), _fy(v)
-        c = "#2a2a2a" if v == 50 else "#191919"
+        c = _C["border2"] if v == 50 else "#191919"
         sw = "0.8" if v == 50 else "0.4"
         grid += (
             f'<line x1="{gx:.1f}" y1="0" x2="{gx:.1f}" y2="{PH:.1f}" stroke="{c}" stroke-width="{sw}"/>'
@@ -2730,13 +2556,13 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
 
     # Quadrant text labels
     qlbls = (
-        f'<text x="{_fx(75):.1f}" y="9" font-size="6.5" fill="rgba(192,57,43,0.55)" '
+        f'<text x="{_fx(75):.1f}" y="10" font-size="7" fill="rgba(192,57,43,0.6)" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">CRITICAL</text>'
-        f'<text x="{_fx(25):.1f}" y="9" font-size="6.5" fill="#222" '
+        f'<text x="{_fx(25):.1f}" y="10" font-size="7" fill="{_C["border2"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle">VOLATILE</text>'
-        f'<text x="{_fx(75):.1f}" y="{PH - 3:.1f}" font-size="6.5" fill="#222" '
+        f'<text x="{_fx(75):.1f}" y="{PH - 4:.1f}" font-size="7" fill="{_C["border2"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle">ISOLATED</text>'
-        f'<text x="{_fx(25):.1f}" y="{PH - 3:.1f}" font-size="6.5" fill="#222" '
+        f'<text x="{_fx(25):.1f}" y="{PH - 4:.1f}" font-size="7" fill="{_C["border2"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle">LATENT</text>'
     )
 
@@ -2744,15 +2570,15 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
     ticks = ""
     for v in (0, 50, 100):
         ticks += (
-            f'<text x="{_fx(v):.1f}" y="{H - 2}" font-size="6" fill="#2a2a2a" '
+            f'<text x="{_fx(v):.1f}" y="{H - 2}" font-size="7" fill="{_C["border2"]}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="middle">{v}</text>'
-            f'<text x="{ML - 2}" y="{_fy(v) + 3:.1f}" font-size="6" fill="#2a2a2a" '
+            f'<text x="{ML - 2}" y="{_fy(v) + 3:.1f}" font-size="7" fill="{_C["border2"]}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="end">{v}</text>'
         )
     axis_lbls = (
-        f'<text x="{W}" y="{H}" font-size="7" fill="#444" '
+        f'<text x="{W}" y="{H}" font-size="7.5" fill="{_C["muted"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="end">CIS →</text>'
-        f'<text x="2" y="8" font-size="7" fill="#444" '
+        f'<text x="2" y="9" font-size="7.5" fill="{_C["muted"]}" '
         f'font-family="JetBrains Mono,monospace">↑ TPS</text>'
     )
 
@@ -2760,7 +2586,7 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
     active_items, mon_items = [], []
     for cid, r in conflict_results.items():
         entry = (float(r.get("cis", 0)), float(r.get("tps", 0)),
-                 r.get("color", "#8890a1"), r.get("label", cid)[:3].upper())
+                 r.get("color", _C["label"]), r.get("label", cid)[:3].upper())
         if r.get("state") == "active":
             active_items.append(entry)
         else:
@@ -2778,33 +2604,31 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
         dots += (
             f'<circle cx="{px:.1f}" cy="{py:.1f}" r="9" '
             f'fill="{col}" fill-opacity="0.18" stroke="{col}" stroke-width="1.5"/>'
-            f'<text x="{px:.1f}" y="{py + 2.5:.1f}" font-size="6" fill="{col}" '
+            f'<text x="{px:.1f}" y="{py + 3:.1f}" font-size="7" fill="{col}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{lbl}</text>'
         )
 
     svg = (
-        f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" style="display:block">'
+        f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" style="display:block;overflow:visible">'
         + fills + grid + qlbls + ticks + axis_lbls + dots
         + f'</svg>'
     )
 
     n_act = len(active_items)
     n_mon = len(mon_items)
-    st.markdown(
-        f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;padding:.5rem .65rem">'
+    body = (
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-        f'<span style="{_M}font-size:8px;color:#555960">CIS × TPS · all tracked</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">CIS × TPS · all tracked</span>'
         f'<div style="display:flex;gap:4px">'
         f'<span style="background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.28);'
-        f'{_M}font-size:7px;color:#e05241;padding:1px 5px">{n_act} ACTIVE</span>'
-        f'<span style="background:#111;border:1px solid #1e1e1e;'
-        f'{_M}font-size:7px;color:#555960;padding:1px 5px">{n_mon} MON</span>'
+        f'{_M}font-size:8px;color:#e05241;padding:2px 6px">{n_act} ACTIVE</span>'
+        f'<span style="background:#111;border:1px solid {_C["border"]};'
+        f'{_M}font-size:8px;color:{_C["muted"]};padding:2px 6px">{n_mon} MON</span>'
         f'</div>'
         f'</div>'
         f'{svg}'
-        f'</div>',
-        unsafe_allow_html=True,
     )
+    _card("CONFLICT LANDSCAPE · CIS × TPS", body)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2834,11 +2658,11 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
 
     # 5 axes — ordered to make the pentagon visually balanced
     axes = [
-        ("CIS",  cis,        "#c0392b"),   # top
-        ("MCS",  mcs,        "#2980b9"),   # upper-right
+        ("CIS",  cis,        _C["danger"]),   # top
+        ("MCS",  mcs,        _C["info"]),   # upper-right
         ("VOL",  vol_score,  "#8E6F3E"),   # lower-right
-        ("COUP", coup_score, "#27ae60"),   # lower-left
-        ("TPS",  tps,        "#e67e22"),   # upper-left
+        ("COUP", coup_score, _C["safe"]),   # lower-left
+        ("TPS",  tps,        _C["warn"]),   # upper-left
     ]
     n = len(axes)
 
@@ -2860,7 +2684,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
             f'{cx + pct/100*R*math.cos(_ang(i)):.1f},{cy + pct/100*R*math.sin(_ang(i)):.1f}'
             for i in range(n)
         )
-        c  = "#2a2a2a" if pct == 50 else "#191919"
+        c  = _C["border2"] if pct == 50 else "#191919"
         sw = "0.9"    if pct == 50 else "0.5"
         grid_html += f'<polygon points="{pts}" fill="none" stroke="{c}" stroke-width="{sw}"/>'
 
@@ -2868,13 +2692,13 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     spoke_html = "".join(
         f'<line x1="{cx}" y1="{cy}" '
         f'x2="{cx + R * math.cos(_ang(i)):.1f}" y2="{cy + R * math.sin(_ang(i)):.1f}" '
-        f'stroke="#1e1e1e" stroke-width="1"/>'
+        f'stroke=_C["border"] stroke-width="1"/>'
         for i in range(n)
     )
 
     # Data polygon
     data_pts = " ".join(f'{_pt(i, axes[i][1])[0]:.1f},{_pt(i, axes[i][1])[1]:.1f}' for i in range(n))
-    fill_c = "#c0392b" if score >= 65 else "#e67e22" if score >= 45 else "#27ae60"
+    fill_c = _C["danger"] if score >= 65 else _C["warn"] if score >= 45 else _C["safe"]
 
     # Labels + endpoint dots per axis
     lbl_html = ""
@@ -2888,7 +2712,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         n_dy = -5 if sin_a < -0.25 else (3 if sin_a > 0.25 else -4)
         v_dy = n_dy + 10
         lbl_html += (
-            f'<text x="{lx:.1f}" y="{ly + n_dy:.1f}" font-size="8" fill="#8890a1" '
+            f'<text x="{lx:.1f}" y="{ly + n_dy:.1f}" font-size="8" fill=_C["label"] '
             f'font-family="JetBrains Mono,monospace" text-anchor="{anc}">{name}</text>'
             f'<text x="{lx:.1f}" y="{ly + v_dy:.1f}" font-size="8.5" fill="{col}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="{anc}" font-weight="700">{val:.0f}</text>'
@@ -2900,7 +2724,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     ctr_html = (
         f'<text x="{cx}" y="{cy - 5}" font-size="15" fill="{fill_c}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{score:.0f}</text>'
-        f'<text x="{cx}" y="{cy + 9}" font-size="7" fill="#555960" '
+        f'<text x="{cx}" y="{cy + 9}" font-size="7" fill=_C["muted"] '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle">GRS</text>'
     )
 
@@ -2920,11 +2744,11 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
         f'<span style="{_M}font-size:8px;color:{_C["muted"]}">5-dimension risk profile</span>'
         f'<span style="background:{fill_c}1a;border:1px solid {fill_c}44;'
-        f'{_M}font-size:7px;font-weight:700;letter-spacing:.10em;color:{fill_c};'
-        f'padding:1px 5px">{severity_lbl}</span>'
+        f'{_M}font-size:8px;font-weight:700;letter-spacing:.10em;color:{fill_c};'
+        f'padding:2px 7px">{severity_lbl}</span>'
         f'</div>'
         f'{svg}'
-        f'<div style="{_M}font-size:7.5px;color:#2e2e2e;margin-top:3px">'
+        f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:6px">'
         f'VOL=VIX stress · COUP=eq↔cmd coupling · MCS=market conditions</div>',
     )
 
@@ -2982,13 +2806,13 @@ def _render_returns_heatmap() -> None:
     # Header row
     hdr_cells = "".join(
         f'<th style="{_M}font-size:7px;font-weight:700;letter-spacing:.08em;'
-        f'color:#555960;text-align:center;padding:3px 4px;border-right:1px solid #111">'
+        f'color:{_C["muted"]};text-align:center;padding:3px 4px;border-right:1px solid #111">'
         f'{lbl}</th>'
         for lbl in day_labels
     )
     header = (
-        f'<tr><th style="{_M}font-size:7px;color:#555960;padding:3px 6px;'
-        f'text-align:left;border-right:1px solid #1e1e1e;min-width:52px">ASSET</th>'
+        f'<tr><th style="{_M}font-size:7px;color:{_C["muted"]};padding:3px 6px;'
+        f'text-align:left;border-right:1px solid {_C["border"]};min-width:52px">ASSET</th>'
         + hdr_cells + f'</tr>'
     )
 
@@ -3007,23 +2831,23 @@ def _render_returns_heatmap() -> None:
                 txt = _cell_txt(pct)
                 cells += (
                     f'<td style="background:{bg};{_M}font-size:7.5px;font-weight:700;'
-                    f'color:#e8e9ed;text-align:center;padding:4px 3px;'
+                    f'color:{_C["text"]};text-align:center;padding:4px 3px;'
                     f'border-right:1px solid #111;white-space:nowrap">{txt}</td>'
                 )
         tbody += (
             f'<tr style="border-bottom:1px solid #111">'
-            f'<td style="{_M}font-size:8px;font-weight:700;color:#A8B8C8;'
-            f'padding:4px 6px;border-right:1px solid #1e1e1e;white-space:nowrap">'
+            f'<td style="{_M}font-size:8px;font-weight:700;color:{_C["label"]};'
+            f'padding:4px 6px;border-right:1px solid {_C["border"]};white-space:nowrap">'
             f'{label}</td>'
             + cells + f'</tr>'
         )
 
     _card("DAILY RETURNS · 5D",
         f'<table style="width:100%;border-collapse:collapse">'
-        f'<thead style="background:#0a0a0a;border-bottom:1px solid #1e1e1e">{header}</thead>'
+        f'<thead style="background:#0a0a0a;border-bottom:1px solid {_C["border"]}">{header}</thead>'
         f'<tbody>{tbody}</tbody>'
         f'</table>'
-        f'<div style="{_M}font-size:7px;color:#2a2a2a;padding:3px 6px">'
+        f'<div style="{_M}font-size:7px;color:{_C["border2"]};padding:3px 6px">'
         f'day-over-day % · VIX inverted (↑ VIX = red)</div>',
     )
 
@@ -3079,17 +2903,17 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
     rows = ""
     for group, score in sorted_scores:
         bw = int(score)
-        if score >= 65:   bc = "#c0392b"
-        elif score >= 40: bc = "#e67e22"
-        else:             bc = "#2980b9"
+        if score >= 65:   bc = _C["danger"]
+        elif score >= 40: bc = _C["warn"]
+        else:             bc = _C["info"]
         rows += (
-            f'<div style="padding:.28rem .55rem;border-bottom:1px solid #111">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-            f'<span style="{_M}font-size:8.5px;font-weight:700;color:#8890a1">{group}</span>'
+            f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+            f'<span style="{_M}font-size:8.5px;font-weight:700;color:{_C["label"]}">{group}</span>'
             f'<span style="{_M}font-size:9px;font-weight:700;color:{bc}">{score:.0f}</span>'
             f'</div>'
-            f'<div style="background:#1a1a1a;height:4px;border-radius:2px">'
-            f'<div style="width:{bw}%;height:4px;background:{bc};border-radius:2px;opacity:.85"></div>'
+            f'<div style="background:#1a1a1a;height:5px;border-radius:2px">'
+            f'<div style="width:{bw}%;height:5px;background:{bc};border-radius:2px;opacity:.85"></div>'
             f'</div>'
             f'</div>'
         )
@@ -3152,7 +2976,7 @@ def _load_vol_trio() -> dict[str, dict]:
 
 def _render_regime_history(regimes: "pd.Series | None") -> None:
     """Left column: 60-day day-by-day correlation-regime strip."""
-    _REG_COL = {1: "#27ae60", 2: "#e8a838", 3: "#c0392b"}
+    _REG_COL = {1: _C["safe"], 2: _C["warn"], 3: _C["danger"]}
     _REG_LAB = {1: "DECOUPLED", 2: "TRANSITIONING", 3: "HIGH COUPLING"}
 
     if regimes is None or len(regimes.dropna()) < 5:
@@ -3185,17 +3009,17 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
         n = cnt.get(rv, 0)
         lx = (rv - 1) * 72
         legend += (
-            f'<rect x="{lx}" y="0" width="8" height="8" fill="{rc}" rx="1" opacity=".8"/>'
-            f'<text x="{lx + 11}" y="8" font-size="7.5" fill="#8890a1" font-family="JetBrains Mono,monospace">'
+            f'<rect x="{lx}" y="2" width="9" height="9" fill="{rc}" rx="1" opacity=".8"/>'
+            f'<text x="{lx + 13}" y="10" font-size="8" fill=_C["label"] font-family="JetBrains Mono,monospace">'
             f'{_REG_LAB[rv][:4]} {n}d</text>'
         )
 
     _card("REGIME HISTORY · 60D",
         f'<svg width="{W}" height="{H}" style="display:block">{cells}</svg>'
-        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem">'
-        f'<svg width="216" height="12">{legend}</svg>'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.45rem">'
+        f'<svg width="216" height="14">{legend}</svg>'
         f'</div>'
-        f'<div style="margin-top:.3rem;{_M}font-size:8.5px;font-weight:700;color:{cur_col}">'
+        f'<div style="margin-top:.4rem;{_M}font-size:8.5px;font-weight:700;color:{cur_col}">'
         f'NOW: {cur_lbl}</div>',
     )
 
@@ -3211,7 +3035,7 @@ def _render_alert_summary(alerts: list) -> None:
 
     from collections import Counter, OrderedDict
     sev_order = ["critical", "high", "medium", "low"]
-    sev_col   = {"critical": "#c0392b", "high": "#e67e22", "medium": "#e8a838", "low": "#2980b9"}
+    sev_col   = {"critical": _C["danger"], "high": _C["warn"], "medium": _C["warn"], "low": _C["info"]}
     cnt = Counter(getattr(a, "severity", "low") for a in alerts)
 
     badges = ""
@@ -3221,11 +3045,11 @@ def _render_alert_summary(alerts: list) -> None:
             continue
         c = sev_col[sev]
         badges += (
-            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:.28rem">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:.4rem">'
             f'<span style="background:{c}22;border:1px solid {c}66;'
-            f'{_M}font-size:8px;font-weight:700;color:{c};padding:1px 6px;'
-            f'border-radius:2px;letter-spacing:.08em;min-width:20px;text-align:center">{n}</span>'
-            f'<span style="{_M}font-size:9px;color:#8890a1;text-transform:uppercase;'
+            f'{_M}font-size:8px;font-weight:700;color:{c};padding:2px 8px;'
+            f'border-radius:2px;letter-spacing:.08em;min-width:22px;text-align:center">{n}</span>'
+            f'<span style="{_M}font-size:9px;color:{_C["label"]};text-transform:uppercase;'
             f'letter-spacing:.08em">{sev}</span>'
             f'</div>'
         )
@@ -3237,9 +3061,9 @@ def _render_alert_summary(alerts: list) -> None:
 
     _card(f"ACTIVE ALERTS · {len(alerts)}",
         f'{badges}'
-        f'<div style="border-top:1px solid #1a1a1a;margin-top:.3rem;padding-top:.3rem">'
+        f'<div style="border-top:1px solid #1a1a1a;margin-top:.4rem;padding-top:.4rem">'
         f'<span style="{_M}font-size:8.5px;color:{rc};font-weight:600">LATEST:</span>'
-        f'<span style="{_M}font-size:8.5px;color:#8890a1;margin-left:4px">{msg}</span>'
+        f'<span style="{_M}font-size:8.5px;color:{_C["label"]};margin-left:5px">{msg}</span>'
         f'</div>',
     )
 
@@ -3266,28 +3090,28 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
 
     cur   = vals[-1]
     delta = cur - vals[max(0, N - 30)] if N >= 5 else 0.0
-    d_col = "#c0392b" if delta > 0 else "#27ae60"
+    d_col = _C["danger"] if delta > 0 else _C["safe"]
     d_sym = "▲" if delta > 0 else "▼"
-    s_col = "#c0392b" if cur >= 70 else "#e8a838" if cur >= 45 else "#27ae60"
+    s_col = _C["danger"] if cur >= 70 else _C["warn"] if cur >= 45 else _C["safe"]
 
     # zone bands
     y_high = _fy(70)
     y_mid  = _fy(45)
     bands  = (
         f'<rect x="{ML}" y="{MT}" width="{PW}" height="{y_high - MT}" '
-        f'fill="#c0392b" opacity=".06" rx="0"/>'
+        f'fill=_C["danger"] opacity=".06" rx="0"/>'
         f'<rect x="{ML}" y="{y_high}" width="{PW}" height="{y_mid - y_high}" '
-        f'fill="#e8a838" opacity=".06" rx="0"/>'
+        f'fill=_C["warn"] opacity=".06" rx="0"/>'
         f'<rect x="{ML}" y="{y_mid}" width="{PW}" height="{MT + PH - y_mid}" '
-        f'fill="#27ae60" opacity=".05" rx="0"/>'
+        f'fill=_C["safe"] opacity=".05" rx="0"/>'
     )
 
     # threshold lines
     lines = (
         f'<line x1="{ML}" y1="{y_high:.1f}" x2="{ML + PW}" y2="{y_high:.1f}" '
-        f'stroke="#c0392b" stroke-width=".6" stroke-dasharray="3,3" opacity=".5"/>'
+        f'stroke=_C["danger"] stroke-width=".6" stroke-dasharray="3,3" opacity=".5"/>'
         f'<line x1="{ML}" y1="{y_mid:.1f}" x2="{ML + PW}" y2="{y_mid:.1f}" '
-        f'stroke="#e8a838" stroke-width=".6" stroke-dasharray="3,3" opacity=".4"/>'
+        f'stroke=_C["warn"] stroke-width=".6" stroke-dasharray="3,3" opacity=".4"/>'
     )
 
     pts = " ".join(f'{_fx(i):.1f},{_fy(v):.1f}' for i, v in enumerate(vals))
@@ -3312,8 +3136,8 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
 
     _card("RISK SCORE TREND · 60D",
         f'{svg}'
-        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.3rem">'
-        f'<span style="{_M}font-size:8.5px;color:#555960">GRS NOW</span>'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.45rem">'
+        f'<span style="{_M}font-size:8.5px;color:{_C["muted"]}">GRS NOW</span>'
         f'<span style="{_M}font-size:11px;font-weight:700;color:{s_col}">{cur:.1f}</span>'
         f'<span style="{_M}font-size:8.5px;color:{d_col}">{d_sym} {abs(delta):.1f} vs 30d</span>'
         f'</div>',
@@ -3341,39 +3165,39 @@ def _render_macro_snapshot() -> None:
         vstr  = fmt_fn(val)
         reg, rc = regime_fn(val)
         arr   = "▲" if pct > 0.05 else "▼" if pct < -0.05 else "—"
-        ac    = "#c0392b" if arr == "▲" else "#27ae60" if arr == "▼" else "#555960"
+        ac    = _C["danger"] if arr == "▲" else _C["safe"] if arr == "▼" else _C["muted"]
         # flip colour for VIX (up = bad)
         if sym == "^VIX":
-            ac = "#c0392b" if arr == "▲" else "#27ae60" if arr == "▼" else "#555960"
+            ac = _C["danger"] if arr == "▲" else _C["safe"] if arr == "▼" else _C["muted"]
         return (label, vstr, reg, rc, arr, ac)
 
     vix_cell = _cell("^VIX",   "VIX",
         fmt_fn=lambda v: f"{v:.1f}",
-        regime_fn=lambda v: ("CALM", "#27ae60") if v < 15 else
-                            ("NORMAL", "#8890a1") if v < 25 else
-                            ("ELEVATED", "#e8a838") if v < 35 else
-                            ("STRESS", "#c0392b"))
+        regime_fn=lambda v: ("CALM", _C["safe"]) if v < 15 else
+                            ("NORMAL", _C["label"]) if v < 25 else
+                            ("ELEVATED", _C["warn"]) if v < 35 else
+                            ("STRESS", _C["danger"]))
 
     tny_cell = _cell("^TNX",   "10Y YLD",
         fmt_fn=lambda v: f"{v:.2f}%",
-        regime_fn=lambda v: ("LOW", "#2980b9") if v < 3.0 else
-                            ("NORMAL", "#8890a1") if v < 4.5 else
-                            ("HIGH", "#e8a838") if v < 5.5 else
-                            ("EXTREME", "#c0392b"))
+        regime_fn=lambda v: ("LOW", _C["info"]) if v < 3.0 else
+                            ("NORMAL", _C["label"]) if v < 4.5 else
+                            ("HIGH", _C["warn"]) if v < 5.5 else
+                            ("EXTREME", _C["danger"]))
 
     dxy_cell = _cell("DX-Y.NYB", "DXY",
         fmt_fn=lambda v: f"{v:.1f}",
-        regime_fn=lambda v: ("WEAK", "#27ae60") if v < 98 else
-                            ("NEUTRAL", "#8890a1") if v < 104 else
-                            ("STRONG", "#e8a838") if v < 110 else
-                            ("EXTREME", "#c0392b"))
+        regime_fn=lambda v: ("WEAK", _C["safe"]) if v < 98 else
+                            ("NEUTRAL", _C["label"]) if v < 104 else
+                            ("STRONG", _C["warn"]) if v < 110 else
+                            ("EXTREME", _C["danger"]))
 
     wti_cell = _cell("CL=F",   "WTI",
         fmt_fn=lambda v: f"${v:.1f}",
-        regime_fn=lambda v: ("LOW", "#27ae60") if v < 60 else
-                            ("MID", "#8890a1") if v < 80 else
-                            ("HIGH", "#e8a838") if v < 100 else
-                            ("SPIKE", "#c0392b"))
+        regime_fn=lambda v: ("LOW", _C["safe"]) if v < 60 else
+                            ("MID", _C["label"]) if v < 80 else
+                            ("HIGH", _C["warn"]) if v < 100 else
+                            ("SPIKE", _C["danger"]))
 
     cells = [vix_cell, tny_cell, dxy_cell, wti_cell]
     if not any(cells):
@@ -3390,18 +3214,18 @@ def _render_macro_snapshot() -> None:
             label, vstr, reg, rc, arr, ac = cell
             cols_html += (
                 f'<div style="flex:1;background:{_C["card2"]};border:1px solid {_C["border2"]};'
-                f'padding:.4rem .5rem;border-radius:2px;min-width:0">'
-                f'<div style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.12em;'
-                f'color:{_C["muted"]};text-transform:uppercase;margin-bottom:2px">{label}</div>'
-                f'<div style="{_M}font-size:1.0rem;font-weight:700;color:#e8e9ed;line-height:1">{vstr}</div>'
-                f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">'
-                f'<span style="{_M}font-size:7.5px;font-weight:700;color:{rc};'
+                f'padding:.5rem .6rem;border-radius:2px;min-width:0">'
+                f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+                f'color:{_C["muted"]};text-transform:uppercase;margin-bottom:3px">{label}</div>'
+                f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{_C["text"]};line-height:1">{vstr}</div>'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">'
+                f'<span style="{_M}font-size:8px;font-weight:700;color:{rc};'
                 f'letter-spacing:.08em">{reg}</span>'
                 f'<span style="{_M}font-size:9px;font-weight:700;color:{ac}">{arr}</span>'
                 f'</div>'
                 f'</div>'
             )
-        body += f'<div style="display:flex;gap:4px;margin-bottom:4px">{cols_html}</div>'
+        body += f'<div style="display:flex;gap:5px;margin-bottom:5px">{cols_html}</div>'
     _card("MACRO SNAPSHOT", body)
 
 
@@ -3432,30 +3256,30 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
 
     rows_html = ""
     _G_COL = {
-        "Energy":           "#e67e22",
+        "Energy":           _C["warn"],
         "Precious Metals":  "#f1c40f",
         "Industrial Metals":"#95a5a6",
-        "Agriculture":      "#27ae60",
+        "Agriculture":      _C["safe"],
     }
     for g, rets in group_rets.items():
         if not rets:
             continue
         avg = sum(rets) / len(rets)
-        col = "#27ae60" if avg >= 0 else "#c0392b"
+        col = _C["safe"] if avg >= 0 else _C["danger"]
         bar_w  = min(abs(avg) / 5.0 * 100, 100)   # cap at ±5% full width
         bar_dir = "right" if avg >= 0 else "left"
         sign   = "+" if avg >= 0 else ""
-        gc     = _G_COL.get(g, "#8890a1")
+        gc     = _G_COL.get(g, _C["label"])
         abbr   = {"Energy": "ENGY", "Precious Metals": "PREC",
                   "Industrial Metals": "INDU", "Agriculture": "AGRI"}.get(g, g[:4].upper())
         rows_html += (
-            f'<div style="padding:.28rem .55rem;border-bottom:1px solid #111">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-            f'<span style="{_M}font-size:8px;font-weight:700;color:{gc}">{abbr}</span>'
+            f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+            f'<span style="{_M}font-size:8.5px;font-weight:700;color:{gc}">{abbr}</span>'
             f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}{avg:.2f}%</span>'
             f'</div>'
-            f'<div style="background:#1a1a1a;height:4px;border-radius:2px;overflow:hidden">'
-            f'<div style="float:{bar_dir};width:{bar_w:.0f}%;height:4px;'
+            f'<div style="background:#1a1a1a;height:5px;border-radius:2px;overflow:hidden">'
+            f'<div style="float:{bar_dir};width:{bar_w:.0f}%;height:5px;'
             f'background:{col};border-radius:2px;opacity:.85"></div>'
             f'</div>'
             f'</div>'
@@ -3516,7 +3340,7 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
     bars_svg = ""
     for i, (lag, cor) in enumerate(zip(lags, corrs)):
         bh   = max(abs(cor) * PH, 1.5)
-        col  = "#27ae60" if cor >= 0 else "#c0392b"
+        col  = _C["safe"] if cor >= 0 else _C["danger"]
         op   = 1.0 if lag == peak_lag else 0.5
         x    = ML + i * gap + gap / 2 - bw / 2
         y    = MT + PH / 2 - bh / 2 if cor >= 0 else MT + PH / 2
@@ -3529,11 +3353,11 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
     # x-axis lag labels
     for i, lag in enumerate(lags):
         lx = ML + i * gap + gap / 2
-        bars_svg += f'<text x="{lx:.1f}" y="{H-2}" font-size="7" fill="#555960" text-anchor="middle" font-family="JetBrains Mono,monospace">+{lag}d</text>'
+        bars_svg += f'<text x="{lx:.1f}" y="{H-2}" font-size="7" fill=_C["muted"] text-anchor="middle" font-family="JetBrains Mono,monospace">+{lag}d</text>'
 
     # y-axis ticks (+0.5 / 0 / -0.5)
     for yv, yt in [(0.5, MT + PH * 0.0), (0.0, MT + PH * 0.5), (-0.5, MT + PH * 1.0)]:
-        bars_svg += f'<text x="{ML-2}" y="{yt:.1f}" font-size="6.5" fill="#444" text-anchor="end" font-family="JetBrains Mono,monospace" dominant-baseline="middle">{yv:+.1f}</text>'
+        bars_svg += f'<text x="{ML-2}" y="{yt:.1f}" font-size="7" fill="{_C["muted"]}" text-anchor="end" font-family="JetBrains Mono,monospace" dominant-baseline="middle">{yv:+.1f}</text>'
 
     lead_msg = (
         f"CMD leads EQ by {peak_lag}d" if peak_lag > 0
@@ -3542,9 +3366,9 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
     _card("CMD→EQ LEAD-LAG · 60D",
         f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">{bars_svg}</svg>'
-        f'<div style="display:flex;justify-content:space-between;margin-top:.25rem">'
-        f'<span style="{_M}font-size:8px;color:#8890a1">{lead_msg}</span>'
-        f'<span style="{_M}font-size:8px;font-weight:700;color:{"#27ae60" if peak_cor>=0 else "#c0392b"}">'
+        f'<div style="display:flex;justify-content:space-between;margin-top:.4rem">'
+        f'<span style="{_M}font-size:8px;color:{_C["label"]}">{lead_msg}</span>'
+        f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["safe"] if peak_cor>=0 else _C["danger"]}">'
         f'ρ={peak_cor:.2f}</span>'
         f'</div>',
     )
@@ -3579,7 +3403,7 @@ def _render_yield_curve_snap() -> None:
 
     # colour by slope: short-end vs long-end
     slope = present[-1][1] - present[0][1]
-    line_col = "#27ae60" if slope > 0.1 else "#c0392b" if slope < -0.1 else "#e8a838"
+    line_col = _C["safe"] if slope > 0.1 else _C["danger"] if slope < -0.1 else _C["warn"]
     shape_lbl = "NORMAL" if slope > 0.1 else "INVERTED" if slope < -0.1 else "FLAT"
 
     # fill under curve
@@ -3592,9 +3416,9 @@ def _render_yield_curve_snap() -> None:
         la = "start" if i == 0 else "end" if i == len(present)-1 else "middle"
         dots += (
             f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="2.5" fill="{line_col}" opacity=".9"/>'
-            f'<text x="{dx:.1f}" y="{H-2}" font-size="7.5" fill="#555960" text-anchor="middle" '
+            f'<text x="{dx:.1f}" y="{H-2}" font-size="7.5" fill=_C["muted"] text-anchor="middle" '
             f'font-family="JetBrains Mono,monospace">{t}</text>'
-            f'<text x="{dx:.1f}" y="{dy-6:.1f}" font-size="7" fill="#8890a1" text-anchor="{la}" '
+            f'<text x="{dx:.1f}" y="{dy-6:.1f}" font-size="7" fill=_C["label"] text-anchor="{la}" '
             f'font-family="JetBrains Mono,monospace">{v:.2f}</text>'
         )
 
@@ -3617,9 +3441,9 @@ def _render_yield_curve_snap() -> None:
 
     _card("YIELD CURVE",
         f'{svg}'
-        f'<div style="display:flex;justify-content:space-between;margin-top:.2rem">'
+        f'<div style="display:flex;justify-content:space-between;margin-top:.45rem">'
         f'<span style="{_M}font-size:8.5px;font-weight:700;color:{line_col}">{shape_lbl}</span>'
-        f'<span style="{_M}font-size:8px;color:#555960">'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">'
         f'spread {slope:+.2f}% (3M→30Y)</span>'
         f'</div>',
     )
@@ -3636,18 +3460,18 @@ def _render_vol_trio() -> None:
         return
 
     _VOL_DESC = {
-        "VIX": ("Equity Vol", lambda v: ("CALM",     "#27ae60") if v < 15 else
-                                         ("NORMAL",   "#8890a1") if v < 25 else
-                                         ("ELEVATED", "#e8a838") if v < 35 else
-                                         ("STRESS",   "#c0392b")),
-        "OVX": ("Oil Vol",    lambda v: ("LOW",      "#27ae60") if v < 25 else
-                                         ("MID",      "#8890a1") if v < 45 else
-                                         ("HIGH",     "#e8a838") if v < 65 else
-                                         ("EXTREME",  "#c0392b")),
-        "GVZ": ("Gold Vol",   lambda v: ("LOW",      "#27ae60") if v < 12 else
-                                         ("MID",      "#8890a1") if v < 20 else
-                                         ("HIGH",     "#e8a838") if v < 30 else
-                                         ("EXTREME",  "#c0392b")),
+        "VIX": ("Equity Vol", lambda v: ("CALM",     _C["safe"]) if v < 15 else
+                                         ("NORMAL",   _C["label"]) if v < 25 else
+                                         ("ELEVATED", _C["warn"]) if v < 35 else
+                                         ("STRESS",   _C["danger"])),
+        "OVX": ("Oil Vol",    lambda v: ("LOW",      _C["safe"]) if v < 25 else
+                                         ("MID",      _C["label"]) if v < 45 else
+                                         ("HIGH",     _C["warn"]) if v < 65 else
+                                         ("EXTREME",  _C["danger"])),
+        "GVZ": ("Gold Vol",   lambda v: ("LOW",      _C["safe"]) if v < 12 else
+                                         ("MID",      _C["label"]) if v < 20 else
+                                         ("HIGH",     _C["warn"]) if v < 30 else
+                                         ("EXTREME",  _C["danger"])),
     }
 
     rows_html = ""
@@ -3662,16 +3486,16 @@ def _render_vol_trio() -> None:
         lo_str  = f'{d["lo"]:.1f}'
         hi_str  = f'{d["hi"]:.1f}'
         rows_html += (
-            f'<div style="padding:.32rem .55rem;border-bottom:1px solid #111">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+            f'<div style="padding:.42rem .65rem;border-bottom:1px solid #111">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<div>'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:#DCE4F0">{key}</span>'
-            f'<span style="{_M}font-size:7.5px;color:#555960;margin-left:5px">{sub_lbl}</span>'
+            f'<span style="{_M}font-size:9px;font-weight:700;color:{_C["text"]}">{key}</span>'
+            f'<span style="{_M}font-size:8px;color:{_C["muted"]};margin-left:6px">{sub_lbl}</span>'
             f'</div>'
             f'<div style="text-align:right">'
             f'<span style="{_M}font-size:10px;font-weight:700;color:{rc}">{d["cur"]:.1f}</span>'
-            f'<span style="{_M}font-size:7.5px;font-weight:700;color:{rc};'
-            f'margin-left:5px;letter-spacing:.06em">{reg}</span>'
+            f'<span style="{_M}font-size:8px;font-weight:700;color:{rc};'
+            f'margin-left:6px;letter-spacing:.06em">{reg}</span>'
             f'</div>'
             f'</div>'
             # gauge track
@@ -3680,10 +3504,10 @@ def _render_vol_trio() -> None:
             f'background:{rc};border-radius:3px;opacity:.8"></div>'
             f'</div>'
             # range labels
-            f'<div style="display:flex;justify-content:space-between;margin-top:2px">'
-            f'<span style="{_M}font-size:7px;color:#333">{lo_str}</span>'
-            f'<span style="{_M}font-size:7px;color:#333">1y range</span>'
-            f'<span style="{_M}font-size:7px;color:#333">{hi_str}</span>'
+            f'<div style="display:flex;justify-content:space-between;margin-top:4px">'
+            f'<span style="{_M}font-size:7.5px;color:{_C["muted"]}">{lo_str}</span>'
+            f'<span style="{_M}font-size:7.5px;color:{_C["muted"]}">1y range</span>'
+            f'<span style="{_M}font-size:7.5px;color:{_C["muted"]}">{hi_str}</span>'
             f'</div>'
             f'</div>'
         )
@@ -3702,18 +3526,18 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     if not active:
         return
 
-    CX, CY, R = 105, 98, 80
-    W, H       = 210, 210
+    CX, CY, R = 105, 108, 80
+    W, H       = 210, 220
 
     grs   = float(risk.get("score", 50))
-    g_col = "#c0392b" if grs >= 70 else "#e8a838" if grs >= 45 else "#27ae60"
+    g_col = _C["danger"] if grs >= 70 else _C["warn"] if grs >= 45 else _C["safe"]
 
     # ── background ────────────────────────────────────────────────────────────
     # risk zone rings
     bg = (
-        f'<circle cx="{CX}" cy="{CY}" r="{R}" fill="#c0392b" opacity=".055"/>'
-        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.65)}" fill="#e8a838" opacity=".07"/>'
-        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.32)}" fill="#27ae60" opacity=".10"/>'
+        f'<circle cx="{CX}" cy="{CY}" r="{R}" fill=_C["danger"] opacity=".055"/>'
+        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.65)}" fill=_C["warn"] opacity=".07"/>'
+        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.32)}" fill=_C["safe"] opacity=".10"/>'
     )
     # ring outlines
     for ri in [R, int(R*0.65), int(R*0.32)]:
@@ -3726,7 +3550,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         spokes += (
             f'<line x1="{CX}" y1="{CY}" '
             f'x2="{CX + R*math.cos(rad):.1f}" y2="{CY + R*math.sin(rad):.1f}" '
-            f'stroke="#1e1e1e" stroke-width=".8"/>'
+            f'stroke=_C["border"] stroke-width=".8"/>'
         )
 
     # ring labels (CIS values)
@@ -3746,7 +3570,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     for cid, r in active:
         cis   = float(r.get("cis", 50))
         tps   = float(r.get("tps", 50))
-        color = r.get("color", "#e8a838")
+        color = r.get("color", _C["warn"])
         label = (r.get("label") or cid).replace("_", " ")[:12]
 
         # angle: TPS maps 0→360, starting from 12 o'clock (−90°)
@@ -3792,7 +3616,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         f'<circle cx="{CX}" cy="{CY}" r="18" fill="#0a0a0a" stroke="{g_col}" stroke-width="1.5"/>'
         f'<text x="{CX}" y="{CY-3}" font-size="13" font-weight="700" fill="{g_col}" '
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">{grs:.0f}</text>'
-        f'<text x="{CX}" y="{CY+9}" font-size="6" fill="#555960" '
+        f'<text x="{CX}" y="{CY+9}" font-size="6" fill=_C["muted"] '
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">GRS</text>'
     )
 
@@ -3828,9 +3652,9 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     _card("THREAT RADAR · CIS × TPS",
         f'<div style="text-align:center">'
         f'{svg}'
-        f'<div style="display:flex;justify-content:center;gap:14px;margin-top:.15rem">'
-        f'<span style="{_M}font-size:7px;color:#333">● radius = CIS</span>'
-        f'<span style="{_M}font-size:7px;color:#333">● angle = TPS</span>'
+        f'<div style="display:flex;justify-content:center;gap:16px;margin-top:.4rem">'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">● radius = CIS</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">● angle = TPS</span>'
         f'</div>'
         f'</div>',
     )
@@ -3881,13 +3705,13 @@ def _render_risk_convergence(
     if isinstance(score_hist, _pd.Series) and len(score_hist.dropna()) >= 10:
         v1 = _norm(score_hist, 0, 100)
         if len(v1) >= 5:
-            series_data.append(("GRS", v1, "#c0392b", float(v1[-1])))
+            series_data.append(("GRS", v1, _C["danger"], float(v1[-1])))
 
     # Series 2: Coupling (avg_corr → 0–100 via percentile rank)
     if isinstance(corr_series, _pd.Series) and len(corr_series.dropna()) >= 10:
         v2 = _norm(corr_series, 0, 100)
         if len(v2) >= 5:
-            series_data.append(("COUP", v2, "#2980b9", float(v2[-1])))
+            series_data.append(("COUP", v2, _C["info"], float(v2[-1])))
 
     # Series 3: vol stress proxy from pulse (VIX current → flat line as baseline context)
     try:
@@ -3900,7 +3724,7 @@ def _render_risk_convergence(
             # pad to N by repeating first value
             while len(vix_norm) < 5:
                 vix_norm.insert(0, vix_norm[0])
-            series_data.append(("VIX", vix_norm, "#27ae60", float(vix_norm[-1])))
+            series_data.append(("VIX", vix_norm, _C["safe"], float(vix_norm[-1])))
     except Exception:
         pass
 
@@ -3937,15 +3761,15 @@ def _render_risk_convergence(
         ey = MT + (1 - cur/100) * PH
         end_dots += (
             f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{col}"/>'
-            f'<text x="{ex+4}" y="{ey:.1f}" font-size="7" fill="{col}" '
-            f'dominant-baseline="middle" font-family="JetBrains Mono,monospace">'
+            f'<text x="{ex-5}" y="{ey:.1f}" font-size="7" fill="{col}" '
+            f'dominant-baseline="middle" text-anchor="end" font-family="JetBrains Mono,monospace">'
             f'{cur:.0f}</text>'
         )
         legend_items += (
-            f'<span style="display:inline-flex;align-items:center;gap:3px;margin-right:10px">'
-            f'<svg width="12" height="4"><line x1="0" y1="2" x2="12" y2="2" '
+            f'<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px">'
+            f'<svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" '
             f'stroke="{col}" stroke-width="2"/></svg>'
-            f'<span style="{_M}font-size:7.5px;color:{col}">{name}</span>'
+            f'<span style="{_M}font-size:8px;color:{col}">{name}</span>'
             f'</span>'
         )
 
@@ -3963,7 +3787,7 @@ def _render_risk_convergence(
 
     _card("RISK SIGNAL CONVERGENCE · 60D",
         f'{svg}'
-        f'<div style="display:flex;flex-wrap:wrap;margin-top:.3rem">{legend_items}</div>',
+        f'<div style="display:flex;flex-wrap:wrap;margin-top:.45rem">{legend_items}</div>',
     )
 
 
@@ -4029,13 +3853,13 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
         grid = (
             f'<line x1="{cx}" y1="0" x2="{cx}" y2="{H}" '
-            f'stroke="#2a2a3a" stroke-width="0.8"/>'
+            f'stroke=_C["border2"] stroke-width="0.8"/>'
         )
         for pct in (25, 75):
             gx = PAD_X + LABEL_W + BAR_MAX * pct // 100
             grid += (
                 f'<line x1="{gx}" y1="0" x2="{gx}" y2="{H}" '
-                f'stroke="#1e1e2e" stroke-width="0.5"/>'
+                f'stroke=_C["border"] stroke-width="0.5"/>'
             )
 
         bars = grid
@@ -4047,23 +3871,23 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
             if v >= 0:
                 bx = cx
                 bw = min(v * half, half)
-                col = "#c0392b" if v >= 0.7 else "#e67e22" if v >= 0.4 else "#e8a838"
+                col = _C["danger"] if v >= 0.7 else _C["warn"] if v >= 0.4 else _GOLD
             else:
                 bw  = min(abs(v) * half, half)
                 bx  = cx - bw
-                col = "#2980b9" if v <= -0.4 else "#5dade2"
+                col = _C["info"] if v <= -0.4 else "#5dade2"
 
             bars += (
                 # track
                 f'<rect x="{PAD_X + LABEL_W}" y="{y}" width="{BAR_MAX}" height="{BAR_H}" '
-                f'fill="#111120" rx="2"/>'
+                f'fill=_C["card2"] rx="2"/>'
                 # bar
                 f'<rect x="{bx:.1f}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
                 f'fill="{col}" opacity="0.85" rx="2"/>'
                 # label
                 f'<text x="{PAD_X + LABEL_W - 4}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
-                f'fill="#9a9ab0" text-anchor="end">{lbl}</text>'
+                f'fill=_C["label"] text-anchor="end">{lbl}</text>'
                 # value
                 f'<text x="{PAD_X + LABEL_W + BAR_MAX + 4}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
@@ -4134,11 +3958,11 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         H    = PAD + n * CELL
 
         def _corr_color(v: float) -> str:
-            if v >= 0.7:  return "#c0392b"
-            if v >= 0.4:  return "#e67e22"
+            if v >= 0.7:  return _C["danger"]
+            if v >= 0.4:  return _C["warn"]
             if v >= 0.1:  return "#f1c40f"
             if v >= -0.1: return "#7f8c8d"
-            if v >= -0.4: return "#2980b9"
+            if v >= -0.4: return _C["info"]
             return "#1a5276"
 
         cells = ""
@@ -4164,25 +3988,25 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
             row_labels += (
                 f'<text x="{PAD - 4}" y="{PAD + i * CELL + CELL//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill="#a0a0b0" text-anchor="end">{lbl}</text>'
+                f'fill=_C["label"] text-anchor="end">{lbl}</text>'
             )
             col_labels += (
                 f'<text x="{PAD + i * CELL + CELL//2}" y="{PAD - 6}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill="#a0a0b0" text-anchor="middle">{lbl}</text>'
+                f'fill=_C["label"] text-anchor="middle">{lbl}</text>'
             )
 
         legend = (
             '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">'
             + "".join(
                 f'<span style="font-family:JetBrains Mono,monospace;font-size:8px;'
-                f'color:#a0a0b0"><span style="display:inline-block;width:8px;height:8px;'
+                f'color:{_C["label"]}"><span style="display:inline-block;width:8px;height:8px;'
                 f'background:{c};border-radius:1px;margin-right:2px;vertical-align:middle">'
                 f'</span>{lbl}</span>'
                 for c, lbl in [
-                    ("#c0392b","≥0.7"), ("#e67e22","0.4–0.7"),
+                    (_C["danger"],"≥0.7"), (_C["warn"],"0.4–0.7"),
                     ("#f1c40f","0.1–0.4"), ("#7f8c8d","-0.1–0.1"),
-                    ("#2980b9","-0.4–-0.1"), ("#1a5276","≤-0.4"),
+                    (_C["info"],"-0.4–-0.1"), ("#1a5276","≤-0.4"),
                 ]
             )
             + "</div>"
@@ -4221,29 +4045,29 @@ def _render_risk_signal_waterfall(
 
         # 1. Geo Risk Score
         grs = float(risk.get("score", 0))
-        grs_col = "#c0392b" if grs >= 70 else "#e67e22" if grs >= 45 else "#27ae60"
+        grs_col = _C["danger"] if grs >= 70 else _C["warn"] if grs >= 45 else _C["safe"]
         signals.append(("GEO RISK", grs, grs_col, f"{grs:.0f}/100"))
 
         # 2. Conflict Intensity Score
         cis = float(risk.get("cis", 0))
-        cis_col = "#c0392b" if cis >= 70 else "#e67e22" if cis >= 45 else "#27ae60"
+        cis_col = _C["danger"] if cis >= 70 else _C["warn"] if cis >= 45 else _C["safe"]
         signals.append(("CONFLICT INTENSITY", cis, cis_col, f"{cis:.0f}/100"))
 
         # 3. Transmission Pressure
         tps = float(risk.get("tps", 0))
-        tps_col = "#c0392b" if tps >= 70 else "#e67e22" if tps >= 45 else "#2980b9"
+        tps_col = _C["danger"] if tps >= 70 else _C["warn"] if tps >= 45 else _C["info"]
         signals.append(("TRANSMISSION PRESSURE", tps, tps_col, f"{tps:.0f}/100"))
 
         # 4. Market Coupling Score
         mcs = float(risk.get("mcs", 0))
-        mcs_col = "#c0392b" if mcs >= 70 else "#e67e22" if mcs >= 45 else "#27ae60"
+        mcs_col = _C["danger"] if mcs >= 70 else _C["warn"] if mcs >= 45 else _C["safe"]
         signals.append(("MARKET COUPLING", mcs, mcs_col, f"{mcs:.0f}/100"))
 
         # 5. Correlation regime (1=Decoupled, 2=Transitioning, 3=High Coupling)
         if regimes is not None and not regimes.empty:
             reg = int(regimes.dropna().iloc[-1]) if len(regimes.dropna()) > 0 else 1
             reg_pct = (reg - 1) / 2 * 100
-            reg_col = "#27ae60" if reg == 1 else "#e8a838" if reg == 2 else "#c0392b"
+            reg_col = _C["safe"] if reg == 1 else _C["warn"] if reg == 2 else _C["danger"]
             reg_lbl = ["DECOUPLED", "TRANSITIONING", "HIGH COUPLING"][reg - 1]
             signals.append(("REGIME", reg_pct, reg_col, reg_lbl))
 
@@ -4251,13 +4075,13 @@ def _render_risk_signal_waterfall(
         crit = len([a for a in alerts if getattr(a, "severity", "") == "critical"])
         high = len([a for a in alerts if getattr(a, "severity", "") == "high"])
         alert_pct = min((crit * 25 + high * 10), 100)
-        alert_col = "#c0392b" if crit >= 3 else "#e67e22" if crit >= 1 else "#27ae60"
+        alert_col = _C["danger"] if crit >= 3 else _C["warn"] if crit >= 1 else _C["safe"]
         signals.append(("ALERT PRESSURE", alert_pct, alert_col, f"{crit}c {high}h alerts"))
 
         # 7. Active conflicts pressure
         n_conflicts = len([c for c in conflict_results if c.get("active", True)])
         conf_pct = min(n_conflicts / 10 * 100, 100)
-        conf_col = "#c0392b" if n_conflicts >= 6 else "#e67e22" if n_conflicts >= 3 else "#27ae60"
+        conf_col = _C["danger"] if n_conflicts >= 6 else _C["warn"] if n_conflicts >= 3 else _C["safe"]
         signals.append(("ACTIVE CONFLICTS", conf_pct, conf_col, f"{n_conflicts} tracked"))
 
         # Render SVG waterfall
@@ -4277,10 +4101,10 @@ def _render_risk_signal_waterfall(
                 # label
                 f'<text x="{LABEL_W - 6}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill="#8a8a9a" text-anchor="end">{lbl}</text>'
+                f'fill=_C["label"] text-anchor="end">{lbl}</text>'
                 # track
                 f'<rect x="{LABEL_W}" y="{y}" width="{BAR_W}" height="{BAR_H}" '
-                f'fill="#1a1a2a" rx="2"/>'
+                f'fill=_C["card2"] rx="2"/>'
                 # bar
                 f'<rect x="{LABEL_W}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
                 f'fill="{col}" opacity="0.85" rx="2"/>'
@@ -4343,11 +4167,11 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
         H = HDR_H + len(active) * CELL_H + 4
 
         def _cell_col(v: float) -> tuple[str, float]:
-            if v >= 60: return "#c0392b", 0.9
-            if v >= 40: return "#e67e22", 0.8
-            if v >= 20: return "#e8a838", 0.7
-            if v >  5:  return "#2980b9", 0.5
-            return "#1a1a2a", 1.0
+            if v >= 60: return _C["danger"], 0.9
+            if v >= 40: return _C["warn"], 0.8
+            if v >= 20: return _C["warn"], 0.7
+            if v >  5:  return _C["info"], 0.5
+            return _C["card2"], 1.0
 
         cells = ""
         # Column headers
@@ -4355,10 +4179,10 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
             x = LABEL_W + j * CELL_W
             cells += (
                 f'<rect x="{x}" y="0" width="{CELL_W}" height="{HDR_H}" '
-                f'fill="#1e2a3a" rx="0"/>'
+                f'fill="#141414" rx="0"/>'
                 f'<text x="{x + CELL_W//2}" y="{HDR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill="#CFB991" text-anchor="middle" font-weight="700">{g}</text>'
+                f'fill=_GOLD text-anchor="middle" font-weight="700">{g}</text>'
             )
         # Rows
         for i, c in enumerate(active):
@@ -4366,13 +4190,13 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
             name = c.get("name", f"Conflict {i+1}").replace("_", " ")
             short = name[:12] + "…" if len(name) > 12 else name
             cis_v = float(c.get("cis", 0))
-            cis_col = "#c0392b" if cis_v >= 70 else "#e67e22" if cis_v >= 45 else "#8a8a9a"
-            bg = "#0e1420" if i % 2 == 0 else "#0a1018"
+            cis_col = _C["danger"] if cis_v >= 70 else _C["warn"] if cis_v >= 45 else _C["label"]
+            bg = _C["card2"] if i % 2 == 0 else _C["card"]
             cells += (
                 f'<rect x="0" y="{y}" width="{W}" height="{CELL_H}" fill="{bg}"/>'
                 f'<text x="4" y="{y + CELL_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill="#c0c0d0">{short}</text>'
+                f'fill=_C["label"]>{short}</text>'
                 f'<text x="{LABEL_W - 5}" y="{y + CELL_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
                 f'fill="{cis_col}" text-anchor="end">{cis_v:.0f}</text>'
@@ -4397,10 +4221,10 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
         note = (
             '<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
             'color:#555;margin-top:3px">cell value = exposure × CIS/100 · '
-            '<span style="color:#c0392b">■</span> ≥60 '
-            '<span style="color:#e67e22">■</span> 40-60 '
-            '<span style="color:#e8a838">■</span> 20-40 '
-            '<span style="color:#2980b9">■</span> 5-20</div>'
+            '<span style="color:{_C["danger"]}">■</span> ≥60 '
+            '<span style="color:{_C["warn"]}">■</span> 40-60 '
+            '<span style="color:{_C["warn"]}">■</span> 20-40 '
+            '<span style="color:{_C["info"]}">■</span> 5-20</div>'
         )
         _card("CONFLICT × COMMODITY IMPACT MATRIX", svg + note)
     except Exception:
@@ -4441,20 +4265,20 @@ def _render_geo_event_timeline(conflict_results) -> None:
             short = name[:11] + "…" if len(name) > 11 else name
             bw   = cis / 100 * BAR_MAX
 
-            col1 = "#c0392b" if cis >= 70 else "#e67e22" if cis >= 45 else "#e8a838"
+            col1 = _C["danger"] if cis >= 70 else _C["warn"] if cis >= 45 else _C["warn"]
             tps_x = LABEL_W + tps / 100 * BAR_MAX
-            bg = "#0e1420" if i % 2 == 0 else "#0a1018"
+            bg = _C["card2"] if i % 2 == 0 else _C["card"]
             bars += (
                 f'<rect x="0" y="{y}" width="{W}" height="{ROW_H}" fill="{bg}"/>'
                 f'<text x="{LABEL_W - 4}" y="{y + 13}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
-                f'fill="#c0c0d0" text-anchor="end">{short}</text>'
+                f'fill=_C["label"] text-anchor="end">{short}</text>'
                 f'<rect x="{LABEL_W}" y="{y + 5}" width="{BAR_MAX}" height="10" '
-                f'fill="#1a1a2a" rx="2"/>'
+                f'fill=_C["card2"] rx="2"/>'
                 f'<rect x="{LABEL_W}" y="{y + 5}" width="{bw:.1f}" height="10" '
                 f'fill="{col1}" opacity="0.8" rx="2"/>'
                 f'<line x1="{tps_x:.1f}" y1="{y + 3}" x2="{tps_x:.1f}" y2="{y + 17}" '
-                f'stroke="#CFB991" stroke-width="1.5" opacity="0.9"/>'
+                f'stroke=_GOLD stroke-width="1.5" opacity="0.9"/>'
                 f'<text x="{LABEL_W + BAR_MAX + 4}" y="{y + 13}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
                 f'fill="{col1}">{cis:.0f}</text>'
@@ -4464,7 +4288,7 @@ def _render_geo_event_timeline(conflict_results) -> None:
             '<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
             'color:#555;margin-top:3px">'
             '■ bar = CIS (conflict intensity) · '
-            '<span style="color:#CFB991">│</span> = TPS (transmission pressure)'
+            '<span style="color:{_GOLD}">│</span> = TPS (transmission pressure)'
             '</div>'
         )
         svg = (
@@ -4533,9 +4357,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         tps_f = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
         raw   = round(0.40 * cis_f + 0.35 * tps_f + 0.25 * 50, 1)
         if raw < 25:   lbl, col = "Low",      "#2e7d32"
-        elif raw < 50: lbl, col = "Moderate", "#8E9AAA"
-        elif raw < 75: lbl, col = "Elevated", "#e67e22"
-        else:          lbl, col = "High",     "#c0392b"
+        elif raw < 50: lbl, col = "Moderate", _C["label"]
+        elif raw < 75: lbl, col = "Elevated", _C["warn"]
+        else:          lbl, col = "High",     _C["danger"]
         _fallback_at = risk.get("_computed_at", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         risk = {
             "score": raw, "label": lbl, "color": col,
@@ -4624,6 +4448,46 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # § 1  Masthead — full-width above 3-col
     _render_masthead(conflict_agg)
 
+    # § 1.1  Analytical reading guide — orients first-time reviewers to the workflow
+    _steps = [
+        ("1", "Shock / Scenario",    "What geopolitical event or scenario are we analysing?",  _C["warn"]),
+        ("2", "Commodities",         "Which commodity markets moved and by how much?",          _C["info"]),
+        ("3", "Equity Exposure",     "Which equity indices are most exposed to this move?",     _C["info"]),
+        ("4", "Statistical Test",    "Is the equity-commodity relationship statistically meaningful?", _C["label"]),
+        ("5", "Regime",              "What correlation regime are we in and where is it heading?", _C["label"]),
+        ("6", "AI Conclusion",       "What does the AI analyst conclude from the evidence?",    _C["gold"]),
+        ("7", "Evidence",            "What data and methodology support that conclusion?",      _C["muted"]),
+    ]
+    _step_items = "".join(
+        f'<div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">'
+        f'<div style="display:flex;align-items:center;gap:4px">'
+        f'<span style="{_M}font-size:8px;font-weight:700;color:{c};background:{c}18;'
+        f'border:1px solid {c}33;border-radius:50%;width:14px;height:14px;'
+        f'display:flex;align-items:center;justify-content:center;flex-shrink:0">{n}</span>'
+        f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["text"]};'
+        f'letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{title}</span>'
+        f'</div>'
+        f'<span style="{_F}font-size:9px;color:{_C["muted"]};line-height:1.3">{q}</span>'
+        f'</div>'
+        + (f'<span style="color:{_C["border2"]};font-size:12px;flex-shrink:0;padding:0 2px">›</span>'
+           if i < len(_steps) - 1 else "")
+        for i, (n, title, q, c) in enumerate(_steps)
+    )
+    st.markdown(
+        f'<div style="background:#060606;border:1px solid {_C["border"]};'
+        f'border-left:2px solid rgba(207,185,145,0.25);padding:.4rem .7rem .35rem;margin-bottom:.4rem">'
+        f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:.3rem">'
+        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'text-transform:uppercase;color:{_C["muted"]}">Analytical Reading Guide</span>'
+        f'<span style="{_F}font-size:9px;color:{_C["muted"]};font-style:italic">'
+        f'· follow this sequence for a first-time review</span>'
+        f'</div>'
+        f'<div style="display:flex;gap:4px;align-items:flex-start;flex-wrap:nowrap;overflow-x:auto">'
+        f'{_step_items}'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+
     # ── 3-col layout: intel feed | dominant gauge | market pulse cards ────────
     # Column heights are balanced by design:
     #   Left  = intelligence feed + scenario switch
@@ -4631,9 +4495,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     #   Right  = market pulse cards + where-to-go-now recommendations
     # Context narrative + intel panel + morning briefing go BELOW as full-width.
     # ─────────────────────────────────────────────────────────────────────────
-    _col_left, _col_ctr, _col_right = st.columns([1.0, 2.2, 1.0], gap="medium")
+    _col_left, _col_ctr, _col_right = st.columns([1.1, 2.0, 1.1], gap="medium")
 
     with _col_left:
+        _section_header("01", "Intelligence Feed", "alerts · signals · chokepoints")
         # § L1  Intelligence feed — live alerts + morning briefing + chokepoint watch
         _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
         # § L2  Threat radar — visually striking showpiece directly under intel feed
@@ -4666,6 +4531,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             pass
 
     with _col_ctr:
+        _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals")
         # Market pulse horizontal strip
         _render_market_pulse()
         # Portfolio pulse (conditional — hidden unless CSV uploaded)
@@ -4690,7 +4556,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         try:
             _lag = transmission_lag_signal(_al_cmd_r, _al_eq_r)
             if _lag["active"]:
-                _lc = "#e8a838" if _lag["lag_signal"] == "In progress" else "#e74c3c"
+                _lc = _C["warn"] if _lag["lag_signal"] == "In progress" else "#e74c3c"
                 _li = "⏳" if _lag["lag_signal"] == "In progress" else "⚡"
                 st.markdown(
                     f'<div style="background:#0d0c04;border-left:3px solid {_lc};'
@@ -4703,13 +4569,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         except Exception:
             pass
         # § C0  Top cross-asset correlation pairs — full-width ranked bar chart
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         try:
             _render_top_corr_pairs(_al_eq_r, _al_cmd_r)
         except Exception:
             pass
         # § C1–C4  2-column sub-grid: each panel ~half the center width (~340px)
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _cc_l, _cc_r = st.columns(2, gap="small")
         with _cc_l:
             # § C1  Asset Correlation Heatmap
@@ -4737,23 +4601,20 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 pass
 
     with _col_right:
+        _section_header("03", "Market Signals", "instruments · risk arc · channels")
         # § R1  Market pulse cards — 6 live instrument cards with sparklines
         _render_market_pulse_cards()
         # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_risk_arc(risk)
         # § R3  Risk convergence — showpiece directly under risk arc:
         #        60d overlapping area chart of GRS / coupling / VIX stress signals
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         try:
             _render_risk_convergence(_score_hist, _al_corr)
         except Exception:
             pass
         # § R4  Next action — routing recommendation based on dominant risk driver
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_next_action(conflict_agg, conflict_results, compact=True)
         # § R5  Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _corr_cur = (
             float(_al_corr.dropna().iloc[-1])
             if _al_corr is not None and len(_al_corr.dropna()) >= 1
@@ -4761,26 +4622,21 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
         # § R6  Returns heatmap — 5-day day-over-day asset return grid
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_returns_heatmap()
         # § R7  Transmission channels — CIS-weighted channel pressure breakdown
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_transmission_channels(conflict_results, risk)
         # § R8  GRS trend — 60-day composite risk score sparkline with zone bands
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
-        _render_grs_trend(_score_hist if isinstance(_score_hist, __import__("pandas").Series) else None)
+        _render_grs_trend(_score_hist if isinstance(_score_hist, pd.Series) else None)
         # § R9  Macro snapshot — VIX / 10Y / DXY / WTI 2×2 regime grid
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_macro_snapshot()
         # § R10 Yield curve — 3M / 5Y / 10Y / 30Y shape (normal / inverted / flat)
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_yield_curve_snap()
         # § R11 Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         _render_vol_trio()
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
-    st.markdown('<hr class="hm-rule" style="margin:.4rem 0 .2rem">', unsafe_allow_html=True)
+    st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
+    _section_header("04", "Scenario & Context", "scenario switch · narrative · intel monitor")
 
     # Scenario switch — full-width, 8 buttons in one row
     _render_scenario_switch()

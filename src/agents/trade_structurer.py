@@ -21,9 +21,11 @@ from src.analysis.agent_state import (
 _SYSTEM = (
     "You are the AI Trade Structurer embedded in the Cross-Asset Spillover Monitor "
     "at Purdue University Daniels School of Business. "
-    "You generate institutional cross-asset trade ideas based on regime, correlation, "
-    "and spillover signals. "
-    "Be precise and quantitative. No disclaimers. "
+    "You generate illustrative cross-asset trade structures for academic research purposes "
+    "based on regime, correlation, and spillover signals. "
+    "Be precise and quantitative. "
+    "You produce research illustrative trade structures — not investment advice. "
+    "Do not recommend portfolio sizing or leverage. Distinguish evidence from inference. "
     "Respond only with a valid JSON object — no markdown, no extra text."
 )
 
@@ -32,21 +34,31 @@ _AGENT = "trade_structurer"
 # ── Pydantic output schema ────────────────────────────────────────────────────
 
 class TradeOutput(BaseModel):
-    trade_name: str  = Field(description="Short descriptive name for the trade, e.g. 'Long Gold / Short SPX'")
-    direction:  str  = Field(description="Asset pair and direction, e.g. 'Long GLD / Short SPY'")
-    trigger:    str  = Field(description="Specific entry condition with price level or signal trigger")
-    target:     str  = Field(description="Exit level or time horizon")
-    risk:       str  = Field(description="Stop-loss level or hedge instrument")
-    rationale:  str  = Field(description="2-3 sentences grounded in the provided market data")
+    trade_name:            str = Field(description="Short descriptive name, e.g. 'Long Gold / Short SPX'")
+    direction:             str = Field(description="Asset pair and direction, e.g. 'Long GLD / Short SPY'")
+    trigger:               str = Field(description="Specific entry condition with price level or signal trigger")
+    target:                str = Field(description="Exit level or time horizon")
+    risk:                  str = Field(description="Stop-loss level or hedge instrument")
+    rationale:             str = Field(description="2-3 sentences grounded in the provided market data")
+    evidence:              str = Field(description="Data points from the context that support this structure")
+    confidence_level:      str = Field(description="Low / Medium / High with one-line reason")
+    key_uncertainty:       str = Field(description="What the available data cannot resolve")
+    invalidation_condition: str = Field(description="Market condition that would invalidate this view")
+    alternative_view:      str = Field(description="One plausible alternative interpretation of the same data")
 
 
 _SCHEMA_HINT = """{
-  "trade_name": "...",
-  "direction":  "Long X / Short Y",
-  "trigger":    "specific entry condition",
-  "target":     "exit level or horizon",
-  "risk":       "stop or hedge",
-  "rationale":  "2-3 sentences from provided data"
+  "trade_name":             "...",
+  "direction":              "Long X / Short Y",
+  "trigger":                "specific entry condition",
+  "target":                 "exit level or horizon",
+  "risk":                   "stop or hedge",
+  "rationale":              "2-3 sentences from provided data",
+  "evidence":               "data points supporting this structure",
+  "confidence_level":       "Low/Medium/High — one-line reason",
+  "key_uncertainty":        "what the data cannot resolve",
+  "invalidation_condition": "market condition that contradicts this view",
+  "alternative_view":       "one plausible alternative interpretation"
 }"""
 
 
@@ -66,7 +78,8 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
 
     base_prompt = (
         f"CURRENT MARKET CONTEXT:\n{context_str}\n\n"
-        "Generate ONE specific, actionable cross-asset trade idea supported by the data above. "
+        "Generate ONE illustrative cross-asset trade structure supported by the data above. "
+        "This is for academic research purposes only — do not include portfolio sizing or leverage. "
         f"Respond with a JSON object matching this structure exactly:\n{_SCHEMA_HINT}\n"
         "Return ONLY the JSON object — no markdown fences, no extra text."
     )
@@ -84,7 +97,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
                 client = _ant.Anthropic(api_key=api_key)
                 resp = client.messages.create(
                     model="claude-sonnet-4-6",
-                    max_tokens=400,
+                    max_tokens=650,
                     messages=[{"role": "user", "content": prompt}],
                     system=_SYSTEM,
                 )
@@ -99,7 +112,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
                         {"role": "system", "content": _SYSTEM},
                         {"role": "user",   "content": prompt},
                     ],
-                    max_tokens=400, temperature=0.3,
+                    max_tokens=650, temperature=0.3,
                     response_format={"type": "json_object"},
                 )
                 raw = resp.choices[0].message.content.strip()
@@ -215,6 +228,11 @@ def run(
         f"TARGET: {trade_dict.get('target', '')}",
         f"RISK: {trade_dict.get('risk', '')}",
         f"RATIONALE: {rationale}",
+        f"EVIDENCE: {trade_dict.get('evidence', '')}",
+        f"CONFIDENCE: {trade_dict.get('confidence_level', '')}",
+        f"KEY UNCERTAINTY: {trade_dict.get('key_uncertainty', '')}",
+        f"INVALIDATED IF: {trade_dict.get('invalidation_condition', '')}",
+        f"ALT VIEW: {trade_dict.get('alternative_view', '')}",
     ])
     summary = f"{direction} — Trigger: {trade_dict.get('trigger', '')}"
 

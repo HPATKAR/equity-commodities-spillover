@@ -49,15 +49,18 @@ def _panel_note(txt: str) -> None:
 
 def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Cross-Asset Correlation",
-                 "Rolling Pearson · DCC-GARCH · Regime Detection · Markov Forecast")
+                 "Step 4b of 7 · Channel Strength · Rolling Pearson · DCC-Style Dynamic Correlation · Regime Detection")
     _page_intro(
-        "Correlation is the <em>first observable signal</em> of spillover: when equity returns and commodity "
-        "returns start moving together, the channel between the two markets is open. "
-        "<strong>This page measures how open that channel is right now.</strong> "
-        "Rolling Pearson gives the direction and magnitude. DCC-GARCH shows whether the relationship "
-        "is structural or noise - non-linear dependence that spikes during stress is the hallmark of "
-        "a genuine spillover regime. The Markov forecast tells you where the regime is headed. "
-        "A Crisis regime here means equity shocks <em>are</em> transmitting into commodities in real time."
+        "<strong>Research question for this page: is the equity-commodity channel currently open, "
+        "and how strong is it?</strong> "
+        "When equity and commodity returns move together consistently, the channel is open — "
+        "shocks in one market are propagating to the other. "
+        "Rolling Pearson gives the current direction and magnitude. "
+        "DCC-style dynamic correlation (EWMA pre-whitening + DCC(1,1) recursion, fixed parameters) "
+        "tracks how the relationship has evolved over time — correlation that spikes during stress "
+        "episodes and then mean-reverts is the characteristic signature of a spillover regime. "
+        "The Markov projection gives a probabilistic view of where the regime is headed next. "
+        "Read this alongside the Spillover page, which tests the <em>direction</em> of that relationship."
     )
 
     # ── Conflict context banner ────────────────────────────────────────────────
@@ -302,15 +305,15 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
 
-    # ── Panel 2 (left wide): DCC-GARCH ───────────────────────────────────
+    # ── Panel 2 (left wide): DCC-style dynamic correlation ────────────────
     with col_dcc:
-        _label("DCC-GARCH Dynamic Conditional Correlation")
+        _label("DCC-Style Dynamic Conditional Correlation (EWMA pre-whitening)")
         cd1, cd2 = st.columns(2)
         dcc_eq  = cd1.selectbox("Asset A (Equity / FI / FX)", eq_options + fi_options + fx_options, index=0, key="dcc_eq", label_visibility="collapsed")
         dcc_cmd = cd2.selectbox("Asset B (Commodity / FI / FX)", cmd_options + fi_options + fx_options, index=0, key="dcc_cmd", label_visibility="collapsed")
 
         if dcc_eq in eq_r.columns and dcc_cmd in cmd_r.columns:
-            with st.spinner("Computing DCC-GARCH…"):
+            with st.spinner("Computing DCC-style dynamic correlation…"):
                 dcc_series  = dcc_correlation(eq_r[dcc_eq], cmd_r[dcc_cmd])
                 roll_series = rolling_correlation(eq_r[dcc_eq], cmd_r[dcc_cmd], 63)
 
@@ -319,7 +322,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             fig_dcc = go.Figure()
             fig_dcc.add_trace(go.Scatter(
                 x=dcc_series.index, y=dcc_series.values,
-                name="DCC-GARCH",
+                name="DCC-style",
                 line=dict(color=PALETTE[0], width=2),
             ))
             fig_dcc.add_trace(go.Scatter(
@@ -360,7 +363,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 _add_event_bands(fig_dcc2)
                 _chart(_style_fig(fig_dcc2, height=260))
                 _insight_note(
-                    "Compares the DCC-GARCH dynamic correlation between a single equity index and multiple commodities simultaneously. "
+                    "Compares the DCC-style dynamic correlation between a single equity index and multiple commodities simultaneously. "
                     "Lines that spike upward at the same time indicate a broad risk-off event rather than a commodity-specific move. "
                     "Use this view to identify which commodity pairs are most tightly linked to the selected equity market."
                 )
@@ -712,13 +715,13 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 _max_corr = None
             _cqo_ctx = {
                 "n_obs": _n_obs, "date_range": f"{start} to {end}",
-                "model": "Rolling Pearson correlation + DCC-GARCH + Markov regime",
+                "model": "Rolling Pearson correlation + DCC-style dynamic correlation + Markov regime",
                 "regime": str(_current_regime), "regime_change": _regime_changed,
                 "max_correlation": _max_corr, "assumption_count": 3,
                 "notes": [
                     "Rolling window correlation is non-stationary - window length (60d default) is arbitrary",
                     "Pearson correlation assumes linearity; equity-commodity relationships are often non-linear during crises",
-                    "DCC-GARCH assumes elliptical distributions - tail dependence is underestimated",
+                    "DCC-style correlation (EWMA pre-whitening) uses fixed λ=0.94, not MLE-estimated; assumes elliptical distributions — tail dependence is underestimated",
                     "Markov regime model uses 2 states only - real market has continuous regime transitions",
                     "Correlation ≠ causation - no causal inference drawn from this page",
                 ],

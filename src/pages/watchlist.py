@@ -61,15 +61,19 @@ def _vol_regime(vol_pct: float) -> tuple[str, str]:
 
 def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Commodity Watchlist",
-                 "Live Snapshot · Intraday Prices · Daily Historical · CFTC COT Positioning")
+                 "Step 2 of 7 · Which Commodities Moved · Live Prices · Historical Returns · CFTC COT Positioning")
     _page_intro(
-        "The commodities on this page are the primary spillover conduits into equity markets. "
-        "Crude oil, gold, copper, and agricultural futures have historically led equity market "
-        "repricing during macro stress - price moves here often precede equity effects by days. "
-        "<strong>Use this page as an early warning monitor.</strong> "
-        "The COT positioning data adds a second layer: when speculative positioning in a commodity "
-        "reaches a historical extreme, mean-reversion is the base case - and that reversal typically "
-        "generates its own downstream spillover into correlated equity sectors."
+        "<strong>Research question for this page: which commodity markets moved today, "
+        "and is the move large enough to be analytically significant?</strong> "
+        "Crude oil, gold, copper, and agricultural futures are the primary conduits through which "
+        "geopolitical shocks transmit into equity markets — price moves here often Granger-precede "
+        "equity effects by one to five days in the historical sample. "
+        "A large move in a commodity with an active conflict transmission channel (see Conflict Intel) "
+        "is the clearest early signal. "
+        "The CFTC COT positioning data adds a second layer: when speculative positioning reaches a "
+        "historical extreme, mean-reversion is the base case — and that reversal typically generates "
+        "its own downstream spillover into correlated equity sectors. "
+        "Read this before Correlation and Spillover."
     )
 
     # ── Conflict commodity pressure banner ────────────────────────────────
@@ -539,8 +543,8 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "COT Signal Logic",
         "The CFTC publishes weekly data on how non-commercial (speculative) traders are positioned "
         "in commodity futures. <b>Net Spec % OI</b> = (Long − Short) ÷ Open Interest × 100. "
-        "Readings above <b>+25%</b> signal a crowded long (contrarian sell signal); "
-        "below <b>−25%</b> signal a crowded short (contrarian buy signal). "
+        "Readings above <b>+25%</b> indicate a crowded long (historically associated with mean-reversion risk); "
+        "below <b>−25%</b> indicate a crowded short (historically associated with short-covering rallies). "
         "These extremes have historically preceded price reversals of 10–20% within 4–8 weeks.",
     )
 
@@ -598,9 +602,9 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(html_cot, unsafe_allow_html=True)
                 _insight_note(
                     "Flags when speculative traders are all-in on one side of a commodity. "
-                    "A 'Crowded Long' means too many people are betting on price rises - "
+                    "A 'Crowded Long' means speculative positioning is skewed toward price rises — "
                     "historically, these positions unwind and the price falls. "
-                    "A 'Crowded Short' is the opposite: a contrarian buy signal."
+                    "A 'Crowded Short' is the opposite: historically associated with short-covering reversals."
                 )
 
         with col_cot_r:

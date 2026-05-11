@@ -16,8 +16,10 @@ _SYSTEM = (
     "You are the AI Macro Strategist embedded in the Cross-Asset Spillover Monitor "
     "at Purdue University Daniels School of Business. "
     "You monitor yield curves, inflation dynamics, Fed policy, and macro data. "
-    "Write terse, institutional-grade macro analysis in 3–5 sentences. "
-    "Be precise and quantitative. No disclaimers. No greetings."
+    "Write terse, quantitative macro research analysis in 3–5 sentences. "
+    "Be precise and quantitative. "
+    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "Distinguish evidence from inference."
 )
 
 _AGENT = "macro_strategist"
@@ -31,10 +33,16 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
 
     prompt = (
         f"MACRO CONTEXT (live data):\n{context_str}\n\n"
-        "Provide a 3–5 sentence macro intelligence assessment covering: "
+        "Provide a 3–5 sentence macro research assessment covering: "
         "1) yield curve signal (recession/expansion), "
         "2) inflation trajectory and Fed posture, "
-        "3) the most important cross-asset risk from current macro conditions."
+        "3) the most important cross-asset risk from current macro conditions.\n\n"
+        "End with these labeled lines:\n"
+        "EVIDENCE: [data points used in this assessment]\n"
+        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
+        "INVALIDATED IF: [what would contradict this view]\n"
+        "ALT VIEW: [one plausible alternative interpretation]"
     )
     try:
         t0 = time.monotonic()
@@ -43,7 +51,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
             client = _ant.Anthropic(api_key=api_key)
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=350,
+                max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
                 system=_SYSTEM,
             )
@@ -58,7 +66,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
                     {"role": "system", "content": _SYSTEM},
                     {"role": "user",   "content": prompt},
                 ],
-                max_tokens=350, temperature=0.2,
+                max_tokens=500, temperature=0.2,
             )
             text = resp.choices[0].message.content.strip()
             model_name = "gpt-4o"

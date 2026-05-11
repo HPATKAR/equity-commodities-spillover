@@ -900,8 +900,8 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     _chart(fig_cred)
 
             _insight_note(
-                "Credit spreads are the market's real-time verdict on default risk. "
-                "They widen before equity markets sell off, making them a useful leading risk indicator. "
+                "Credit spreads are a market-based measure of perceived default risk. "
+                "They historically widen before equity markets sell off, making them a useful leading risk indicator. "
                 "HY spreads above 600bps have historically coincided with recessions; IG above 200bps "
                 "signals broad credit stress. An inverted yield curve alongside widening spreads = "
                 "the strongest combined recession signal."

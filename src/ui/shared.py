@@ -1110,25 +1110,25 @@ function nav(page) {{
     </div>
 
     <div>
-      <p class="ft-hd">Navigate</p>
+      <p class="ft-hd">Analytical Sequence</p>
       <ul>
-        <li><a href="#" onclick="nav('overview');return false;">Overview</a></li>
-        <li><a href="#" onclick="nav('war_impact_map');return false;">War Impact Map</a></li>
-        <li><a href="#" onclick="nav('geopolitical');return false;">Geopolitical Triggers</a></li>
-        <li><a href="#" onclick="nav('correlation');return false;">Correlation Analysis</a></li>
-        <li><a href="#" onclick="nav('spillover');return false;">Spillover Analytics</a></li>
-        <li><a href="#" onclick="nav('watchlist');return false;">Commodities to Watch</a></li>
+        <li><a href="#" onclick="nav('watchlist');return false;">2 · Commodities to Watch</a></li>
+        <li><a href="#" onclick="nav('war_impact_map');return false;">3 · War Impact Map</a></li>
+        <li><a href="#" onclick="nav('spillover');return false;">4a · Spillover Analytics</a></li>
+        <li><a href="#" onclick="nav('correlation');return false;">4b · Correlation Analysis</a></li>
+        <li><a href="#" onclick="nav('overview');return false;">5 · Overview &amp; Regime</a></li>
+        <li><a href="#" onclick="nav('geopolitical');return false;">Historical: Geo Event Impact</a></li>
       </ul>
     </div>
 
     <div>
       <p class="ft-hd">Strategy &amp; Research</p>
       <ul>
-        <li><a href="#" onclick="nav('trade_ideas');return false;">Trade Ideas</a></li>
-        <li><a href="#" onclick="nav('stress_test');return false;">Portfolio Stress Test</a></li>
         <li><a href="#" onclick="nav('scenario_engine');return false;">Scenario Engine</a></li>
+        <li><a href="#" onclick="nav('stress_test');return false;">Portfolio Stress Test</a></li>
+        <li><a href="#" onclick="nav('trade_ideas');return false;">6 · Illustrative Trade Ideas</a></li>
         <li><a href="#" onclick="nav('model_accuracy');return false;">Performance Review</a></li>
-        <li><a href="#" onclick="nav('ai_chat');return false;">AI Analyst</a></li>
+        <li><a href="#" onclick="nav('ai_chat');return false;">6 · AI Analyst</a></li>
       </ul>
     </div>
 

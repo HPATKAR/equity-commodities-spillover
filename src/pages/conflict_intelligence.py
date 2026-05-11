@@ -61,6 +61,23 @@ def _freshness_color(label: str) -> str:
     }.get(label, "#555960")
 
 
+def _cis_source_badge(cis_source: str) -> str:
+    """Return an HTML badge string indicating the CIS data source."""
+    _src_map = {
+        "acled+gdelt": ("ACLED+GDELT", "#27ae60"),
+        "acled":       ("ACLED",       "#27ae60"),
+        "gdelt":       ("GDELT",       "#2980b9"),
+        "static":      ("MANUAL ASSUMPTION", "#555960"),
+    }
+    label, color = _src_map.get(cis_source, ("MANUAL ASSUMPTION", "#555960"))
+    return (
+        f'<div style="margin-top:4px;border-top:1px solid #1a1a1a;padding-top:3px">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:6px;'
+        f'color:{color};letter-spacing:.08em">SRC: {label}</span>'
+        f'</div>'
+    )
+
+
 # ── Scorecard grid ────────────────────────────────────────────────────────────
 
 def _render_scorecard_grid(results: dict) -> str | None:
@@ -125,7 +142,9 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
                     f'color:{_freshness_color(r["freshness"])}">{r["freshness"].upper()}</span>'
                     f'</div>'
-                    f'</div>',
+                    # CIS source provenance badge
+                    + _cis_source_badge(r.get("cis_source", "static"))
+                    + f'</div>',
                     unsafe_allow_html=True,
                 )
                 if st.button("Select", key=f"ci_sel_{cid}", width="stretch"):
@@ -568,9 +587,13 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     _render_transmission_heatmap(results)
 
     # ── Conflict detail header ─────────────────────────────────────────────
+    _lu = selected.get("last_updated", "")
+    _src = selected.get("cis_source", "static")
+    _src_label = {"acled+gdelt": "ACLED+GDELT", "acled": "ACLED",
+                  "gdelt": "GDELT", "static": "MANUAL ASSUMPTION"}.get(_src, _src.upper())
     st.markdown(
         f'<div style="border-left:3px solid {selected["color"]};'
-        f'padding:4px 12px;margin:1.2rem 0 0.6rem">'
+        f'padding:4px 12px;margin:1.2rem 0 0.3rem">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
         f'font-weight:700;color:{selected["color"]}">{selected["label"]}</span>'
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;'
@@ -580,9 +603,45 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         f'CIS {selected["cis"]:.0f} · TPS {selected["tps"]:.0f} · '
         f'{selected["trend"].upper()} · {selected["state"].upper()}'
         f'</span>'
+        f'<br><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        f'color:#555960;margin-left:0">'
+        f'Last updated: {_lu} · CIS source: {_src_label}'
+        f'</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
+
+    # ── Data provenance note ───────────────────────────────────────────────
+    _live_dims   = selected.get("live_dims",   [])
+    _manual_dims = selected.get("manual_dims", [])
+    if _src == "static":
+        st.markdown(
+            '<div style="background:#0d0800;border:1px solid #3a2800;'
+            'border-left:3px solid #e67e22;padding:.4rem .8rem;'
+            'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+            '<span style="color:#e67e22;font-weight:700">⚠ MANUAL SCENARIO ASSUMPTION</span>'
+            '<span style="color:#8E9AAA;margin-left:.5rem">'
+            'ACLED and GDELT are unavailable — all CIS intensity dimensions use '
+            'hardcoded registry values. Scores reflect the analyst\'s last manual update, '
+            'not live event data. All transmission channel weights are always manual.</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        _live_str   = " · ".join(_live_dims)   if _live_dims   else "none"
+        _manual_str = " · ".join(_manual_dims) if _manual_dims else "none"
+        st.markdown(
+            f'<div style="background:#040808;border:1px solid #0a2a1a;'
+            f'border-left:3px solid #27ae60;padding:.35rem .8rem;'
+            f'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+            f'<span style="color:#27ae60;font-weight:700">DATA PROVENANCE</span>'
+            f'<span style="color:#8E9AAA;margin-left:.5rem">'
+            f'Live: <span style="color:#CFB991">{_live_str}</span> · '
+            f'Manual assumption: <span style="color:#555960">{_manual_str}</span> · '
+            f'All transmission channels: manual assumption'
+            f'</span></div>',
+            unsafe_allow_html=True,
+        )
 
     # ── Two-column detail layout ───────────────────────────────────────────
     col_l, col_r = st.columns([1, 1])
@@ -598,7 +657,9 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     with col_r:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            'color:#8E9AAA;letter-spacing:.16em">TRANSMISSION CHANNELS</p>',
+            'color:#8E9AAA;letter-spacing:.16em">'
+            'TRANSMISSION CHANNELS · <span style="color:#555960">manual scenario assumption</span>'
+            '</p>',
             unsafe_allow_html=True,
         )
         _render_tps_channels(selected_id)

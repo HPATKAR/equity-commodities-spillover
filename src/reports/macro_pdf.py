@@ -666,7 +666,7 @@ def build_macro_pdf(
 
     # ── 5. Yield Spreads & Credit ─────────────────────────────────────────────
     story += _section_header("5 · Yield Spreads & Credit Risk",
-                              "Credit spreads are the market's real-time verdict on default risk and financial conditions.")
+                              "Credit spreads are a market-based measure of perceived default risk and financial conditions.")
     if not spreads_df.empty:
         try:
             story.append(_chart_spreads(spreads_df))

@@ -780,9 +780,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Structured Trade Ideas",
                  "Regime-driven · Conflict-linked · Exposure-ranked · QC-graded")
     _page_intro(
-        "Spillover analysis is only useful if it generates actionable positioning. "
-        "<strong>Each idea here is a direct translation of a spillover or correlation regime signal into a trade.</strong> "
-        "Conflict-driven candidates are generated live from current CIS/TPS scores and exposure data. "
+        "Spillover analysis is most useful when it connects to positioning hypotheses. "
+        "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
+        "Conflict-driven candidates are generated from current CIS/TPS scores and exposure data. "
         "Static library ideas fire when the current regime matches their structural trigger. "
         "All ideas are QC-graded (A–D), scenario-payoff-projected, and debatable via agent threads."
     )
@@ -984,8 +984,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<p style="font-size:0.72rem;color:#8890a1;line-height:1.7;margin-bottom:0.8rem">'
         'Generate a professionally formatted A4 research report covering the current regime, '
-        'all active trade ideas, geopolitical context, and methodology - suitable for '
-        'academic submission or institutional review.</p>',
+        'all illustrative trade ideas, geopolitical context, and methodology - suitable for '
+        'academic submission or instructor review.</p>',
         unsafe_allow_html=True,
     )
 
@@ -1129,7 +1129,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _api_key  = _anthropic_key or _openai_key
             _cqo_ctx = {
                 "n_obs": len(eq_r.dropna(how="all")), "date_range": f"{start} to {end}",
-                "model": "Conflict-driven + regime-filtered trade ideas", "regime": r_name,
+                "model": "Conflict-driven + regime-filtered illustrative trade structures", "regime": r_name,
                 "assumption_count": 5, "trade_has_stop": True,
                 "notes": [
                     f"Current regime index: {current}/3 - {len(active_trades)} ideas active after filters",

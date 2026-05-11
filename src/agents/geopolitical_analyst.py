@@ -17,7 +17,9 @@ _SYSTEM = (
     "Spillover Monitor at Purdue University Daniels School of Business. "
     "You monitor active conflict zones, sanctions regimes, and commodity supply disruption risks. "
     "Analyse how geopolitical events transmit to commodity and equity markets. "
-    "Be precise. No disclaimers. No greetings."
+    "Be precise. "
+    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "Distinguish evidence from inference."
 )
 
 _AGENT = "geopolitical_analyst"
@@ -27,10 +29,16 @@ _AGENT = "geopolitical_analyst"
 def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     prompt = (
         f"GEOPOLITICAL CONTEXT:\n{context_str}\n\n"
-        "Provide a 3–5 sentence geopolitical risk assessment covering: "
+        "Provide a 3–5 sentence geopolitical research assessment covering: "
         "1) the highest-severity active conflict and its commodity transmission channel, "
         "2) sanctions or trade-restriction risk to energy / metals supply, "
-        "3) which equity regions are most exposed to current geopolitical stress."
+        "3) which equity regions are most exposed to current geopolitical stress.\n\n"
+        "End with these labeled lines:\n"
+        "EVIDENCE: [data points used in this assessment]\n"
+        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
+        "INVALIDATED IF: [what would contradict this view]\n"
+        "ALT VIEW: [one plausible alternative interpretation]"
     )
     import time
     from src.analysis.trace_logger import log_trace
@@ -41,7 +49,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
             client = _ant.Anthropic(api_key=api_key)
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=350,
+                max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
                 system=_SYSTEM,
             )
@@ -56,7 +64,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
                     {"role": "system", "content": _SYSTEM},
                     {"role": "user",   "content": prompt},
                 ],
-                max_tokens=350, temperature=0.2,
+                max_tokens=500, temperature=0.2,
             )
             text = resp.choices[0].message.content.strip()
             model_name = "gpt-4o"

@@ -122,9 +122,9 @@ def _arch_flow() -> None:
     _BG  = "#080808"
     _BRD = "#1e1e1e"
     layers = [
-        ("CIS", "40%", "#c0392b",  "Conflict Intensity",   "7 weighted dimensions · per-conflict · state multiplier · staleness cap"),
-        ("TPS", "35%", "#e67e22",  "Transmission Pressure","12 channel weights · supply chain · sanctions · chokepoint · FX"),
-        ("MCS", "25%", "#CFB991",  "Market Confirmation",  "6 orthogonalized price signals · EWM z-scores · live feed"),
+        ("CIS", "35%", "#c0392b",  "Conflict Intensity",   "7 weighted dimensions · per-conflict · state multiplier · staleness cap"),
+        ("TPS", "30%", "#e67e22",  "Transmission Pressure","12 channel weights · supply chain · sanctions · chokepoint · FX"),
+        ("MCS", "35%", "#CFB991",  "Market Confirmation",  "6 market signals · EWM z-scores (span=252) · live feed"),
     ]
     # build layer boxes
     boxes_html = ""
@@ -156,7 +156,7 @@ def _arch_flow() -> None:
         f'<div style="display:flex;gap:6px;margin-bottom:6px">'
         f'<div style="flex:2;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
         f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">ASSEMBLY</span><br>'
-        f'<code style="{_M}font-size:9px;color:{_G}">GRS_raw = 0.40·CIS + 0.35·TPS + 0.25·MCS</code>'
+        f'<code style="{_M}font-size:9px;color:{_G}">GRS_raw = 0.35·CIS + 0.30·TPS + 0.35·MCS</code>'
         f'</div>'
         f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
         f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">MARKET FRESHNESS</span><br>'
@@ -261,11 +261,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     )
     _page_intro(
         "This document provides complete technical documentation for all analytical models "
-        "in the Cross-Asset Spillover Monitor. It follows the structure recommended by "
-        "<strong>SR 11-7 / OCC 2011-12</strong> model risk management guidance: "
+        "in the Cross-Asset Spillover Monitor. It is structured following the documentation "
+        "conventions recommended by <strong>SR 11-7 / OCC 2011-12</strong> model risk management guidance: "
         "purpose, design logic, implementation, assumptions, limitations, and ongoing monitoring. "
         "Each section covers one analytical module - from raw data ingestion through to "
-        "the composite risk score, trade signal generation, and portfolio stress testing."
+        "the composite risk score, illustrative trade structure generation, and portfolio stress testing."
     )
 
     # ── Navigation index ───────────────────────────────────────────────────────
@@ -636,7 +636,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "The MCS is the market-observable layer of the risk score - it uses six live price signals to "
         "<em>confirm or contradict</em> the structural CIS/TPS verdict. High CIS with calm markets → MCS "
         "dampens the score (markets have priced it in). Low CIS with spiking volatility → MCS amplifies. "
-        "All signals are orthogonalized to remove multicollinearity before weighting."
+        "Each signal is independently EWM z-scored and clipped to [0, 100] before weighting."
     )
 
     _formula(
@@ -655,9 +655,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "Gold 20d cumulative return EWM z-scored (span=60). "
             "TLT bond ETF adds corroboration: if Gold z > 0.5 and TLT return z > 0.3, "
             "+min(tlt_z×4, 10) pts. Filters USD-specific gold rallies from genuine flight-to-safety.",
-            "SafeHaven = clip(50 + g_z×14 + tlt_boost, 0, 100)\n"
+            "base      = 100 / (1 + exp(−0.56·g_z))   [sigmoid, k=14/25]\n"
             "tlt_boost = min(tlt_z×4, 10) if g_z>0.5 and tlt_z>0.3\n"
-            "          = 0  otherwise",
+            "          = 0  otherwise\n"
+            "SafeHaven = clip(base + tlt_boost, 0, 100)",
             "tlt_z = 20d TLT return / (std × √20). Cached fetch, TTL=300."
         )
     with r1c2:
@@ -666,9 +667,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "Simultaneous EWM z-scores of 20d cumulative log-returns for Gold and front Oil contract. "
             "Flat +5 bonus when both z > 1 - regime-invariant joint geopolitical premium. "
             "Avoids multiplicative zero-collapse when one signal is near-neutral.",
-            "OilGold = clip(50 + g_z×14 + o_z×8 + bonus, 0, 100)\n"
+            "g_base  = 100 / (1 + exp(−0.56·g_z))   [sigmoid, k=14/25]\n"
+            "o_base  = 100 / (1 + exp(−0.32·o_z))   [sigmoid, k=8/25]\n"
             "bonus   = 5.0  if g_z > 1.0 and o_z > 1.0\n"
-            "        = 0.0  otherwise",
+            "        = 0.0  otherwise\n"
+            "OilGold = clip(0.5·g_base + 0.5·o_base + bonus, 0, 100)",
             "WTI preferred; falls back to Brent. EWM span=60, clip g_z/o_z to [−4, +4]."
         )
     with r1c3:
@@ -679,7 +682,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "z = 0 → score 50; z = +2 → score ≈ 74.",
             "rv     = eq_r.rolling(20).std() × √252 × 100\n"
             "z      = EWM_zscore(rv.mean(axis=1), span=60)\n"
-            "EqVol  = clip(50 + z×12, 0, 100)",
+            "EqVol  = 100 / (1 + exp(−0.48·z))   [sigmoid, k=12/25]",
             "Falls back to first 3 columns if named indices unavailable."
         )
     # Row 2
@@ -692,19 +695,19 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "transmission of geopolitical shocks (yield compression = risk-off bid).",
             "tlt_r     = TLT.pct_change()\n"
             "rv_tlt    = tlt_r.rolling(20).std() × √252 × 100\n"
-            "RatesVol  = clip(50 + z×10, 0, 100)",
+            "RatesVol  = 100 / (1 + exp(−0.40·z))   [sigmoid, k=10/25]",
             "Shared cached 200d TLT fetch (TTL=300). Scale=10 (less sensitive than equity)."
         )
     with r2c2:
         _signal_card(
-            "cmd_vol", "Commodity Vol (residual)", 0.15, "#8E9AAA",
+            "cmd_vol", "Commodity Vol", 0.15, "#8E9AAA",
             "Energy/metals 20d annualized vol (WTI, Brent, NatGas, Gold, Silver, Copper) "
-            "OLS-residualized on equity vol over trailing 252 days. "
-            "Strips equity-fear component - isolates commodity-specific supply-disruption stress.",
-            "resid  = rv_cmd − β_OLS × rv_eq\n"
-            "β_OLS  = polyfit(rv_eq[-252:], rv_cmd[-252:], 1)[0]\n"
-            "CmdVol = clip(50 + EWM_zscore(resid)×11, 0, 100)",
-            "Falls back to raw rv_cmd if equity data unavailable or < 30 overlapping obs."
+            "EWM z-scored directly — no OLS residualization against equity vol. "
+            "Captures commodity-specific supply-disruption stress as a raw volatility signal.",
+            "rv_cmd = mean annualized 20d vol across commodity basket\n"
+            "z      = EWM_zscore(rv_cmd, span=60)\n"
+            "CmdVol = 100 / (1 + exp(−0.44·z))   [sigmoid, k=11/25]",
+            "Residualization against equity vol was removed; raw vol z-score is used instead."
         )
     with r2c3:
         _signal_card(
@@ -738,11 +741,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     with col_lw:
         # Proportional weight bars
         for abbr, full, pct, col, val, rationale in [
-            ("CIS", "Conflict Intensity",    "40%", "#c0392b", 40,
+            ("CIS", "Conflict Intensity",    "35%", "#c0392b", 35,
              "Structural severity - direction and magnitude of active hostilities."),
-            ("TPS", "Transmission Pressure", "35%", "#e67e22", 35,
+            ("TPS", "Transmission Pressure", "30%", "#e67e22", 30,
              "Channel specificity - which commodities and markets are exposed."),
-            ("MCS", "Market Confirmation",   "25%", _G,        25,
+            ("MCS", "Market Confirmation",   "35%", _G,        35,
              "Live signal - confirms or dampens the structural signal."),
         ]:
             st.markdown(
@@ -783,7 +786,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _formula(
         "CIS_portfolio = Σᵢ [ CIS(i) × CIS(i) ] / Σᵢ CIS(i)   ← intensity-weighted avg\n"
         "TPS_portfolio = Σᵢ [ TPS(i) × CIS(i) ] / Σᵢ CIS(i)   ← same weights\n\n"
-        "GRS_raw = 0.40 × CIS_portfolio + 0.35 × TPS_portfolio + 0.25 × MCS\n"
+        "GRS_raw = 0.35 × CIS_portfolio + 0.30 × TPS_portfolio + 0.35 × MCS\n"
         "GRS     = clip( GRS_raw × geo_mult , 0, 100 )",
         "High-CIS conflicts dominate. Latent/frozen conflicts already discounted via state_mult in CIS computation."
     )
@@ -1054,9 +1057,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _h2("8 · Correlation Regime Engine")
     _prose(
         "The regime engine classifies the current equity-commodity relationship into one of four states "
-        "using rolling Pearson correlation and DCC-GARCH. Rolling correlation provides a fast, "
-        "interpretable regime signal; DCC-GARCH captures time-varying dynamics that spike during stress - "
-        "a hallmark of genuine spillover rather than stable co-movement."
+        "using rolling Pearson correlation. DCC-GARCH is computed separately as a supplementary "
+        "visualization — it does not feed into the regime state variable. Rolling correlation provides "
+        "a fast, interpretable regime signal that maps directly to the four-state ladder below."
     )
 
     # Regime ladder - full width
@@ -1108,19 +1111,22 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "w ∈ { 21d, 42d, 63d, 126d, 252d }",
             "Thresholds P₂₅/P₅₀/P₇₅ set from full historical avg_corr distribution."
         )
-        _h3("DCC-GARCH  (Engle, 2002)")
+        _h3("DCC  (Engle, 2002)  ·  EWMA Pre-whitening")
         _prose(
-            "Two-step DCC: (1) fit GARCH(1,1) to each return series to extract standardised residuals; "
-            "(2) apply DCC to the residuals to obtain time-varying conditional correlation R_t. "
-            "DCC correlations spike during stress events - a signature of genuine spillover."
+            "Two-step procedure: (1) EWMA volatility pre-whitening (λ=0.94, RiskMetrics daily standard) "
+            "standardises returns before the DCC recursion — equivalent to GARCH(1,1) with ω=0, α=0.06, β=0.94 "
+            "but with fixed rather than MLE-estimated parameters; "
+            "(2) DCC(1,1) recursion on the standardised residuals to obtain time-varying conditional correlation R_t."
         )
         _formula(
-            "Step 1  GARCH(1,1):  σ²_t = ω + α·ε²_{t-1} + β·σ²_{t-1}\n"
-            "        ε̃_t = ε_t / σ_t   (standardised residuals)\n\n"
-            "Step 2  DCC:\n"
+            "Step 1  EWMA pre-whitening (fixed params, not MLE-fit):\n"
+            "  h_t = λ·h_{t-1} + (1-λ)·x_{t-1}²,   λ=0.94\n"
+            "  ε̃_t = x_t / √h_t   (standardised residuals)\n\n"
+            "Step 2  DCC(1,1):\n"
             "  Q_t = (1-a-b)·Q̄ + a·(ε̃_{t-1}·ε̃_{t-1}ᵀ) + b·Q_{t-1}\n"
             "  R_t = diag(Q_t)^{-½} · Q_t · diag(Q_t)^{-½}",
-            "Q̄ = unconditional cov of ε̃. Parameters: a=0.05, b=0.92."
+            "Q̄ = unconditional cov of ε̃. Parameters: a=0.05, b=0.90. "
+            "Full GARCH(1,1) MLE (ω, α, β data-estimated) would require the arch package."
         )
     with col_b:
         _h3("Regime Detection Detail")
@@ -1200,8 +1206,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="background:#040404;border-left:2px solid #c0392b;padding:.35rem .5rem;margin:.3rem 0">'
             f'<code style="{_M}font-size:8px;color:#c0392b;white-space:pre-wrap;line-height:1.6">'
             f'H₀: X does not Granger-cause Y\n'
-            f'F-test on VAR(p),  p ∈ {{1, …, 5}}\n'
-            f'Reported: F-stat · p-value · optimal lag p*</code></div>'
+            f'Lag p* selected by BIC over p ∈ {{1, …, 5}}\n'
+            f'F-test run at BIC-optimal lag only\n'
+            f'Reported: min p-value · significance · lag p*</code></div>'
             f'<p style="{_S}font-size:0.62rem;color:{_MUT};margin:.35rem 0 0;line-height:1.4;font-style:italic">'
             f'▲ Assumes linear dependence. Misses threshold or regime-switching effects.</p>'
             f'</div>',
@@ -1226,7 +1233,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'               / p(y_t+1 | y_t) ]\n'
             f'Net TE  = TE(X→Y) − TE(Y→X)</code></div>'
             f'<p style="{_S}font-size:0.62rem;color:{_MUT};margin:.35rem 0 0;line-height:1.4;font-style:italic">'
-            f'▲ Kernel density on binned log-returns. Sensitive to bin-width choice.</p>'
+            f'▲ Histogram-based entropy estimation using equal-probability binning. Sensitive to bin-count choice.</p>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -1240,15 +1247,17 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'AGGREGATE · VARIANCE DECOMP</span>'
             f'</div>'
             f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0 0 .4rem;line-height:1.5">'
-            f'Generalised forecast error variance decomposition of a VAR. '
+            f'Cholesky-orthogonalized forecast error variance decomposition of a VAR. '
             f'θᵢⱼ(H) = fraction of asset i\'s H-step forecast variance explained by shocks to j.</p>'
             f'<div style="background:#040404;border-left:2px solid {_G};padding:.35rem .5rem;margin:.3rem 0">'
             f'<code style="{_M}font-size:8px;color:{_G};white-space:pre-wrap;line-height:1.6">'
-            f'θᵢⱼ(H) = [Σ_h=0..H-1 (eᵢᵀAₕΣeⱼ)²]\n'
-            f'          / [Σ_h=0..H-1 (eᵢᵀAₕΣAₕᵀeᵢ)]\n'
+            f'θᵢⱼ(H) = Cholesky-orthogonalized FEVD\n'
+            f'  (statsmodels VAR.fevd(), Cholesky P)\n'
             f'Total SI = (Σᵢ≠ⱼ θᵢⱼ) / N × 100</code></div>'
             f'<p style="{_S}font-size:0.62rem;color:{_MUT};margin:.35rem 0 0;line-height:1.4;font-style:italic">'
-            f'H = 10d horizon. VAR lag by BIC. Assumes covariance stationarity.</p>'
+            f'H = 10d horizon. VAR lag by BIC. Cholesky is order-dependent; '
+            f'D-Y (2012) uses Pesaran-Shin generalized FEVD (order-invariant) — '
+            f'that extension requires custom implementation beyond statsmodels.</p>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -1561,7 +1570,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         _assumption_b("Four-state Markov chain adequately captures the regime space - higher granularity not supported by sample size.", "MED")
         _assumption_b("Rolling Pearson correlation is a sufficient proxy for time-varying dependence at daily frequency.", "MED")
         _assumption_b("Yahoo Finance daily close prices are unbiased proxies for commodity spot prices (front-month futures).", "LOW")
-        _assumption_b("DCC-GARCH parameters (a=0.05, b=0.92) are calibrated globally - not conflict-specific.", "HIGH")
+        _assumption_b("DCC(1,1) parameters (a=0.05, b=0.90) and EWMA λ=0.94 are fixed globally - not MLE-estimated or conflict-specific.", "HIGH")
         _assumption_b("SECURITY_EXPOSURE structural weights are point-in-time estimates and subject to drift.", "HIGH")
         _assumption_b("RSS feed headlines are a representative sample of geopolitical events - coverage gaps exist.", "MED")
     with col_l2:
@@ -1578,7 +1587,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _h3("Model Maintenance Protocol  ·  SR 11-7")
     _maint_rows = [
         ("WEEKLY",    _G,        "Review conflict registry for state changes (active → latent). Update last_updated fields. Check freshness cap violations."),
-        ("MONTHLY",   "#e67e22", "Recalibrate regime thresholds as new data accumulates. Validate DCC-GARCH stationarity. Review MCS z-score distributions."),
+        ("MONTHLY",   "#e67e22", "Recalibrate regime thresholds as new data accumulates. Validate DCC-style correlation stationarity. Review MCS z-score distributions."),
         ("QUARTERLY", "#c0392b", "Re-examine CIS dimension weights against realized commodity price responses to recent conflicts. Backtest risk score vs. VIX spikes."),
         ("ANNUALLY",  _DIM,     "Full model review - reassess 4-regime Markov structure; re-estimate TPS channel weights; refresh SECURITY_EXPOSURE structural weights."),
     ]

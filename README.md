@@ -1,6 +1,6 @@
 # Equity-Commodities Spillover Monitor
 
-An institutional-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX — with geopolitical risk intelligence, a live conflict feed, forward-looking scenario analysis, and an orchestrated AI agent workforce running on real financial data.
+A research-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX — with geopolitical risk intelligence, a conflict event feed, scenario-based shock analysis, and an orchestrated AI agent workforce running on real financial data.
 
 Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School of Business · Prof. Cinder Zhang
 
@@ -30,7 +30,7 @@ The Spillover Monitor answers three questions that standard market dashboards do
 
 1. **Where is stress coming from?** — Granger causality (BIC-optimal lag, Holm-corrected), transfer entropy with shuffle significance tests, and Diebold-Yilmaz FEVD identify directional transmission paths between assets, not just correlation levels.
 2. **How severe is the current regime?** — A five-component composite risk score (0–100) and four-state correlation regime model classify market conditions with historical analogues and Markov transition forecasts.
-3. **What happens next?** — A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of this into actionable morning briefings, trade ideas, and stress assessments.
+3. **What happens next?** — A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of this into research briefings, illustrative trade ideas, and stress assessments.
 
 The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and weekly EIA petroleum inventory reports — on every session load.
 
@@ -109,8 +109,8 @@ All core econometric methods implement published best practices. The table below
 |--------|---------------|----------------|
 | **Granger causality** | BIC-optimal lag via `VAR(ic='bic')` before testing; Holm-Bonferroni step-down correction across the full N×M×2 test grid | Granger (1969); Lütkepohl (2005) Ch. 4 |
 | **Transfer entropy** | Schreiber (2000) directed information measure; 200-permutation shuffle test for significance; optimal lag selected by maximising TE(commodity→equity) | Schreiber (2000) |
-| **Diebold-Yilmaz FEVD** | VAR fitted with `ic='bic'` (lag_order is upper bound); 10-step forecast horizon; generalized variance decomposition | Diebold & Yilmaz (2012) |
-| **DCC-GARCH** | Two-step Engle (2002): EWMA pre-whitening (λ=0.94, RiskMetrics) standardises returns before DCC(1,1) recursion; raw-return DCC is contaminated by heteroskedasticity | Engle (2002) |
+| **Diebold-Yilmaz FEVD** | VAR fitted with `ic='bic'` (lag_order is upper bound); 10-step forecast horizon; Cholesky-orthogonalized FEVD (statsmodels default; order-dependent — D-Y 2012 uses Pesaran-Shin generalized FEVD) | Diebold & Yilmaz (2012) |
+| **DCC-style dynamic correlation** | Two-step Engle (2002): EWMA pre-whitening (λ=0.94, RiskMetrics, fixed parameters not MLE-estimated) standardises returns before DCC(1,1) recursion; raw-return DCC is contaminated by heteroskedasticity | Engle (2002) |
 | **Correlation regime** | Adaptive percentile thresholds; 5-day median smoothing; hysteresis (exit threshold = entry − 5pp); persistence gate (Crisis requires 60% of 10-day window above elevated) | Hamilton (1989) regime-switching |
 | **Composite stress index** | Vol signals: z-score → [0,100] preserves absolute VIX level information; correlation signals: empirical percentile rank | Illing & Liu (2006) FSI design |
 | **Markov regime dynamics** | 4×4 first-order transition matrix; steady-state via linear solve; Mean First Passage Time to Crisis | Hamilton (1994) |
@@ -133,12 +133,12 @@ All core econometric methods implement published best practices. The table below
 ## Key Features
 
 ### Quantitative Analytics
-- **Correlation regime model** — four-state classification (Decorrelated → Normal → Elevated → Crisis) with Markov transition forecasts, steady-state distribution, and mean days to next Crisis; *regime taxonomy designed by Jiahe Miao*
+- **Correlation regime model** — four-state classification (Decorrelated → Normal → Elevated → Crisis) with Markov transition projections, steady-state distribution, and mean days to next Crisis; *regime taxonomy designed by Jiahe Miao*
 - **Composite Global Risk Score (0–100)** — three weighted components: Conflict Intensity Score (35%), Transmission Pressure Score (30%), Market Confirmation Score (35%); EWM-normalized with 252-day span to prevent regime normalisation during sustained crises
 - **Early Warning System** — five-component composite score (correlation velocity, vol acceleration, regime duration pressure, equity vol trend, Markov crisis probability) with historical analogue matching via Euclidean nearest-neighbour on (eq_vol, cmd_vol, corr) signature
 - **Directional spillover analytics** — Granger causality (BIC-optimal lag, Holm-Bonferroni corrected), transfer entropy with 200-permutation shuffle significance test, Diebold-Yilmaz FEVD connectedness index (0–100%); *D-Y interpretation framework contributed by Jiahe Miao*
 - **CIS/TPS conflict model** — Conflict Intensity Score (7 dimensions: deadliness, civilian danger, diffusion, fragmentation, escalation trend, recency, source coverage) and Transmission Pressure Score (12 channels: oil/gas, metals, agriculture, shipping, chokepoint, sanctions, equity sector, FX, inflation, supply chain, credit, energy infra); aggregated via HHI-weighted portfolio score
-- **DCC-GARCH correlations** — Engle (2002) two-step DCC with EWMA pre-whitening; correlation clips to [−1, 1] to guard against numerical drift
+- **DCC-style dynamic correlations** — Engle (2002) two-step DCC with EWMA pre-whitening (λ=0.94, fixed); correlation clips to [−1, 1] to guard against numerical drift
 - **Correlation velocity detection** — first derivative of rolling correlation (10-day lag) for earlier regime transition detection
 
 ### Scenario & Stress Analysis
@@ -250,7 +250,7 @@ Global choropleth — 195+ countries scored by equity-market exposure to three s
 Event-window forensics for 13 shocks (2008–present). Normalized price performance, volatility shift, correlation regime change at event onset/peak/recovery. Live Intelligence Feed with RSS ingestion and severity scoring.
 
 ### Correlation Analysis
-Four tabs: Rolling Correlation, DCC-GARCH (Engle 2002, EWMA pre-whitened), Regime Detection, Regime Forecast. Markov transition matrix, steady-state distribution, mean days to Crisis per state. Regime taxonomy by Jiahe Miao.
+Four tabs: Rolling Correlation, DCC-style Dynamic Correlation (Engle 2002, EWMA pre-whitened), Regime Detection, Regime Forecast. Markov transition matrix, steady-state distribution, mean days to Crisis per state. Regime taxonomy by Jiahe Miao.
 
 ### Spillover Analytics
 Granger causality grid (BIC lag, Holm-corrected; both raw and FWER-adjusted significant-pair counts displayed), transfer entropy matrix with shuffle p-values (* = p < 0.05), Diebold-Yilmaz FEVD connectedness index (0–100%, BIC-selected VAR lag), network graph (node size = net spillover power), cross-asset section covering rates, FX, and FI channels.
@@ -265,7 +265,7 @@ Live snapshot (price, 1d/5d return, annualized vol, regime label). Intraday and 
 Six chokepoints: Hormuz, Suez, Taiwan Strait, Bosporus, Malacca, Panama. Disruption score (0–100), vessel traffic vs. baseline, commodity channels at risk, estimated trade value at risk. Framework by Ilian Zalomai.
 
 ### Trade Ideas
-Regime-triggered cross-asset trade cards. AI Trade Structurer generates ideas using full typed peer context. Pydantic-validated structured output. Six base regime-conditioned trade structures by Jiahe Miao.
+Regime-triggered illustrative trade structures. AI Trade Structurer generates research ideas using full typed peer context. Pydantic-validated structured output. Six base regime-conditioned structures by Jiahe Miao.
 
 ### Exposure Scoring
 Per-asset Structural Exposure Score (SES), Transmission-Adjusted Exposure (TAE), and Scenario-Adjusted Score (SAS) across all tracked conflicts. Geo multiplier applied via scenario state.
@@ -319,30 +319,43 @@ Command Center
 ```bash
 git clone https://github.com/HPATKAR/equity-commodities-spillover.git
 cd equity-commodities-spillover
+
+# Create and activate a virtual environment (Python 3.11 recommended)
+python3.11 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Configure API keys (required before first run)
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+# Edit secrets.toml and fill in at least one AI provider key.
+
 streamlit run app.py
 ```
 
+The dashboard opens at **http://localhost:8501**. Without any API keys it runs in read-only mode (market data via yfinance, no AI agents, no FRED macro data).
+
 ### Configuration
 
-Add to `.streamlit/secrets.toml` (local) or as Secret Files on Render (deployed):
+All secrets live in `.streamlit/secrets.toml` — copy the example template above and fill in your keys:
 
-```toml
-[keys]
-fred_api_key      = "..."   # FRED macroeconomic data (optional — unlocks Macro Dashboard)
-anthropic_api_key = "..."   # Claude Sonnet — AI agents + analyst (preferred)
-openai_api_key    = "..."   # GPT-4o fallback
+| Key | Section | Required | Purpose |
+|-----|---------|----------|---------|
+| `anthropic_api_key` | `[keys]` | Preferred | AI agents + analyst (Claude Sonnet) |
+| `openai_api_key` | `[keys]` | Fallback | GPT-4o fallback if no Anthropic key |
+| `fred_api_key` | `[keys]` | Optional | Macro Dashboard (yield curve, CPI, GDP) |
+| `app_key` | `[lseg]` | Optional | LSEG/Refinitiv price data (yfinance fallback if absent) |
 
-[auth]
-password = "..."            # Optional — activate with enable_auth = true
+Anthropic is preferred when both AI keys are present. FRED is free — get a key at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html).
 
-[config]
-enable_auth      = false
-enable_rss       = true
-refresh_interval = 300
+### Running the eval harness (no Streamlit required)
+
+```bash
+python evals/run_eval.py
+# With output file:
+python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 ```
-
-Anthropic is used when both keys are present. FRED unlocks yield curve, CPI, Fed Funds Rate, GDP, and ISM data on the Macro Dashboard.
 
 ---
 
@@ -382,7 +395,7 @@ Anthropic is used when both keys are present. FRED unlocks yield curve, CPI, Fed
 | Lütkepohl, H. (2005). *New Introduction to Multiple Time Series Analysis*. Springer. Ch. 4. | BIC lag selection for VAR and Granger |
 | Schreiber, T. (2000). "Measuring Information Transfer." *Physical Review Letters* 85(2): 461–464. | Transfer entropy + shuffle significance |
 | Diebold, F.X. & Yilmaz, K. (2012). "Better to Give than to Receive: Forecast-Based Measurement of Volatility Spillovers." *International Journal of Forecasting* 28(1): 57–66. | Diebold-Yilmaz FEVD spillover index |
-| Engle, R.F. (2002). "Dynamic Conditional Correlation: A Simple Class of Multivariate Generalized Autoregressive Conditional Heteroskedasticity Models." *JBES* 20(3): 339–350. | DCC-GARCH correlations |
+| Engle, R.F. (2002). "Dynamic Conditional Correlation: A Simple Class of Multivariate Generalized Autoregressive Conditional Heteroskedasticity Models." *JBES* 20(3): 339–350. | DCC-style dynamic correlations |
 | Holm, S. (1979). "A Simple Sequentially Rejective Multiple Test Procedure." *Scandinavian Journal of Statistics* 6(2): 65–70. | Bonferroni-Holm correction for Granger grid |
 | Hamilton, J.D. (1989). "A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle." *Econometrica* 57(2): 357–384. | Regime-switching framework |
 | J.P. Morgan / Reuters (1996). *RiskMetrics Technical Document*, 4th ed. | EWMA λ=0.94 for DCC pre-whitening |
