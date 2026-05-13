@@ -530,7 +530,7 @@ def _build_speedometer_svg(
         x2, y2 = pt(R_OUT + 2, sep)
         S.append(
             f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
-            f'stroke=_C["card"] stroke-width="4.5"/>'
+            f'stroke="{_C["card"]}" stroke-width="4.5"/>'
         )
 
     # Zone labels - inside band at arc centerline
@@ -2277,8 +2277,8 @@ def _render_correlation_pulse(
     dot_y = _fy(cur)
 
     svg = (
-        f'<svg width="{W}" height="{H + 12}" viewBox="0 0 {W} {H + 12}" '
-        f'style="display:block;overflow:visible">'
+        f'<svg viewBox="0 0 {W} {H + 12}" '
+        f'style="width:100%;height:auto;display:block;overflow:visible">'
         # shaded coupling zone (above 0.35 threshold)
         f'<rect x="0" y="0" width="{W}" height="{thr_y:.1f}" '
         f'fill="rgba(192,57,43,0.07)"/>'
@@ -2288,9 +2288,9 @@ def _render_correlation_pulse(
         # zero reference line
         f'<line x1="0" y1="{zero_y:.1f}" x2="{W}" y2="{zero_y:.1f}" '
         f'stroke="#2e2e2e" stroke-width="1"/>'
-        # 0.35 high-coupling threshold
+        # 0.35 high-coupling threshold (was: stroke=_C["danger"] — color bug fixed)
         f'<line x1="0" y1="{thr_y:.1f}" x2="{W}" y2="{thr_y:.1f}" '
-        f'stroke=_C["danger"] stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
+        f'stroke="{_C["danger"]}" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
         # correlation sparkline
         f'<polyline points="{pts}" fill="none" stroke="{cur_c}" '
         f'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>'
@@ -2617,7 +2617,7 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
         )
 
     svg = (
-        f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" style="display:block;overflow:visible">'
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">'
         + fills + grid + qlbls + ticks + axis_lbls + dots
         + f'</svg>'
     )
@@ -2700,7 +2700,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     spoke_html = "".join(
         f'<line x1="{cx}" y1="{cy}" '
         f'x2="{cx + R * math.cos(_ang(i)):.1f}" y2="{cy + R * math.sin(_ang(i)):.1f}" '
-        f'stroke=_C["border"] stroke-width="1"/>'
+        f'stroke="{_C["border"]}" stroke-width="1"/>'
         for i in range(n)
     )
 
@@ -2720,7 +2720,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         n_dy = -5 if sin_a < -0.25 else (3 if sin_a > 0.25 else -4)
         v_dy = n_dy + 10
         lbl_html += (
-            f'<text x="{lx:.1f}" y="{ly + n_dy:.1f}" font-size="8" fill=_C["label"] '
+            f'<text x="{lx:.1f}" y="{ly + n_dy:.1f}" font-size="8" fill="{_C["label"]}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="{anc}">{name}</text>'
             f'<text x="{lx:.1f}" y="{ly + v_dy:.1f}" font-size="8.5" fill="{col}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="{anc}" font-weight="700">{val:.0f}</text>'
@@ -2732,14 +2732,14 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     ctr_html = (
         f'<text x="{cx}" y="{cy - 5}" font-size="15" fill="{fill_c}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{score:.0f}</text>'
-        f'<text x="{cx}" y="{cy + 9}" font-size="7" fill=_C["muted"] '
+        f'<text x="{cx}" y="{cy + 9}" font-size="7" fill="{_C["muted"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle">GRS</text>'
     )
 
     SVG_W, SVG_H = 210, 195
     svg = (
-        f'<svg width="{SVG_W}" height="{SVG_H}" viewBox="0 0 {SVG_W} {SVG_H}" '
-        f'style="display:block;margin:0 auto">'
+        f'<svg viewBox="0 0 {SVG_W} {SVG_H}" '
+        f'style="width:100%;height:auto;display:block;overflow:visible">'
         + grid_html + spoke_html
         + f'<polygon points="{data_pts}" fill="{fill_c}" fill-opacity="0.13" '
         f'stroke="{fill_c}" stroke-width="1.5" stroke-linejoin="round"/>'
@@ -2992,7 +2992,7 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
 
     vals = list(regimes.dropna().astype(int).iloc[-60:])
     N    = len(vals)
-    W, H, gap = 210, 18, 1
+    W, H, gap = 280, 18, 1
     cell_w = max(1, (W - gap * (N - 1)) / N)
 
     cells = ""
@@ -3018,14 +3018,14 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
         lx = (rv - 1) * 72
         legend += (
             f'<rect x="{lx}" y="2" width="9" height="9" fill="{rc}" rx="1" opacity=".8"/>'
-            f'<text x="{lx + 13}" y="10" font-size="8" fill=_C["label"] font-family="JetBrains Mono,monospace">'
+            f'<text x="{lx + 13}" y="10" font-size="8" fill="{_C["label"]}" font-family="JetBrains Mono,monospace">'
             f'{_REG_LAB[rv][:4]} {n}d</text>'
         )
 
     _card("REGIME HISTORY · 60D",
-        f'<svg width="{W}" height="{H}" style="display:block">{cells}</svg>'
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block">{cells}</svg>'
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.45rem">'
-        f'<svg width="216" height="14">{legend}</svg>'
+        f'<svg viewBox="0 0 216 14" style="width:100%;height:auto;display:block">{legend}</svg>'
         f'</div>'
         f'<div style="margin-top:.4rem;{_M}font-size:8.5px;font-weight:700;color:{cur_col}">'
         f'NOW: {cur_lbl}</div>',
@@ -3107,19 +3107,23 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
     y_mid  = _fy(45)
     bands  = (
         f'<rect x="{ML}" y="{MT}" width="{PW}" height="{y_high - MT}" '
-        f'fill=_C["danger"] opacity=".06" rx="0"/>'
+        f'fill="{_C["danger"]}" opacity=".06" rx="0"/>'
         f'<rect x="{ML}" y="{y_high}" width="{PW}" height="{y_mid - y_high}" '
-        f'fill=_C["warn"] opacity=".06" rx="0"/>'
+        f'fill="{_C["warn"]}" opacity=".06" rx="0"/>'
         f'<rect x="{ML}" y="{y_mid}" width="{PW}" height="{MT + PH - y_mid}" '
-        f'fill=_C["safe"] opacity=".05" rx="0"/>'
+        f'fill="{_C["safe"]}" opacity=".05" rx="0"/>'
     )
 
-    # threshold lines
+    # threshold lines + inline zone labels
     lines = (
         f'<line x1="{ML}" y1="{y_high:.1f}" x2="{ML + PW}" y2="{y_high:.1f}" '
-        f'stroke=_C["danger"] stroke-width=".6" stroke-dasharray="3,3" opacity=".5"/>'
+        f'stroke="{_C["danger"]}" stroke-width=".6" stroke-dasharray="3,3" opacity=".5"/>'
+        f'<text x="{ML + PW - 2}" y="{y_high - 2}" font-size="6" fill="{_C["danger"]}" '
+        f'text-anchor="end" font-family="JetBrains Mono,monospace" opacity=".7">70</text>'
         f'<line x1="{ML}" y1="{y_mid:.1f}" x2="{ML + PW}" y2="{y_mid:.1f}" '
-        f'stroke=_C["warn"] stroke-width=".6" stroke-dasharray="3,3" opacity=".4"/>'
+        f'stroke="{_C["warn"]}" stroke-width=".6" stroke-dasharray="3,3" opacity=".4"/>'
+        f'<text x="{ML + PW - 2}" y="{y_mid - 2}" font-size="6" fill="{_C["warn"]}" '
+        f'text-anchor="end" font-family="JetBrains Mono,monospace" opacity=".7">45</text>'
     )
 
     pts = " ".join(f'{_fx(i):.1f},{_fy(v):.1f}' for i, v in enumerate(vals))
@@ -3133,7 +3137,7 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
     dot_x, dot_y = _fx(N - 1), _fy(cur)
 
     svg = (
-        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">'
         f'{bands}{lines}'
         f'<polygon points="{fill_pts}" fill="{s_col}" opacity=".08"/>'
         f'<polyline points="{pts}" fill="none" stroke="{s_col}" '
@@ -3361,7 +3365,7 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
     # x-axis lag labels
     for i, lag in enumerate(lags):
         lx = ML + i * gap + gap / 2
-        bars_svg += f'<text x="{lx:.1f}" y="{H-2}" font-size="7" fill=_C["muted"] text-anchor="middle" font-family="JetBrains Mono,monospace">+{lag}d</text>'
+        bars_svg += f'<text x="{lx:.1f}" y="{H-2}" font-size="7" fill="{_C["muted"]}" text-anchor="middle" font-family="JetBrains Mono,monospace">+{lag}d</text>'
 
     # y-axis ticks (+0.5 / 0 / -0.5)
     for yv, yt in [(0.5, MT + PH * 0.0), (0.0, MT + PH * 0.5), (-0.5, MT + PH * 1.0)]:
@@ -3373,7 +3377,7 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
     )
 
     _card("CMD→EQ LEAD-LAG · 60D",
-        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">{bars_svg}</svg>'
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">{bars_svg}</svg>'
         f'<div style="display:flex;justify-content:space-between;margin-top:.4rem">'
         f'<span style="{_M}font-size:8px;color:{_C["label"]}">{lead_msg}</span>'
         f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["safe"] if peak_cor>=0 else _C["danger"]}">'
@@ -3424,9 +3428,9 @@ def _render_yield_curve_snap() -> None:
         la = "start" if i == 0 else "end" if i == len(present)-1 else "middle"
         dots += (
             f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="2.5" fill="{line_col}" opacity=".9"/>'
-            f'<text x="{dx:.1f}" y="{H-2}" font-size="7.5" fill=_C["muted"] text-anchor="middle" '
+            f'<text x="{dx:.1f}" y="{H-2}" font-size="7.5" fill="{_C["muted"]}" text-anchor="middle" '
             f'font-family="JetBrains Mono,monospace">{t}</text>'
-            f'<text x="{dx:.1f}" y="{dy-6:.1f}" font-size="7" fill=_C["label"] text-anchor="{la}" '
+            f'<text x="{dx:.1f}" y="{dy-6:.1f}" font-size="7" fill="{_C["label"]}" text-anchor="{la}" '
             f'font-family="JetBrains Mono,monospace">{v:.2f}</text>'
         )
 
@@ -3438,7 +3442,7 @@ def _render_yield_curve_snap() -> None:
         grid += f'<text x="{ML-3}" y="{gy:.1f}" font-size="6.5" fill="#444" text-anchor="end" dominant-baseline="middle" font-family="JetBrains Mono,monospace">{yv:.1f}</text>'
 
     svg = (
-        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">'
         f'{grid}'
         f'<polygon points="{fill_pts}" fill="{line_col}" opacity=".07"/>'
         f'<polyline points="{pts}" fill="none" stroke="{line_col}" stroke-width="1.8" '
@@ -3874,13 +3878,13 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
         grid = (
             f'<line x1="{cx}" y1="0" x2="{cx}" y2="{H}" '
-            f'stroke=_C["border2"] stroke-width="0.8"/>'
+            f'stroke="{_C["border2"]}" stroke-width="0.8"/>'
         )
         for pct in (25, 75):
             gx = PAD_X + LABEL_W + BAR_MAX * pct // 100
             grid += (
                 f'<line x1="{gx}" y1="0" x2="{gx}" y2="{H}" '
-                f'stroke=_C["border"] stroke-width="0.5"/>'
+                f'stroke="{_C["border"]}" stroke-width="0.5"/>'
             )
 
         bars = grid
@@ -3901,14 +3905,14 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
             bars += (
                 # track
                 f'<rect x="{PAD_X + LABEL_W}" y="{y}" width="{BAR_MAX}" height="{BAR_H}" '
-                f'fill=_C["card2"] rx="2"/>'
+                f'fill="{_C["card2"]}" rx="2"/>'
                 # bar
                 f'<rect x="{bx:.1f}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
                 f'fill="{col}" opacity="0.85" rx="2"/>'
                 # label
                 f'<text x="{PAD_X + LABEL_W - 4}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
-                f'fill=_C["label"] text-anchor="end">{lbl}</text>'
+                f'fill="{_C["label"]}" text-anchor="end">{lbl}</text>'
                 # value
                 f'<text x="{PAD_X + LABEL_W + BAR_MAX + 4}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
@@ -4009,12 +4013,12 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
             row_labels += (
                 f'<text x="{PAD - 4}" y="{PAD + i * CELL + CELL//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill=_C["label"] text-anchor="end">{lbl}</text>'
+                f'fill="{_C["label"]}" text-anchor="end">{lbl}</text>'
             )
             col_labels += (
                 f'<text x="{PAD + i * CELL + CELL//2}" y="{PAD - 6}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill=_C["label"] text-anchor="middle">{lbl}</text>'
+                f'fill="{_C["label"]}" text-anchor="middle">{lbl}</text>'
             )
 
         legend = (
@@ -4122,10 +4126,10 @@ def _render_risk_signal_waterfall(
                 # label
                 f'<text x="{LABEL_W - 6}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill=_C["label"] text-anchor="end">{lbl}</text>'
+                f'fill="{_C["label"]}" text-anchor="end">{lbl}</text>'
                 # track
                 f'<rect x="{LABEL_W}" y="{y}" width="{BAR_W}" height="{BAR_H}" '
-                f'fill=_C["card2"] rx="2"/>'
+                f'fill="{_C["card2"]}" rx="2"/>'
                 # bar
                 f'<rect x="{LABEL_W}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
                 f'fill="{col}" opacity="0.85" rx="2"/>'
@@ -4203,7 +4207,7 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
                 f'fill="#141414" rx="0"/>'
                 f'<text x="{x + CELL_W//2}" y="{HDR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill=_GOLD text-anchor="middle" font-weight="700">{g}</text>'
+                f'fill="{_GOLD}" text-anchor="middle" font-weight="700">{g}</text>'
             )
         # Rows
         for i, c in enumerate(active):
@@ -4217,7 +4221,7 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
                 f'<rect x="0" y="{y}" width="{W}" height="{CELL_H}" fill="{bg}"/>'
                 f'<text x="4" y="{y + CELL_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
-                f'fill=_C["label"]>{short}</text>'
+                f'fill="{_C["label"]}">{short}</text>'
                 f'<text x="{LABEL_W - 5}" y="{y + CELL_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
                 f'fill="{cis_col}" text-anchor="end">{cis_v:.0f}</text>'
@@ -4240,12 +4244,12 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
             f'{cells}</svg>'
         )
         note = (
-            '<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
-            'color:#555;margin-top:3px">cell value = exposure × CIS/100 · '
-            '<span style="color:{_C["danger"]}">■</span> ≥60 '
-            '<span style="color:{_C["warn"]}">■</span> 40-60 '
-            '<span style="color:{_C["warn"]}">■</span> 20-40 '
-            '<span style="color:{_C["info"]}">■</span> 5-20</div>'
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
+            f'color:#555;margin-top:3px">cell value = exposure × CIS/100 · '
+            f'<span style="color:{_C["danger"]}">■</span> ≥60 '
+            f'<span style="color:{_C["warn"]}">■</span> 40–60 '
+            f'<span style="color:{_C["warn"]}">■</span> 20–40 '
+            f'<span style="color:{_C["info"]}">■</span> 5–20</div>'
         )
         _card("CONFLICT × COMMODITY IMPACT MATRIX", svg + note)
     except Exception:
@@ -4293,24 +4297,24 @@ def _render_geo_event_timeline(conflict_results) -> None:
                 f'<rect x="0" y="{y}" width="{W}" height="{ROW_H}" fill="{bg}"/>'
                 f'<text x="{LABEL_W - 4}" y="{y + 13}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
-                f'fill=_C["label"] text-anchor="end">{short}</text>'
+                f'fill="{_C["label"]}" text-anchor="end">{short}</text>'
                 f'<rect x="{LABEL_W}" y="{y + 5}" width="{BAR_MAX}" height="10" '
-                f'fill=_C["card2"] rx="2"/>'
+                f'fill="{_C["card2"]}" rx="2"/>'
                 f'<rect x="{LABEL_W}" y="{y + 5}" width="{bw:.1f}" height="10" '
                 f'fill="{col1}" opacity="0.8" rx="2"/>'
                 f'<line x1="{tps_x:.1f}" y1="{y + 3}" x2="{tps_x:.1f}" y2="{y + 17}" '
-                f'stroke=_GOLD stroke-width="1.5" opacity="0.9"/>'
+                f'stroke="{_GOLD}" stroke-width="1.5" opacity="0.9"/>'
                 f'<text x="{LABEL_W + BAR_MAX + 4}" y="{y + 13}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
                 f'fill="{col1}">{cis:.0f}</text>'
             )
 
         legend = (
-            '<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
-            'color:#555;margin-top:3px">'
-            '■ bar = CIS (conflict intensity) · '
-            '<span style="color:{_GOLD}">│</span> = TPS (transmission pressure)'
-            '</div>'
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
+            f'color:#555;margin-top:3px">'
+            f'■ bar = CIS (conflict intensity) · '
+            f'<span style="color:{_GOLD}">│</span> = TPS (transmission pressure)'
+            f'</div>'
         )
         svg = (
             f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
