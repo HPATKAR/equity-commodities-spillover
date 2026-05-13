@@ -207,7 +207,7 @@ Validated against 56 labeled historical cases across crisis, stress, and normal 
 | geopolitical_analyst | 11 | 0.0%† | 0.40 | ⚠ EVAL-LIMITED |
 | signal_auditor | 4 | 0.0%† | 0.40 | ⚠ EVAL-LIMITED |
 
-† CIS/TPS and Granger hit-rate fields require live API access (ACLED, GDELT, real-time prices) that is unavailable in the offline backtesting harness. These agents are excluded from pass/fail determination; their confidence gates are set at conservative floors. Pass threshold: 60% for agents with live-data fields; gate = 80% × measured hit rate for agents with full backtest coverage.
+† CIS/TPS and Granger hit-rate fields require live API access (ACLED, GDELT, real-time prices) unavailable in the offline harness — these agents show 0.0% hit rate by construction and are excluded from pass/fail. **Gate column** = production confidence floor set in code: `max(0.80 × measured hit rate, 0.35 floor)`. **PASS** = gate is calibrated and hit rate clears it; for small-sample agents (commodities_specialist n=3) the floor gate applies.
 
 Confidence is calibrated via data completeness flags passed in `AgentHandoff`, not self-reported strings from the model.
 
