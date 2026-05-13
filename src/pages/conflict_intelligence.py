@@ -492,7 +492,7 @@ def _render_transmission_heatmap(results: dict) -> None:
 def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None:
     _page_header(
         "Conflict Intelligence Center",
-        "CIS scoring · 7-dimension intensity · State multiplier · Portfolio weighting",
+        "Step 1 of 7 · Active Shocks · CIS scoring · 7-dimension intensity · State multiplier · Portfolio weighting",
         "INTELLIGENCE / CONFLICT SCORECARD",
     )
 

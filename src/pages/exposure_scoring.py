@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-from src.ui.shared import _page_header, _page_footer
+from src.ui.shared import _page_header, _page_footer, _page_intro
 
 from src.analysis.exposure import (
     score_all_assets,
@@ -298,8 +298,19 @@ def _exposure_filters() -> dict:
 
 def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     _page_header("Exposure Scoring",
-                 "Per-asset SES · TAE · Scenario-adjusted score · Conflict beta · Hedge ranking",
+                 "Step 3 of 7 · Equity Exposure · Per-asset SES · TAE · Scenario-adjusted score · Conflict beta · Hedge ranking",
                  "INTELLIGENCE / EXPOSURE")
+    _page_intro(
+        "<strong>Research question for this page: which equity markets and sectors carry the most "
+        "exposure to the active geopolitical shock?</strong> "
+        "The Scenario-adjusted Exposure Score (SES) combines conflict beta — how sensitive each "
+        "asset has historically been to commodity-driven shocks — with the current conflict intensity "
+        "(CIS) and transmission pressure (TPS) to produce a single ranked exposure number. "
+        "High-scoring assets are the equity markets most at risk when a commodity channel opens. "
+        "Hedge rankings invert the logic: which assets have historically decoupled or appreciated "
+        "during commodity stress? "
+        "Read this after the Commodity Watchlist (step 2) and before Spillover/Correlation (step 4)."
+    )
 
     # ── Scenario context ───────────────────────────────────────────────────
     scenario    = get_scenario()

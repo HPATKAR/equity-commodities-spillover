@@ -1112,12 +1112,14 @@ function nav(page) {{
     <div>
       <p class="ft-hd">Analytical Sequence</p>
       <ul>
+        <li><a href="#" onclick="nav('conflict_intelligence');return false;">1 · Conflict Intelligence</a></li>
         <li><a href="#" onclick="nav('watchlist');return false;">2 · Commodities to Watch</a></li>
-        <li><a href="#" onclick="nav('war_impact_map');return false;">3 · War Impact Map</a></li>
+        <li><a href="#" onclick="nav('exposure_scoring');return false;">3 · Equity Exposure</a></li>
         <li><a href="#" onclick="nav('spillover');return false;">4a · Spillover Analytics</a></li>
         <li><a href="#" onclick="nav('correlation');return false;">4b · Correlation Analysis</a></li>
         <li><a href="#" onclick="nav('overview');return false;">5 · Overview &amp; Regime</a></li>
-        <li><a href="#" onclick="nav('geopolitical');return false;">Historical: Geo Event Impact</a></li>
+        <li><a href="#" onclick="nav('trade_ideas');return false;">6 · Trade Ideas</a></li>
+        <li><a href="#" onclick="nav('insights');return false;">7 · Intelligence Briefing</a></li>
       </ul>
     </div>
 
@@ -1126,9 +1128,9 @@ function nav(page) {{
       <ul>
         <li><a href="#" onclick="nav('scenario_engine');return false;">Scenario Engine</a></li>
         <li><a href="#" onclick="nav('stress_test');return false;">Portfolio Stress Test</a></li>
-        <li><a href="#" onclick="nav('trade_ideas');return false;">6 · Illustrative Trade Ideas</a></li>
+        <li><a href="#" onclick="nav('trade_ideas');return false;">Illustrative Trade Ideas</a></li>
         <li><a href="#" onclick="nav('model_accuracy');return false;">Performance Review</a></li>
-        <li><a href="#" onclick="nav('ai_chat');return false;">6 · AI Analyst</a></li>
+        <li><a href="#" onclick="nav('ai_chat');return false;">AI Research Desk</a></li>
       </ul>
     </div>
 

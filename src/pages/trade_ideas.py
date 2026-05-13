@@ -778,7 +778,7 @@ def _render_trade_card(
 
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _page_header("Structured Trade Ideas",
-                 "Regime-driven · Conflict-linked · Exposure-ranked · QC-graded")
+                 "Step 6 of 7 · AI Conclusions · Regime-driven · Conflict-linked · Exposure-ranked · QC-graded")
     _page_intro(
         "Spillover analysis is most useful when it connects to positioning hypotheses. "
         "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
