@@ -3530,141 +3530,154 @@ def _render_vol_trio() -> None:
 def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     """Left column: radar-style polar scatter of active conflicts (CIS=radius, TPS=angle)."""
     import math
+
     active = [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"]
     if not active:
         return
 
-    CX, CY, R = 105, 108, 80
-    W, H       = 210, 220
+    # Responsive viewBox — fills column width, square aspect ratio
+    VW, VH  = 260, 260
+    CX, CY  = 130, 130
+    R       = 98   # radar radius; leaves ~32px margin on each side for labels
 
     grs   = float(risk.get("score", 50))
     g_col = _C["danger"] if grs >= 70 else _C["warn"] if grs >= 45 else _C["safe"]
 
-    # ── background ────────────────────────────────────────────────────────────
-    # risk zone rings
-    bg = (
-        f'<circle cx="{CX}" cy="{CY}" r="{R}" fill=_C["danger"] opacity=".055"/>'
-        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.65)}" fill=_C["warn"] opacity=".07"/>'
-        f'<circle cx="{CX}" cy="{CY}" r="{int(R*0.32)}" fill=_C["safe"] opacity=".10"/>'
+    # ── risk-zone ring fills (fixed: was missing f-string braces on color refs) ─
+    ring_data = [
+        (1.00, _C["danger"], ".05"),
+        (0.65, _C["warn"],   ".08"),
+        (0.32, _C["safe"],   ".12"),
+    ]
+    bg = "".join(
+        f'<circle cx="{CX}" cy="{CY}" r="{int(R * pct)}" fill="{col}" opacity="{op}"/>'
+        for pct, col, op in ring_data
     )
-    # ring outlines
-    for ri in [R, int(R*0.65), int(R*0.32)]:
-        bg += f'<circle cx="{CX}" cy="{CY}" r="{ri}" fill="none" stroke="#222" stroke-width=".7"/>'
-
-    # radial spokes (every 45°)
-    spokes = ""
-    for deg in range(0, 360, 45):
-        rad = math.radians(deg)
-        spokes += (
-            f'<line x1="{CX}" y1="{CY}" '
-            f'x2="{CX + R*math.cos(rad):.1f}" y2="{CY + R*math.sin(rad):.1f}" '
-            f'stroke=_C["border"] stroke-width=".8"/>'
+    # ring stroke outlines
+    for pct in [0.32, 0.65, 1.0]:
+        bg += (
+            f'<circle cx="{CX}" cy="{CY}" r="{int(R * pct)}" '
+            f'fill="none" stroke="#282828" stroke-width=".8"/>'
         )
 
-    # ring labels (CIS values)
+    # ── dashed spokes (every 45°) ─────────────────────────────────────────────
+    spokes = "".join(
+        f'<line x1="{CX}" y1="{CY}" '
+        f'x2="{CX + R * math.cos(math.radians(d)):.1f}" '
+        f'y2="{CY + R * math.sin(math.radians(d)):.1f}" '
+        f'stroke="{_C["border"]}" stroke-width=".8" stroke-dasharray="2,4"/>'
+        for d in range(0, 360, 45)
+    )
+
+    # ── CIS ring labels — placed at upper-left diagonal to avoid blip lanes ───
     ring_labels = ""
-    for pct, label in [(0.32, "25"), (0.65, "50"), (1.0, "75+")]:
-        lx = CX + R * pct + 2
+    for pct, lbl in [(0.32, "25"), (0.65, "50"), (1.0, "75+")]:
+        angle_deg = -125  # upper-left diagonal
+        rx = CX + R * pct * math.cos(math.radians(angle_deg))
+        ry = CY + R * pct * math.sin(math.radians(angle_deg))
         ring_labels += (
-            f'<text x="{lx:.1f}" y="{CY-2}" font-size="6.5" fill="#333" '
-            f'font-family="JetBrains Mono,monospace">{label}</text>'
+            f'<text x="{rx:.1f}" y="{ry:.1f}" font-size="7" fill="#484848" '
+            f'font-family="JetBrains Mono,monospace" text-anchor="middle" '
+            f'dominant-baseline="middle">{lbl}</text>'
         )
 
-    # ── conflict blips ────────────────────────────────────────────────────────
-    blips = ""
-    pulse_css = ""
-    top_conflict = max(active, key=lambda x: x[1].get("cis", 0))
+    # ── TPS compass ticks ─────────────────────────────────────────────────────
+    compass = (
+        f'<text x="{CX}" y="{CY - R - 10}" font-size="7.5" fill="#404040" '
+        f'text-anchor="middle" font-family="JetBrains Mono,monospace">TPS 0</text>'
+        f'<text x="{CX + R + 11}" y="{CY + 3}" font-size="7.5" fill="#404040" '
+        f'text-anchor="start" font-family="JetBrains Mono,monospace">90</text>'
+        f'<text x="{CX}" y="{CY + R + 18}" font-size="7.5" fill="#404040" '
+        f'text-anchor="middle" font-family="JetBrains Mono,monospace">180</text>'
+        f'<text x="{CX - R - 11}" y="{CY + 3}" font-size="7.5" fill="#404040" '
+        f'text-anchor="end" font-family="JetBrains Mono,monospace">270</text>'
+    )
 
-    for cid, r in active:
+    # ── conflict blips — low CIS painted first so high-CIS renders on top ─────
+    top_cid = max(active, key=lambda x: x[1].get("cis", 0))[0]
+    pulse_rings = ""
+    blips = ""
+
+    for cid, r in sorted(active, key=lambda x: x[1].get("cis", 0)):
         cis   = float(r.get("cis", 50))
         tps   = float(r.get("tps", 50))
         color = r.get("color", _C["warn"])
         label = (r.get("label") or cid).replace("_", " ")[:12]
 
-        # angle: TPS maps 0→360, starting from 12 o'clock (−90°)
+        # TPS → angle: 0 at 12 o'clock, clockwise
         theta = math.radians(tps / 100.0 * 360.0 - 90.0)
-        rad_r = cis / 100.0 * R
-        bx    = CX + rad_r * math.cos(theta)
-        by    = CY + rad_r * math.sin(theta)
-        dot_r = 4.5 + cis / 100.0 * 5.5
+        # minimum radius: keeps blip outside the centre GRS circle (r=22)
+        rad_r = max(cis / 100.0 * R, 28)
+        bx = CX + rad_r * math.cos(theta)
+        by = CY + rad_r * math.sin(theta)
+        dot_r = 5.5 + cis / 100.0 * 4.5  # 5.5–10 px range
 
-        is_top = (cid == top_conflict[0])
-
-        # glow ring for top conflict
-        if is_top:
-            blips += (
-                f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r+5:.1f}" '
-                f'fill="none" stroke="{color}" stroke-width="1" opacity=".3" '
-                f'class="radar-pulse"/>'
-                f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r+10:.1f}" '
-                f'fill="none" stroke="{color}" stroke-width=".5" opacity=".15" '
-                f'class="radar-pulse2"/>'
+        # pulse rings for highest-CIS conflict only
+        if cid == top_cid:
+            pulse_rings += (
+                f'<circle class="rp1" cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r + 7:.1f}" '
+                f'fill="none" stroke="{color}" stroke-width="1.2" opacity=".4"/>'
+                f'<circle class="rp2" cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r + 16:.1f}" '
+                f'fill="none" stroke="{color}" stroke-width=".7" opacity=".2"/>'
             )
 
         blips += (
             f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r:.1f}" '
-            f'fill="{color}" opacity=".85"/>'
+            f'fill="{color}" opacity=".9"/>'
             f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r:.1f}" '
-            f'fill="none" stroke="{color}" stroke-width="1.2" opacity=".5"/>'
+            f'fill="none" stroke="{color}" stroke-width="1.5" opacity=".4"/>'
         )
 
-        # label placement: push outward from center
-        lrad = rad_r + dot_r + 5
-        lx   = CX + lrad * math.cos(theta)
-        ly   = CY + lrad * math.sin(theta)
-        anchor = "start" if math.cos(theta) >= 0 else "end"
+        # label anchor: 3-way split (start / middle / end) by quadrant
+        cos_t = math.cos(theta)
+        anchor = "start" if cos_t > 0.25 else ("end" if cos_t < -0.25 else "middle")
+        lrad = rad_r + dot_r + 8
+        lx = CX + lrad * math.cos(theta)
+        ly = CY + lrad * math.sin(theta)
         blips += (
-            f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="7" fill="{color}" '
+            f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8" fill="{color}" '
             f'text-anchor="{anchor}" dominant-baseline="middle" '
-            f'font-family="DM Sans,sans-serif" font-weight="700">{label[:10]}</text>'
+            f'font-family="DM Sans,sans-serif" font-weight="700">{label}</text>'
         )
 
-    # ── centre GRS ────────────────────────────────────────────────────────────
+    # ── centre circle: GRS score ──────────────────────────────────────────────
     centre = (
-        f'<circle cx="{CX}" cy="{CY}" r="18" fill="#0a0a0a" stroke="{g_col}" stroke-width="1.5"/>'
-        f'<text x="{CX}" y="{CY-3}" font-size="13" font-weight="700" fill="{g_col}" '
+        f'<circle cx="{CX}" cy="{CY}" r="22" fill="#070707" stroke="{g_col}" stroke-width="2"/>'
+        f'<text x="{CX}" y="{CY - 4}" font-size="14" font-weight="700" fill="{g_col}" '
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">{grs:.0f}</text>'
-        f'<text x="{CX}" y="{CY+9}" font-size="6" fill=_C["muted"] '
+        f'<text x="{CX}" y="{CY + 10}" font-size="7" fill="{_C["muted"]}" '
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">GRS</text>'
     )
 
-    # compass labels
-    compass = (
-        f'<text x="{CX}" y="{CY-R-5}" font-size="7" fill="#333" text-anchor="middle" '
-        f'font-family="JetBrains Mono,monospace">TPS 0</text>'
-        f'<text x="{CX+R+4}" y="{CY+3}" font-size="7" fill="#333" text-anchor="start" '
-        f'font-family="JetBrains Mono,monospace">90</text>'
-        f'<text x="{CX}" y="{CY+R+12}" font-size="7" fill="#333" text-anchor="middle" '
-        f'font-family="JetBrains Mono,monospace">180</text>'
-        f'<text x="{CX-R-4}" y="{CY+3}" font-size="7" fill="#333" text-anchor="end" '
-        f'font-family="JetBrains Mono,monospace">270</text>'
-    )
-
-    pulse_style = (
+    # ── CSS animation — transform-based (cross-browser; r: in keyframes is unreliable)
+    anim = (
         "<style>"
-        "@keyframes radar-pulse{0%{opacity:.3;r:10}50%{opacity:.05;r:18}100%{opacity:.3;r:10}}"
-        "@keyframes radar-pulse2{0%{opacity:.15;r:18}50%{opacity:.02;r:26}100%{opacity:.15;r:18}}"
-        ".radar-pulse{animation:radar-pulse 2s ease-in-out infinite}"
-        ".radar-pulse2{animation:radar-pulse2 2s ease-in-out infinite .4s}"
+        "@keyframes rp1{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.9);opacity:.03}}"
+        "@keyframes rp2{0%,100%{transform:scale(1);opacity:.2}50%{transform:scale(2.0);opacity:.02}}"
+        ".rp1{transform-box:fill-box;transform-origin:center;animation:rp1 2.4s ease-in-out infinite}"
+        ".rp2{transform-box:fill-box;transform-origin:center;animation:rp2 2.4s ease-in-out infinite .5s}"
         "</style>"
     )
 
     svg = (
-        f'<svg width="{W}" height="{H}" style="display:block;overflow:visible">'
-        f'{pulse_style}'
-        f'{bg}{spokes}{ring_labels}'
-        f'{blips}{centre}{compass}'
+        f'<svg viewBox="0 0 {VW} {VH}" '
+        f'style="width:100%;height:auto;display:block;overflow:visible">'
+        f'{anim}'
+        f'{bg}{spokes}{ring_labels}{compass}'
+        f'{pulse_rings}{blips}{centre}'
         f'</svg>'
     )
 
-    _card("THREAT RADAR · CIS × TPS",
-        f'<div style="text-align:center">'
-        f'{svg}'
-        f'<div style="display:flex;justify-content:center;gap:16px;margin-top:.4rem">'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">● radius = CIS</span>'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">● angle = TPS</span>'
+    legend = (
+        f'<div style="display:flex;justify-content:center;gap:14px;'
+        f'margin-top:.3rem;padding-top:.25rem;border-top:1px solid {_C["border"]}">'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">radius = CIS intensity</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">angle = TPS pressure</span>'
         f'</div>'
-        f'</div>',
+    )
+
+    _card("THREAT RADAR · CIS × TPS",
+        f'<div style="padding:.1rem 0">{svg}{legend}</div>',
     )
 
 
