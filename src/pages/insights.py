@@ -54,11 +54,12 @@ def _insight_card(
         f'letter-spacing:0.10em;margin-left:6px;white-space:nowrap">GEO:{geo_driver}</span>'
         if geo_driver else ""
     )
+    _delta_s = str(delta or "")
     delta_html = (
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
-        f'color:{"#27ae60" if delta.startswith("+") else "#c0392b" if delta.startswith("-") else "#8890a1"};'
-        f'margin-left:8px">{delta}</span>'
-        if delta else ""
+        f'color:{"#27ae60" if _delta_s.startswith("+") else "#c0392b" if _delta_s.startswith("-") else "#8890a1"};'
+        f'margin-left:8px">{_delta_s}</span>'
+        if _delta_s else ""
     )
 
     st.markdown(

@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from src.ui.shared import _page_header, _page_footer
+from src.ui.shared import _page_header, _page_footer, _page_intro
 
 from src.analysis.conflict_model import (
     score_all_conflicts,
@@ -494,6 +494,15 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         "Conflict Intelligence Center",
         "Step 1 of 7 · Active Shocks · CIS scoring · 7-dimension intensity · State multiplier · Portfolio weighting",
         "INTELLIGENCE / CONFLICT SCORECARD",
+    )
+    _page_intro(
+        "<strong>Research question for this page: which active geopolitical shocks are material enough to "
+        "transmit risk into commodity and equity markets?</strong> "
+        "The Conflict Intensity Score (CIS) aggregates seven analyst-assessed dimensions — deadliness, "
+        "civilian danger, geographic diffusion, fragmentation, escalation trend, recency, and source coverage — "
+        "into a 0–100 composite. Each conflict also carries a Transmission Pressure Score (TPS) that weights "
+        "the open commodity channels (energy, shipping, metals, FX/sanctions). "
+        "CIS × TPS together determine how much of the geopolitical signal reaches the markets analysed on steps 2–5."
     )
 
     # ── Live Data Status Banner (ACLED + GDELT) ────────────────────────────

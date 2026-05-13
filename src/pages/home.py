@@ -382,12 +382,13 @@ def _sparkline_svg(
     elif velocity < -1.5: v_col, v_lbl = _C["safe"], "▼ FALLING"
     else:                v_col, v_lbl = _C["label"], "- STABLE"
     return (
-        f'<svg width="{width}" height="{height}" style="overflow:visible;vertical-align:middle;margin-left:8px">'
+        f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+        f'style="overflow:visible;vertical-align:middle;margin-left:8px">'
         f'<path d="{path} L{_x(n-1):.1f},{height} L{_x(0):.1f},{height} Z" '
-        f'fill="{line_color}" fill-opacity="0.08"/>'
-        f'<path d="{path}" fill="none" stroke="{line_color}" stroke-width="1.5" '
+        f'fill="{line_color}" fill-opacity="0.08" style="animation:hm-card-in .8s ease-out both"/>'
+        f'<path class="hm-line-in" d="{path}" fill="none" stroke="{line_color}" stroke-width="1.5" '
         f'stroke-linecap="round" stroke-linejoin="round"/>'
-        f'<circle cx="{lx}" cy="{ly}" r="2.5" fill="{line_color}"/>'
+        f'<circle class="hm-dot-live" cx="{lx}" cy="{ly}" r="2.5" fill="{line_color}"/>'
         f'</svg>'
         f'<span style="{_M}font-size:11px;color:{v_col};margin-left:5px;'
         f'vertical-align:middle;font-weight:700">{v_lbl}</span>'
@@ -404,7 +405,7 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
         f'<span style="{_M}font-size:10px;color:{_C["text"]};min-width:95px;white-space:nowrap">'
         f'{label}</span>'
         f'<div style="flex:1;background:{_C["card2"]};height:5px;border-radius:1px">'
-        f'<div style="width:{pct:.0f}%;height:5px;background:{color};border-radius:1px"></div></div>'
+        f'<div class="hm-bar-grow" style="width:{pct:.0f}%;height:5px;background:{color};border-radius:1px"></div></div>'
         f'<span style="{_M}font-size:12px;font-weight:700;color:{color};'
         f'min-width:26px;text-align:right">{value:.0f}</span>'
         f'<span style="{_M}font-size:10px;color:{_C["label"]};min-width:52px">'
@@ -1377,10 +1378,13 @@ def _render_market_pulse_cards() -> None:
                 f'{i/(len(series)-1)*W:.1f},{H - (v-mn)/span*H:.1f}'
                 for i, v in enumerate(series)
             )
+            dot_x = f'{(len(series)-1)/(len(series)-1)*W:.1f}'
+            dot_y = f'{H - (series[-1]-mn)/span*H:.1f}'
             spark_svg = (
-                f'<svg width="{W}" height="{H}" style="display:block;margin-top:5px">'
-                f'<polyline points="{pts}" fill="none" stroke="{c}" '
+                f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" style="display:block;margin-top:5px">'
+                f'<polyline class="hm-line-in" points="{pts}" fill="none" stroke="{c}" '
                 f'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>'
+                f'<circle class="hm-dot-live" cx="{dot_x}" cy="{dot_y}" r="2" fill="{c}"/>'
                 f'</svg>'
             )
 
@@ -1934,7 +1938,7 @@ def _render_market_pulse() -> None:
         val_fmt = f'{d["val"]:.2f}' if d["val"] < 10000 else f'{d["val"]:,.0f}'
         chg_fmt = f'{arrow} {abs(pct):.2f}%'
         return (
-            f'<div style="flex:1;min-width:90px;padding:.65rem .85rem;background:#0f0f0f;'
+            f'<div class="hm-card-anim" style="flex:1;min-width:90px;padding:.65rem .85rem;background:#0f0f0f;'
             f'border:1px solid {_C["border"]};border-top:3px solid {c};'
             f'transition:background .12s ease">'
             f'<div style="{_M}font-size:9px;font-weight:700;letter-spacing:.18em;'
@@ -2635,7 +2639,7 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
     for cis_v, tps_v, col, lbl in active_items:
         px, py = _fx(cis_v), _fy(tps_v)
         dots += (
-            f'<circle cx="{px:.1f}" cy="{py:.1f}" r="9" '
+            f'<circle class="hm-dot-live" cx="{px:.1f}" cy="{py:.1f}" r="9" '
             f'fill="{col}" fill-opacity="0.18" stroke="{col}" stroke-width="1.5"/>'
             f'<text x="{px:.1f}" y="{py + 3:.1f}" font-size="7" fill="{col}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{lbl}</text>'
@@ -2852,21 +2856,22 @@ def _render_returns_heatmap() -> None:
 
     # Data rows
     tbody = ""
-    for label, sym, returns in rows_data:
+    for row_i, (label, sym, returns) in enumerate(rows_data):
         is_vix = sym == "^VIX"
-        # Pad with blanks if fewer days than max
         padded = [None] * (n_days - len(returns)) + returns
         cells  = ""
-        for pct in padded:
+        for col_j, pct in enumerate(padded):
+            delay = f"{(row_i * n_days + col_j) * 0.012:.3f}s"
             if pct is None:
-                cells += f'<td style="background:#111;padding:4px 3px"></td>'
+                cells += f'<td style="background:#111;padding:4px 3px;animation:hm-cell-in .3s {delay} both"></td>'
             else:
                 bg  = _cell_bg(pct, is_vix)
                 txt = _cell_txt(pct)
                 cells += (
                     f'<td style="background:{bg};{_M}font-size:7.5px;font-weight:700;'
                     f'color:{_C["text"]};text-align:center;padding:4px 3px;'
-                    f'border-right:1px solid #111;white-space:nowrap">{txt}</td>'
+                    f'border-right:1px solid #111;white-space:nowrap;'
+                    f'animation:hm-cell-in .3s {delay} both">{txt}</td>'
                 )
         tbody += (
             f'<tr style="border-bottom:1px solid #111">'
@@ -2947,7 +2952,7 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
             f'<span style="{_M}font-size:9px;font-weight:700;color:{bc}">{score:.0f}</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:5px;border-radius:2px">'
-            f'<div style="width:{bw}%;height:5px;background:{bc};border-radius:2px;opacity:.85"></div>'
+            f'<div class="hm-bar-grow" style="width:{bw}%;height:5px;background:{bc};border-radius:2px;opacity:.85"></div>'
             f'</div>'
             f'</div>'
         )
@@ -3386,7 +3391,15 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
         op   = 1.0 if lag == peak_lag else 0.5
         x    = ML + i * gap + gap / 2 - bw / 2
         y    = MT + PH / 2 - bh / 2 if cor >= 0 else MT + PH / 2
-        bars_svg += f'<rect x="{x:.1f}" y="{y:.1f}" width="{bw:.1f}" height="{bh:.1f}" fill="{col}" opacity="{op}" rx="1"/>'
+        delay = f"{i * 0.08:.2f}s"
+        bars_svg += (
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{bw:.1f}" height="{bh:.1f}" '
+            f'fill="{col}" rx="1">'
+            f'<animate attributeName="opacity" from="0" to="{op}" dur="0.45s" fill="freeze" begin="{delay}"/>'
+            f'<animate attributeName="height" from="0" to="{bh:.1f}" dur="0.55s" '
+            f'calcMode="spline" keySplines="0.22 1 0.36 1" fill="freeze" begin="{delay}"/>'
+            f'</rect>'
+        )
 
     # midline
     mid_y = MT + PH / 2
