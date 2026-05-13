@@ -1670,12 +1670,13 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
     if not recs:
         recs.append({
             "color": _C["info"], "tag": "▶ READING ORDER",
-            "label": "Correlation → Spillover → Overview",
-            "page_id": "correlation",
+            "label": "Start the 7-step flow",
+            "page_id": "watchlist",
             "text": (
-                "Risk environment is contained. Follow the reading guide above: "
-                "<b>Correlation</b> (channel open?) → <b>Spillover</b> (direction?) → "
-                "<b>Overview</b> (regime classification and AI briefing)."
+                "Risk environment is contained. Start the reading guide: "
+                "<b>Watchlist</b> (step 2 · which commodities moved?) → "
+                "<b>Correlation</b> (step 4b · channel open?) → "
+                "<b>Overview</b> (step 5 · regime classification)."
             ),
         })
 
@@ -1726,12 +1727,13 @@ _JUMP_GROUPS = [
     {
         "group":   "Core Analysis",
         "color":   _C["info"],
-        "caption": "Read these in order on every session — they answer the four core research questions.",
+        "caption": "Follow this sequence on every session — steps 2 → 3 → 4b → 4a → 5.",
         "items": [
-            ("Correlation",    "correlation",    "Step 4b · Is the equity-commodity channel open?", "daily", "1"),
-            ("Spillover",      "spillover",      "Step 4a · Which market is statistically leading?", "deep", "2"),
-            ("Overview",       "overview",       "Step 5 · What correlation regime are we in?",      "daily", "3"),
-            ("War Impact Map", "war_impact_map", "Step 3 · Which equity markets are exposed?",       "alert", "4"),
+            ("Watchlist",      "watchlist",      "Step 2 · Which commodity markets moved?",          "daily", "1"),
+            ("Exposure",       "exposure_scoring","Step 3 · Which equity markets are exposed?",       "deep",  "2"),
+            ("Correlation",    "correlation",    "Step 4b · Is the equity-commodity channel open?",   "daily", "3"),
+            ("Spillover",      "spillover",      "Step 4a · Which market is statistically leading?",  "deep",  "4"),
+            ("Overview",       "overview",       "Step 5 · What correlation regime are we in?",       "daily", "5"),
         ],
     },
     {
@@ -1739,12 +1741,12 @@ _JUMP_GROUPS = [
         "color":   _GOLD,
         "caption": "Open when a conflict score rises, a scenario changes, or a headline appears.",
         "items": [
-            ("Conflict Intel",   "conflict_intelligence", "CIS/TPS scorecard per active conflict",    "alert", "5"),
-            ("Threat vs Act",    "threat_act_monitor",    "Live news GPR · threat vs. action signal", "alert", "6"),
-            ("Transmission",     "transmission_matrix",   "Which channels are open and at what pressure", "alert", "7"),
-            ("Exposure Scoring", "exposure_scoring",      "Step 3 · Per-asset scenario-adjusted score", "deep", "8"),
-            ("Geopolitical",     "geopolitical",          "Historical event windows · GPR timeline",  "deep",  "9"),
-            ("Strait Watch",     "strait_watch",          "Chokepoint disruption risk monitor",        "alert", "10"),
+            ("Conflict Intel",   "conflict_intelligence", "Step 1 · Active shocks · CIS/TPS scorecard", "alert", "6"),
+            ("Threat vs Act",    "threat_act_monitor",    "Live news GPR · threat vs. action signal",   "alert", "7"),
+            ("Transmission",     "transmission_matrix",   "Which channels are open and at what pressure","alert", "8"),
+            ("War Impact Map",   "war_impact_map",        "Geographic conflict risk · chokepoints",      "alert", "9"),
+            ("Geopolitical",     "geopolitical",          "Historical event windows · GPR timeline",    "deep",  "10"),
+            ("Strait Watch",     "strait_watch",          "Chokepoint disruption risk monitor",          "alert", "11"),
         ],
     },
     {
@@ -1752,10 +1754,11 @@ _JUMP_GROUPS = [
         "color":   _C["safe"],
         "caption": "Use after reading the analysis pages — for scenario simulation and AI conclusions.",
         "items": [
-            ("Scenario Engine", "scenario_engine", "What-if shock simulation under active scenario", "deep",  "11"),
-            ("Stress Test",     "stress_test",     "Portfolio drawdown under commodity shock events", "deep", "12"),
-            ("Trade Ideas",     "trade_ideas",     "Step 6 · AI-generated illustrative structures",  "daily", "13"),
-            ("Macro Dashboard", "macro_dashboard", "Rates · inflation · yield curve context",         "daily", "14"),
+            ("Scenario Engine",  "scenario_engine", "What-if shock simulation under active scenario",  "deep",  "12"),
+            ("Stress Test",      "stress_test",     "Portfolio drawdown under commodity shock events",  "deep",  "13"),
+            ("Trade Ideas",      "trade_ideas",     "Step 6 · AI-generated illustrative structures",   "daily", "14"),
+            ("Intel Briefing",   "insights",        "Step 7 · Plain-language verdicts with full evidence","daily","15"),
+            ("Macro Dashboard",  "macro_dashboard", "Rates · inflation · yield curve context",          "daily", "16"),
         ],
     },
 ]
@@ -1796,7 +1799,7 @@ def _render_quickjump() -> None:
         unsafe_allow_html=True,
     )
 
-    # One flat 4-col grid for all 14 modules
+    # One flat 4-col grid for all 16 modules
     cols = st.columns(4, gap="small")
     for i, (label, page_id, desc, tag, _sc, g_color) in enumerate(all_items):
         tag_label, tag_cls = _TAG_META.get(tag, ("", ""))
