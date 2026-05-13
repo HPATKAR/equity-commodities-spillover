@@ -76,7 +76,7 @@ def _ph(title: str, accent: str = "") -> str:
 def _card(title: str, body: str, accent: str = "") -> None:
     """Render a panel card with consistent header and surface styling."""
     st.markdown(
-        f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
+        f'<div class="hm-card-anim" style="background:{_C["card2"]};border:1px solid {_C["border"]};'
         f'border-left:2px solid rgba(207,185,145,0.22);'
         f'padding:.7rem .75rem .6rem;margin-bottom:10px">'
         f'{_ph(title, accent)}'
@@ -193,6 +193,31 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
   font-size:10px!important;font-weight:700!important;letter-spacing:.08em!important;
   text-transform:uppercase!important;color:#8890a1!important}
 [data-testid="stHorizontalBlock"]{gap:.4rem!important}
+/* ── ANIMATIONS ───────────────────────────────────────────────────── */
+@keyframes hm-card-in{0%{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes hm-line-in{0%{stroke-dashoffset:1400}to{stroke-dashoffset:0}}
+@keyframes hm-dot-live{0%,100%{opacity:.9}50%{opacity:.28}}
+@keyframes hm-cell-in{0%{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+@keyframes hm-score-breathe{0%,100%{opacity:1}50%{opacity:.52}}
+@keyframes hm-bar-grow-x{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes hm-live-blink{0%,49%{opacity:1}50%,99%{opacity:0}}
+@keyframes hm-badge-pop{0%{opacity:0;transform:scale(.7)}80%{transform:scale(1.08)}to{opacity:1;transform:scale(1)}}
+/* Card entrance */
+.hm-card-anim{animation:hm-card-in .48s ease-out both}
+/* SVG sparkline draw-in */
+.hm-line-in{stroke-dasharray:1400;animation:hm-line-in 1.4s ease-out forwards}
+/* Live dot pulse on end dots */
+.hm-dot-live{animation:hm-dot-live 2.8s ease-in-out infinite}
+/* Cell / rect stagger fade */
+.hm-cell-in{animation:hm-cell-in .32s ease-out both;transform-box:fill-box;transform-origin:center}
+/* GRS score breathing */
+.hm-score-breathe{animation:hm-score-breathe 3.5s ease-in-out infinite}
+/* HTML bar grow (scaleX from left) */
+.hm-bar-grow{transform-origin:left center;animation:hm-bar-grow-x .78s cubic-bezier(0.22,1,0.36,1) both}
+/* LIVE badge blink */
+.hm-live-blink{animation:hm-live-blink 1.6s step-start infinite}
+/* Nav badge pop-in */
+.hm-badge-pop{animation:hm-badge-pop .4s ease-out both}
 </style>"""
 
 
@@ -2292,10 +2317,10 @@ def _render_correlation_pulse(
         f'<line x1="0" y1="{thr_y:.1f}" x2="{W}" y2="{thr_y:.1f}" '
         f'stroke="{_C["danger"]}" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
         # correlation sparkline
-        f'<polyline points="{pts}" fill="none" stroke="{cur_c}" '
+        f'<polyline class="hm-line-in" points="{pts}" fill="none" stroke="{cur_c}" '
         f'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>'
-        # terminal dot
-        f'<circle cx="{W:.1f}" cy="{dot_y:.1f}" r="3.5" fill="{cur_c}"/>'
+        # terminal dot — pulsing "live" indicator
+        f'<circle class="hm-dot-live" cx="{W:.1f}" cy="{dot_y:.1f}" r="3.5" fill="{cur_c}"/>'
         # axis labels
         f'<text x="0" y="{H + 11}" font-size="8" fill="#333333" '
         f'font-family="JetBrains Mono,monospace">60d ago</text>'
@@ -2728,9 +2753,9 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         px, py = _pt(i, val)
         lbl_html += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{col}" opacity="0.9"/>'
 
-    # Score in center
+    # Score in center — breathing animation signals live data
     ctr_html = (
-        f'<text x="{cx}" y="{cy - 5}" font-size="15" fill="{fill_c}" '
+        f'<text class="hm-score-breathe" x="{cx}" y="{cy - 5}" font-size="15" fill="{fill_c}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{score:.0f}</text>'
         f'<text x="{cx}" y="{cy + 9}" font-size="7" fill="{_C["muted"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle">GRS</text>'
@@ -2742,7 +2767,8 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         f'style="width:100%;height:auto;display:block;overflow:visible">'
         + grid_html + spoke_html
         + f'<polygon points="{data_pts}" fill="{fill_c}" fill-opacity="0.13" '
-        f'stroke="{fill_c}" stroke-width="1.5" stroke-linejoin="round"/>'
+        f'stroke="{fill_c}" stroke-width="1.5" stroke-linejoin="round" '
+        f'style="animation:hm-card-in .8s ease-out both"/>'
         + lbl_html + ctr_html
         + f'</svg>'
     )
@@ -2999,9 +3025,12 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
     for i, v in enumerate(vals):
         c = _REG_COL.get(v, "#333")
         x = i * (cell_w + gap)
-        # fade older cells slightly
         op = 0.45 + 0.55 * (i / max(N - 1, 1))
-        cells += f'<rect x="{x:.1f}" y="0" width="{cell_w:.1f}" height="{H}" fill="{c}" opacity="{op:.2f}" rx="1"/>'
+        delay = f"{i * 0.008:.3f}s"
+        cells += (
+            f'<rect class="hm-cell-in" x="{x:.1f}" y="0" width="{cell_w:.1f}" height="{H}" '
+            f'fill="{c}" opacity="{op:.2f}" rx="1" style="animation-delay:{delay}"/>'
+        )
 
     # current regime badge
     cur_v   = int(vals[-1]) if vals else 1
@@ -3139,10 +3168,11 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
     svg = (
         f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">'
         f'{bands}{lines}'
-        f'<polygon points="{fill_pts}" fill="{s_col}" opacity=".08"/>'
-        f'<polyline points="{pts}" fill="none" stroke="{s_col}" '
+        f'<polygon points="{fill_pts}" fill="{s_col}" opacity=".08" '
+        f'style="animation:hm-card-in .9s ease-out both"/>'
+        f'<polyline class="hm-line-in" points="{pts}" fill="none" stroke="{s_col}" '
         f'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>'
-        f'<circle cx="{dot_x:.1f}" cy="{dot_y:.1f}" r="3" fill="{s_col}" opacity="1"/>'
+        f'<circle class="hm-dot-live" cx="{dot_x:.1f}" cy="{dot_y:.1f}" r="3.5" fill="{s_col}"/>'
         f'</svg>'
     )
 
@@ -3291,7 +3321,7 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
             f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}{avg:.2f}%</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:5px;border-radius:2px;overflow:hidden">'
-            f'<div style="float:{bar_dir};width:{bar_w:.0f}%;height:5px;'
+            f'<div class="hm-bar-grow" style="float:{bar_dir};width:{bar_w:.0f}%;height:5px;'
             f'background:{col};border-radius:2px;opacity:.85"></div>'
             f'</div>'
             f'</div>'
@@ -3426,8 +3456,10 @@ def _render_yield_curve_snap() -> None:
     for i, (t, v) in enumerate(present):
         dx, dy = _fx(i), _fy(v)
         la = "start" if i == 0 else "end" if i == len(present)-1 else "middle"
+        is_last = (i == len(present) - 1)
+        dot_cls = 'class="hm-dot-live"' if is_last else 'opacity=".9"'
         dots += (
-            f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="2.5" fill="{line_col}" opacity=".9"/>'
+            f'<circle {dot_cls} cx="{dx:.1f}" cy="{dy:.1f}" r="2.5" fill="{line_col}"/>'
             f'<text x="{dx:.1f}" y="{H-2}" font-size="7.5" fill="{_C["muted"]}" text-anchor="middle" '
             f'font-family="JetBrains Mono,monospace">{t}</text>'
             f'<text x="{dx:.1f}" y="{dy-6:.1f}" font-size="7" fill="{_C["label"]}" text-anchor="{la}" '
@@ -3444,8 +3476,9 @@ def _render_yield_curve_snap() -> None:
     svg = (
         f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">'
         f'{grid}'
-        f'<polygon points="{fill_pts}" fill="{line_col}" opacity=".07"/>'
-        f'<polyline points="{pts}" fill="none" stroke="{line_col}" stroke-width="1.8" '
+        f'<polygon points="{fill_pts}" fill="{line_col}" opacity=".07" '
+        f'style="animation:hm-card-in .9s ease-out both"/>'
+        f'<polyline class="hm-line-in" points="{pts}" fill="none" stroke="{line_col}" stroke-width="1.8" '
         f'stroke-linecap="round" stroke-linejoin="round"/>'
         f'{dots}'
         f'</svg>'
@@ -3512,7 +3545,7 @@ def _render_vol_trio() -> None:
             f'</div>'
             # gauge track
             f'<div style="position:relative;background:#1a1a1a;height:5px;border-radius:3px">'
-            f'<div style="position:absolute;left:0;top:0;width:{bar_w}%;height:5px;'
+            f'<div class="hm-bar-grow" style="position:absolute;left:0;top:0;width:{bar_w}%;height:5px;'
             f'background:{rc};border-radius:3px;opacity:.8"></div>'
             f'</div>'
             # range labels
@@ -3647,7 +3680,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     # ── centre circle: GRS score ──────────────────────────────────────────────
     centre = (
         f'<circle cx="{CX}" cy="{CY}" r="22" fill="#070707" stroke="{g_col}" stroke-width="2"/>'
-        f'<text x="{CX}" y="{CY - 4}" font-size="14" font-weight="700" fill="{g_col}" '
+        f'<text class="hm-score-breathe" x="{CX}" y="{CY - 4}" font-size="14" font-weight="700" fill="{g_col}" '
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">{grs:.0f}</text>'
         f'<text x="{CX}" y="{CY + 10}" font-size="7" fill="{_C["muted"]}" '
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">GRS</text>'
@@ -3777,15 +3810,15 @@ def _render_risk_convergence(
         n = len(vals)
         pts  = _pts(vals)
         fill = _fill(vals)
-        areas += f'<polygon points="{fill}" fill="{col}" opacity=".12"/>'
+        areas += f'<polygon points="{fill}" fill="{col}" opacity=".12" style="animation:hm-card-in .9s ease-out both"/>'
         lines += (
-            f'<polyline points="{pts}" fill="none" stroke="{col}" '
+            f'<polyline class="hm-line-in" points="{pts}" fill="none" stroke="{col}" '
             f'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>'
         )
         ex = ML + PW
         ey = MT + (1 - cur/100) * PH
         end_dots += (
-            f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{col}"/>'
+            f'<circle class="hm-dot-live" cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{col}"/>'
             f'<text x="{ex-5}" y="{ey:.1f}" font-size="7" fill="{col}" '
             f'dominant-baseline="middle" text-anchor="end" font-family="JetBrains Mono,monospace">'
             f'{cur:.0f}</text>'
@@ -3906,9 +3939,12 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
                 # track
                 f'<rect x="{PAD_X + LABEL_W}" y="{y}" width="{BAR_MAX}" height="{BAR_H}" '
                 f'fill="{_C["card2"]}" rx="2"/>'
-                # bar
+                # bar — animated grow from center
                 f'<rect x="{bx:.1f}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
-                f'fill="{col}" opacity="0.85" rx="2"/>'
+                f'fill="{col}" opacity="0.85" rx="2">'
+                f'<animate attributeName="width" from="0" to="{bw:.1f}" dur="0.65s" '
+                f'calcMode="spline" keySplines="0.22 1 0.36 1" fill="freeze" begin="{i*0.05:.2f}s"/>'
+                f'</rect>'
                 # label
                 f'<text x="{PAD_X + LABEL_W - 4}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="7.5" '
@@ -3999,12 +4035,13 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
                 y   = PAD + i * CELL
                 op  = 0.25 if i == j else max(0.3, abs(v) * 0.9)
                 txt = "1.0" if i == j else f"{v:+.2f}"[1:] if abs(v) >= 0.1 else f"{v:+.2f}"
+                delay = f"{(i * n + j) * 0.018:.3f}s"
                 cells += (
-                    f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" '
-                    f'fill="{col}" opacity="{op:.2f}" rx="2"/>'
+                    f'<rect class="hm-cell-in" x="{x}" y="{y}" width="{CELL}" height="{CELL}" '
+                    f'fill="{col}" opacity="{op:.2f}" rx="2" style="animation-delay:{delay}"/>'
                     f'<text x="{x + CELL//2}" y="{y + CELL//2 + 4}" '
                     f'font-family="JetBrains Mono,monospace" font-size="7.5" '
-                    f'fill="white" text-anchor="middle">{txt}</text>'
+                    f'fill="white" text-anchor="middle" style="animation:hm-card-in .4s {delay} both">{txt}</text>'
                 )
 
         row_labels = ""
@@ -4122,6 +4159,7 @@ def _render_risk_signal_waterfall(
         for i, (lbl, pct, col, note) in enumerate(signals):
             y    = PAD_Y + i * (BAR_H + GAP)
             bw   = max(pct / 100 * BAR_W, 2)
+            delay = f"{i * 0.07:.2f}s"
             bars += (
                 # label
                 f'<text x="{LABEL_W - 6}" y="{y + BAR_H//2 + 4}" '
@@ -4130,9 +4168,12 @@ def _render_risk_signal_waterfall(
                 # track
                 f'<rect x="{LABEL_W}" y="{y}" width="{BAR_W}" height="{BAR_H}" '
                 f'fill="{_C["card2"]}" rx="2"/>'
-                # bar
+                # bar — animated grow from left
                 f'<rect x="{LABEL_W}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
-                f'fill="{col}" opacity="0.85" rx="2"/>'
+                f'fill="{col}" opacity="0.85" rx="2">'
+                f'<animate attributeName="width" from="0" to="{bw:.1f}" dur="0.65s" '
+                f'calcMode="spline" keySplines="0.22 1 0.36 1" fill="freeze" begin="{delay}"/>'
+                f'</rect>'
                 # note
                 f'<text x="{LABEL_W + BAR_W + 5}" y="{y + BAR_H//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
@@ -4301,7 +4342,10 @@ def _render_geo_event_timeline(conflict_results) -> None:
                 f'<rect x="{LABEL_W}" y="{y + 5}" width="{BAR_MAX}" height="10" '
                 f'fill="{_C["card2"]}" rx="2"/>'
                 f'<rect x="{LABEL_W}" y="{y + 5}" width="{bw:.1f}" height="10" '
-                f'fill="{col1}" opacity="0.8" rx="2"/>'
+                f'fill="{col1}" opacity="0.8" rx="2">'
+                f'<animate attributeName="width" from="0" to="{bw:.1f}" dur="0.65s" '
+                f'calcMode="spline" keySplines="0.22 1 0.36 1" fill="freeze" begin="{i*0.06:.2f}s"/>'
+                f'</rect>'
                 f'<line x1="{tps_x:.1f}" y1="{y + 3}" x2="{tps_x:.1f}" y2="{y + 17}" '
                 f'stroke="{_GOLD}" stroke-width="1.5" opacity="0.9"/>'
                 f'<text x="{LABEL_W + BAR_MAX + 4}" y="{y + 13}" '
@@ -4328,6 +4372,35 @@ def _render_geo_event_timeline(conflict_results) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
+
+@st.fragment(run_every="1m")
+def _live_heartbeat() -> None:
+    """Fires every 60 s; triggers a full page rerun to pull fresh data.
+    Suppressed on the initial page render to avoid an immediate loop."""
+    import time
+    _key = "_home_live_loaded_at"
+    _now = time.time()
+    _loaded_at = st.session_state.get(_key, 0.0)
+    if _loaded_at == 0.0:
+        st.session_state[_key] = _now   # first render — just record, don't rerun
+    elif (_now - _loaded_at) >= 55:     # 55s buffer covers render latency
+        st.session_state[_key] = _now
+        st.rerun()
+
+    ts = datetime.datetime.now().strftime("%H:%M:%S")
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:6px;'
+        f'padding:.18rem .5rem;margin-bottom:.3rem;'
+        f'border:1px solid {_C["border"]};background:#060606;width:fit-content">'
+        f'<span class="hm-live-blink" style="display:inline-block;width:6px;height:6px;'
+        f'border-radius:50%;background:{_C["safe"]}"></span>'
+        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
+        f'color:{_C["safe"]}">LIVE</span>'
+        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">· refreshed {ts} · auto 60s</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
 
 def page_home(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(_STYLE, unsafe_allow_html=True)
@@ -4472,6 +4545,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     # § 1  Masthead — full-width above 3-col
     _render_masthead(conflict_agg)
+    _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
 
     # § 1.1  Analytical reading guide — orients first-time reviewers to the workflow
     _steps = [
