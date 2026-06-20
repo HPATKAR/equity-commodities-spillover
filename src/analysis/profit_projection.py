@@ -69,7 +69,7 @@ _ASSET_PARAMS: dict[str, dict] = {
 
     # Equities
     "S&P 500":                {"vol": 18.0, "base_return":  8.0},
-    "NASDAQ 100":             {"vol": 24.0, "base_return":  9.0},
+    "Nasdaq 100":             {"vol": 24.0, "base_return":  9.0},
     "Eurostoxx 50":           {"vol": 22.0, "base_return":  5.0},
     "DAX":                    {"vol": 22.0, "base_return":  5.0},
     "CAC 40":                 {"vol": 21.0, "base_return":  5.0},
@@ -91,7 +91,12 @@ _ASSET_PARAMS: dict[str, dict] = {
     "JPY/USD":                {"vol": 9.5,  "base_return":  0.0},
     "CHF/USD":                {"vol": 7.5,  "base_return":  0.0},
     "USD/INR":                {"vol": 6.0,  "base_return":  3.0},
-    "US Dollar Index (DXY)":  {"vol": 8.0,  "base_return":  0.0},
+    "DXY (Dollar Index)":     {"vol": 8.0,  "base_return":  0.0},
+
+    # Fixed Income — additional
+    "IG Corporate (LQD)":     {"vol":  8.0, "base_return":  3.5},  # investment-grade bonds
+    "EM USD Bonds (EMB)":     {"vol": 12.0, "base_return":  4.5},  # EM USD sovereign/quasi
+    "US 1-3Y Treasury (SHY)": {"vol":  2.5, "base_return":  4.5},  # short-duration safety
 }
 
 _DEFAULT_PARAMS = {"vol": 25.0, "base_return": 3.0}
@@ -111,45 +116,75 @@ _SCENARIO_RETURN_ADJUSTMENTS: dict[str, dict[str, float]] = {
         "Nifty 50": -8.0, "MSCI EM": -10.0,
         "Wheat": +15.0, "Corn": +10.0,
         "US 20Y+ Treasury (TLT)": +5.0,
+        "IG Corporate (LQD)":     +4.0,
+        "US 1-3Y Treasury (SHY)": +3.0,
+        "EM USD Bonds (EMB)":    -14.0,
+        "DXY (Dollar Index)":    +6.0,
+        "Shanghai Comp":         -12.0,
+        "Nasdaq 100":             -8.0,
     },
     "de_escalation":   {
         "WTI Crude Oil": -12.0, "Brent Crude": -10.0, "Natural Gas": -15.0,
         "Gold": -8.0, "Silver": -6.0,
         "S&P 500": +6.0, "Eurostoxx 50": +8.0,
         "Wheat": -8.0, "Corn": -5.0,
+        # India/EM: oil falling + risk easing = CAD improvement → equity re-rating
+        "Nifty 50": +7.0, "Sensex": +7.0,
+        "EM USD Bonds (EMB)":    +8.0,
+        "DXY (Dollar Index)":    -4.0,
+        "Shanghai Comp":         +8.0,
+        "Nikkei 225":            +5.0,   # Japan imports oil; falling oil = margin relief
     },
     "supply_shock":    {
         "WTI Crude Oil": +22.0, "Brent Crude": +20.0, "Natural Gas": +25.0,
         "Heating Oil": +20.0, "Gasoline (RBOB)": +18.0,
         "Gold": +8.0, "Wheat": +18.0, "Corn": +12.0,
         "S&P 500": -10.0, "Eurostoxx 50": -14.0,
+        # India/Japan are major energy importers — supply shock hurts both
+        "Nifty 50": -9.0, "Sensex": -9.0, "Nikkei 225": -10.0,
         "TIPS / Inflation (TIP)": +6.0,
+        "EM USD Bonds (EMB)":    -6.0,
     },
     "sanctions_shock": {
         "Nickel": +15.0, "Aluminum": +10.0, "Palladium": +18.0,
         "Gold": +10.0, "Silver": +7.0,
         "EUR/USD": -5.0,
         "S&P 500": -6.0, "Eurostoxx 50": -10.0,
+        "Nifty 50": -4.0, "Sensex": -4.0,  # EM contagion risk
     },
     "shipping_shock":  {
         "WTI Crude Oil": +14.0, "Brent Crude": +12.0,
         "Natural Gas": +15.0, "Heating Oil": +12.0,
         "Wheat": +10.0, "Corn": +8.0, "Soybeans": +7.0,
         "Copper": -4.0, "Iron Ore": -5.0,
+        # India/Japan: shipping disruption raises import costs
+        "Nifty 50": -5.0, "Sensex": -5.0, "Nikkei 225": -6.0,
     },
     "risk_off":        {
         "Gold": +10.0, "Silver": +7.0,
         "US 20Y+ Treasury (TLT)": +8.0,
-        "US Dollar Index (DXY)": +5.0,
-        "S&P 500": -12.0, "NASDAQ 100": -15.0, "Eurostoxx 50": -14.0,
+        "DXY (Dollar Index)": +5.0,
+        "S&P 500": -12.0, "Nasdaq 100": -18.0, "Eurostoxx 50": -14.0,
         "HY Corporate (HYG)": -8.0,
         "MSCI EM": -14.0,
+        "Nifty 50": -10.0, "Sensex": -10.0,  # EM equities sell off in risk-off
+        "IG Corporate (LQD)":     +5.0,
+        "US 1-3Y Treasury (SHY)": +4.0,
+        "EM USD Bonds (EMB)":    -10.0,
+        "Shanghai Comp":         -14.0,
     },
     "recovery":        {
-        "Copper": +12.0, "S&P 500": +10.0, "NASDAQ 100": +12.0,
+        "Copper": +12.0, "S&P 500": +10.0, "Nasdaq 100": +14.0,
         "Eurostoxx 50": +9.0, "MSCI EM": +11.0,
         "WTI Crude Oil": +6.0,
         "Gold": -5.0, "US 20Y+ Treasury (TLT)": -4.0,
+        # India/EM: global recovery + stable oil = strong equity upside
+        "Nifty 50": +10.0, "Sensex": +10.0,
+        "Nikkei 225": +8.0,
+        "EM USD Bonds (EMB)":    +7.0,
+        "DXY (Dollar Index)":    -5.0,
+        "IG Corporate (LQD)":    -2.0,
+        "Shanghai Comp":         +10.0,
     },
     "base": {},  # no adjustment
 }
@@ -164,6 +199,52 @@ _SCENARIO_PROBS: dict[str, float] = {
     "shipping_shock":  0.08,
     "risk_off":        0.06,
     "recovery":        0.04,
+}
+
+# Scenario probability weights conditioned on the current correlation regime.
+# Regime 3 (Crisis): dramatically higher escalation/risk_off, near-zero recovery/de_escalation.
+# Regime 0 (Decorrelated): opposite — recovery/de_escalation dominate.
+_REGIME_SCENARIO_WEIGHTS: dict[int, dict[str, float]] = {
+    0: {  # Decorrelated — benign macro conditions
+        "base":            0.42,
+        "recovery":        0.18,
+        "de_escalation":   0.14,
+        "escalation":      0.10,
+        "supply_shock":    0.06,
+        "sanctions_shock": 0.05,
+        "shipping_shock":  0.04,
+        "risk_off":        0.01,
+    },
+    1: {  # Normal — balanced
+        "base":            0.32,
+        "recovery":        0.10,
+        "de_escalation":   0.12,
+        "escalation":      0.17,
+        "supply_shock":    0.11,
+        "sanctions_shock": 0.09,
+        "shipping_shock":  0.06,
+        "risk_off":        0.03,
+    },
+    2: {  # Elevated — stress building
+        "base":            0.18,
+        "recovery":        0.04,
+        "de_escalation":   0.06,
+        "escalation":      0.28,
+        "supply_shock":    0.18,
+        "sanctions_shock": 0.12,
+        "shipping_shock":  0.08,
+        "risk_off":        0.06,
+    },
+    3: {  # Crisis — adverse scenarios dominate
+        "base":            0.10,
+        "recovery":        0.02,
+        "de_escalation":   0.03,
+        "escalation":      0.35,
+        "supply_shock":    0.20,
+        "sanctions_shock": 0.14,
+        "shipping_shock":  0.10,
+        "risk_off":        0.06,
+    },
 }
 
 
@@ -185,14 +266,16 @@ def _leg_return(
     adj_map  = _SCENARIO_RETURN_ADJUSTMENTS.get(scenario_id, {})
     adj      = adj_map.get(asset, 0.0)
 
-    base_r   = params["base_return"] * holding_years
+    # Long legs: capture unconditional drift + scenario alpha
+    # Short legs: zero unconditional drift — pair trade alpha comes from spread divergence,
+    # not from betting against the long-run equity premium
+    is_long  = direction.lower() == "long"
+    base_r   = (params["base_return"] if is_long else 0.0) * holding_years
     annual_v = params["vol"] * vol_mult
     period_v = annual_v * math.sqrt(holding_years)
 
-    # Geo scenarios amplify scenario adjustment
     total_r = base_r + adj * geo_mult * holding_years
-
-    sign = 1.0 if direction.lower() == "long" else -1.0
+    sign    = 1.0 if is_long else -1.0
     return round(total_r * sign, 2), round(period_v, 2)
 
 
@@ -248,6 +331,7 @@ def payoff_table(
     trade: dict,
     holding_years: float = _DEFAULT_HOLDING_YEARS,
     current_scenario_id: Optional[str] = None,
+    current_regime: int = 1,
 ) -> list[dict]:
     """
     Compute expected P&L for the trade under every scenario.
@@ -260,7 +344,8 @@ def payoff_table(
         current_scenario_id = get_scenario_id()
 
     rows = []
-    for sid, prob in _SCENARIO_PROBS.items():
+    regime_weights = _REGIME_SCENARIO_WEIGHTS.get(current_regime, _SCENARIO_PROBS)
+    for sid, prob in regime_weights.items():
         stats = _trade_stats(trade, sid, holding_years)
         sc    = SCENARIOS.get(sid, SCENARIOS["base"])
         rows.append({
@@ -281,6 +366,7 @@ def project_trade(
     trade: dict,
     holding_years: float = _DEFAULT_HOLDING_YEARS,
     current_scenario_id: Optional[str] = None,
+    current_regime: int = 1,
 ) -> dict:
     """
     Full projection for a trade. Returns summary metrics + payoff table.
@@ -303,7 +389,7 @@ def project_trade(
     if current_scenario_id is None:
         current_scenario_id = get_scenario_id()
 
-    table = payoff_table(trade, holding_years, current_scenario_id)
+    table = payoff_table(trade, holding_years, current_scenario_id, current_regime)
 
     pnls  = [r["expected_pnl"]      for r in table]
     probs = [r["prob"]              for r in table]

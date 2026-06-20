@@ -14,6 +14,7 @@ Filters:
   - max_qc_flags: reject ideas with too many quality flags
   - conflict_ids: only show ideas linked to selected conflict IDs (or "all")
   - country_perspective: filter by user's home market context (Global/US/India/Europe/Japan/UK)
+  - investor_styles: filter and re-rank by investing philosophy archetype
 
 Usage:
     from src.analysis.trade_filter import apply_filters, build_filter_ui
@@ -38,7 +39,158 @@ DEFAULTS = {
     "max_qc_flags":      2,
     "conflict_ids":      [],        # empty = all conflicts pass
     "country_perspective": "Global",
+    "investor_styles":   [],        # empty = no style filter
 }
+
+
+# ── Investor Style Archetypes ─────────────────────────────────────────────────
+#
+# Each archetype encodes:
+#   managers    — canonical list of money managers who practice this style
+#   categories  — trade categories naturally aligned with this style
+#   description — one-line summary shown in the filter UI
+#   icon        — single emoji for compact display
+#
+# SCORING LOGIC (used in _score_investor_style):
+#   +2 pts per matching manager in trade["investor_lens"]
+#   +1 pt  per matching category in style["categories"]
+#   +1 pt  if trade is "generated" (live geo) and style supports geopolitical ideas
+#   Minimum score > 0 to pass. Trades re-ranked by score within filtered set.
+
+_INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
+    "Global Macro Liquidity": {
+        "icon":        "⚡",
+        "managers": [
+            "Stanley Druckenmiller", "David Tepper", "Shankar Sharma", "S Naren",
+            "Kerr Neilson",
+        ],
+        "categories":  ["Macro", "Dollar Cycle", "Fixed Income", "Asia Divergence"],
+        "description": "Druckenmiller · Naren · Sharma — follow liquidity, central banks & macro cycles",
+        "geo_boost":   True,   # geo-driven ideas get +1
+    },
+    "Max Pessimism Contrarian": {
+        "icon":        "🔄",
+        "managers": [
+            "John Templeton", "Howard Marks", "Mohnish Pabrai", "Prem Watsa",
+            "Anthony Bolton", "Guy Spier", "Robert Vinall",
+        ],
+        "categories":  ["Crisis Hedge", "Geopolitical", "India/EM", "Dollar Cycle"],
+        "description": "Templeton · Marks · Pabrai · Watsa — buy maximum pessimism, cap downside",
+        "geo_boost":   True,
+    },
+    "Capital Cycle / GARP": {
+        "icon":        "📈",
+        "managers": [
+            "Peter Lynch", "Rakesh Jhunjhunwala", "Prashant Jain", "Sunil Singhania",
+            "Ramdeo Agrawal", "Sir John Neff", "Kenneth Andrade", "Samir Arora",
+        ],
+        "categories":  ["Growth", "India/EM"],
+        "description": "Lynch · Jhunjhunwala · Jain · Agrawal — growth at a reasonable price, capital cycles",
+        "geo_boost":   False,
+    },
+    "Distressed Credit / Cycle Top": {
+        "icon":        "💳",
+        "managers": [
+            "Howard Marks", "Seth Klarman", "David Tepper", "Bill Ackman",
+            "Walter Schloss", "Peter Cundill",
+        ],
+        "categories":  ["Private Credit", "Fixed Income", "Crisis Hedge"],
+        "description": "Marks · Klarman · Tepper — credit cycle awareness, distressed debt to equity",
+        "geo_boost":   False,
+    },
+    "Monastic Quality Compounder": {
+        "icon":        "🏛",
+        "managers": [
+            "Warren Buffett", "Charlie Munger", "Saurabh Mukherjea", "Pulak Prasad",
+            "Chuck Akre", "Terry Smith", "Nick Train", "Tom Gayner",
+        ],
+        "categories":  ["Growth"],
+        "description": "Buffett · Munger · Mukherjea · Prasad — high-moat businesses, near-zero churn",
+        "geo_boost":   False,
+    },
+    "Asia & EM Macro Specialist": {
+        "icon":        "🌏",
+        "managers": [
+            "Shankar Sharma", "S Naren", "Prashant Jain", "Cheah Cheng Hye",
+            "Kerr Neilson", "Samir Arora", "Ramdeo Agrawal",
+        ],
+        "categories":  ["Asia Divergence", "India/EM", "Dollar Cycle", "Geopolitical"],
+        "description": "Sharma · Naren · Jain · Neilson — Asian markets, EM rotation, India macro",
+        "geo_boost":   True,
+    },
+    "Fed Pivot / Duration Play": {
+        "icon":        "🏦",
+        "managers": [
+            "Stanley Druckenmiller", "S Naren", "Howard Marks", "Prem Watsa",
+        ],
+        "categories":  ["Fixed Income", "Macro"],
+        "description": "Druckenmiller · Naren · Marks — duration + gold around Fed cycle turns",
+        "geo_boost":   False,
+    },
+    "Geopolitical Risk Arbitrage": {
+        "icon":        "🌍",
+        "managers": [
+            "John Templeton", "Shankar Sharma", "Prem Watsa", "Mohnish Pabrai",
+            "Howard Marks",
+        ],
+        "categories":  ["Geopolitical", "Crisis Hedge", "Asia Divergence", "India/EM"],
+        "description": "Templeton · Sharma · Watsa — geo events create the entry, fundamentals drive the return",
+        "geo_boost":   True,
+    },
+}
+
+# ── Investor style scoring ────────────────────────────────────────────────────
+
+def score_investor_style(trade: dict, style_name: str) -> int:
+    """
+    Score how strongly a trade aligns with a given investing style archetype.
+
+    Scoring:
+      +2 per matching manager in trade["investor_lens"]
+      +1 per matching category in style["categories"]
+      +1 if style has geo_boost and trade is conflict-generated
+    Returns integer >= 0. Zero means no alignment.
+    """
+    style = _INVESTOR_STYLE_ARCHETYPES.get(style_name)
+    if not style:
+        return 0
+
+    score = 0
+    style_managers = set(style["managers"])
+    style_cats     = set(style.get("categories", []))
+
+    # Manager overlap
+    trade_managers = trade.get("investor_lens", [])
+    score += sum(2 for m in trade_managers if m in style_managers)
+
+    # Category alignment
+    if trade.get("category", "") in style_cats:
+        score += 1
+
+    # Geo boost for live conflict-driven ideas
+    if style.get("geo_boost") and trade.get("generated"):
+        score += 1
+
+    return score
+
+
+def score_all_styles(trade: dict, selected_styles: list[str]) -> int:
+    """
+    Aggregate style score across all selected styles.
+    Uses max-score-per-style (not additive) to avoid double-counting.
+    A trade with perfect match to ONE style scores higher than partial matches to many.
+    """
+    if not selected_styles:
+        return 0
+    return max(score_investor_style(trade, s) for s in selected_styles)
+
+
+def _passes_investor_style(trade: dict, selected_styles: list[str]) -> bool:
+    """Return True if the trade has ANY alignment (score > 0) with ANY selected style."""
+    if not selected_styles:
+        return True
+    return score_all_styles(trade, selected_styles) > 0
+
 
 # ── Country perspective asset relevance map ───────────────────────────────────
 # For each country perspective, defines asset subsets that are most relevant.
@@ -226,12 +378,15 @@ def apply_filters(
 ) -> list[dict]:
     """
     Apply all active filters to a list of trade candidates.
-    Returns filtered list, sorted by confidence desc.
+
+    When investor_styles is set, trades are filtered to those with any alignment
+    and then re-ranked by style-alignment score (primary) and confidence (secondary).
+    This surfaces the most philosophy-coherent ideas first.
 
     filters dict keys (all optional, defaults from DEFAULTS):
         min_confidence, min_beta, min_sas, direction, category,
         regime_match, scenario_match, max_qc_flags,
-        conflict_ids, country_perspective
+        conflict_ids, country_perspective, investor_styles
     """
     if filters is None:
         filters = {}
@@ -246,6 +401,7 @@ def apply_filters(
     max_qc_flags     = int(filters.get("max_qc_flags",        DEFAULTS["max_qc_flags"]))
     conflict_ids     = list(filters.get("conflict_ids",       DEFAULTS["conflict_ids"]))
     country_persp    = filters.get("country_perspective",     DEFAULTS["country_perspective"])
+    investor_styles  = list(filters.get("investor_styles",    DEFAULTS["investor_styles"]))
 
     result = []
     for t in candidates:
@@ -269,9 +425,23 @@ def apply_filters(
             continue
         if not _passes_min_sas(t, min_sas, asset_exposure):
             continue
+        if not _passes_investor_style(t, investor_styles):
+            continue
         result.append(t)
 
-    result.sort(key=lambda t: float(t.get("confidence", 0.5)), reverse=True)
+    # Primary sort: style alignment score (when styles selected) desc,
+    # secondary: confidence desc.
+    if investor_styles:
+        result.sort(
+            key=lambda t: (
+                score_all_styles(t, investor_styles),
+                float(t.get("confidence", 0.5)),
+            ),
+            reverse=True,
+        )
+    else:
+        result.sort(key=lambda t: float(t.get("confidence", 0.5)), reverse=True)
+
     return result
 
 
@@ -369,6 +539,31 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
                 ),
             )
 
+        # ── Row 1b: Investor philosophy filter ────────────────────────────
+        st.markdown(
+            '<div style="border-top:1px solid #1e1e1e;margin:8px 0 6px"></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            'color:#555960;letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px">'
+            'INVESTING PHILOSOPHY — FILTER BY MONEY MANAGER ARCHETYPE</p>',
+            unsafe_allow_html=True,
+        )
+        selected_styles = st.multiselect(
+            "Investing philosophy",
+            options=list(_INVESTOR_STYLE_ARCHETYPES.keys()),
+            default=[],
+            format_func=lambda s: f"{_INVESTOR_STYLE_ARCHETYPES[s]['icon']}  {s}  —  {_INVESTOR_STYLE_ARCHETYPES[s]['description']}",
+            placeholder="All philosophies (leave empty for no restriction)",
+            key=f"{key_prefix}_investor_styles",
+            help=(
+                "Filter and re-rank trades by alignment with a money manager's archetype. "
+                "Scoring: +2 per matching manager, +1 per aligned category, +1 geo-driven bonus. "
+                "Trades are re-ranked by style score when any philosophy is selected."
+            ),
+        )
+
         # ── Row 2: Quality criteria ────────────────────────────────────────
         st.markdown(
             '<div style="border-top:1px solid #1e1e1e;margin:8px 0 6px"></div>',
@@ -386,7 +581,8 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
         category = c3.selectbox(
             "Category",
             ["all", "Geopolitical", "Crisis Hedge", "Macro", "FX",
-             "Commodity", "Fixed Income", "India/EM", "Private Credit"],
+             "Commodity", "Fixed Income", "India/EM", "Private Credit",
+             "Dollar Cycle", "Asia Divergence"],
             key=f"{key_prefix}_category",
         )
         c4, c5, c6, c7 = st.columns(4)
@@ -408,6 +604,14 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
 
         # ── Active filter summary ──────────────────────────────────────────
         _active_summary = []
+        if selected_styles:
+            _icons = " ".join(
+                _INVESTOR_STYLE_ARCHETYPES[s]["icon"] for s in selected_styles[:3]
+            )
+            _style_label = ", ".join(selected_styles[:2])
+            if len(selected_styles) > 2:
+                _style_label += f" +{len(selected_styles) - 2} more"
+            _active_summary.append(f"Style: {_icons} {_style_label}")
         if selected_conflict_ids:
             _active_summary.append(
                 f"Wars: {', '.join(selected_war_labels[:3])}"
@@ -451,4 +655,5 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
         "max_qc_flags":        int(max_flags),
         "conflict_ids":        selected_conflict_ids,
         "country_perspective": country_perspective,
+        "investor_styles":     selected_styles,
     }

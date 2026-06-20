@@ -1394,4 +1394,87 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
+    # ── Trade Idea Methodology ────────────────────────────────────────────────
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;'
+        'letter-spacing:.12em;text-transform:uppercase;color:#CFB991;margin:2rem 0 .5rem">'
+        'TRADE IDEA METHODOLOGY</p>',
+        unsafe_allow_html=True,
+    )
+    with st.expander("Backtest & Projected P&L — Framework, Assumptions, and Limitations", expanded=False):
+        st.markdown(
+            """
+<div style="font-family:'DM Sans',sans-serif;font-size:12px;color:#cccccc;line-height:1.7">
+
+<p style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+letter-spacing:.12em;color:#CFB991;text-transform:uppercase;margin-bottom:4px">
+HISTORICAL BACKTEST</p>
+
+The backtest simulates entries triggered by **regime transition events** — specifically the first day
+the 60-day average cross-asset correlation series enters a qualifying regime (Elevated or Crisis for
+hedge trades; Normal or Decorrelated for growth trades). This rising-edge signal approximates the
+moment a practitioner would receive the regime alert.
+
+**Holding period** is calibrated to the trade thesis rather than fixed at 30 days:
+- Tactical trades (no stated horizon): **30 trading days**
+- Medium-term trades (6–12 months stated): **126 trading days (~6 months)**
+- Structural macro trades (6–18 months): **126 trading days** (conservative lower bound)
+- Long-horizon trades (12–24 months): **252 trading days (1 year)**
+
+**Portfolio P&L per trade** is computed as a conviction-weighted sum of leg returns:
+- Base allocation: equal weight (1/n) per leg
+- SAS modifier: legs where the asset's Scenario-Adjusted Score (SAS) aligns with the trade
+  direction receive a proportional boost (up to +50%)
+- Confidence modifier: scales all weights by (0.5 + confidence score)
+- Weights are normalised to sum to 1.0
+
+**Win rate, Avg Return, Sharpe, and Max Drawdown** are derived from the distribution of
+trade-level P&Ls across all historical entry signals.
+
+<p style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+letter-spacing:.12em;color:#CFB991;text-transform:uppercase;margin:12px 0 4px">
+PROJECTED P&L (SCENARIO MODEL)</p>
+
+The projected P&L is a **forward-looking scenario-probability-weighted estimate**, not a
+backtest result. It answers: "given the current correlation regime, what is the expected
+return of this trade across all plausible macroeconomic scenarios?"
+
+**Leg return model:**
+- **Long legs** receive: `base_return × holding_years + scenario_adjustment × geo_multiplier × holding_years`
+- **Short legs** receive zero unconditional drift. The alpha in a pair trade is the *spread
+  divergence* under a scenario, not betting against the long-run equity risk premium.
+  Including the ERP would cause all short-equity legs to show −2%/quarter unconditionally —
+  a model artefact, not a trade reality.
+
+**Regime-conditioned scenario weights** replace the naive flat probability distribution.
+A trade evaluated in a Crisis regime (correlation ≥ 80th percentile) is assigned:
+- Escalation: 35% | Supply shock: 20% | Sanctions: 14% | Shipping shock: 10%
+- Base: 10% | Risk-off: 6% | De-escalation: 3% | Recovery: 2%
+
+A Normal regime trade uses a more balanced distribution (Base 32%, Escalation 17%, etc.).
+This ensures crisis hedges are not penalised by de-escalation/recovery scenarios that have
+near-zero probability during an active stress regime.
+
+<p style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+letter-spacing:.12em;color:#e67e22;text-transform:uppercase;margin:12px 0 4px">
+KNOWN LIMITATIONS</p>
+
+- **Entry signal is regime-only.** The backtest fires on every regime entry, not on the full
+  confluence of conditions stated in the trade entry field (e.g., "DXY at 3-year high AND EM
+  PMI >50"). Actual entry discipline would improve results.
+- **Macro trades require patience.** A 126-day backtest horizon still understates the full
+  6–18 month thesis. The backtest should be read as "early-period performance," not total return.
+- **Scenario P&L is a model prior.** Asset return distributions, scenario adjustments, and
+  geo multipliers are calibrated from historical ranges — not a forecast. They are updated as
+  the macro environment evolves.
+- **No transaction costs, slippage, or carry.** ETF bid-ask spreads, borrowing costs on short
+  legs, and FX hedging costs are excluded. Real-world returns will be modestly lower.
+- **All ideas are illustrative.** No trade should be implemented without independent risk
+  assessment, position sizing, and regulatory review.
+
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
     _page_footer()

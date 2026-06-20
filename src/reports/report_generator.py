@@ -62,10 +62,14 @@ W, H = A4
 REGIME_NAMES  = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
 REGIME_COLORS = {0: GREEN, 1: GRAY, 2: ORANGE, 3: RED}
 CAT_COLORS    = {
-    "Crisis Hedge": RED,
-    "Geopolitical": ORANGE,
-    "Macro":        BLUE,
-    "Growth":       GREEN,
+    "Crisis Hedge":    RED,
+    "Geopolitical":    ORANGE,
+    "Macro":           BLUE,
+    "Growth":          GREEN,
+    "Dollar Cycle":    colors.HexColor("#1abc9c"),
+    "Asia Divergence": colors.HexColor("#9b59b6"),
+    "Fixed Income":    colors.HexColor("#2471a3"),
+    "India/EM":        colors.HexColor("#d35400"),
 }
 
 # hex versions for matplotlib
@@ -630,12 +634,13 @@ def _trade_card(trade: dict) -> list:
             ]),
         )
 
+    risk_text = trade.get("risk") or trade.get("stop", "—")
     eer_row = Table(
-        [[_sub("ENTRY TRIGGER", trade["entry"],
+        [[_sub("ENTRY TRIGGER", trade.get("entry", "—"),
                colors.HexColor("#f9f8f6"), AGED),
-          _sub("EXIT SIGNAL",   trade["exit"],
+          _sub("EXIT SIGNAL",   trade.get("exit", "—"),
                colors.HexColor("#f9f8f6"), GRAY),
-          _sub("KEY RISKS",     trade["risk"],
+          _sub("KEY RISKS / STOP", risk_text,
                colors.HexColor("#fff8f8"), RED)]],
         colWidths=[col_w/3, col_w/3, col_w/3],
         style=TableStyle([
@@ -648,8 +653,31 @@ def _trade_card(trade: dict) -> list:
         ]),
     )
 
+    # Extra detail row for new-style trades (target / invalidation / hold period)
+    extra_rows: list = []
+    if trade.get("target") or trade.get("invalidation") or trade.get("holding_period"):
+        extra_rows.append(
+            Table(
+                [[_sub("TARGET",       trade.get("target",         "—"),
+                        colors.HexColor("#f3faf3"), GREEN),
+                  _sub("INVALIDATION", trade.get("invalidation",   "—"),
+                        colors.HexColor("#f5f5ff"), BLUE),
+                  _sub("HOLD PERIOD",  trade.get("holding_period", "—"),
+                        colors.HexColor("#f9f8f6"), GRAY)]],
+                colWidths=[col_w/3, col_w/3, col_w/3],
+                style=TableStyle([
+                    ("TOPPADDING",    (0,0), (-1,-1), 0),
+                    ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+                    ("LEFTPADDING",   (0,0), (-1,-1), 0),
+                    ("RIGHTPADDING",  (0,0), (-1,-1), 0),
+                    ("BOX",           (0,0), (-1,-1), 0.5, LGRAY),
+                    ("LINEBEFORE",    (1,0), (2,-1),  0.5, LGRAY),
+                ]),
+            )
+        )
+
     return [KeepTogether([header_row, name_row, rationale_row,
-                          eer_row, Spacer(1, 14)])]
+                          eer_row, *extra_rows, Spacer(1, 14)])]
 
 
 # ── Main generator ──────────────────────────────────────────────────────────
