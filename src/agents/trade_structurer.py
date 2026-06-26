@@ -39,16 +39,18 @@ _SYSTEM = (
     "spillover/regime data — not in general market commentary.\n\n"
 
     "MANDATORY OUTPUT REQUIREMENTS:\n"
-    "1. Specific exchange tickers for all instruments (e.g. XOM, GLD, USO, SPY, TLT, JETS, QQQ)\n"
-    "2. Options structure alternative where volatility regime supports it "
-    "(e.g. 'Buy XOM $115C 45DTE / Sell $125C — debit spread ~$3.20')\n"
-    "3. Entry price reference anchored to a technical or fundamental trigger\n"
-    "4. Quantified upside target as % with approximate price level\n"
-    "5. Hard stop-loss as % from entry with a model-derived condition\n"
-    "6. Evidence must cite at least two specific metric values from the context "
-    "(e.g. 'CIS=72, TPS=58, SAS(Gold)=84, regime=Elevated')\n"
-    "7. ONLY proceed if your confidence is HIGH — if not, set confidence_level to 'Medium' or 'Low' "
-    "so the system can filter it out automatically\n\n"
+    "1. SPECIFIC INDIVIDUAL STOCKS — use the live stock prices provided in the context. "
+    "Example output: 'Buy XOM at $113.45, target $129.00 (+13.7%), stop $107.50 (−5.2%)'. "
+    "Do NOT produce vague ideas like 'Long energy sector' or 'Long XLE'. "
+    "Name 1-2 actual stocks from the price list, anchor to their live price.\n"
+    "2. Options alternative tied to the specific stock "
+    "(e.g. 'Buy XOM $115C 45DTE / Sell $125C — debit spread est. ~$3.20')\n"
+    "3. entry_price_ref = live price ± a technical trigger (e.g. 'XOM $113.45 on next open')\n"
+    "4. upside_pct = specific dollar target AND % (e.g. '$129.00 (+13.7%) in 3-5 weeks')\n"
+    "5. stop_loss = specific dollar level AND % (e.g. '$107.50 (−5.2%) hard stop')\n"
+    "6. evidence must cite ≥2 model metrics from the context "
+    "(e.g. 'CIS=72, TPS=58, regime=Elevated, XOM live=$113.45')\n"
+    "7. ONLY generate if confidence is HIGH — otherwise mark 'Medium' or 'Low' to be filtered\n\n"
 
     "This is for academic research — not investment advice. No portfolio sizing or leverage.\n"
     "Respond ONLY with a valid JSON object — no markdown fences, no extra text."
@@ -109,15 +111,16 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
 
     base_prompt = (
         f"QUANTITATIVE SIGNAL CONTEXT:\n{context_str}\n\n"
-        "Using the Diebold-Yilmaz spillover signals and regime data above, generate ONE "
-        "high-conviction, academically defensible cross-asset trade idea. Requirements:\n"
-        "• Name specific ETFs or stocks with exchange tickers (e.g. XOM, GLD, USO, SPY, TLT)\n"
-        "• Anchor entry to a technical/fundamental trigger derived from the signals\n"
-        "• Quantify upside (%) and hard stop-loss (%) with model-derived conditions\n"
-        "• Include an options structure where regime volatility supports it\n"
-        "• Evidence field MUST cite at least two metric values from the context above\n"
-        "• Set confidence_level = 'High — [reason]' only if genuinely high conviction; "
-        "otherwise 'Medium — [reason]' or 'Low — [reason]' so the system filters it out\n"
+        "Using the Diebold-Yilmaz spillover signals, regime data, and LIVE STOCK PRICES above, "
+        "generate ONE high-conviction individual stock trade idea. Rules:\n"
+        "• Pick 1-2 specific stocks FROM THE PRICE LIST above (e.g. XOM, CVX, LMT, NEM, DAL)\n"
+        "• entry_price_ref = their exact live price from the list (e.g. 'Buy XOM at $113.45')\n"
+        "• upside_pct = concrete target price in dollars AND % (e.g. '$129.00 (+13.7%)')\n"
+        "• stop_loss = concrete stop price in dollars AND % (e.g. '$107.50 (−5.2%)')\n"
+        "• options_structure = a specific options play on the same stock\n"
+        "• evidence MUST cite the live price AND ≥2 model metrics (CIS, TPS, regime, etc.)\n"
+        "• If the regime/signal data does NOT clearly support a specific stock play, set "
+        "confidence_level = 'Medium — [reason]' or 'Low — [reason]' and the system discards it\n"
         "• Academic research only — no portfolio sizing, no leverage\n"
         f"Respond with a JSON object matching this structure:\n{_SCHEMA_HINT}\n"
         "Return ONLY the JSON object — no markdown fences, no extra text."
@@ -222,11 +225,16 @@ def run(
     if peer.get("geopolitical_analyst"):
         parts.append(f"Geo Intel: {str(peer['geopolitical_analyst'])[:120]}")
 
+    # Individual stock prices block (appended last so it's prominent in the prompt)
+    stock_block = context.get("stock_prices_text", "")
+
     if not parts:
         set_status(_AGENT, "idle")
         return {}
 
     ctx_str = "\n".join(parts)
+    if stock_block:
+        ctx_str = ctx_str + "\n\n" + stock_block
 
     if not provider:
         set_status(_AGENT, "monitoring")

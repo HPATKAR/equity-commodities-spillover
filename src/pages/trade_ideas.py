@@ -545,6 +545,74 @@ _CATEGORY_COLORS = {
     "Asia Divergence": "#9b59b6",
 }
 
+# ── Individual stock universe for AI Trade Structurer ─────────────────────────
+# Curated by sector: most relevant to geopolitical & cross-asset spillover signals.
+# The AI receives live prices for these so it can produce specific entry/target/stop levels.
+_STOCK_UNIVERSE: dict[str, dict[str, str]] = {
+    # Energy — most sensitive to Hormuz/Russia/OPEC supply shocks
+    "XOM":  {"name": "ExxonMobil",          "sector": "Energy"},
+    "CVX":  {"name": "Chevron",             "sector": "Energy"},
+    "COP":  {"name": "ConocoPhillips",      "sector": "Energy"},
+    "SLB":  {"name": "SLB (Schlumberger)",  "sector": "Energy"},
+    "OXY":  {"name": "Occidental Petroleum","sector": "Energy"},
+    # Defense / Aerospace — direct geo-risk beneficiary
+    "LMT":  {"name": "Lockheed Martin",     "sector": "Defense"},
+    "RTX":  {"name": "RTX (Raytheon)",      "sector": "Defense"},
+    "NOC":  {"name": "Northrop Grumman",    "sector": "Defense"},
+    "GD":   {"name": "General Dynamics",    "sector": "Defense"},
+    # Airlines — geo-risk victim (fuel cost + demand)
+    "DAL":  {"name": "Delta Air Lines",     "sector": "Airlines"},
+    "UAL":  {"name": "United Airlines",     "sector": "Airlines"},
+    # Gold miners — amplified gold exposure
+    "NEM":  {"name": "Newmont",             "sector": "Gold Mining"},
+    "GOLD": {"name": "Barrick Gold",        "sector": "Gold Mining"},
+    # Industrial metals — China/supply chain sensitive
+    "FCX":  {"name": "Freeport-McMoRan",    "sector": "Copper/Mining"},
+    # Agriculture / fertilizers — Wheat/corn supply shock
+    "MOS":  {"name": "Mosaic (Fertilizers)","sector": "Agriculture"},
+    "ADM":  {"name": "Archer-Daniels-Midland","sector": "Agriculture"},
+    # Tech — macro/risk-off sensitive
+    "AAPL": {"name": "Apple",               "sector": "Tech"},
+    "MSFT": {"name": "Microsoft",           "sector": "Tech"},
+    "NVDA": {"name": "NVIDIA",              "sector": "Tech"},
+    # Consumer Staples — safe-haven domestic
+    "KO":   {"name": "Coca-Cola",           "sector": "Consumer Staples"},
+    "WMT":  {"name": "Walmart",             "sector": "Consumer Staples"},
+}
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _fetch_stock_prices() -> dict[str, float]:
+    """Fetch latest closing prices for the curated stock universe. Cached 15 min."""
+    try:
+        import yfinance as yf
+        tickers = list(_STOCK_UNIVERSE.keys())
+        raw = yf.download(tickers, period="5d", progress=False, auto_adjust=True)["Close"]
+        if raw.empty:
+            return {}
+        latest = raw.ffill().iloc[-1]
+        return {str(t): round(float(v), 2) for t, v in latest.items() if not np.isnan(v)}
+    except Exception:
+        return {}
+
+
+def _format_stock_context(prices: dict[str, float]) -> str:
+    """Format stock prices into a context block grouped by sector."""
+    if not prices:
+        return ""
+    lines: list[str] = ["INDIVIDUAL STOCK REFERENCE PRICES (live, use these for specific entry/target/stop):"]
+    by_sector: dict[str, list[str]] = {}
+    for ticker, info in _STOCK_UNIVERSE.items():
+        price = prices.get(ticker)
+        if price is None:
+            continue
+        sector = info["sector"]
+        by_sector.setdefault(sector, []).append(f"{ticker} ({info['name']}) ${price:.2f}")
+    for sector, items in by_sector.items():
+        lines.append(f"  {sector}: {', '.join(items)}")
+    return "\n".join(lines)
+
+
 _TI_STYLE = """<style>
 /* ── Trade Ideas Page Design System ────────────────────────── */
 .ti-card{border:1px solid #1e1e1e;background:#0d0d0d;margin-bottom:.6rem;overflow:hidden}
@@ -1630,6 +1698,14 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     _w5e = _eq_r3.iloc[-5:].sum()
                     _ts_ctx["worst_equity"]      = str(_w5e.idxmin())
                     _ts_ctx["worst_equity_ret"]  = float(_w5e.min()) * 100
+            except Exception:
+                pass
+
+            # Live individual stock prices for specific idea generation
+            try:
+                _stock_px = _fetch_stock_prices()
+                if _stock_px:
+                    _ts_ctx["stock_prices_text"] = _format_stock_context(_stock_px)
             except Exception:
                 pass
 
