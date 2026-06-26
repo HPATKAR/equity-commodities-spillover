@@ -545,48 +545,226 @@ _CATEGORY_COLORS = {
     "Asia Divergence": "#9b59b6",
 }
 
-# ── Individual stock universe for AI Trade Structurer ─────────────────────────
-# Curated by sector: most relevant to geopolitical & cross-asset spillover signals.
-# The AI receives live prices for these so it can produce specific entry/target/stop levels.
-_STOCK_UNIVERSE: dict[str, dict[str, str]] = {
-    # Energy — most sensitive to Hormuz/Russia/OPEC supply shocks
-    "XOM":  {"name": "ExxonMobil",          "sector": "Energy"},
-    "CVX":  {"name": "Chevron",             "sector": "Energy"},
-    "COP":  {"name": "ConocoPhillips",      "sector": "Energy"},
-    "SLB":  {"name": "SLB (Schlumberger)",  "sector": "Energy"},
-    "OXY":  {"name": "Occidental Petroleum","sector": "Energy"},
-    # Defense / Aerospace — direct geo-risk beneficiary
-    "LMT":  {"name": "Lockheed Martin",     "sector": "Defense"},
-    "RTX":  {"name": "RTX (Raytheon)",      "sector": "Defense"},
-    "NOC":  {"name": "Northrop Grumman",    "sector": "Defense"},
-    "GD":   {"name": "General Dynamics",    "sector": "Defense"},
-    # Airlines — geo-risk victim (fuel cost + demand)
-    "DAL":  {"name": "Delta Air Lines",     "sector": "Airlines"},
-    "UAL":  {"name": "United Airlines",     "sector": "Airlines"},
-    # Gold miners — amplified gold exposure
-    "NEM":  {"name": "Newmont",             "sector": "Gold Mining"},
-    "GOLD": {"name": "Barrick Gold",        "sector": "Gold Mining"},
-    # Industrial metals — China/supply chain sensitive
-    "FCX":  {"name": "Freeport-McMoRan",    "sector": "Copper/Mining"},
-    # Agriculture / fertilizers — Wheat/corn supply shock
-    "MOS":  {"name": "Mosaic (Fertilizers)","sector": "Agriculture"},
-    "ADM":  {"name": "Archer-Daniels-Midland","sector": "Agriculture"},
-    # Tech — macro/risk-off sensitive
-    "AAPL": {"name": "Apple",               "sector": "Tech"},
-    "MSFT": {"name": "Microsoft",           "sector": "Tech"},
-    "NVDA": {"name": "NVIDIA",              "sector": "Tech"},
-    # Consumer Staples — safe-haven domestic
-    "KO":   {"name": "Coca-Cola",           "sector": "Consumer Staples"},
-    "WMT":  {"name": "Walmart",             "sector": "Consumer Staples"},
+# ── S&P 500 stock universe for AI Trade Structurer ────────────────────────────
+# ~150 S&P 500 members organised by macro-relevant sector.
+# At call time, _select_sectors_for_signal() picks the 3-5 most relevant sectors
+# for the current regime/scenario so the AI context stays lean (~40 stocks max).
+# Format: ticker → (display_name, sector)
+_SP500_UNIVERSE: dict[str, tuple[str, str]] = {
+    # ── Energy: Integrated, E&P, Refining, OFS ──────────────────────────────
+    "XOM":  ("ExxonMobil",            "Energy"),
+    "CVX":  ("Chevron",               "Energy"),
+    "COP":  ("ConocoPhillips",        "Energy"),
+    "EOG":  ("EOG Resources",         "Energy"),
+    "OXY":  ("Occidental Petroleum",  "Energy"),
+    "DVN":  ("Devon Energy",          "Energy"),
+    "HES":  ("Hess",                  "Energy"),
+    "MRO":  ("Marathon Oil",          "Energy"),
+    "APA":  ("APA Corp",              "Energy"),
+    "FANG": ("Diamondback Energy",    "Energy"),
+    "PSX":  ("Phillips 66",           "Energy"),
+    "VLO":  ("Valero Energy",         "Energy"),
+    "MPC":  ("Marathon Petroleum",    "Energy"),
+    "SLB":  ("SLB (Schlumberger)",    "Energy"),
+    "HAL":  ("Halliburton",           "Energy"),
+    "BKR":  ("Baker Hughes",          "Energy"),
+    "KMI":  ("Kinder Morgan",         "Energy"),
+    "WMB":  ("Williams Companies",    "Energy"),
+    "OKE":  ("ONEOK",                 "Energy"),
+    # ── Defense & Aerospace ─────────────────────────────────────────────────
+    "LMT":  ("Lockheed Martin",       "Defense"),
+    "RTX":  ("RTX (Raytheon)",        "Defense"),
+    "NOC":  ("Northrop Grumman",      "Defense"),
+    "GD":   ("General Dynamics",      "Defense"),
+    "BA":   ("Boeing",                "Defense"),
+    "LHX":  ("L3Harris Technologies", "Defense"),
+    "HII":  ("Huntington Ingalls",    "Defense"),
+    "LDOS": ("Leidos",                "Defense"),
+    "TDG":  ("TransDigm Group",       "Defense"),
+    "AXON": ("Axon Enterprise",       "Defense"),
+    # ── Airlines ────────────────────────────────────────────────────────────
+    "DAL":  ("Delta Air Lines",       "Airlines"),
+    "UAL":  ("United Airlines",       "Airlines"),
+    "AAL":  ("American Airlines",     "Airlines"),
+    "LUV":  ("Southwest Airlines",    "Airlines"),
+    "ALK":  ("Alaska Air Group",      "Airlines"),
+    # ── Gold & Precious Metals Mining ───────────────────────────────────────
+    "NEM":  ("Newmont",               "Gold Mining"),
+    "GOLD": ("Barrick Gold",          "Gold Mining"),
+    "AEM":  ("Agnico Eagle",          "Gold Mining"),
+    "WPM":  ("Wheaton Precious Metals","Gold Mining"),
+    # ── Industrial Metals & Mining ──────────────────────────────────────────
+    "FCX":  ("Freeport-McMoRan",      "Industrial Metals"),
+    "NUE":  ("Nucor Steel",           "Industrial Metals"),
+    "CLF":  ("Cleveland-Cliffs",      "Industrial Metals"),
+    "X":    ("US Steel",              "Industrial Metals"),
+    "AA":   ("Alcoa",                 "Industrial Metals"),
+    "MP":   ("MP Materials",          "Industrial Metals"),
+    "SCCO": ("Southern Copper",       "Industrial Metals"),
+    # ── Agriculture & Fertilizers ───────────────────────────────────────────
+    "MOS":  ("Mosaic (Fertilizers)",  "Agriculture"),
+    "ADM":  ("Archer-Daniels-Midland","Agriculture"),
+    "BG":   ("Bunge Global",          "Agriculture"),
+    "CF":   ("CF Industries",         "Agriculture"),
+    "CTVA": ("Corteva Agriscience",   "Agriculture"),
+    "FMC":  ("FMC Corp",              "Agriculture"),
+    # ── Technology ──────────────────────────────────────────────────────────
+    "AAPL": ("Apple",                 "Tech"),
+    "MSFT": ("Microsoft",             "Tech"),
+    "NVDA": ("NVIDIA",                "Tech"),
+    "GOOGL":("Alphabet (A)",          "Tech"),
+    "META": ("Meta Platforms",        "Tech"),
+    "AMZN": ("Amazon",                "Tech"),
+    "TSLA": ("Tesla",                 "Tech"),
+    "AMD":  ("Advanced Micro Devices","Tech"),
+    "INTC": ("Intel",                 "Tech"),
+    "QCOM": ("Qualcomm",              "Tech"),
+    "AVGO": ("Broadcom",              "Tech"),
+    "CRM":  ("Salesforce",            "Tech"),
+    "ORCL": ("Oracle",                "Tech"),
+    "NOW":  ("ServiceNow",            "Tech"),
+    "ADBE": ("Adobe",                 "Tech"),
+    # ── Financials ──────────────────────────────────────────────────────────
+    "JPM":  ("JPMorgan Chase",        "Financials"),
+    "BAC":  ("Bank of America",       "Financials"),
+    "GS":   ("Goldman Sachs",         "Financials"),
+    "MS":   ("Morgan Stanley",        "Financials"),
+    "WFC":  ("Wells Fargo",           "Financials"),
+    "C":    ("Citigroup",             "Financials"),
+    "BLK":  ("BlackRock",             "Financials"),
+    "SCHW": ("Charles Schwab",        "Financials"),
+    "COF":  ("Capital One",           "Financials"),
+    "AXP":  ("American Express",      "Financials"),
+    "BX":   ("Blackstone",            "Financials"),
+    "KKR":  ("KKR & Co",              "Financials"),
+    # ── Healthcare ──────────────────────────────────────────────────────────
+    "UNH":  ("UnitedHealth Group",    "Healthcare"),
+    "LLY":  ("Eli Lilly",             "Healthcare"),
+    "JNJ":  ("Johnson & Johnson",     "Healthcare"),
+    "ABBV": ("AbbVie",                "Healthcare"),
+    "MRK":  ("Merck",                 "Healthcare"),
+    "PFE":  ("Pfizer",                "Healthcare"),
+    "TMO":  ("Thermo Fisher",         "Healthcare"),
+    "ABT":  ("Abbott Laboratories",   "Healthcare"),
+    "BMY":  ("Bristol-Myers Squibb",  "Healthcare"),
+    "AMGN": ("Amgen",                 "Healthcare"),
+    "ISRG": ("Intuitive Surgical",    "Healthcare"),
+    "VRTX": ("Vertex Pharmaceuticals","Healthcare"),
+    # ── Consumer Staples (safe-haven) ───────────────────────────────────────
+    "PG":   ("Procter & Gamble",      "Consumer Staples"),
+    "KO":   ("Coca-Cola",             "Consumer Staples"),
+    "PEP":  ("PepsiCo",               "Consumer Staples"),
+    "WMT":  ("Walmart",               "Consumer Staples"),
+    "COST": ("Costco",                "Consumer Staples"),
+    "MO":   ("Altria Group",          "Consumer Staples"),
+    "PM":   ("Philip Morris",         "Consumer Staples"),
+    "CL":   ("Colgate-Palmolive",     "Consumer Staples"),
+    "GIS":  ("General Mills",         "Consumer Staples"),
+    "KR":   ("Kroger",                "Consumer Staples"),
+    # ── Consumer Discretionary ──────────────────────────────────────────────
+    "MCD":  ("McDonald's",            "Consumer Discretionary"),
+    "SBUX": ("Starbucks",             "Consumer Discretionary"),
+    "NKE":  ("Nike",                  "Consumer Discretionary"),
+    "HD":   ("Home Depot",            "Consumer Discretionary"),
+    "TGT":  ("Target",                "Consumer Discretionary"),
+    "F":    ("Ford Motor",            "Consumer Discretionary"),
+    "GM":   ("General Motors",        "Consumer Discretionary"),
+    "TJX":  ("TJX Companies",         "Consumer Discretionary"),
+    "LOW":  ("Lowe's",                "Consumer Discretionary"),
+    "BKNG": ("Booking Holdings",      "Consumer Discretionary"),
+    "RCL":  ("Royal Caribbean",       "Consumer Discretionary"),
+    "CCL":  ("Carnival Corp",         "Consumer Discretionary"),
+    # ── Industrials ─────────────────────────────────────────────────────────
+    "CAT":  ("Caterpillar",           "Industrials"),
+    "DE":   ("Deere & Company",       "Industrials"),
+    "HON":  ("Honeywell",             "Industrials"),
+    "GE":   ("GE Aerospace",          "Industrials"),
+    "UPS":  ("United Parcel Service", "Industrials"),
+    "FDX":  ("FedEx",                 "Industrials"),
+    "ETN":  ("Eaton Corp",            "Industrials"),
+    "EMR":  ("Emerson Electric",      "Industrials"),
+    "PCAR": ("PACCAR",                "Industrials"),
+    "MMM":  ("3M",                    "Industrials"),
+    # ── Utilities (safe-haven, rate-sensitive) ───────────────────────────────
+    "NEE":  ("NextEra Energy",        "Utilities"),
+    "DUK":  ("Duke Energy",           "Utilities"),
+    "SO":   ("Southern Company",      "Utilities"),
+    "D":    ("Dominion Energy",       "Utilities"),
+    "EXC":  ("Exelon",                "Utilities"),
+    "AEP":  ("AEP",                   "Utilities"),
+    "SRE":  ("Sempra Energy",         "Utilities"),
+    # ── Materials ────────────────────────────────────────────────────────────
+    "LIN":  ("Linde",                 "Materials"),
+    "APD":  ("Air Products",          "Materials"),
+    "SHW":  ("Sherwin-Williams",      "Materials"),
+    "ECL":  ("Ecolab",                "Materials"),
+    "DOW":  ("Dow Inc",               "Materials"),
+    "DD":   ("DuPont",                "Materials"),
+    "PPG":  ("PPG Industries",        "Materials"),
+    # ── Real Estate ──────────────────────────────────────────────────────────
+    "AMT":  ("American Tower",        "Real Estate"),
+    "PLD":  ("Prologis",              "Real Estate"),
+    "EQIX": ("Equinix",               "Real Estate"),
+    "SPG":  ("Simon Property Group",  "Real Estate"),
+    # ── Communications ───────────────────────────────────────────────────────
+    "NFLX": ("Netflix",               "Communications"),
+    "DIS":  ("Walt Disney",           "Communications"),
+    "T":    ("AT&T",                  "Communications"),
+    "VZ":   ("Verizon",               "Communications"),
+    "CMCSA":("Comcast",               "Communications"),
 }
+
+# Maps signal context → which sectors to pull for the AI (keeps prompt lean)
+_SECTOR_SIGNAL_MAP: dict[str, list[str]] = {
+    "supply_shock":    ["Energy", "Agriculture", "Industrial Metals", "Defense"],
+    "escalation":      ["Energy", "Defense", "Gold Mining", "Airlines"],
+    "sanctions_shock": ["Energy", "Defense", "Financials", "Industrial Metals"],
+    "shipping_shock":  ["Energy", "Industrials", "Airlines", "Consumer Discretionary"],
+    "risk_off":        ["Gold Mining", "Consumer Staples", "Utilities", "Defense"],
+    "crisis":          ["Gold Mining", "Defense", "Consumer Staples", "Utilities"],
+    "de_escalation":   ["Airlines", "Consumer Discretionary", "Tech", "Industrials"],
+    "recovery":        ["Tech", "Consumer Discretionary", "Financials", "Industrials"],
+    "base":            ["Tech", "Financials", "Healthcare", "Consumer Discretionary"],
+    "default":         ["Energy", "Tech", "Financials", "Defense", "Healthcare"],
+}
+
+# Always included alongside signal-driven sectors (core reference)
+_ANCHOR_SECTORS = ["Energy", "Tech", "Financials"]
+
+
+def _select_sectors_for_signal(regime_level: int, scenario_id: str | None) -> list[str]:
+    """Pick 4-6 relevant sectors based on regime and active scenario."""
+    signal_sectors = _SECTOR_SIGNAL_MAP.get(scenario_id or "default",
+                                             _SECTOR_SIGNAL_MAP["default"])
+    # Crisis/Elevated regime always adds safe-haven and defense
+    if regime_level >= 3:
+        signal_sectors = list(dict.fromkeys(
+            signal_sectors + ["Gold Mining", "Defense", "Consumer Staples", "Utilities"]
+        ))
+    elif regime_level >= 2:
+        signal_sectors = list(dict.fromkeys(signal_sectors + ["Gold Mining", "Defense"]))
+
+    # Merge with anchor sectors (no duplicates, preserve order)
+    combined = list(dict.fromkeys(signal_sectors + _ANCHOR_SECTORS))
+    return combined[:7]  # cap at 7 sectors ≈ 40-50 stocks
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def _fetch_stock_prices() -> dict[str, float]:
-    """Fetch latest closing prices for the curated stock universe. Cached 15 min."""
+def _fetch_stock_prices(sectors: tuple[str, ...] = ()) -> dict[str, float]:
+    """
+    Fetch latest closing prices for S&P 500 universe stocks.
+    If sectors is provided, fetches only those sectors; otherwise fetches all.
+    Cached 15 min.
+    """
     try:
         import yfinance as yf
-        tickers = list(_STOCK_UNIVERSE.keys())
+        sector_set = set(sectors)
+        tickers = [
+            t for t, (_, s) in _SP500_UNIVERSE.items()
+            if not sector_set or s in sector_set
+        ]
+        if not tickers:
+            return {}
         raw = yf.download(tickers, period="5d", progress=False, auto_adjust=True)["Close"]
         if raw.empty:
             return {}
@@ -596,20 +774,26 @@ def _fetch_stock_prices() -> dict[str, float]:
         return {}
 
 
-def _format_stock_context(prices: dict[str, float]) -> str:
-    """Format stock prices into a context block grouped by sector."""
+def _format_stock_context(prices: dict[str, float], sectors: list[str]) -> str:
+    """Format stock prices compactly by sector for the AI context block."""
     if not prices:
         return ""
-    lines: list[str] = ["INDIVIDUAL STOCK REFERENCE PRICES (live, use these for specific entry/target/stop):"]
+    sector_set = set(sectors)
+    lines: list[str] = [
+        "S&P 500 STOCK REFERENCE PRICES (live — use these for specific entry/target/stop):"
+    ]
     by_sector: dict[str, list[str]] = {}
-    for ticker, info in _STOCK_UNIVERSE.items():
+    for ticker, (name, sector) in _SP500_UNIVERSE.items():
+        if sector_set and sector not in sector_set:
+            continue
         price = prices.get(ticker)
         if price is None:
             continue
-        sector = info["sector"]
-        by_sector.setdefault(sector, []).append(f"{ticker} ({info['name']}) ${price:.2f}")
-    for sector, items in by_sector.items():
-        lines.append(f"  {sector}: {', '.join(items)}")
+        by_sector.setdefault(sector, []).append(f"{ticker} ${price:.2f}")
+    for sector in sectors:
+        items = by_sector.get(sector)
+        if items:
+            lines.append(f"  {sector}: {', '.join(items)}")
     return "\n".join(lines)
 
 
@@ -1701,11 +1885,18 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             except Exception:
                 pass
 
-            # Live individual stock prices for specific idea generation
+            # Live S&P 500 stock prices — sector-filtered by current regime/scenario
             try:
-                _stock_px = _fetch_stock_prices()
+                _scenario_id: str | None = None
+                try:
+                    from src.analysis.scenario_state import get_scenario_id as _gsi
+                    _scenario_id = _gsi()
+                except Exception:
+                    pass
+                _sel_sectors = _select_sectors_for_signal(current, _scenario_id)
+                _stock_px    = _fetch_stock_prices(tuple(_sel_sectors))
                 if _stock_px:
-                    _ts_ctx["stock_prices_text"] = _format_stock_context(_stock_px)
+                    _ts_ctx["stock_prices_text"] = _format_stock_context(_stock_px, _sel_sectors)
             except Exception:
                 pass
 
