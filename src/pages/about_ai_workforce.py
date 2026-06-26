@@ -19,7 +19,7 @@ _M    = "font-family:'JetBrains Mono',monospace;"
 _STYLE = """<style>
 .aiw-label{
     font-family:'JetBrains Mono',monospace!important;
-    font-size:8px!important;font-weight:700!important;
+    font-size:0.50rem!important;font-weight:700!important;
     text-transform:uppercase;letter-spacing:.20em;
     color:#CFB991!important;display:block;
     border-bottom:1px solid #1e1e1e;
@@ -27,7 +27,7 @@ _STYLE = """<style>
 }
 .aiw-section-hdr{
     font-family:'JetBrains Mono',monospace!important;
-    font-size:8px!important;font-weight:700!important;
+    font-size:0.50rem!important;font-weight:700!important;
     text-transform:uppercase;letter-spacing:.18em;
     color:#CFB991!important;display:block;
     border-bottom:1px solid #1e1e1e;
@@ -47,7 +47,7 @@ _ROUNDS = [
         "n": 2, "label": "Round 2 - Synthesisers",
         "desc": "Consume Round 1 outputs. Cross-signal synthesis.",
         "agents": ["risk_officer", "commodities_specialist"],
-        "color": "#8E9AAA",
+        "color": "#8890a1",
     },
     {
         "n": 3, "label": "Round 3 - Action Layer",
