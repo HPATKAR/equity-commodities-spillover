@@ -19,14 +19,39 @@ from src.analysis.agent_state import (
 )
 
 _SYSTEM = (
-    "You are the AI Trade Structurer embedded in the Cross-Asset Spillover Monitor "
-    "at Purdue University Daniels School of Business. "
-    "You generate illustrative cross-asset trade structures for academic research purposes "
-    "based on regime, correlation, and spillover signals. "
-    "Be precise and quantitative. "
-    "You produce research illustrative trade structures — not investment advice. "
-    "Do not recommend portfolio sizing or leverage. Distinguish evidence from inference. "
-    "Respond only with a valid JSON object — no markdown, no extra text."
+    "You are the AI Trade Structurer embedded in the Cross-Asset Spillover Monitor, "
+    "a quantitative research platform built at Purdue University Daniels School of Business "
+    "by the MSF cohort for Prof. Cinder Zhang's MGMT 69000-120.\n\n"
+
+    "ANALYTICAL FRAMEWORK:\n"
+    "This system applies the Diebold & Yilmaz (2012, 2014) FEVD-based spillover methodology "
+    "to a 32-asset universe spanning equities, commodities, fixed income, and FX. "
+    "Regimes are classified into four states: Low Correlation (ρ < 0.25), "
+    "Normal (0.25–0.45), Elevated (0.45–0.60), and Crisis (ρ > 0.60). "
+    "Geopolitical risk is quantified via three scores:\n"
+    "  • CIS (Conflict Impact Score, 0–100): composite conflict intensity index\n"
+    "  • TPS (Transmission Pressure Score, 0–100): how actively the conflict propagates through trade/supply routes\n"
+    "  • SAS (Scenario-Adjusted Score, 0–100): asset-level exposure under the current macro scenario\n\n"
+
+    "YOUR TASK:\n"
+    "Using the quantitative signals provided in the context, generate ONE high-conviction, "
+    "academically defensible cross-asset trade idea. The idea must be grounded in the "
+    "spillover/regime data — not in general market commentary.\n\n"
+
+    "MANDATORY OUTPUT REQUIREMENTS:\n"
+    "1. Specific exchange tickers for all instruments (e.g. XOM, GLD, USO, SPY, TLT, JETS, QQQ)\n"
+    "2. Options structure alternative where volatility regime supports it "
+    "(e.g. 'Buy XOM $115C 45DTE / Sell $125C — debit spread ~$3.20')\n"
+    "3. Entry price reference anchored to a technical or fundamental trigger\n"
+    "4. Quantified upside target as % with approximate price level\n"
+    "5. Hard stop-loss as % from entry with a model-derived condition\n"
+    "6. Evidence must cite at least two specific metric values from the context "
+    "(e.g. 'CIS=72, TPS=58, SAS(Gold)=84, regime=Elevated')\n"
+    "7. ONLY proceed if your confidence is HIGH — if not, set confidence_level to 'Medium' or 'Low' "
+    "so the system can filter it out automatically\n\n"
+
+    "This is for academic research — not investment advice. No portfolio sizing or leverage.\n"
+    "Respond ONLY with a valid JSON object — no markdown fences, no extra text."
 )
 
 _AGENT = "trade_structurer"
@@ -34,28 +59,34 @@ _AGENT = "trade_structurer"
 # ── Pydantic output schema ────────────────────────────────────────────────────
 
 class TradeOutput(BaseModel):
-    trade_name:            str = Field(description="Short descriptive name, e.g. 'Long Gold / Short SPX'")
-    direction:             str = Field(description="Asset pair and direction, e.g. 'Long GLD / Short SPY'")
-    trigger:               str = Field(description="Specific entry condition with price level or signal trigger")
-    target:                str = Field(description="Exit level or time horizon")
-    risk:                  str = Field(description="Stop-loss level or hedge instrument")
+    trade_name:            str = Field(description="Short name, e.g. 'Long XOM / Short JETS'")
+    tickers:               str = Field(description="Specific tickers, e.g. 'Long XOM (ExxonMobil), CVX / Short JETS (airline ETF)'")
+    direction:             str = Field(description="Direction with tickers, e.g. 'Long XOM, CVX / Short JETS'")
+    trigger:               str = Field(description="Specific entry condition referencing the signal data provided")
+    entry_price_ref:       str = Field(description="Entry price reference, e.g. 'XOM ~$112 on breakout above 50d MA; GLD ~$215'")
+    upside_pct:            str = Field(description="% upside target with price level, e.g. '+12-18% → XOM $128-132'")
+    stop_loss:             str = Field(description="Stop-loss as % from entry, e.g. 'Stop XOM below $107 (−4.5%)'")
+    options_structure:     str = Field(description="Options alternative if applicable, e.g. 'Buy XOM $115C 45DTE / Sell $125C — debit ~$3.20; or GLD $210P'")
     rationale:             str = Field(description="2-3 sentences grounded in the provided market data")
-    evidence:              str = Field(description="Data points from the context that support this structure")
-    confidence_level:      str = Field(description="Low / Medium / High with one-line reason")
+    evidence:              str = Field(description="Specific data points from the context supporting this idea")
+    confidence_level:      str = Field(description="Must be 'High' — only generate when high confidence. Include one-line reason.")
     key_uncertainty:       str = Field(description="What the available data cannot resolve")
     invalidation_condition: str = Field(description="Market condition that would invalidate this view")
     alternative_view:      str = Field(description="One plausible alternative interpretation of the same data")
 
 
 _SCHEMA_HINT = """{
-  "trade_name":             "...",
-  "direction":              "Long X / Short Y",
-  "trigger":                "specific entry condition",
-  "target":                 "exit level or horizon",
-  "risk":                   "stop or hedge",
+  "trade_name":             "Long XOM / Short JETS",
+  "tickers":                "Long XOM (ExxonMobil), CVX (Chevron) / Short JETS (US Global Jets ETF)",
+  "direction":              "Long XOM, CVX / Short JETS",
+  "trigger":                "Hormuz disruption score >0.6 + WTI 5d return >+3%; enter on next open",
+  "entry_price_ref":        "XOM ~$112, CVX ~$152, JETS ~$18 (reference at signal date)",
+  "upside_pct":             "+12-18% → XOM $126-132, CVX $170-180 over 3-6 weeks",
+  "stop_loss":              "XOM closes below $107 (−4.5%); JETS rallies above $20 (+11%)",
+  "options_structure":      "Alt: Buy XOM $115C (45 DTE) / Sell $125C — debit ~$3.20; or USO $80C",
   "rationale":              "2-3 sentences from provided data",
-  "evidence":               "data points supporting this structure",
-  "confidence_level":       "Low/Medium/High — one-line reason",
+  "evidence":               "specific data points supporting this idea",
+  "confidence_level":       "High — [one-line reason]",
   "key_uncertainty":        "what the data cannot resolve",
   "invalidation_condition": "market condition that contradicts this view",
   "alternative_view":       "one plausible alternative interpretation"
@@ -77,10 +108,18 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
     from src.analysis.trace_logger import log_trace
 
     base_prompt = (
-        f"CURRENT MARKET CONTEXT:\n{context_str}\n\n"
-        "Generate ONE illustrative cross-asset trade structure supported by the data above. "
-        "This is for academic research purposes only — do not include portfolio sizing or leverage. "
-        f"Respond with a JSON object matching this structure exactly:\n{_SCHEMA_HINT}\n"
+        f"QUANTITATIVE SIGNAL CONTEXT:\n{context_str}\n\n"
+        "Using the Diebold-Yilmaz spillover signals and regime data above, generate ONE "
+        "high-conviction, academically defensible cross-asset trade idea. Requirements:\n"
+        "• Name specific ETFs or stocks with exchange tickers (e.g. XOM, GLD, USO, SPY, TLT)\n"
+        "• Anchor entry to a technical/fundamental trigger derived from the signals\n"
+        "• Quantify upside (%) and hard stop-loss (%) with model-derived conditions\n"
+        "• Include an options structure where regime volatility supports it\n"
+        "• Evidence field MUST cite at least two metric values from the context above\n"
+        "• Set confidence_level = 'High — [reason]' only if genuinely high conviction; "
+        "otherwise 'Medium — [reason]' or 'Low — [reason]' so the system filters it out\n"
+        "• Academic research only — no portfolio sizing, no leverage\n"
+        f"Respond with a JSON object matching this structure:\n{_SCHEMA_HINT}\n"
         "Return ONLY the JSON object — no markdown fences, no extra text."
     )
 
@@ -97,7 +136,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
                 client = _ant.Anthropic(api_key=api_key)
                 resp = client.messages.create(
                     model="claude-sonnet-4-6",
-                    max_tokens=650,
+                    max_tokens=1100,
                     messages=[{"role": "user", "content": prompt}],
                     system=_SYSTEM,
                 )
@@ -112,7 +151,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
                         {"role": "system", "content": _SYSTEM},
                         {"role": "user",   "content": prompt},
                     ],
-                    max_tokens=650, temperature=0.3,
+                    max_tokens=1100, temperature=0.3,
                     response_format={"type": "json_object"},
                 )
                 raw = resp.choices[0].message.content.strip()
@@ -219,22 +258,38 @@ def run(
     trade_name = trade_dict.get("trade_name", "Structured Trade Idea")
     direction  = trade_dict.get("direction", "")
     rationale  = trade_dict.get("rationale", "")
+    conf_level = trade_dict.get("confidence_level", "")
 
     # Reconstruct human-readable narrative from validated fields
     narrative = "\n".join([
         f"TRADE: {trade_name}",
+        f"TICKERS: {trade_dict.get('tickers', '')}",
         f"DIRECTION: {direction}",
         f"TRIGGER: {trade_dict.get('trigger', '')}",
-        f"TARGET: {trade_dict.get('target', '')}",
-        f"RISK: {trade_dict.get('risk', '')}",
+        f"ENTRY: {trade_dict.get('entry_price_ref', '')}",
+        f"UPSIDE: {trade_dict.get('upside_pct', '')}",
+        f"STOP: {trade_dict.get('stop_loss', '')}",
+        f"OPTIONS: {trade_dict.get('options_structure', '')}",
         f"RATIONALE: {rationale}",
         f"EVIDENCE: {trade_dict.get('evidence', '')}",
-        f"CONFIDENCE: {trade_dict.get('confidence_level', '')}",
+        f"CONFIDENCE: {conf_level}",
         f"KEY UNCERTAINTY: {trade_dict.get('key_uncertainty', '')}",
         f"INVALIDATED IF: {trade_dict.get('invalidation_condition', '')}",
         f"ALT VIEW: {trade_dict.get('alternative_view', '')}",
     ])
-    summary = f"{direction} — Trigger: {trade_dict.get('trigger', '')}"
+    summary = f"{direction} — Entry: {trade_dict.get('entry_price_ref', '')} | Upside: {trade_dict.get('upside_pct', '')}"
+
+    # Only route to approval queue if HIGH confidence
+    if not conf_level.lower().startswith("high"):
+        set_status(_AGENT, "monitoring")
+        log_activity(_AGENT, "idea filtered — not high confidence", conf_level[:80], "info")
+        return {
+            "narrative":  narrative,
+            "trade":      trade_dict,
+            "confidence": conf,
+            "filtered":   True,
+            "reason":     f"confidence not high: {conf_level[:80]}",
+        }
 
     item_id = add_pending(
         agent_id=_AGENT,

@@ -27,6 +27,50 @@ from typing import Optional
 
 import numpy as np
 
+from src.data.config import (
+    COMMODITY_TICKERS as _COMMODITY_TICKERS,
+    EQUITY_TICKERS as _EQUITY_TICKERS,
+    FIXED_INCOME_TICKERS as _FI_TICKERS,
+)
+
+# ── Ticker resolution ─────────────────────────────────────────────────────────
+
+# Preferred liquid ETF proxy per asset (overrides raw futures/index ticker for trade ideas)
+_ETF_PROXY: dict[str, str] = {
+    "WTI Crude Oil":    "USO",
+    "Brent Crude":      "BNO",
+    "Natural Gas":      "UNG",
+    "Gold":             "GLD",
+    "Silver":           "SLV",
+    "Copper":           "CPER",
+    "Wheat":            "WEAT",
+    "Corn":             "CORN",
+    "Soybeans":         "SOYB",
+    "S&P 500":          "SPY",
+    "Nasdaq 100":       "QQQ",
+    "Russell 2000":     "IWM",
+    "Eurostoxx 50":     "FEZ",
+    "DAX":              "EWG",
+    "FTSE 100":         "EWU",
+    "Nikkei 225":       "EWJ",
+    "Hang Seng":        "EWH",
+    "Shanghai Comp":    "MCHI",
+    "CSI 300":          "MCHI",
+}
+
+# Combined lookup: ETF proxy first, then config tickers as fallback
+_ALL_TICKERS: dict[str, str] = {
+    **_COMMODITY_TICKERS,
+    **_EQUITY_TICKERS,
+    **_FI_TICKERS,
+    **_ETF_PROXY,  # ETF proxy overrides raw futures for cleaner display
+}
+
+
+def _resolve_tickers(assets: list[str]) -> dict[str, str]:
+    """Map asset display names to their preferred tradeable ticker."""
+    return {a: _ALL_TICKERS[a] for a in assets if a in _ALL_TICKERS}
+
 
 # ── Scenario-to-category affinity ────────────────────────────────────────────
 
@@ -45,9 +89,10 @@ _SCENARIO_TRADE_TYPES: dict[str, list[str]] = {
 _REGIME_NAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
 
 # Minimum SAS threshold to qualify an asset for trade inclusion
-_MIN_SAS_LONG = 25.0     # long geo-risk ideas: lead asset SAS >= this
+_MIN_SAS_LONG = 30.0     # long geo-risk ideas: lead asset SAS >= this
 _MIN_SAS_HEDGE = 20.0    # hedge ideas: hedge_score >= this
-_MIN_CIS = 35.0          # conflict must have CIS >= this to generate ideas
+_MIN_CIS = 45.0          # conflict must have CIS >= this to generate ideas
+_MIN_CONFIDENCE = 0.55   # suppress generated trades below this floor
 
 
 # ── Template generators ───────────────────────────────────────────────────────
@@ -105,6 +150,7 @@ def _safe_haven_pair(
             f"Rapid ceasefire or diplomatic breakthrough compresses geo premium; "
             f"central bank intervention can override safe-haven bid"
         ),
+        "tickers":   _resolve_tickers([hedge_asset, lead_asset]),
         "assets":    [hedge_asset, lead_asset],
         "direction": ["Long", "Short"],
         "regime":    [2, 3] if regime >= 2 else [1, 2],
@@ -112,10 +158,10 @@ def _safe_haven_pair(
         "conflict_id": conflict["id"],
         "scenarios": ["escalation", "risk_off", "supply_shock", "sanctions_shock"],
         "confidence": round(confidence, 3),
+        "upside_pct": round(confidence * 14, 1),
         "qc_flags":  qc_flags,
         "generated": True,
         "generated_at": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        # Structural trade management levels
         "stop":           f"{lead_asset} SAS drops below 15 or CIS falls below 30",
         "target":         f"{hedge_asset} outperforms by 8–12% OR CIS peaks and TPS rolls over",
         "invalidation":   f"Ceasefire / peace agreement; {lead_asset} SAS < 15 for 3+ days",
@@ -188,6 +234,7 @@ def _supply_shock_long(
             f"Demand destruction from recession overwhelms supply premium; "
             f"OPEC+ supply response; strategic reserve releases"
         ),
+        "tickers":   _resolve_tickers([asset]),
         "assets":    [asset],
         "direction": ["Long"],
         "regime":    [1, 2, 3],
@@ -195,6 +242,7 @@ def _supply_shock_long(
         "conflict_id": conflict["id"],
         "scenarios": ["supply_shock", "escalation", "shipping_shock"],
         "confidence": round(confidence, 3),
+        "upside_pct": round(confidence * 13, 1),
         "qc_flags":  qc_flags,
         "generated": True,
         "generated_at": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
@@ -269,6 +317,7 @@ def _pair_long_short(
             f"Macro demand shock can flip the pair (both fall together); "
             f"correlation snap-back in crisis compresses spread"
         ),
+        "tickers":   _resolve_tickers([long_asset, short_asset]),
         "assets":    [long_asset, short_asset],
         "direction": ["Long", "Short"],
         "regime":    [2, 3],
@@ -276,6 +325,7 @@ def _pair_long_short(
         "conflict_id": conflict["id"],
         "scenarios": ["escalation", "supply_shock", "shipping_shock", "sanctions_shock"],
         "confidence": round(confidence, 3),
+        "upside_pct": round(confidence * 11, 1),
         "qc_flags":  qc_flags,
         "generated": True,
         "generated_at": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
@@ -343,6 +393,7 @@ def _deescalation_reversal(
             f"False de-escalation signal; new front opens; "
             f"supply disruption independently re-prices commodity"
         ),
+        "tickers":   _resolve_tickers([asset]),
         "assets":    [asset],
         "direction": ["Short"],
         "regime":    [1, 2],
@@ -350,6 +401,7 @@ def _deescalation_reversal(
         "conflict_id": conflict["id"],
         "scenarios": ["de_escalation", "recovery"],
         "confidence": round(confidence, 3),
+        "upside_pct": round(confidence * 10, 1),
         "qc_flags":  qc_flags,
         "generated": True,
         "generated_at": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
@@ -556,7 +608,7 @@ def generate_conflict_trades(
     unique: list[dict] = []
     for t in candidates:
         key = t["name"]
-        if key not in seen:
+        if key not in seen and float(t.get("confidence", 0.0)) >= _MIN_CONFIDENCE:
             seen.add(key)
             unique.append(t)
 

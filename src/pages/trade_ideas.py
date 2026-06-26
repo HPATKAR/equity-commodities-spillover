@@ -838,6 +838,11 @@ def _render_trade_card(
     regimes: "pd.Series | None" = None,
 ) -> None:
     """Render a single trade card with QC grade, confidence, payoff table, and debate thread."""
+    # Suppress low-confidence generated ideas to keep the page signal-to-noise high
+    _conf_raw = float(trade.get("confidence", 0.60))
+    if trade.get("generated") and _conf_raw < 0.55:
+        return
+
     cat_col = _CATEGORY_COLORS.get(trade["category"], "#CFB991")
 
     # ── QC scoring ─────────────────────────────────────────────────────────
@@ -875,19 +880,28 @@ def _render_trade_card(
     )
 
     # ── Specific tradeable instruments ─────────────────────────────────────
-    _ticker_map  = _TRADE_TICKERS.get(trade.get("name", ""), {})
+    # Priority: static _TRADE_TICKERS lookup → tickers dict on trade → asset name fallback
+    _ticker_map_static = _TRADE_TICKERS.get(trade.get("name", ""), {})
+    _ticker_map_gen    = trade.get("tickers") or {}
+    # For AI-structured trades tickers is a freeform string; handle both str and dict
+    if isinstance(_ticker_map_gen, str):
+        _ticker_map_gen = {}
     _ticker_parts = []
     for _a, _d in zip(trade.get("assets", []), trade.get("direction", [])):
-        _t = _ticker_map.get(_a)
+        _t = _ticker_map_static.get(_a) or _ticker_map_gen.get(_a)
         if _t:
             _clr = "#27ae60" if _d.lower() == "long" else "#c0392b"
             _ticker_parts.append(
                 f'<span style="color:{_clr};font-weight:700">{_d[0]}</span>'
-                f'&nbsp;<span style="color:#444c5c">{_t}</span>'
+                f'&nbsp;<span style="color:#8890a1;font-weight:600">{_t}</span>'
             )
+    # AI-structured trades carry tickers as a single descriptive string — surface it directly
+    _ai_tickers_str = trade.get("tickers", "") if isinstance(trade.get("tickers"), str) else ""
+    if not _ticker_parts and _ai_tickers_str:
+        _ticker_parts = [f'<span style="color:#8890a1">{_ai_tickers_str}</span>']
     ticker_html = (
         '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#3a4a5a;margin-bottom:8px;line-height:2;display:flex;flex-wrap:wrap;gap:10px">'
+        'color:#8890a1;margin-bottom:8px;line-height:2;display:flex;flex-wrap:wrap;gap:10px">'
         + "  ".join(_ticker_parts)
         + '</div>'
     ) if _ticker_parts else ""
@@ -913,6 +927,30 @@ def _render_trade_card(
         + _cell("Risk",   trade.get("risk",  "—"), "#c0392b", 'style="border-left:2px solid #220000"')
         + '</div>'
     )
+
+    # ── AI-structured specific fields (entry_price_ref, upside_pct, stop_loss, options_structure)
+    ai_price_html = ""
+    _ai_entry   = trade.get("entry_price_ref", "")
+    _ai_upside  = trade.get("upside_pct", "")
+    _ai_stop    = trade.get("stop_loss", "")
+    _ai_opts    = trade.get("options_structure", "")
+    _gen_upside = trade.get("upside_pct")  # numeric from generator
+    if any([_ai_entry, _ai_upside, _ai_stop, _ai_opts]):
+        ai_price_html = (
+            '<div class="ti-ext-grid" style="border-top:1px solid #1a1a1a;margin-top:4px">'
+            + (_cell("Entry Ref",    _ai_entry,  "#CFB991") if _ai_entry  else "")
+            + (_cell("Upside",       _ai_upside, "#27ae60") if _ai_upside else "")
+            + (_cell("Stop-Loss",    _ai_stop,   "#c0392b") if _ai_stop   else "")
+            + (_cell("Options Alt.", _ai_opts,   "#2980b9") if _ai_opts   else "")
+            + '</div>'
+        )
+    elif isinstance(_gen_upside, (int, float)):
+        ai_price_html = (
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            'color:#8890a1;margin-top:4px">'
+            f'Est. upside: <span style="color:#27ae60;font-weight:700">~{_gen_upside:.1f}%</span>'
+            '</div>'
+        )
 
     ext_html = ""
     if any(trade.get(k) for k in ["stop", "target", "invalidation", "holding_period"]):
@@ -950,6 +988,7 @@ def _render_trade_card(
             f'</div>'
             f'<p class="ti-rationale">{trade["rationale"]}</p>'
             + grid_html
+            + ai_price_html
             + ext_html
             + '</div>'  # ti-body
             + '</div>',  # ti-card
