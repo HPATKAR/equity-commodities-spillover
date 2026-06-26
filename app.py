@@ -993,36 +993,12 @@ _OPENAI_KEY      = _get_secret("openai_api_key")
 
 
 def _validate_api_keys() -> None:
-    """Attempt a minimal API call to verify keys at startup. Shows st.error on failure."""
+    """Check that at least one AI provider key is present. No live API calls."""
     if not st.session_state.get("_api_keys_validated"):
-        if _ANTHROPIC_KEY:
-            try:
-                import anthropic as _ant
-                _ant.Anthropic(api_key=_ANTHROPIC_KEY).models.list()
-            except Exception as e:
-                err = str(e)
-                if "authentication" in err.lower() or "api_key" in err.lower() or "401" in err:
-                    st.error(
-                        "Anthropic API key appears invalid - agents will not run. "
-                        "Check `secrets.toml` → `[keys]` → `anthropic_api_key`.",
-                        icon="🔑",
-                    )
-        elif _OPENAI_KEY:
-            try:
-                from openai import OpenAI as _OAI
-                _OAI(api_key=_OPENAI_KEY).models.list()
-            except Exception as e:
-                err = str(e)
-                if "authentication" in err.lower() or "api_key" in err.lower() or "401" in err:
-                    st.error(
-                        "OpenAI API key appears invalid - agents will not run. "
-                        "Check `secrets.toml` → `[keys]` → `openai_api_key`.",
-                        icon="🔑",
-                    )
-        else:
+        if not _ANTHROPIC_KEY and not _OPENAI_KEY:
             st.warning(
-                "No AI provider key found in secrets - agents will run in monitoring mode. "
-                "Add `anthropic_api_key` or `openai_api_key` under `[keys]` in `.streamlit/secrets.toml`.",
+                "No AI provider key configured — agents will run in monitoring mode only. "
+                "Add `anthropic_api_key` under `[keys]` in `.streamlit/secrets.toml`.",
                 icon="🔑",
             )
         st.session_state["_api_keys_validated"] = True
