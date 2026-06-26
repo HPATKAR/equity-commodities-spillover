@@ -281,7 +281,8 @@ def _log_returns(prices: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fill_gaps(df: pd.DataFrame, method: str = "ffill", limit: int = 5) -> pd.DataFrame:
-    return df.ffill(limit=limit).bfill(limit=2)
+    # ffill only — bfill uses future prices to fill past gaps (look-ahead bias in returns).
+    return df.ffill(limit=limit)
 
 
 # ── Cached loaders ─────────────────────────────────────────────────────────

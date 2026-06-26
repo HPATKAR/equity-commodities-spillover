@@ -951,7 +951,7 @@ def _render_system_reliability(
         ("News/GPR feed", "RSS keyword matching, not semantic NLP or LLM sentiment"),
         ("Confidence overlay", "Heuristic blend of component agreement - not probabilistically calibrated"),
         ("Regime detection", "Rule-based threshold on composite stress index; walk-forward ML is optional"),
-        ("Risk score history (VIX panel)", "Uses market signals only (MCS layer, 25% of live GRS). CIS (40%) and TPS (35%) cannot be reconstructed at daily frequency - full 3-layer back-test is not possible."),
+        ("Risk score history (VIX panel)", "Uses market signals only (MCS layer, 35% of live GRS). CIS (35%) and TPS (30%) cannot be reconstructed at daily frequency - full 3-layer back-test is not possible."),
         ("LSEG premium data", "Requires local Eikon/Workspace - defaults to yfinance if unavailable"),
         ("Exposure betas", "Structural exposure is analyst-assigned; no empirical regression to conflict events"),
     ]

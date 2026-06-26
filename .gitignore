@@ -25,7 +25,9 @@ env/
 .idea/
 
 # Runtime logs — session LLM trace data, not source
-logs/
+logs/*.csv
+# keep the directory itself (logs/.gitkeep) so a fresh clone has the folder
+!logs/.gitkeep
 
 # Submission / course documents — PDFs, Word docs, generator scripts
 *.pdf

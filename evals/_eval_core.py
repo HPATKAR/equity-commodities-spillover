@@ -47,8 +47,10 @@ def run_snapshot(date_str: str) -> dict:
         end_dl   = end_dt + datetime.timedelta(days=1)  # yfinance exclusive end
 
         # ── Download equity + commodity prices ────────────────────────────────
-        equity_tickers    = ["SPY", "EFA", "EEM", "QQQ", "IWM"]
-        commodity_tickers = ["GLD", "USO", "DBA", "PDBC", "CPER"]
+        # Use dashboard-aligned tickers (index futures/contracts, not ETF proxies)
+        # so eval results are directly comparable to dashboard output.
+        equity_tickers    = ["^GSPC", "^NDX", "^GDAXI", "^N225"]   # S&P500, Nasdaq, DAX, Nikkei
+        commodity_tickers = ["CL=F", "GC=F", "NG=F", "ZW=F"]       # WTI, Gold, NatGas, Wheat
         tlt_shy           = ["TLT", "SHY"]
 
         all_tickers = equity_tickers + commodity_tickers + tlt_shy

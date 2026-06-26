@@ -2,8 +2,20 @@ services:
   - type: web
     name: equity-commodities-spillover
     runtime: python
+    plan: starter
+    region: oregon
+    numInstances: 1
+    healthCheckPath: /
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false --server.enableWebsocketCompression false
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: "3.11.0"
+      # AI providers — set at least one of these in Render dashboard > Environment
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # Optional data sources
+      - key: FRED_API_KEY
+        sync: false

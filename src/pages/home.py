@@ -218,6 +218,21 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 .hm-live-blink{animation:hm-live-blink 1.6s step-start infinite}
 /* Nav badge pop-in */
 .hm-badge-pop{animation:hm-badge-pop .4s ease-out both}
+/* Row slide-in from left */
+@keyframes hm-row-in{0%{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.hm-row-in{animation:hm-row-in .38s cubic-bezier(0.22,1,0.36,1) both}
+/* Number bounce-in */
+@keyframes hm-num-pop{0%{opacity:0;transform:scale(.72) translateY(4px)}80%{transform:scale(1.06)}to{opacity:1;transform:none}}
+.hm-num-pop{animation:hm-num-pop .52s cubic-bezier(0.22,1,0.36,1) both}
+/* Gold shimmer sweep (repeating) */
+@keyframes hm-shimmer{0%{background-position:-200% 0}to{background-position:200% 0}}
+.hm-shimmer{background:linear-gradient(90deg,transparent 0%,rgba(207,185,145,0.07) 50%,transparent 100%);background-size:200%;animation:hm-shimmer 3.2s ease-in-out infinite}
+/* Glow pulse for critical elements */
+@keyframes hm-glow-pulse{0%,100%{opacity:1}50%{opacity:.55;text-shadow:0 0 8px currentColor}}
+.hm-glow-pulse{animation:hm-glow-pulse 2.2s ease-in-out infinite}
+/* Typing cursor blink */
+@keyframes hm-cursor{0%,49%{border-color:currentColor}50%,100%{border-color:transparent}}
+.hm-cursor{border-right:.12em solid;animation:hm-cursor 1.1s step-end infinite;padding-right:.06em}
 </style>"""
 
 
@@ -329,8 +344,8 @@ def _render_masthead(conflict_agg: dict) -> None:
     # ── Status bar ────────────────────────────────────────────────────────
     _sit_rgb = {_C["danger"]: "192,57,43", _C["warn"]: "230,126,34", _C["safe"]: "39,174,96"}.get(sit_color, "207,185,145")
     st.markdown(
-        f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
-        f'border-left:3px solid {sit_color};'
+        f'<div class="hm-shimmer" style="position:relative;background:{_C["card2"]};'
+        f'border:1px solid {_C["border"]};border-left:3px solid {sit_color};'
         f'padding:.4rem 1rem;display:flex;align-items:center;gap:16px;'
         f'flex-wrap:wrap;margin-bottom:.75rem">'
         f'<span class="nx-live-dot"></span>'
@@ -339,16 +354,16 @@ def _render_masthead(conflict_agg: dict) -> None:
         f'<span style="color:{_C["border2"]}">│</span>&nbsp;'
         f'{now.strftime("%H:%M")} LOCAL'
         f'</span>'
-        f'<span style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
+        f'<span class="hm-badge-pop" style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
         f'border:1px solid rgba({_sit_rgb},0.35);'
         f'{_M}font-size:9px;font-weight:700;padding:2px 9px;letter-spacing:.14em;border-radius:1px">'
         f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE'
         f'</span>'
         f'<span style="{_M}font-size:10px;color:{_C["label"]}">{sc_note}</span>'
         f'<span style="{_M}font-size:10px;color:{_C["label"]}">'
-        f'CIS&nbsp;<b style="color:{sit_color}">{cis:.0f}</b>'
+        f'CIS&nbsp;<b class="hm-num-pop" style="color:{sit_color}">{cis:.0f}</b>'
         f'</span>'
-        f'<span style="margin-left:auto;background:{sit_color};color:#000;'
+        f'<span class="hm-badge-pop" style="margin-left:auto;background:{sit_color};color:#000;'
         f'{_M}font-size:9px;font-weight:700;padding:3px 11px;letter-spacing:.16em">'
         f'{sit_label}</span>'
         f'</div>',
@@ -885,7 +900,7 @@ def _render_geo_risk_block(
             annotation_font={"size": 8, "color": color, "family": "JetBrains Mono"},
             annotation_position="right",
         )
-        st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
     else:
         st.markdown(
             f'<div style="{_F}font-size:12px;color:{_C["label"]};padding:2rem 0;'
@@ -1222,22 +1237,23 @@ def _render_intelligence_feed(
     )[:4]
     if active:
         st.markdown(
-            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{_GOLD};padding:.4rem 0 .3rem;'
-            f'margin-top:.3rem;border-top:1px solid {_C["border"]}">Active Conflicts</div>',
+            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.10em;'
+            f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
+            f'margin-top:.4rem;border-top:1px solid {_C["border"]}">Active Conflicts</div>',
             unsafe_allow_html=True,
         )
-        for cid, r in active:
+        for ci, (cid, r) in enumerate(active):
             cv    = r["cis"]
             bar_c = _C["danger"] if cv >= 65 else _C["warn"] if cv >= 45 else _C["label"]
+            r_delay = f"{ci * 0.07:.2f}s"
             st.markdown(
-                f'<div style="display:flex;align-items:center;gap:6px;padding:5px .55rem;'
+                f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:5px .55rem;'
                 f'border-left:2px solid {bar_c};background:{_C["card"]};'
-                f'border-bottom:1px solid {_C["border"]};margin-bottom:2px">'
+                f'border-bottom:1px solid {_C["border"]};margin-bottom:2px;animation-delay:{r_delay}">'
                 f'<span style="{_M}font-size:10px;font-weight:700;color:{r["color"]};'
                 f'min-width:52px;white-space:nowrap">{r["label"][:10]}</span>'
                 f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
-                f'<div style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c}"></div></div>'
+                f'<div class="hm-bar-grow" style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c};animation-delay:{r_delay}"></div></div>'
                 f'<span style="{_M}font-size:10px;font-weight:700;color:{bar_c};'
                 f'min-width:22px;text-align:right">{cv:.0f}</span>'
                 f'</div>',
@@ -1248,9 +1264,9 @@ def _render_intelligence_feed(
     feed = st.session_state.get("agent_activity", [])[:3]
     if feed:
         st.markdown(
-            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{_GOLD};padding:.4rem 0 .3rem;'
-            f'margin-top:.3rem;border-top:1px solid {_C["border"]}">AI Analyst</div>',
+            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.10em;'
+            f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
+            f'margin-top:.4rem;border-top:1px solid {_C["border"]}">AI Analyst</div>',
             unsafe_allow_html=True,
         )
         for entry in feed:
@@ -1260,11 +1276,11 @@ def _render_intelligence_feed(
             st.markdown(
                 f'<div style="display:flex;gap:6px;align-items:flex-start;'
                 f'padding:4px 0;border-bottom:1px solid #111">'
-                f'<span style="{_M}font-size:.52rem;color:{ag_col};font-weight:700;min-width:28px">'
+                f'<span style="{_M}font-size:9px;color:{ag_col};font-weight:700;min-width:28px">'
                 f'{ag.get("short","?")}</span>'
-                f'<span style="{_F}font-size:.62rem;color:#b8b8b8;flex:1;line-height:1.45">'
+                f'<span style="{_F}font-size:10px;color:#b8b8b8;flex:1;line-height:1.45">'
                 f'{entry.get("action","")}: {entry.get("detail","")[:52]}</span>'
-                f'<span style="{_M}font-size:.50rem;color:{_C["muted"]};white-space:nowrap">{ts_str}</span>'
+                f'<span style="{_M}font-size:9px;color:{_C["label"]};white-space:nowrap">{ts_str}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1273,16 +1289,17 @@ def _render_intelligence_feed(
     scenario = get_scenario()
     tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
     st.markdown(
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:{_GOLD};padding:.4rem 0 .3rem;'
-        f'margin-top:.35rem;border-top:1px solid {_C["border"]}">Chokepoint Watch</div>',
+        f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.10em;'
+        f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
+        f'margin-top:.45rem;border-top:1px solid {_C["border"]}">Chokepoint Watch</div>',
         unsafe_allow_html=True,
     )
     strait_rows = ""
-    for s in _STRAITS:
-        s_risk = min(int(s["base_risk"] * tps_mult), 100)
-        tc     = _C["danger"] if s_risk >= 70 else _C["warn"] if s_risk >= 45 else _C["safe"]
-        tier   = "HIGH" if s_risk >= 70 else "ELEV" if s_risk >= 45 else "MOD"
+    for si, s in enumerate(_STRAITS):
+        s_risk  = min(int(s["base_risk"] * tps_mult), 100)
+        tc      = _C["danger"] if s_risk >= 70 else _C["warn"] if s_risk >= 45 else _C["safe"]
+        tier    = "HIGH" if s_risk >= 70 else "ELEV" if s_risk >= 45 else "MOD"
+        s_delay = f"{si * 0.06:.2f}s"
         pulse_dot = (
             f'<span class="hm-dot" style="background:{tc};flex-shrink:0"></span>'
             if s_risk >= 70 else
@@ -1290,13 +1307,13 @@ def _render_intelligence_feed(
             f'background:{tc};opacity:.7;flex-shrink:0"></span>'
         )
         strait_rows += (
-            f'<div style="display:flex;align-items:center;gap:6px;padding:4px 0;'
-            f'border-bottom:1px solid {_C["border"]}">'
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:4px 0;'
+            f'border-bottom:1px solid {_C["border"]};animation-delay:{s_delay}">'
             f'{pulse_dot}'
             f'<span style="{_M}font-size:10px;font-weight:700;color:{tc};min-width:66px;'
             f'white-space:nowrap">{s["name"][:16]}</span>'
             f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
-            f'<div style="width:{s_risk}%;height:4px;background:{tc};border-radius:1px"></div></div>'
+            f'<div class="hm-bar-grow" style="width:{s_risk}%;height:4px;background:{tc};border-radius:1px;animation-delay:{s_delay}"></div></div>'
             f'<span style="{_M}font-size:10px;color:{tc};font-weight:700;min-width:20px;'
             f'text-align:right">{s_risk}</span>'
             f'<span style="background:{tc};color:#000;{_M}font-size:8px;font-weight:700;'
@@ -1326,8 +1343,8 @@ def _render_intelligence_feed(
         st.markdown(
             f'<div style="margin-top:.35rem;padding:.3rem .55rem;background:{_C["card"]};'
             f'border:1px solid {_C["border"]};display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-            f'<span style="{_M}font-size:8px;letter-spacing:.14em;text-transform:uppercase;'
-            f'color:{_C["muted"]}">Δ vs last load</span>'
+            f'<span style="{_M}font-size:9px;letter-spacing:.10em;text-transform:uppercase;'
+            f'color:{_C["label"]}">Δ vs last load</span>'
             f'{_dchip("GRS", _dg)}'
             f'{_dchip("CIS", _dc)}'
             f'{_dchip("TPS", _dt)}'
@@ -1336,8 +1353,8 @@ def _render_intelligence_feed(
         )
 
     st.markdown(
-        f'<div style="{_M}font-size:.50rem;color:{_C["muted"]};padding-top:.45rem;'
-        f'border-top:1px solid #111;margin-top:.4rem">'
+        f'<div style="{_M}font-size:9px;color:{_C["label"]};padding-top:.5rem;'
+        f'border-top:1px solid {_C["border"]};margin-top:.4rem">'
         f'Updated {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
         unsafe_allow_html=True,
     )
@@ -1489,7 +1506,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
             f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
             + col_header + rows
             + f'<div style="border-top:1px solid #1a1a1a;margin-top:4px;padding-top:3px">'
-            f'<span style="{_M}font-size:8px;color:#383838">'
+            f'<span style="{_M}font-size:9px;color:{_C["muted"]}">'
             f'CIS scores: manual scenario assumptions unless ACLED/GDELT source shown on scorecard. '
             f'Transmission channel weights: always manual scenario assumptions.</span>'
             f'</div>'
@@ -1633,8 +1650,8 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     # Scenario assumption disclosure
     _calib = current_def.get("calibration_note", "")
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-        f'color:#555960;margin:.3rem 0 0;line-height:1.5">'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+        f'color:{_C["muted"]};margin:.3rem 0 0;line-height:1.55">'
         f'⚠ Scenario multipliers are <b>manual scenario assumptions</b> — '
         f'not statistically calibrated against historical episodes. '
         f'{_calib}</p>',
@@ -1837,7 +1854,7 @@ def _render_quickjump() -> None:
                 f'<div class="hm-nav" style="border-top:2px solid {g_color};min-height:58px">'
                 f'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'
                 f'<span style="{_M}font-size:11px;font-weight:700;color:{g_color}">{label}</span>'
-                f'<span class="hm-tag {tag_cls}" style="font-size:7px!important">{tag_label}</span>'
+                f'<span class="hm-tag {tag_cls}" style="font-size:8px!important">{tag_label}</span>'
                 f'</div>'
                 f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.35">{desc}</div>'
                 f'</div>',
@@ -2030,13 +2047,14 @@ def _render_portfolio_pulse() -> None:
         reverse=True,
     )[:3]
 
-    def _mover_html(p: dict, ret: float) -> str:
+    def _mover_html(p: dict, ret: float, idx: int = 0) -> str:
         col   = _C["safe"] if ret >= 0 else _C["danger"]
         arrow = "▲" if ret >= 0 else "▼"
         w_pct = p["weight"] * 100
+        mv_delay = f"{idx * 0.08:.2f}s"
         return (
-            f'<div style="display:flex;align-items:center;gap:6px;'
-            f'padding:3px 0;border-bottom:1px solid #0f0f0f">'
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;'
+            f'padding:3px 0;border-bottom:1px solid #0f0f0f;animation-delay:{mv_delay}">'
             f'<span style="{_M}font-size:11px;font-weight:700;color:{col};min-width:52px">'
             f'{p["ticker"]}</span>'
             f'<span style="{_M}font-size:10px;color:{_C["text"]};flex:1">'
@@ -2046,7 +2064,7 @@ def _render_portfolio_pulse() -> None:
             f'</div>'
         )
 
-    movers_html = "".join(_mover_html(p, r) for p, r in movers) if movers else (
+    movers_html = "".join(_mover_html(p, r, i) for i, (p, r) in enumerate(movers)) if movers else (
         f'<span style="{_M}font-size:11px;color:{_C["label"]}">Returns pending…</span>'
     )
 
@@ -2065,7 +2083,7 @@ def _render_portfolio_pulse() -> None:
             f'<div style="margin-top:.4rem;padding-top:.35rem;border-top:1px solid #1a1a1a">'
             f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:2px">Est. 1-Day P&amp;L</div>'
-            f'<div style="{_M}font-size:0.95rem;font-weight:700;color:{pl_color}">'
+            f'<div class="hm-num-pop" style="{_M}font-size:0.95rem;font-weight:700;color:{pl_color}">'
             f'{pl_arrow} {pl_sign}${dollar_pl:,.0f}'
             f'<span style="font-size:11px;margin-left:5px">{pl_sign}{port_ret:.2f}%</span>'
             f'</div></div></div>',
@@ -2101,11 +2119,12 @@ def _render_live_signals() -> None:
         tps_mult = scenario.get("tps_mult", 1.0) if scenario.get("label") == "Shipping Shock" else 1.0
 
         rows_s = ""
-        for s in _STRAITS:
+        for ls_i, s in enumerate(_STRAITS):
             risk = min(int(s["base_risk"] * tps_mult), 100)
             if risk >= 70:   tier, tc = "HIGH",     s["color"]
             elif risk >= 45: tier, tc = "ELEVATED", _C["warn"]
             else:            tier, tc = "MODERATE", _C["safe"]
+            ls_delay = f"{ls_i * 0.07:.2f}s"
             pulse = (
                 f'<span class="hm-dot" style="background:{tc}"></span>'
                 if risk >= 70 else
@@ -2114,13 +2133,13 @@ def _render_live_signals() -> None:
                 f'margin-right:4px;opacity:.7"></span>'
             )
             rows_s += (
-                f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;'
-                f'border-bottom:1px solid {_C["card"]}">'
+                f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:4px 0;'
+                f'border-bottom:1px solid {_C["card"]};animation-delay:{ls_delay}">'
                 + pulse
                 + f'<span style="{_M}font-size:11px;font-weight:700;color:{tc};'
                 f'min-width:75px;white-space:nowrap">{s["name"][:18]}</span>'
                 f'<div style="flex:1;background:#111;height:4px;border-radius:1px">'
-                f'<div style="width:{risk}%;height:4px;background:{tc};border-radius:1px"></div></div>'
+                f'<div class="hm-bar-grow" style="width:{risk}%;height:4px;background:{tc};border-radius:1px;animation-delay:{ls_delay}"></div></div>'
                 f'<span style="{_M}font-size:12px;color:{tc};font-weight:700;min-width:22px;'
                 f'text-align:right">{risk}</span>'
                 f'<span style="background:{tc};color:#000;{_M}font-size:11px;'
@@ -2232,19 +2251,20 @@ def _render_agent_strip() -> None:
     pending_badge = (
         f'<span class="nx-badge nx-badge-warning">{n_pending} PENDING</span>'
         if n_pending else
-        '<span class="nx-live-dot"></span><span style="font-family:\'JetBrains Mono\',monospace;'
-        'font-size:0.50rem;color:{_C["safe"]};letter-spacing:0.10em">ALL PROCESSED</span>'
+        f'<span class="nx-live-dot"></span><span style="font-family:\'JetBrains Mono\',monospace;'
+        f'font-size:9px;color:{_C["safe"]};letter-spacing:0.10em">ALL PROCESSED</span>'
     )
 
     rows_html = ""
-    for entry in feed:
-        ag     = AGENTS.get(entry["agent_id"], {})
-        color  = ag.get("color", _C["label"])
-        ts_str = entry["ts"].strftime("%H:%M:%S") if isinstance(entry["ts"], datetime.datetime) else "-"
-        action = entry.get("action", "")
-        detail = entry.get("detail", "")[:72]
+    for as_i, entry in enumerate(feed):
+        ag      = AGENTS.get(entry["agent_id"], {})
+        color   = ag.get("color", _C["label"])
+        ts_str  = entry["ts"].strftime("%H:%M:%S") if isinstance(entry["ts"], datetime.datetime) else "-"
+        action  = entry.get("action", "")
+        detail  = entry.get("detail", "")[:72]
+        as_delay = f"{as_i * 0.06:.2f}s"
         rows_html += (
-            f'<div class="nx-intel-row">'
+            f'<div class="nx-intel-row hm-row-in" style="animation-delay:{as_delay}">'
             f'<span class="nx-intel-ts">{ts_str}</span>'
             f'<span class="nx-intel-entity" style="color:{color}">{ag.get("short","?")}</span>'
             f'<span class="nx-intel-condition">{action}: {detail}</span>'
@@ -2336,18 +2356,19 @@ def _render_correlation_pulse(
         f'</svg>'
     )
 
+    _corr_num_cls = "hm-glow-pulse" if regime_lbl == "HIGH COUPLING" else "hm-num-pop"
     _card("CORRELATION PULSE",
         f'<div style="border-left:3px solid {cur_c};padding-left:.4rem;margin-bottom:4px">'
         f'<div style="display:flex;justify-content:space-between;'
         f'align-items:center;margin-bottom:6px">'
         f'<div>'
-        f'<span style="{_M}font-size:1.05rem;font-weight:700;color:{cur_c};line-height:1">'
+        f'<span class="{_corr_num_cls}" style="{_M}font-size:1.05rem;font-weight:700;color:{cur_c};line-height:1">'
         f'{cur_sign}{cur:.3f}</span>'
         f'<span style="{_M}font-size:8px;color:{_C["muted"]};margin-left:5px">eq↔cmd 60d</span>'
         f'</div>'
         f'<span style="background:{regime_c}1a;border:1px solid {regime_c}44;'
-        f'{_M}font-size:7px;font-weight:700;letter-spacing:.10em;color:{regime_c};'
-        f'padding:1px 5px;text-transform:uppercase">{regime_lbl}</span>'
+        f'{_M}font-size:8px;font-weight:700;letter-spacing:.08em;color:{regime_c};'
+        f'padding:2px 6px;text-transform:uppercase">{regime_lbl}</span>'
         f'</div>'
         f'<div style="padding-bottom:2px">{svg}</div>'
         f'</div>'
@@ -2384,7 +2405,7 @@ def _render_risk_arc(risk: dict) -> None:
         c   = _cc(val)
         lbl = _cl(val)
         bw  = min(int(val), 100)
-        # SVG sparkline-style bar with gradient fill
+        # SVG bar with gradient fill + grow animation
         bar_svg = (
             f'<svg width="100%" height="5" style="display:block;border-radius:2px;overflow:hidden">'
             f'<defs><linearGradient id="bg_{label}" x1="0" y1="0" x2="1" y2="0">'
@@ -2392,7 +2413,10 @@ def _render_risk_arc(risk: dict) -> None:
             f'<stop offset="100%" stop-color="{c}" stop-opacity="0.45"/>'
             f'</linearGradient></defs>'
             f'<rect width="100%" height="5" fill="#1a1a1a"/>'
-            f'<rect width="{bw}%" height="5" fill="url(#bg_{label})"/>'
+            f'<rect width="{bw}%" height="5" fill="url(#bg_{label})">'
+            f'<animate attributeName="width" from="0%" to="{bw}%" dur="0.85s" '
+            f'calcMode="spline" keySplines="0.22 1 0.36 1" fill="freeze"/>'
+            f'</rect>'
             f'</svg>'
         )
         return (
@@ -2407,7 +2431,7 @@ def _render_risk_arc(risk: dict) -> None:
             f'wt {wpct}%</span>'
             f'</div>'
             f'<div style="display:flex;align-items:center;gap:6px">'
-            f'<span style="{_M}font-size:1.0rem;font-weight:700;color:{c};line-height:1">'
+            f'<span class="hm-num-pop" style="{_M}font-size:1.0rem;font-weight:700;color:{c};line-height:1">'
             f'{val:.0f}</span>'
             f'<span style="background:{c}22;border:1px solid {c}44;'
             f'{_M}font-size:8px;font-weight:700;color:{c};padding:2px 6px">{lbl}</span>'
@@ -2447,12 +2471,13 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
         return
 
     rows = ""
-    for cid, r in sorted(active, key=lambda x: x[1].get("cis", 0), reverse=True):
+    for esc_i, (cid, r) in enumerate(sorted(active, key=lambda x: x[1].get("cis", 0), reverse=True)):
         trend     = r.get("trend", "stable")
         esc       = r.get("escalation", "stable")
         cis_v     = float(r.get("cis", 0))
         col       = r.get("color", _C["label"])
         lbl       = r.get("label", cid)
+        esc_delay = f"{esc_i * 0.07:.2f}s"
 
         if trend == "rising":
             t_icon, t_col = "▲", _C["danger"]
@@ -2469,11 +2494,13 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
             esc_bg, esc_c, esc_txt = "rgba(136,144,161,0.08)", _C["label"], "STABLE"
 
         bar_w = min(int(cis_v), 100)
+        # escalating rows glow for emphasis
+        arrow_cls = "hm-glow-pulse" if esc == "escalating" else ""
         rows += (
-            f'<div style="display:flex;align-items:center;gap:8px;padding:7px .65rem;'
-            f'border-bottom:1px solid #111;background:#0f0f0f">'
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:7px .65rem;'
+            f'border-bottom:1px solid #111;background:#0f0f0f;animation-delay:{esc_delay}">'
             # trend arrow
-            f'<span style="{_M}font-size:11px;font-weight:700;color:{t_col};'
+            f'<span class="{arrow_cls}" style="{_M}font-size:11px;font-weight:700;color:{t_col};'
             f'min-width:12px;flex-shrink:0">{t_icon}</span>'
             # name
             f'<span style="{_M}font-size:9px;font-weight:700;color:{col};'
@@ -2481,7 +2508,7 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
             f'{lbl[:14]}</span>'
             # bar
             f'<div style="flex:1;background:#1a1a1a;height:4px;border-radius:2px;min-width:20px">'
-            f'<div style="width:{bar_w}%;height:4px;background:{col};border-radius:2px;opacity:.8"></div></div>'
+            f'<div class="hm-bar-grow" style="width:{bar_w}%;height:4px;background:{col};border-radius:2px;opacity:.8;animation-delay:{esc_delay}"></div></div>'
             # CIS value
             f'<span style="{_M}font-size:9px;font-weight:700;color:{col};min-width:22px;text-align:right">'
             f'{cis_v:.0f}</span>'
@@ -2522,9 +2549,10 @@ def _render_top_commodities(conflict_results: dict) -> None:
     max_score = top[0][1] if top else 1.0
 
     rows = ""
-    for com, score in top:
-        n_c   = conflict_count.get(com, 1)
-        bar_w = int(score / max_score * 100)
+    for tc_i, (com, score) in enumerate(top):
+        n_c      = conflict_count.get(com, 1)
+        bar_w    = int(score / max_score * 100)
+        tc_delay = f"{tc_i * 0.07:.2f}s"
         # Color by exposure level
         if score / max_score > 0.66:
             bar_c = _C["danger"]
@@ -2534,7 +2562,7 @@ def _render_top_commodities(conflict_results: dict) -> None:
             bar_c = _C["label"]
 
         rows += (
-            f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
+            f'<div class="hm-row-in" style="padding:.4rem .65rem;border-bottom:1px solid #111;animation-delay:{tc_delay}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<span style="{_M}font-size:9px;font-weight:700;color:{_C["text"]};'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">'
@@ -2543,7 +2571,7 @@ def _render_top_commodities(conflict_results: dict) -> None:
             f'{n_c} conflict{"s" if n_c > 1 else ""}</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:4px;border-radius:2px">'
-            f'<div style="width:{bar_w}%;height:4px;background:{bar_c};border-radius:2px;opacity:.85"></div>'
+            f'<div class="hm-bar-grow" style="width:{bar_w}%;height:4px;background:{bar_c};border-radius:2px;opacity:.85;animation-delay:{tc_delay}"></div>'
             f'</div>'
             f'</div>'
         )
@@ -2843,13 +2871,13 @@ def _render_returns_heatmap() -> None:
 
     # Header row
     hdr_cells = "".join(
-        f'<th style="{_M}font-size:7px;font-weight:700;letter-spacing:.08em;'
-        f'color:{_C["muted"]};text-align:center;padding:3px 4px;border-right:1px solid #111">'
+        f'<th style="{_M}font-size:8px;font-weight:700;letter-spacing:.06em;'
+        f'color:{_C["label"]};text-align:center;padding:3px 4px;border-right:1px solid #111">'
         f'{lbl}</th>'
         for lbl in day_labels
     )
     header = (
-        f'<tr><th style="{_M}font-size:7px;color:{_C["muted"]};padding:3px 6px;'
+        f'<tr><th style="{_M}font-size:8px;color:{_C["label"]};padding:3px 6px;'
         f'text-align:left;border-right:1px solid {_C["border"]};min-width:52px">ASSET</th>'
         + hdr_cells + f'</tr>'
     )
@@ -2886,7 +2914,7 @@ def _render_returns_heatmap() -> None:
         f'<thead style="background:#0a0a0a;border-bottom:1px solid {_C["border"]}">{header}</thead>'
         f'<tbody>{tbody}</tbody>'
         f'</table>'
-        f'<div style="{_M}font-size:7px;color:{_C["border2"]};padding:3px 6px">'
+        f'<div style="{_M}font-size:8px;color:{_C["muted"]};padding:4px 6px">'
         f'day-over-day % · VIX inverted (↑ VIX = red)</div>',
     )
 
@@ -3081,16 +3109,19 @@ def _render_alert_summary(alerts: list) -> None:
     cnt = Counter(getattr(a, "severity", "low") for a in alerts)
 
     badges = ""
+    al_i = 0
     for sev in sev_order:
         n = cnt.get(sev, 0)
         if n == 0:
             continue
         c = sev_col[sev]
+        al_delay = f"{al_i * 0.08:.2f}s"
+        al_i += 1
         badges += (
-            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:.4rem">'
-            f'<span style="background:{c}22;border:1px solid {c}66;'
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;margin-bottom:.4rem;animation-delay:{al_delay}">'
+            f'<span class="hm-badge-pop" style="background:{c}22;border:1px solid {c}66;'
             f'{_M}font-size:8px;font-weight:700;color:{c};padding:2px 8px;'
-            f'border-radius:2px;letter-spacing:.08em;min-width:22px;text-align:center">{n}</span>'
+            f'border-radius:2px;letter-spacing:.08em;min-width:22px;text-align:center;animation-delay:{al_delay}">{n}</span>'
             f'<span style="{_M}font-size:9px;color:{_C["label"]};text-transform:uppercase;'
             f'letter-spacing:.08em">{sev}</span>'
             f'</div>'
@@ -3252,19 +3283,23 @@ def _render_macro_snapshot() -> None:
 
     body = ""
     grid_rows = [cells[:2], cells[2:]]
+    ms_idx = 0
     for row in grid_rows:
         cols_html = ""
         for cell in row:
             if cell is None:
                 cols_html += '<div style="flex:1"></div>'
+                ms_idx += 1
                 continue
             label, vstr, reg, rc, arr, ac = cell
+            ms_delay = f"{ms_idx * 0.09:.2f}s"
+            ms_idx += 1
             cols_html += (
-                f'<div style="flex:1;background:{_C["card2"]};border:1px solid {_C["border2"]};'
-                f'padding:.5rem .6rem;border-radius:2px;min-width:0">'
+                f'<div class="hm-card-anim" style="flex:1;background:{_C["card2"]};border:1px solid {_C["border2"]};'
+                f'padding:.5rem .6rem;border-radius:2px;min-width:0;animation-delay:{ms_delay}">'
                 f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
                 f'color:{_C["muted"]};text-transform:uppercase;margin-bottom:3px">{label}</div>'
-                f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{_C["text"]};line-height:1">{vstr}</div>'
+                f'<div class="hm-num-pop" style="{_M}font-size:1.0rem;font-weight:700;color:{_C["text"]};line-height:1;animation-delay:{ms_delay}">{vstr}</div>'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">'
                 f'<span style="{_M}font-size:8px;font-weight:700;color:{rc};'
                 f'letter-spacing:.08em">{reg}</span>'
@@ -3533,25 +3568,27 @@ def _render_vol_trio() -> None:
     }
 
     rows_html = ""
-    for key in ["VIX", "OVX", "GVZ"]:
+    for vt_i, key in enumerate(["VIX", "OVX", "GVZ"]):
         d = vols.get(key)
         if not d:
             continue
         sub_lbl, reg_fn = _VOL_DESC[key]
-        reg, rc = reg_fn(d["cur"])
-        pct_r   = d["pct_rank"]          # 0..1 position in 1-year range
-        bar_w   = int(pct_r * 100)
-        lo_str  = f'{d["lo"]:.1f}'
-        hi_str  = f'{d["hi"]:.1f}'
+        reg, rc  = reg_fn(d["cur"])
+        pct_r    = d["pct_rank"]
+        bar_w    = int(pct_r * 100)
+        lo_str   = f'{d["lo"]:.1f}'
+        hi_str   = f'{d["hi"]:.1f}'
+        vt_delay = f"{vt_i * 0.10:.2f}s"
+        val_cls  = "hm-glow-pulse" if reg in ("STRESS", "EXTREME") else "hm-num-pop"
         rows_html += (
-            f'<div style="padding:.42rem .65rem;border-bottom:1px solid #111">'
+            f'<div class="hm-row-in" style="padding:.42rem .65rem;border-bottom:1px solid #111;animation-delay:{vt_delay}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<div>'
             f'<span style="{_M}font-size:9px;font-weight:700;color:{_C["text"]}">{key}</span>'
             f'<span style="{_M}font-size:8px;color:{_C["muted"]};margin-left:6px">{sub_lbl}</span>'
             f'</div>'
             f'<div style="text-align:right">'
-            f'<span style="{_M}font-size:10px;font-weight:700;color:{rc}">{d["cur"]:.1f}</span>'
+            f'<span class="{val_cls}" style="{_M}font-size:10px;font-weight:700;color:{rc};animation-delay:{vt_delay}">{d["cur"]:.1f}</span>'
             f'<span style="{_M}font-size:8px;font-weight:700;color:{rc};'
             f'margin-left:6px;letter-spacing:.06em">{reg}</span>'
             f'</div>'
@@ -3559,7 +3596,7 @@ def _render_vol_trio() -> None:
             # gauge track
             f'<div style="position:relative;background:#1a1a1a;height:5px;border-radius:3px">'
             f'<div class="hm-bar-grow" style="position:absolute;left:0;top:0;width:{bar_w}%;height:5px;'
-            f'background:{rc};border-radius:3px;opacity:.8"></div>'
+            f'background:{rc};border-radius:3px;opacity:.8;animation-delay:{vt_delay}"></div>'
             f'</div>'
             # range labels
             f'<div style="display:flex;justify-content:space-between;margin-top:4px">'
