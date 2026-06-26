@@ -4,7 +4,7 @@ primaryColor             = "#CFB991"
 backgroundColor          = "#08080f"
 secondaryBackgroundColor = "#0f0f1a"
 textColor                = "#c0c8d8"
-font                     = "monospace"
+font                     = "sans"
 
 [server]
 headless                    = true
@@ -12,5 +12,11 @@ enableCORS                  = false
 enableXsrfProtection        = false
 enableWebsocketCompression  = false
 
+[client]
+toolbarMode = "minimal"
+
 [browser]
 gatherUsageStats = false
+
+[logger]
+level = "warning"

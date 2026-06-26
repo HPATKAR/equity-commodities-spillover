@@ -13,6 +13,7 @@ import streamlit as st
 from src.ui.shared import (
     _page_header, _page_footer, _page_intro,
     _definition_block, _takeaway_block, _section_note,
+    _h2, _h3,
 )
 
 _M  = "font-family:'JetBrains Mono',monospace;"
@@ -20,23 +21,6 @@ _S  = "font-family:'DM Sans',sans-serif;"
 _G  = "#CFB991"
 _DIM = "#8E9AAA"
 _MUT = "#555960"
-
-# ── Sub-components ─────────────────────────────────────────────────────────────
-
-def _h2(text: str) -> None:
-    st.markdown(
-        f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.20em;'
-        f'color:{_G};text-transform:uppercase;border-bottom:1px solid #1e1e1e;'
-        f'padding-bottom:5px;margin:1.4rem 0 .6rem">{text}</p>',
-        unsafe_allow_html=True,
-    )
-
-def _h3(text: str) -> None:
-    st.markdown(
-        f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
-        f'color:{_DIM};text-transform:uppercase;margin:.8rem 0 .3rem">{text}</p>',
-        unsafe_allow_html=True,
-    )
 
 def _prose(text: str) -> None:
     st.markdown(

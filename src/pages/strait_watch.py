@@ -250,6 +250,22 @@ def page_strait_watch(start: str, end: str) -> None:
         "of supply-side commodity shocks, and feed directly into the equity-commodities "
         "spillover channel analysed throughout this dashboard. Watch these before watching price."
     )
+    st.markdown(
+        '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
+        'letter-spacing:.12em;text-transform:uppercase;color:#8890a1">'
+        'Baseline Throughput Estimates</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
+        'color:#CFB991">Q1 2025</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;'
+        'color:rgba(255,255,255,.2)">|</span>'
+        '<span style="font-family:\'DM Sans\',sans-serif;font-size:.72rem;color:#8890a1">'
+        'Ships/day baselines are quarterly research estimates. '
+        'Displayed disruption scores are adjusted live each session using commodity price z-scores '
+        'via IMF PortWatch vessel counts where available.</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Load PortWatch live data early so cards can use real counts ───────────
     import copy

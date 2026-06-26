@@ -16,7 +16,7 @@ _M   = "font-family:'JetBrains Mono',monospace;"
 _S   = "font-family:'DM Sans',sans-serif;"
 
 _STYLE = """<style>
-.ah-label{
+.abt-label{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
     text-transform:uppercase;letter-spacing:.20em;
@@ -24,61 +24,61 @@ _STYLE = """<style>
     border-bottom:1px solid #1e1e1e;
     padding-bottom:5px;margin-bottom:10px;
 }
-.ah-name{
+.abt-name{
     font-family:'JetBrains Mono',monospace!important;
     font-size:20px!important;font-weight:700!important;
     color:#e8e9ed!important;letter-spacing:-.02em;
     line-height:1.1;display:block;
 }
-.ah-sub{
+.abt-sub{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#CFB991!important;
     font-weight:600;line-height:1.7;
     letter-spacing:.08em;display:block;
 }
-.ah-tgln{
+.abt-tgln{
     font-family:'DM Sans',sans-serif!important;
     font-size:11px!important;color:#9aa3b0!important;
     line-height:1.72;display:block;
 }
-.ah-body{
+.abt-body{
     font-family:'DM Sans',sans-serif!important;
     font-size:11px!important;color:#9aa3b0!important;
     line-height:1.78;
 }
-.ah-role{
+.abt-role{
     font-family:'DM Sans',sans-serif!important;
     font-size:11.5px!important;font-weight:700!important;
     color:#e8e9ed!important;line-height:1.3;display:block;
 }
-.ah-org{
+.abt-org{
     font-family:'JetBrains Mono',monospace!important;
     font-size:9px!important;font-weight:600!important;
     color:#CFB991!important;display:block;letter-spacing:.04em;
 }
-.ah-meta{
+.abt-meta{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#8E9AAA!important;display:block;
 }
-.ah-sch{
+.abt-sch{
     font-family:'DM Sans',sans-serif!important;
     font-size:12px!important;font-weight:700!important;
     color:#e8e9ed!important;display:block;
 }
-.ah-dept{
+.abt-dept{
     font-family:'DM Sans',sans-serif!important;
     font-size:10px!important;color:#9aa3b0!important;display:block;
 }
-.ah-deg{
+.abt-deg{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#CFB991!important;
     font-weight:600;letter-spacing:.04em;display:block;
 }
-.ah-year{
+.abt-year{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;color:#8E9AAA!important;display:block;
 }
-.ah-link{
+.abt-link{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
     color:#080808!important;text-decoration:none!important;
@@ -87,8 +87,8 @@ _STYLE = """<style>
     margin-right:6px;display:inline-block;
     transition:opacity .15s;
 }
-.ah-link:hover{opacity:.85!important;}
-.ah-link-ghost{
+.abt-link:hover{opacity:.85!important;}
+.abt-link-ghost{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
     color:#CFB991!important;text-decoration:none!important;
@@ -96,19 +96,19 @@ _STYLE = """<style>
     border:1px solid rgba(207,185,145,.35);
     padding:2px 9px;margin-right:6px;display:inline-block;
 }
-.ah-link-ghost:hover{border-color:#CFB991!important;}
-.ah-num{
+.abt-link-ghost:hover{border-color:#CFB991!important;}
+.abt-num{
     font-family:'JetBrains Mono',monospace!important;
     font-size:22px!important;font-weight:700!important;
     color:#CFB991!important;line-height:1;display:block;
 }
-.ah-slbl{
+.abt-slbl{
     font-family:'JetBrains Mono',monospace!important;
     font-size:7px!important;text-transform:uppercase;
     letter-spacing:.14em;color:#8E9AAA!important;display:block;
     margin-top:4px;
 }
-.ah-tag-g{
+.abt-tag-g{
     display:inline-block;padding:2px 9px;
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
@@ -117,7 +117,7 @@ _STYLE = """<style>
     border:1px solid rgba(207,185,145,.25);
     letter-spacing:.06em;text-transform:uppercase;
 }
-.ah-tag-n{
+.abt-tag-n{
     display:inline-block;padding:2px 9px;
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:600!important;
@@ -125,25 +125,25 @@ _STYLE = """<style>
     color:#8E9AAA!important;border:1px solid #222;
     letter-spacing:.06em;text-transform:uppercase;
 }
-.ah-pub-title{
+.abt-pub-title{
     font-family:'DM Sans',sans-serif!important;
     font-size:11px!important;font-weight:600!important;
     color:#e8e9ed!important;line-height:1.55;display:block;
 }
-.ah-pub-auth{
+.abt-pub-auth{
     font-family:'DM Sans',sans-serif!important;
     font-size:10px!important;color:#9aa3b0!important;display:block;
 }
-.ah-pub-journal{
+.abt-pub-journal{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#CFB991!important;display:block;
 }
-.ah-cert-name{
+.abt-cert-name{
     font-family:'DM Sans',sans-serif!important;
     font-size:11px!important;font-weight:600!important;
     color:#e8e9ed!important;display:block;
 }
-.ah-cert-issuer{
+.abt-cert-issuer{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#8E9AAA!important;display:block;
 }

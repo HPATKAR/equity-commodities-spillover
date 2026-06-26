@@ -16,7 +16,7 @@ _M   = "font-family:'JetBrains Mono',monospace;"
 _S   = "font-family:'DM Sans',sans-serif;"
 
 _STYLE = """<style>
-.ail-label{
+.abt-label{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
     text-transform:uppercase;letter-spacing:.20em;
@@ -24,61 +24,61 @@ _STYLE = """<style>
     border-bottom:1px solid #1e1e1e;
     padding-bottom:5px;margin-bottom:10px;
 }
-.ail-name{
+.abt-name{
     font-family:'JetBrains Mono',monospace!important;
     font-size:20px!important;font-weight:700!important;
     color:#e8e9ed!important;letter-spacing:-.02em;
     line-height:1.1;display:block;
 }
-.ail-sub{
+.abt-sub{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#CFB991!important;
     font-weight:600;line-height:1.7;
     letter-spacing:.08em;display:block;
 }
-.ail-tgln{
+.abt-tgln{
     font-family:'DM Sans',sans-serif!important;
     font-size:11px!important;color:#9aa3b0!important;
     line-height:1.72;display:block;
 }
-.ail-body{
+.abt-body{
     font-family:'DM Sans',sans-serif!important;
     font-size:11px!important;color:#9aa3b0!important;
     line-height:1.78;
 }
-.ail-role{
+.abt-role{
     font-family:'DM Sans',sans-serif!important;
     font-size:11.5px!important;font-weight:700!important;
     color:#e8e9ed!important;line-height:1.3;display:block;
 }
-.ail-org{
+.abt-org{
     font-family:'JetBrains Mono',monospace!important;
     font-size:9px!important;font-weight:600!important;
     color:#CFB991!important;display:block;letter-spacing:.04em;
 }
-.ail-meta{
+.abt-meta{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#8E9AAA!important;display:block;
 }
-.ail-sch{
+.abt-sch{
     font-family:'DM Sans',sans-serif!important;
     font-size:12px!important;font-weight:700!important;
     color:#e8e9ed!important;display:block;
 }
-.ail-dept{
+.abt-dept{
     font-family:'DM Sans',sans-serif!important;
     font-size:10px!important;color:#9aa3b0!important;display:block;
 }
-.ail-deg{
+.abt-deg{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8.5px!important;color:#CFB991!important;
     font-weight:600;letter-spacing:.04em;display:block;
 }
-.ail-year{
+.abt-year{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;color:#8E9AAA!important;display:block;
 }
-.ail-link{
+.abt-link{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
     color:#080808!important;text-decoration:none!important;
@@ -87,8 +87,8 @@ _STYLE = """<style>
     margin-right:6px;display:inline-block;
     transition:opacity .15s;
 }
-.ail-link:hover{opacity:.85!important;}
-.ail-link-ghost{
+.abt-link:hover{opacity:.85!important;}
+.abt-link-ghost{
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
     color:#CFB991!important;text-decoration:none!important;
@@ -96,19 +96,19 @@ _STYLE = """<style>
     border:1px solid rgba(207,185,145,.35);
     padding:2px 9px;margin-right:6px;display:inline-block;
 }
-.ail-link-ghost:hover{border-color:#CFB991!important;}
-.ail-num{
+.abt-link-ghost:hover{border-color:#CFB991!important;}
+.abt-num{
     font-family:'JetBrains Mono',monospace!important;
     font-size:22px!important;font-weight:700!important;
     color:#CFB991!important;line-height:1;display:block;
 }
-.ail-slbl{
+.abt-slbl{
     font-family:'JetBrains Mono',monospace!important;
     font-size:7px!important;text-transform:uppercase;
     letter-spacing:.14em;color:#8E9AAA!important;display:block;
     margin-top:4px;
 }
-.ail-tag-g{
+.abt-tag-g{
     display:inline-block;padding:2px 9px;
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:700!important;
@@ -117,7 +117,7 @@ _STYLE = """<style>
     border:1px solid rgba(207,185,145,.25);
     letter-spacing:.06em;text-transform:uppercase;
 }
-.ail-tag-n{
+.abt-tag-n{
     display:inline-block;padding:2px 9px;
     font-family:'JetBrains Mono',monospace!important;
     font-size:8px!important;font-weight:600!important;

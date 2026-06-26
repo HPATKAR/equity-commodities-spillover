@@ -1277,6 +1277,21 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "Static library ideas fire when the current regime matches their structural trigger. "
         "All ideas are QC-graded (A–D), scenario-payoff-projected, and debatable via agent threads."
     )
+    st.markdown(
+        '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
+        'letter-spacing:.12em;text-transform:uppercase;color:#8890a1">'
+        'Static Library Last Reviewed</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
+        'color:#CFB991">June 2025</span>'
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;'
+        'color:rgba(255,255,255,.2)">|</span>'
+        '<span style="font-family:\'DM Sans\',sans-serif;font-size:.72rem;color:#8890a1">'
+        'Structural triggers and entry/exit levels reflect research-period market conditions. '
+        'Conflict-driven ideas are generated live from current session data.</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Geopolitical context & filter gate (shown BEFORE any trades) ──────────
     try:

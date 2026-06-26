@@ -178,6 +178,26 @@ def _add_event_bands(
 
 # ── Text components ────────────────────────────────────────────────────────
 
+def _h2(text: str) -> None:
+    """Section heading — monospace label with gold rule. Use as primary sub-section divider."""
+    st.markdown(
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+        f'letter-spacing:.20em;color:{_GOLD};text-transform:uppercase;'
+        f'border-bottom:1px solid #1e1e1e;padding-bottom:5px;margin:1.4rem 0 .6rem">{text}</p>',
+        unsafe_allow_html=True,
+    )
+
+
+def _h3(text: str) -> None:
+    """Sub-section heading — dimmed monospace label. Use for tertiary groupings."""
+    st.markdown(
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+        f'letter-spacing:.12em;color:#8890a1;text-transform:uppercase;'
+        f'margin:.8rem 0 .3rem">{text}</p>',
+        unsafe_allow_html=True,
+    )
+
+
 def _page_intro(text: str) -> None:
     st.markdown(
         f"""<p style="font-family:'DM Sans',sans-serif;font-size:0.76rem;

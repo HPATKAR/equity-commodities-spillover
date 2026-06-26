@@ -1073,22 +1073,54 @@ except Exception:
     pass
 
 if _need_auth and not st.session_state.get("_auth_ok", False):
-    st.markdown(
-        '<div style="max-width:340px;margin:6rem auto 0;padding:2rem;'
-        'background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;text-align:center">'
-        '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
-        'letter-spacing:0.18em;text-transform:uppercase;color:#8E6F3E;margin-bottom:0.8rem">'
-        'Cross-Asset Spillover Monitor</div>'
-        '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#e8e9ed;'
-        'margin-bottom:1.2rem">Enter access password</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+html,body,[data-testid="stAppViewContainer"],[data-testid="stApp"],.main{
+    background:#000!important;font-family:'DM Sans',sans-serif!important}
+#MainMenu,footer,[data-testid="stDecoration"],[data-testid="stHeader"],
+[data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none!important}
+.block-container{padding:0!important;max-width:100%!important}
+</style>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+     background:#000;padding:2rem">
+  <div style="width:100%;max-width:360px">
+
+    <!-- Wordmark -->
+    <div style="text-align:center;margin-bottom:2.5rem">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;
+           letter-spacing:.22em;text-transform:uppercase;color:#CFB991;margin-bottom:.35rem">
+        Cross-Asset Spillover Monitor
+      </div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:.48rem;font-weight:500;
+           letter-spacing:.16em;text-transform:uppercase;
+           color:rgba(207,185,145,.42)">
+        Purdue Daniels &middot; MGMT&nbsp;69000&ndash;120
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div style="background:#0d0d0d;border:1px solid #1e1e1e;
+         border-top:2px solid #CFB991;padding:2rem 2rem 1.75rem">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;
+           letter-spacing:.14em;text-transform:uppercase;color:#8890a1;
+           margin-bottom:1.4rem;padding-bottom:.75rem;border-bottom:1px solid #1e1e1e">
+        Restricted Access
+      </div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:.82rem;color:#c8c8c8;
+           margin-bottom:1.5rem;line-height:1.55">
+        Enter your access password to continue.
+      </div>
+    </div>
+
+  </div>
+</div>
+""", unsafe_allow_html=True)
     _pw_col = st.columns([1, 2, 1])[1]
     _pw_in = _pw_col.text_input("Password", type="password", key="_auth_pw",
                                 label_visibility="collapsed",
-                                placeholder="Password")
-    if _pw_col.button("Enter", key="_auth_btn", type="primary", width="stretch"):
+                                placeholder="Access password")
+    if _pw_col.button("Authenticate", key="_auth_btn", type="primary", use_container_width=True):
         _correct = ""
         try:
             _correct = st.secrets.get("auth", {}).get("password", "")
@@ -1168,8 +1200,8 @@ html,body{{height:72px;overflow:visible;background:#000;
 /* Italic serif-like styling via font-style + lighter weight for the "&" */
 .bm em{{font-style:italic;font-weight:400;color:rgba(207,185,145,.85);margin:0 1px}}
 .bs{{
-  font-size:.50rem;font-weight:500;
-  color:rgba(207,185,145,.55);
+  font-size:.54rem;font-weight:500;
+  color:rgba(207,185,145,.60);
   letter-spacing:.16em;text-transform:uppercase;
   white-space:nowrap;
 }}
@@ -1190,7 +1222,7 @@ li.ni{{position:relative;display:flex;align-items:stretch}}
   letter-spacing:.022em;
 }}
 .ni > a.lnk:hover,.ni > span.lnk:hover{{
-  color:#fff;background:rgba(255,255,255,.04);
+  color:#fff;background:rgba(255,255,255,.08);
   border-bottom-color:rgba(207,185,145,.35);
 }}
 .ni > a.lnk.active{{color:#CFB991;border-bottom-color:#CFB991;font-weight:600}}
@@ -1217,7 +1249,7 @@ ul.drop li a{{
   transition:color .10s,background .10s,border-color .10s;
   letter-spacing:.012em;
 }}
-ul.drop li a:hover{{color:#fff;background:rgba(255,255,255,.04);border-left-color:rgba(207,185,145,.32)}}
+ul.drop li a:hover{{color:#fff;background:rgba(255,255,255,.08);border-left-color:rgba(207,185,145,.32)}}
 ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-color:#CFB991;font-weight:500}}
 
 /* ── Right data-source strip ── */
@@ -1326,7 +1358,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         'cursor:pointer;';
       a.addEventListener('mouseover',function(){{
         a.style.color='#fff';
-        a.style.background='rgba(255,255,255,.04)';
+        a.style.background='rgba(255,255,255,.08)';
         a.style.borderLeftColor='rgba(207,185,145,.35)';
       }});
       a.addEventListener('mouseout',function(){{
@@ -1717,7 +1749,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var MONITOR  =['watchlist'];
     var RESEARCH =['model_accuracy','ai_chat','methodology'];
     var INSIGHTS =['insights'];
-    var ABOUT    =['about_heramb','about_jiahe','about_ilian'];
+    var ABOUT    =['about_heramb','about_jiahe','about_ilian','about_ai_workforce'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
       if(a.dataset.pg===cur) a.classList.add('active');
     }});
