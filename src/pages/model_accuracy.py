@@ -1159,13 +1159,16 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════════════════════════════════
-    # ROW 1 - Regime Detection (wider) | Risk Score vs VIX (narrower)
-    # ══════════════════════════════════════════════════════════════════════
-    col_reg, col_rs = st.columns([1.2, 1], gap="medium")
+    # ── Signal audit tabs ─────────────────────────────────────────────────
+    _tab1, _tab2, _tab3, _tab4 = st.tabs([
+        "Regime Detection",
+        "Risk Score vs VIX",
+        "Granger Hit Rate",
+        "COT Contrarian",
+    ])
 
     # ── Panel 1: Regime Detection ──────────────────────────────────────────
-    with col_reg:
+    with _tab1:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">Regime Detection: Rule-Based vs VIX</p>',
@@ -1357,7 +1360,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         _chart(fig_ml_cm)
 
     # ── Panel 2: Risk Score vs VIX ─────────────────────────────────────────
-    with col_rs:
+    with _tab2:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">'
@@ -1585,14 +1588,8 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         "simple correlation."
     )
 
-    # ══════════════════════════════════════════════════════════════════════
-    # ROW 2 - Granger Hit Rate | COT Contrarian (stacked for chart room)
-    # ══════════════════════════════════════════════════════════════════════
-    col_gr = st.container()
-    col_cot = st.container()
-
     # ── Panel 3: Granger Hit Rate ──────────────────────────────────────────
-    with col_gr:
+    with _tab3:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">Granger Lead-Lag: Directional Hit Rate</p>',
@@ -1731,7 +1728,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     )
 
     # ── Panel 4: COT Contrarian ────────────────────────────────────────────
-    with col_cot:
+    with _tab4:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">COT Contrarian: Price Reversal Accuracy</p>',
