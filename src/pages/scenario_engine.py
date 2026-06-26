@@ -23,12 +23,7 @@ from src.ui.agent_panel import render_agent_output_block
 from src.agents.stress_engineer import run as _run_stress_engineer
 from src.analysis.agent_state import is_enabled
 
-_GOLD  = "#CFB991"
-_RED   = "#c0392b"
-_GREEN = "#2e7d32"
-_MUTED = "#8890a1"
-_BG    = "#080808"
-_RULE  = "#2a2a2a"
+from src.ui.palette import GOLD as _GOLD, DANGER as _RED, SAFE as _GREEN, LABEL as _MUTED, BG_WARM as _BG, BORDER2 as _RULE
 
 # ── Shock factor proxies in the combined returns DataFrame ─────────────────
 # Map each shock dimension to the closest available asset name

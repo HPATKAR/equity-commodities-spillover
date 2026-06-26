@@ -22,13 +22,7 @@ from src.analysis.correlations import (
 from src.analysis.risk_score import compute_risk_score, risk_score_history
 from src.ui.shared import _page_intro, _page_header, _page_footer
 from src.data.loader import load_private_credit_proxies
-
-# ── Colour palette ────────────────────────────────────────────────────────────
-_GREEN  = "#1e8449"
-_AMBER  = "#b7770d"
-_RED    = "#b03a2e"
-_GREY   = "#555960"
-_GOLD   = "#CFB991"
+from src.ui.palette import GOLD as _GOLD, SAFE as _GREEN, WARN as _AMBER, DANGER as _RED, TICK as _GREY
 
 _F = "font-family:'DM Sans',sans-serif;"
 

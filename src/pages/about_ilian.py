@@ -8,10 +8,9 @@ from pathlib import Path
 import streamlit as st
 
 from src.ui.shared import _page_footer
+from src.ui.palette import GOLD as _G, LABEL as _DIM
 
 _ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
-_G   = "#CFB991"
-_DIM = "#8E9AAA"
 _M   = "font-family:'JetBrains Mono',monospace;"
 _S   = "font-family:'DM Sans',sans-serif;"
 

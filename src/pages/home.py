@@ -35,28 +35,31 @@ from src.data.loader import load_returns
 from src.analysis.correlations import average_cross_corr_series
 from src.analysis.risk_score import risk_score_history, plot_risk_history
 from src.ui.shared import _page_header, _page_footer, _section_header
+from src.ui.palette import (
+    GOLD, DANGER, WARN, SAFE, INFO, NAVY,
+    BG, CARD, CARD2, CARD3, BORDER, BORDER2, TEXT, TICK as MUTED, LABEL,
+)
 
 _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
-_GOLD = "#CFB991"
+_GOLD = GOLD
 
-# ── Design tokens ─────────────────────────────────────────────────────────────
-# Single source of truth for all colors used in inline HTML/SVG panels.
+# ── Design tokens — sourced from src/ui/palette.py ────────────────────────────
 _C = {
-    "danger":  "#c0392b",
-    "warn":    "#e67e22",
-    "safe":    "#27ae60",
-    "info":    "#2980b9",
-    "gold":    "#CFB991",
-    "navy":    "#1E3A5F",
-    "bg":      "#000000",
-    "card":    "#0d0d0d",
-    "card2":   "#141414",
-    "border":  "#1e1e1e",
-    "border2": "#2a2a2a",
-    "text":    "#e8e9ed",
-    "muted":   "#555960",
-    "label":   "#8890a1",
+    "danger":  DANGER,
+    "warn":    WARN,
+    "safe":    SAFE,
+    "info":    INFO,
+    "gold":    GOLD,
+    "navy":    NAVY,
+    "bg":      BG,
+    "card":    CARD,
+    "card2":   CARD2,
+    "border":  BORDER,
+    "border2": BORDER2,
+    "text":    TEXT,
+    "muted":   MUTED,
+    "label":   LABEL,
 }
 
 # ── Shared style helpers ───────────────────────────────────────────────────────

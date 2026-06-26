@@ -11,13 +11,14 @@ import datetime
 import streamlit as st
 
 from src.analysis.proactive_alerts import Alert
+from src.ui.palette import DANGER, WARN, INFO
 
 _F = "font-family:'DM Sans',sans-serif;"
 
 _SEV_META = {
-    "critical": {"border": "#c0392b", "badge_bg": "#c0392b", "badge_fg": "#fff",  "label": "CRITICAL"},
-    "warning":  {"border": "#e67e22", "badge_bg": "#e67e22", "badge_fg": "#000",  "label": "WARNING"},
-    "info":     {"border": "#2980b9", "badge_bg": "#2980b9", "badge_fg": "#fff",  "label": "INFO"},
+    "critical": {"border": DANGER, "badge_bg": DANGER, "badge_fg": "#fff", "label": "CRITICAL"},
+    "warning":  {"border": WARN,   "badge_bg": WARN,   "badge_fg": "#000", "label": "WARNING"},
+    "info":     {"border": INFO,   "badge_bg": INFO,   "badge_fg": "#fff", "label": "INFO"},
 }
 
 _PAGE_LABELS = {

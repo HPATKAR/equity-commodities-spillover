@@ -11,8 +11,8 @@ import streamlit as st
 
 from src.analysis.agent_state import AGENTS, STATUSES, init_agents, get_agent, is_enabled
 from src.ui.shared import _page_header, _about_page_styles, _page_footer
+from src.ui.palette import GOLD as _GOLD
 
-_GOLD = "#CFB991"
 _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
 

@@ -8,9 +8,9 @@ from pathlib import Path
 import streamlit as st
 
 from src.ui.shared import _page_footer
+from src.ui.palette import GOLD as _GOLD
 
 _ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
-_GOLD = "#CFB991"
 
 _STYLE = """<style>
 .abt-label{font-family:'JetBrains Mono',monospace!important;font-size:9px!important;font-weight:700!important;text-transform:uppercase;letter-spacing:.18em;color:#8E9AAA!important;display:block;}

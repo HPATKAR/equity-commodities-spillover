@@ -14,18 +14,13 @@ import plotly.io as pio
 import streamlit as st
 
 from src.data.config import PALETTE, GEOPOLITICAL_EVENTS, CATEGORY_COLORS
+from src.ui.palette import (
+    GOLD as _GOLD, BG as _BLACK,
+    BG as _BG, BG_WARM as _BG_WARM,
+    GRID as _GRID, TICK as _TICK, LEGEND as _LEGEND,
+)
 
 _ASSETS = Path(__file__).parents[2] / "assets"
-_GOLD   = "#CFB991"
-_BLACK  = "#000000"
-
-# ── Plotly template ────────────────────────────────────────────────────────
-
-_BG       = "#000000"    # page background — pitch black
-_BG_WARM  = "#080808"    # chart plot area — near-black
-_GRID     = "#1a1a1a"    # grid lines — structural
-_TICK     = "#555960"    # axis tick labels — muted
-_LEGEND   = "#8890a1"    # legend text
 
 _PURDUE_TEMPLATE = go.layout.Template(
     layout=go.Layout(

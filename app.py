@@ -906,11 +906,6 @@ iframe { background: transparent !important; }
    PURDUE GOLD ACCENTS  (dark mode - tasteful, not loud)
    ════════════════════════════════════════════════════════════════ */
 
-/* Page titles */
-h1 { color: #CFB991 !important; }
-h2 { color: #c4ae88 !important; }
-h3 { color: #b8a27a !important; }
-
 /* Streamlit heading widget */
 [data-testid="stHeading"] { color: #CFB991 !important; }
 
@@ -932,8 +927,6 @@ h3 { color: #b8a27a !important; }
 
 /* Subheader (st.subheader) */
 [data-testid="stMarkdownContainer"] h2,
-[data-testid="stMarkdownContainer"] h3 { color: #c4ae88 !important; }
-
 /* Dividers (---) → faint gold */
 hr { border-top-color: rgba(207,185,145,0.25) !important; }
 
