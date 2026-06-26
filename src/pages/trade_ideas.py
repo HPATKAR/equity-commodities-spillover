@@ -801,56 +801,113 @@ def _format_stock_context(prices: dict[str, float], sectors: list[str]) -> str:
 
 
 _TI_STYLE = """<style>
-/* ── Trade Ideas Page Design System ────────────────────────── */
+/* ── Trade Ideas — Design System ───────────────────────────────────────────
+   Typography scale (matches shared.py + palette.py):
+     0.50rem  JetBrains Mono  uppercase labels, badges, chips, dims
+     0.52rem  JetBrains Mono  header labels (slightly heavier weight labels)
+     0.63rem  DM Sans / Mono  cell values, strip values, secondary data
+     0.70rem  DM Sans         body / rationale (matches _page_intro scale)
+     0.81rem  DM Sans bold    card trade name (primary heading in card)
+     0.94rem  JetBrains Mono  KPI number (page-level metrics)
+   Colors: palette.py — TEXT #e8e9ed · TEXT_SOFT #c8c8c8 · TEXT_MUTED #b8b8b8
+           LABEL #8890a1 · TICK #555960 · GOLD #CFB991
+           BORDER #1e1e1e · BORDER2 #2a2a2a · CARD #0d0d0d · CARD2 #141414
+──────────────────────────────────────────────────────────────────────────── */
+
+/* Card shell */
 .ti-card{border:1px solid #1e1e1e;background:#0d0d0d;margin-bottom:.6rem;overflow:hidden}
-.ti-hdr{background:#111;border-bottom:1px solid #1e1e1e;padding:.45rem .9rem;
+
+/* Card header */
+.ti-hdr{background:#0a0a0a;border-bottom:1px solid #1e1e1e;padding:.45rem .9rem;
   display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.ti-hdr-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
-  letter-spacing:.12em;text-transform:uppercase}
+.ti-hdr-lbl{font-family:'JetBrains Mono',monospace;font-size:0.52rem;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;line-height:1.4}
+
+/* Badges and pills */
 .ti-badges{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
-.ti-pill{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-  padding:2px 6px;color:#fff;border-radius:1px}
-.ti-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-  padding:1px 6px;letter-spacing:.08em;border-radius:1px}
+.ti-pill{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  padding:2px 6px;color:#fff}
+.ti-badge{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  padding:1px 6px;letter-spacing:.08em}
+
+/* Card body */
 .ti-body{padding:.65rem .9rem}
-.ti-name{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
-  color:#f0f0f0;line-height:1.3;margin-bottom:5px}
-.ti-dir{font-family:'JetBrains Mono',monospace;font-size:9px;
-  color:#8890a1;margin-bottom:9px;line-height:1.6}
+.ti-name{font-family:'DM Sans',sans-serif;font-size:0.81rem;font-weight:700;
+  color:#e8e9ed;line-height:1.3;margin-bottom:4px}
+.ti-dir{font-family:'JetBrains Mono',monospace;font-size:0.52rem;
+  color:#8890a1;margin-bottom:6px;line-height:1.7}
+.ti-tickers{font-family:'JetBrains Mono',monospace;font-size:0.56rem;
+  margin-bottom:8px;line-height:1.9;display:flex;flex-wrap:wrap;gap:14px}
+
+/* Meta row */
 .ti-meta{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-.ti-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-  letter-spacing:.10em;text-transform:uppercase;color:#555960}
-.ti-conf{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
-.ti-qc{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:2px 7px;color:#fff}
-.ti-rationale{font-family:'DM Sans',sans-serif;font-size:11px;color:#cccccc;
-  line-height:1.65;margin-bottom:10px}
+.ti-lbl{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:#555960}
+.ti-conf{font-family:'JetBrains Mono',monospace;font-size:0.69rem;font-weight:700}
+.ti-qc{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  padding:2px 7px;color:#fff}
+
+/* Rationale */
+.ti-rationale{font-family:'DM Sans',sans-serif;font-size:0.70rem;color:#b8b8b8;
+  line-height:1.68;margin-bottom:10px}
+
+/* Entry/Exit/Risk grid + extended fields grid */
 .ti-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px}
-.ti-ext-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-top:5px}
-.ti-cell{background:#0a0a0a;border:1px solid #1a1a1a;padding:.35rem .55rem}
-.ti-cell-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-  letter-spacing:.10em;text-transform:uppercase;margin-bottom:3px}
-.ti-cell-val{font-family:'DM Sans',sans-serif;font-size:10px;color:#ddd;line-height:1.45}
+.ti-ext-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:5px}
+.ti-cell{background:#080808;border:1px solid #1a1a1a;padding:.35rem .6rem}
+.ti-cell-lbl{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
+.ti-cell-val{font-family:'DM Sans',sans-serif;font-size:0.63rem;color:#c8c8c8;line-height:1.45}
+
+/* P&L / Backtest strip */
 .ti-strip{display:flex;gap:14px;padding:5px .9rem;align-items:center;
   flex-wrap:wrap;border-top:1px solid #1a1a1a}
-.ti-strip-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-  letter-spacing:.10em;text-transform:uppercase;min-width:56px}
-.ti-strip-val{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700}
-.ti-strip-dim{font-family:'JetBrains Mono',monospace;font-size:8px;color:#444c5c;margin-left:auto}
+.ti-strip-tag{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;min-width:56px}
+.ti-strip-val{font-family:'JetBrains Mono',monospace;font-size:0.63rem;font-weight:700}
+.ti-strip-dim{font-family:'JetBrains Mono',monospace;font-size:0.50rem;
+  color:#444c5c;margin-left:auto}
+
+/* Why chips (pass-filter reasons) */
 .ti-why{display:flex;gap:4px;flex-wrap:wrap;padding:4px .9rem .45rem}
-.ti-why-chip{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
-  padding:2px 7px;border:1px solid #1a3a1a;background:#0a1a0a;color:#27ae60}
+.ti-why-chip{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  padding:2px 7px;border:1px solid #1a3a1a;background:#080f08;color:#27ae60}
+
+/* QC flags */
+.ti-qc-flag{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  padding:2px 7px;border:1px solid #3a2000;background:#100800;color:#e67e22}
+
+/* Asset exposure cells */
 .ti-exp{display:flex;gap:5px;flex-wrap:wrap;padding:4px .9rem .5rem}
-.ti-exp-cell{background:#0a0a0a;border:1px solid #1a1a1a;padding:4px 8px;min-width:80px}
-.ti-exp-name{font-family:'JetBrains Mono',monospace;font-size:8px;color:#555960;
+.ti-exp-cell{background:#080808;border:1px solid #1a1a1a;padding:4px 8px;min-width:80px}
+.ti-exp-name{font-family:'JetBrains Mono',monospace;font-size:0.50rem;color:#555960;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;margin-bottom:2px}
-.ti-exp-sas{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700}
+.ti-exp-sas{font-family:'JetBrains Mono',monospace;font-size:0.56rem;font-weight:700}
+
+/* Page-level KPI tiles */
 .ti-kpi{border:1px solid #1e1e1e;padding:.6rem .85rem;background:#0d0d0d}
-.ti-kpi-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.12em;color:#CFB991;margin-bottom:4px}
-.ti-kpi-val{font-family:'JetBrains Mono',monospace;font-size:1.0rem;font-weight:700}
+.ti-kpi-lbl{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.14em;color:#CFB991;margin-bottom:4px}
+.ti-kpi-val{font-family:'JetBrains Mono',monospace;font-size:0.94rem;font-weight:700}
+
+/* Conflict/regime geo-bar */
 .ti-geo-bar{background:#080808;border:1px solid #1e1e1e;padding:.5rem 1rem;
   margin-bottom:.65rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-/* Entrance animations */
+
+/* Master Investor Lens */
+.ti-lens{background:#060606;border-top:1px solid #151500;padding:.5rem .9rem .4rem}
+.ti-lens-hdr{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
+  letter-spacing:.14em;color:#4a3a10;text-transform:uppercase;margin-bottom:6px}
+.ti-lens-row{display:flex;gap:10px;align-items:flex-start;
+  padding:4px 0;border-bottom:1px solid #111}
+.ti-lens-mgr{font-family:'JetBrains Mono',monospace;font-size:0.50rem;
+  font-weight:700;color:#CFB991}
+.ti-lens-arch{font-family:'JetBrains Mono',monospace;font-size:0.44rem;
+  color:#555960;letter-spacing:.07em}
+.ti-lens-quote{font-family:'DM Sans',sans-serif;font-size:0.63rem;
+  color:#888;line-height:1.55}
+
+/* Entrance animation */
 @keyframes ti-card-in{0%{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .ti-card-anim{animation:ti-card-in .45s ease-out both}
 </style>"""
@@ -886,25 +943,18 @@ def _render_investor_lens_strip(col, trade: dict) -> None:
         arch    = lens.get("archetype", "")
         insight = lens.get("insight", "")
         items_html += (
-            f'<div style="display:flex;gap:10px;align-items:flex-start;'
-            f'padding:4px 0;border-bottom:1px solid #111">'
+            f'<div class="ti-lens-row">'
             f'<div style="min-width:160px;flex-shrink:0">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-            f'font-weight:700;color:#CFB991">{mgr.upper()}</span><br>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
-            f'color:#555960;letter-spacing:.07em">{arch}</span>'
+            f'<span class="ti-lens-mgr">{mgr.upper()}</span><br>'
+            f'<span class="ti-lens-arch">{arch}</span>'
             f'</div>'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
-            f'color:#888;line-height:1.55">&ldquo;{insight}&rdquo;</span>'
+            f'<span class="ti-lens-quote">&ldquo;{insight}&rdquo;</span>'
             f'</div>'
         )
 
     col.markdown(
-        f'<div style="background:#060606;border-top:1px solid #1a1a0a;'
-        f'padding:.5rem .9rem .4rem .9rem">'
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        f'font-weight:700;letter-spacing:.12em;color:#5a4a20;'
-        f'text-transform:uppercase;margin-bottom:6px">MASTER INVESTOR LENS</div>'
+        f'<div class="ti-lens">'
+        f'<div class="ti-lens-hdr">Master Investor Lens</div>'
         + items_html
         + '</div>',
         unsafe_allow_html=True,
@@ -1148,7 +1198,7 @@ def _render_trade_card(
             _clr  = "#27ae60" if _d.lower() == "long" else "#c0392b"
             _full = _TICKER_NAMES.get(_t, _a)  # "ExxonMobil" or fall back to asset name
             _ticker_parts.append(
-                f'<span style="color:{_clr};font-weight:700;font-size:8px">{_d}</span>'
+                f'<span style="color:{_clr};font-weight:700;font-size:0.50rem">{_d}</span>'
                 f'&nbsp;<span style="color:#e8e9ed;font-weight:600">{_full}</span>'
                 f'&nbsp;<span style="color:#8890a1">({_t})</span>'
             )
@@ -1157,8 +1207,7 @@ def _render_trade_card(
     if not _ticker_parts and _ai_tickers_str:
         _ticker_parts = [f'<span style="color:#c8c8c8">{_ai_tickers_str}</span>']
     ticker_html = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-        'margin-bottom:8px;line-height:2;display:flex;flex-wrap:wrap;gap:14px">'
+        '<div class="ti-tickers">'
         + "  ".join(_ticker_parts)
         + '</div>'
     ) if _ticker_parts else ""
@@ -1203,7 +1252,7 @@ def _render_trade_card(
         )
     elif isinstance(_gen_upside, (int, float)):
         ai_price_html = (
-            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#8890a1;margin-top:4px">'
             f'Est. upside: <span style="color:#27ae60;font-weight:700">~{_gen_upside:.1f}%</span>'
             '</div>'
@@ -1268,7 +1317,7 @@ def _render_trade_card(
                     f'<span class="ti-strip-tag" style="color:#CFB991">Projected</span>'
                     f'<span class="ti-strip-val" style="color:{_ec}">E[P&L]&nbsp;{_epnl:+.1f}%</span>'
                     f'<span class="ti-strip-val" style="color:{_wc}">Worst&nbsp;{_wpnl:+.1f}%</span>'
-                    f'<span class="ti-strip-val" style="color:#8E9AAA">BE&nbsp;{_bprob * 100:.0f}%</span>'
+                    f'<span class="ti-strip-val" style="color:#8890a1">BE&nbsp;{_bprob * 100:.0f}%</span>'
                     f'<span class="ti-strip-val" style="color:#CFB991">Sharpe&nbsp;{_sharpe:.2f}</span>'
                     f'<span class="ti-strip-dim">model estimate</span>'
                     f'</div>',
@@ -1332,9 +1381,7 @@ def _render_trade_card(
                 st.markdown(
                     '<div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px .9rem">'
                     + "".join(
-                        f'<span style="background:#1a0e00;color:#e67e22;'
-                        f'font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-                        f'padding:2px 7px;border:1px solid #3a2000">⚠ {f}</span>'
+                        f'<span class="ti-qc-flag">⚠ {f}</span>'
                         for f in qc["flags"]
                     )
                     + '</div>',
@@ -1404,9 +1451,9 @@ def _render_trade_card(
                         f'<div class="ti-exp-name">{_a[:18]}</div>'
                         f'<div style="display:flex;gap:6px;align-items:center">'
                         f'<span class="ti-exp-sas" style="color:{_sas_col}">SAS {_sas:.0f}</span>'
-                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
                         f'color:#8890a1">{_dir_icon}</span>'
-                        + (f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                        + (f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                            f'color:#555960">{_beta_str}</span>' if _beta_str else "")
                         + '</div></div>'
                     )
@@ -1609,19 +1656,19 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
         st.markdown(
             f'<div class="ti-geo-bar" style="border-left:3px solid {_ti_risk_color}">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:{_ti_risk_color};letter-spacing:.14em">'
             f'■ GEO CONTEXT</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;'
             f'color:#e67e22">CIS&nbsp;<b>{_ti_cis:.0f}</b></span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;'
             f'color:#CFB991">TPS&nbsp;<b>{_ti_tps:.0f}</b></span>'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#8890a1">'
             f'Lead:&nbsp;<b style="color:{_ti_risk_color}">{_ti_top}</b></span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;'
             f'color:{_ti_sc_color};font-weight:700">'
             f'{_ti_sc.get("label", "Base").upper()}&nbsp;×{_ti_mult:.2f}</span>'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.50rem;'
             f'color:#555960;margin-left:auto">'
             f'Conflict-driven ideas reflect live CIS/TPS. Set filters before reviewing.</span>'
             f'</div>',
@@ -1721,7 +1768,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     _insuf_note = (
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:#e67e22;margin-top:3px">INSUF DATA ({_regime_n_obs}&lt;60 obs)</div>'
         if _regime_insuf else ""
     )
@@ -1744,9 +1791,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         st.stop()
 
     st.markdown(
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
         f'color:#8890a1;margin-bottom:.6rem">'
-        f'<b style="color:#e8e8e8">{len(active_trades)}</b> ideas — '
+        f'<b style="color:#e8e9ed">{len(active_trades)}</b> ideas — '
         f'<b style="color:#e67e22">{_n_geo}</b> conflict-driven · '
         f'<b style="color:#8890a1">{_n_stat}</b> static · '
         f'sorted by exposure × confidence · regime: '
@@ -1783,13 +1830,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;'
-        'letter-spacing:.10em;text-transform:uppercase;color:#CFB991;margin-bottom:.5rem">'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
+        'letter-spacing:.14em;text-transform:uppercase;color:#CFB991;margin-bottom:.5rem">'
         'Institution Report Download</p>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
         'color:#8890a1;line-height:1.7;margin-bottom:.8rem">'
         'Generate a professionally formatted A4 research report covering the current regime, '
         'all illustrative trade ideas, geopolitical context, and methodology — suitable for '
