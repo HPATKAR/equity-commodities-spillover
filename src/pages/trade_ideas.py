@@ -714,6 +714,9 @@ _SP500_UNIVERSE: dict[str, tuple[str, str]] = {
     "CMCSA":("Comcast",               "Communications"),
 }
 
+# Reverse lookup: ticker → full company name (used by the card renderer)
+_TICKER_NAMES: dict[str, str] = {t: name for t, (name, _) in _SP500_UNIVERSE.items()}
+
 # Maps signal context → which sectors to pull for the AI (keeps prompt lean)
 _SECTOR_SIGNAL_MAP: dict[str, list[str]] = {
     "supply_shock":    ["Energy", "Agriculture", "Industrial Metals", "Defense"],
@@ -1142,18 +1145,20 @@ def _render_trade_card(
     for _a, _d in zip(trade.get("assets", []), trade.get("direction", [])):
         _t = _ticker_map_static.get(_a) or _ticker_map_gen.get(_a)
         if _t:
-            _clr = "#27ae60" if _d.lower() == "long" else "#c0392b"
+            _clr  = "#27ae60" if _d.lower() == "long" else "#c0392b"
+            _full = _TICKER_NAMES.get(_t, _a)  # "ExxonMobil" or fall back to asset name
             _ticker_parts.append(
-                f'<span style="color:{_clr};font-weight:700">{_d[0]}</span>'
-                f'&nbsp;<span style="color:#8890a1;font-weight:600">{_t}</span>'
+                f'<span style="color:{_clr};font-weight:700;font-size:8px">{_d}</span>'
+                f'&nbsp;<span style="color:#e8e9ed;font-weight:600">{_full}</span>'
+                f'&nbsp;<span style="color:#8890a1">({_t})</span>'
             )
     # AI-structured trades carry tickers as a single descriptive string — surface it directly
     _ai_tickers_str = trade.get("tickers", "") if isinstance(trade.get("tickers"), str) else ""
     if not _ticker_parts and _ai_tickers_str:
-        _ticker_parts = [f'<span style="color:#8890a1">{_ai_tickers_str}</span>']
+        _ticker_parts = [f'<span style="color:#c8c8c8">{_ai_tickers_str}</span>']
     ticker_html = (
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
-        'color:#8890a1;margin-bottom:8px;line-height:2;display:flex;flex-wrap:wrap;gap:10px">'
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+        'margin-bottom:8px;line-height:2;display:flex;flex-wrap:wrap;gap:14px">'
         + "  ".join(_ticker_parts)
         + '</div>'
     ) if _ticker_parts else ""
