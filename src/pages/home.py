@@ -245,7 +245,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 # Score history loader (cached - market data only fetched once per TTL)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900, show_spinner=False, max_entries=1)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=1)
 def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[dict, pd.Series]:
     """
     Load market returns, compute avg_corr, then run the full 3-layer risk score.
@@ -4480,22 +4480,23 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     with st.spinner("Loading market data & intelligence…"):
         _scenario_id = get_scenario_id()
-        with ThreadPoolExecutor(max_workers=2) as _pool:
-            _f_conflict = _pool.submit(score_all_conflicts)
-            _f_pulse    = _pool.submit(_load_market_pulse)
-            # Main thread: market risk (contains st.session_state write — must not thread)
-            risk, _score_hist = _load_market_risk(start, end, _scenario_id)
+        _pool = ThreadPoolExecutor(max_workers=2)
+        _f_conflict = _pool.submit(score_all_conflicts)
+        _f_pulse    = _pool.submit(_load_market_pulse)
+        # Main thread: market risk (contains st.session_state write — must not thread)
+        risk, _score_hist = _load_market_risk(start, end, _scenario_id)
 
-        # Collect thread results after main-thread work completes
+        # Collect thread results — 25s timeout each so a hung GDELT/yfinance can't block the page
         try:
-            conflict_results = _f_conflict.result()
+            conflict_results = _f_conflict.result(timeout=25)
             record_fetch("conflict_model")
         except Exception:
             conflict_results = {}
         try:
-            _f_pulse.result()   # cache is now warm; result consumed by _render_market_pulse_cards
+            _f_pulse.result(timeout=25)   # cache is now warm; result consumed by _render_market_pulse_cards
         except Exception:
             pass
+        _pool.shutdown(wait=False)
 
     conflict_agg = aggregate_portfolio_scores(conflict_results)
     if not conflict_agg:

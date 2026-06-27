@@ -324,7 +324,7 @@ def load_all_prices(
     return eq, cmd
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
