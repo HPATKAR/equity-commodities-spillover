@@ -3625,6 +3625,135 @@ def _render_vol_trio() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § R12  HOT STOCKS TO WATCH — top movers by 24h news activity
+# ─────────────────────────────────────────────────────────────────────────────
+
+_HOT_STOCKS_TICKERS = (
+    "AAPL", "MSFT", "NVDA", "TSLA", "AMZN",
+    "META", "GOOGL", "JPM", "XOM", "AMD",
+    "NFLX", "UNH", "BAC", "GS", "CVX",
+)
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _load_hot_stocks() -> list[dict]:
+    """Fetch yfinance news for mega-cap tickers; rank by 24h article activity."""
+    import time
+    import yfinance as yf
+    from concurrent.futures import ThreadPoolExecutor
+
+    now = time.time()
+    tickers = list(_HOT_STOCKS_TICKERS)
+
+    # Batch price fetch — one call for 1-day return on all tickers
+    try:
+        raw_px = yf.download(tickers, period="2d", auto_adjust=True, progress=False, threads=True)
+        closes = raw_px["Close"] if isinstance(raw_px.columns, pd.MultiIndex) else raw_px.get("Close", pd.DataFrame())
+    except Exception:
+        closes = pd.DataFrame()
+
+    def _day_ret(ticker: str) -> float | None:
+        try:
+            col = closes[ticker].dropna()
+            if len(col) >= 2:
+                return round((col.iloc[-1] / col.iloc[-2] - 1) * 100, 2)
+        except Exception:
+            pass
+        return None
+
+    def _fetch_news(ticker: str) -> dict | None:
+        try:
+            news = yf.Ticker(ticker).news or []
+            recent = [a for a in news if (now - a.get("providerPublishTime", 0)) / 3600 < 24]
+            if not recent:
+                return None
+            score = sum(max(0.0, 1.0 - (now - a.get("providerPublishTime", 0)) / 86400.0) for a in recent)
+            top = recent[0]
+            return {
+                "ticker":   ticker,
+                "score":    score,
+                "n_recent": len(recent),
+                "day_ret":  _day_ret(ticker),
+                "headline": top.get("title", ""),
+                "url":      top.get("link", ""),
+                "source":   top.get("publisher", ""),
+                "pub_ts":   top.get("providerPublishTime", 0),
+            }
+        except Exception:
+            return None
+
+    results: list[dict] = []
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = [pool.submit(_fetch_news, t) for t in tickers]
+        for f in futures:
+            try:
+                r = f.result(timeout=15)
+                if r:
+                    results.append(r)
+            except Exception:
+                pass
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:7]
+
+
+def _render_hot_stocks() -> None:
+    """Right column: clickable cards for stocks with most 24h news activity."""
+    import time
+    data = _load_hot_stocks()
+    if not data:
+        return
+
+    now = time.time()
+    cards_html = ""
+    for item in data:
+        ticker   = item["ticker"]
+        day_ret  = item["day_ret"]
+        headline = item["headline"]
+        url      = item["url"]
+        source   = item["source"]
+        n        = item["n_recent"]
+        pub_ts   = item["pub_ts"]
+
+        if day_ret is None:
+            ret_str, ret_col = "—", _C["label"]
+        elif day_ret >= 0:
+            ret_str, ret_col = f"+{day_ret:.1f}%", _C.get("green", "#27ae60")
+        else:
+            ret_str, ret_col = f"{day_ret:.1f}%", _C["danger"]
+
+        age_h   = (now - pub_ts) / 3600 if pub_ts else 0
+        age_str = (f"{int(age_h*60)}m" if age_h < 1 else f"{int(age_h)}h") + " ago"
+
+        hl = (headline[:80] + "…") if len(headline) > 80 else headline
+        link_open  = f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">' if url else "<span>"
+        link_close = "</a>" if url else "</span>"
+
+        cards_html += (
+            f'<div style="border-bottom:1px solid {_C["border"]};padding:6px 0">'
+            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;'
+            f'color:{_GOLD};background:#1a1500;border:1px solid #3a2f00;padding:1px 6px">{ticker}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:600;color:{ret_col}">{ret_str}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["muted"]};margin-left:auto">'
+            f'{n} article{"s" if n!=1 else ""} · {age_str}</span>'
+            f'</div>'
+            f'{link_open}'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#dde0e8;line-height:1.4">{hl}</div>'
+            f'{link_close}'
+            f'<div style="margin-top:2px;font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["label"]}">{source}</div>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
+        f'border-left:2px solid {_GOLD};padding:8px 12px">'
+        f'{cards_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # § L10  THREAT RADAR — polar scatter: conflicts plotted by CIS (radius) × TPS (angle)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -4816,6 +4945,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_yield_curve_snap()
         # § R11 Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
         _render_vol_trio()
+        # § R12 Hot stocks — top mega-caps by 24h news activity, clickable headlines
+        _section_header("", "Stocks to Watch", "most active by news · click to read")
+        try:
+            _render_hot_stocks()
+        except Exception:
+            pass
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
