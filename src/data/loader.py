@@ -63,7 +63,8 @@ def _validate_returns(df: pd.DataFrame, source: str) -> pd.DataFrame:
         pass   # pandera not installed — skip silently
     except Exception as _ve:
         try:
-            st.warning(f"Data quality warning ({source}): {_ve}", icon="⚠️")
+            import logging
+            logging.getLogger(__name__).warning("Data quality (%s): %s", source, _ve)
         except Exception:
             pass
     return df
@@ -96,7 +97,8 @@ def _validate_prices(df: pd.DataFrame, source: str) -> pd.DataFrame:
         pass
     except Exception as _ve:
         try:
-            st.warning(f"Data quality warning ({source}): {_ve}", icon="⚠️")
+            import logging
+            logging.getLogger(__name__).warning("Data quality (%s): %s", source, _ve)
         except Exception:
             pass
     return df

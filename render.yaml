@@ -6,7 +6,7 @@ services:
     region: oregon
     numInstances: 1
     healthCheckPath: /
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python make_secrets.py
     startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false --server.enableWebsocketCompression false
     envVars:
       - key: PYTHON_VERSION

@@ -102,22 +102,21 @@ def _signal_card(
 
 
 def _arch_flow() -> None:
-    """Visual 3-layer architecture flow for the composite risk score."""
+    """Visual 4-layer architecture flow for the composite risk score (C&I + ACLED-style)."""
     _BG  = "#080808"
-    _BRD = "#1e1e1e"
     layers = [
-        ("CIS", "35%", "#c0392b",  "Conflict Intensity",   "7 weighted dimensions · per-conflict · state multiplier · staleness cap"),
-        ("TPS", "30%", "#e67e22",  "Transmission Pressure","12 channel weights · supply chain · sanctions · chokepoint · FX"),
-        ("MCS", "35%", "#CFB991",  "Market Confirmation",  "6 market signals · EWM z-scores (span=252) · live feed"),
+        ("NEWS GPR", "40%", "#c0392b",  "News GPR",           "RSS threat+act classification · Caldara-Iacoviello style · live feed · fallback from escalation signals"),
+        ("CIS",      "30%", "#e67e22",  "Conflict Events",    "ACLED-calibrated event intensity · additive breadth bonus · staleness cap · static registry fallback"),
+        ("CP",       "20%", "#2980b9",  "Chokepoint Stress",  "PortWatch throughput disruption · Hormuz live tanker count · active transmission pressure"),
+        ("MCS",      "10%", "#CFB991",  "Market Confirmation","Oil-Gold joint signal + commodity vol ONLY · equity vol removed (fires on non-geo stress)"),
     ]
-    # build layer boxes
     boxes_html = ""
     for abbr, pct, col, full, detail in layers:
         boxes_html += (
             f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;'
             f'border-top:3px solid {col};padding:.5rem .7rem;min-width:0">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-            f'<span style="{_M}font-size:13px;font-weight:700;color:{col}">{abbr}</span>'
+            f'<span style="{_M}font-size:11px;font-weight:700;color:{col}">{abbr}</span>'
             f'<span style="{_M}font-size:9px;font-weight:700;color:{col};'
             f'background:rgba(255,255,255,0.04);padding:1px 5px">{pct}</span></div>'
             f'<div style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;'
@@ -128,19 +127,16 @@ def _arch_flow() -> None:
 
     st.markdown(
         f'<div style="margin:.6rem 0">'
-        # top row - 3 layer boxes
         f'<div style="display:flex;gap:6px;margin-bottom:6px">{boxes_html}</div>'
-        # arrow row
         f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
-        f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ CIS-weighted avg → portfolio score</div>'
+        f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ CIS-weighted conflict ranking · PortWatch disruption · RSS feed</div>'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
         f'</div>'
-        # middle row - assembly + freshness
         f'<div style="display:flex;gap:6px;margin-bottom:6px">'
         f'<div style="flex:2;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
         f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">ASSEMBLY</span><br>'
-        f'<code style="{_M}font-size:9px;color:{_G}">GRS_raw = 0.35·CIS + 0.30·TPS + 0.35·MCS</code>'
+        f'<code style="{_M}font-size:9px;color:{_G}">GRS_raw = 0.40·GPR + 0.30·CIS + 0.20·CP + 0.10·MCS</code>'
         f'</div>'
         f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
         f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">MARKET FRESHNESS</span><br>'
@@ -151,13 +147,11 @@ def _arch_flow() -> None:
         f'<code style="{_M}font-size:9px;color:#8E9AAA">× geo_mult  (default 1.0)</code>'
         f'</div>'
         f'</div>'
-        # arrow row
         f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
         f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ clip(·, 0, 100)</div>'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
         f'</div>'
-        # output box
         f'<div style="background:#0a0a0a;border:1px solid {_G};padding:.45rem 1rem;text-align:center">'
         f'<span style="{_M}font-size:9px;font-weight:700;color:{_G};letter-spacing:.18em">GRS</span>'
         f'<span style="{_M}font-size:8px;color:{_MUT};margin-left:10px">0 – 100 · Low / Moderate / Elevated / High</span>'
@@ -617,93 +611,44 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("5 · Market Confirmation Score (MCS)")
     _prose(
-        "The MCS is the market-observable layer of the risk score - it uses six live price signals to "
-        "<em>confirm or contradict</em> the structural CIS/TPS verdict. High CIS with calm markets → MCS "
-        "dampens the score (markets have priced it in). Low CIS with spiking volatility → MCS amplifies. "
-        "Each signal is independently EWM z-scored and clipped to [0, 100] before weighting."
+        "The MCS is a <em>confirmatory</em> layer only (10% of GRS) — it uses two geo-specific "
+        "market signals to verify what news flow and conflict events already indicate. "
+        "Equity vol, rates vol, safe-haven bid, and correlation acceleration were removed: "
+        "all four fire on rate cycles, earnings shocks, and COVID-style demand crashes that are "
+        "not geopolitical in origin, producing false positives and diluting the score."
     )
 
     _formula(
-        "MCS = 0.22·SafeHaven + 0.18·OilGold + 0.15·EqVol\n"
-        "    + 0.15·RatesVol  + 0.15·CmdVol  + 0.15·CorrAccel",
-        "All six sub-signals normalised to [0, 100] via EWM z-scoring before weighting. "
-        "CorrAccel replaces correlation-level percentile to avoid double-counting CIS geographic_diffusion."
+        "MCS = 0.70 · OilGold + 0.30 · CmdVol",
+        "Two geo-specific signals only. Both EWM z-scored (span=252) before weighting."
     )
 
     _h3("Signal Cards")
-    # Row 1
-    r1c1, r1c2, r1c3 = st.columns(3)
-    with r1c1:
+    mc1, mc2 = st.columns(2)
+    with mc1:
         _signal_card(
-            "safe_haven", "Safe-Haven Bid", 0.22, "#CFB991",
-            "Gold 20d cumulative return EWM z-scored (span=60). "
-            "TLT bond ETF adds corroboration: if Gold z > 0.5 and TLT return z > 0.3, "
-            "+min(tlt_z×4, 10) pts. Filters USD-specific gold rallies from genuine flight-to-safety.",
-            "base      = 100 / (1 + exp(−0.56·g_z))   [sigmoid, k=14/25]\n"
-            "tlt_boost = min(tlt_z×4, 10) if g_z>0.5 and tlt_z>0.3\n"
-            "          = 0  otherwise\n"
-            "SafeHaven = clip(base + tlt_boost, 0, 100)",
-            "tlt_z = 20d TLT return / (std × √20). Cached fetch, TTL=300."
+            "oil_gold", "Oil-Gold Joint Signal", 0.70, "#e67e22",
+            "EWM z-scores of 20d cumulative log-returns for Gold and front Oil contract (span=252). "
+            "Gold↑ + Oil↑ = war/supply-shock. Gold↑ + Oil↓ = safe-haven flight only. "
+            "Gold↓ + Oil↑ = pure supply shock. Smooth conflict bonus ramps as both exceed neutral.",
+            "score = 50 + g_z×17 + o_z×11 + conflict_bonus\n"
+            "conflict_bonus = clip((g_excess + o_excess)×7.5, 0, 22)\n"
+            "  g_excess = max(0, g_z − 0.7)\n"
+            "  o_excess = max(0, o_z − 0.7)",
+            "span=252 prevents 'war normal' adaptation (span=60 normalises after 2+ months). "
+            "WTI preferred; falls back to Brent."
         )
-    with r1c2:
+    with mc2:
         _signal_card(
-            "oil_gold", "Oil-Gold Signal", 0.18, "#e67e22",
-            "Simultaneous EWM z-scores of 20d cumulative log-returns for Gold and front Oil contract. "
-            "Flat +5 bonus when both z > 1 - regime-invariant joint geopolitical premium. "
-            "Avoids multiplicative zero-collapse when one signal is near-neutral.",
-            "g_base  = 100 / (1 + exp(−0.56·g_z))   [sigmoid, k=14/25]\n"
-            "o_base  = 100 / (1 + exp(−0.32·o_z))   [sigmoid, k=8/25]\n"
-            "bonus   = 5.0  if g_z > 1.0 and o_z > 1.0\n"
-            "        = 0.0  otherwise\n"
-            "OilGold = clip(0.5·g_base + 0.5·o_base + bonus, 0, 100)",
-            "WTI preferred; falls back to Brent. EWM span=60, clip g_z/o_z to [−4, +4]."
-        )
-    with r1c3:
-        _signal_card(
-            "eq_vol", "Equity Vol", 0.15, "#8E9AAA",
-            "20d realized annualized volatility across S&P 500, Eurostoxx 50, and Nikkei 225 - "
-            "averaged, then EWM z-scored (span=60). Measures broad equity fear. "
-            "z = 0 → score 50; z = +2 → score ≈ 74.",
-            "rv     = eq_r.rolling(20).std() × √252 × 100\n"
-            "z      = EWM_zscore(rv.mean(axis=1), span=60)\n"
-            "EqVol  = 100 / (1 + exp(−0.48·z))   [sigmoid, k=12/25]",
-            "Falls back to first 3 columns if named indices unavailable."
-        )
-    # Row 2
-    r2c1, r2c2, r2c3 = st.columns(3)
-    with r2c1:
-        _signal_card(
-            "rates_vol", "Rates Vol", 0.15, "#8E9AAA",
-            "MOVE-proxy: 20d realized vol of TLT (iShares 20Y+ Treasury ETF) price returns. "
-            "More orthogonal to equity vol than VIX. Captures flight-to-safety and rates-channel "
-            "transmission of geopolitical shocks (yield compression = risk-off bid).",
-            "tlt_r     = TLT.pct_change()\n"
-            "rv_tlt    = tlt_r.rolling(20).std() × √252 × 100\n"
-            "RatesVol  = 100 / (1 + exp(−0.40·z))   [sigmoid, k=10/25]",
-            "Shared cached 200d TLT fetch (TTL=300). Scale=10 (less sensitive than equity)."
-        )
-    with r2c2:
-        _signal_card(
-            "cmd_vol", "Commodity Vol", 0.15, "#8E9AAA",
-            "Energy/metals 20d annualized vol (WTI, Brent, NatGas, Gold, Silver, Copper) "
-            "EWM z-scored directly — no OLS residualization against equity vol. "
-            "Captures commodity-specific supply-disruption stress as a raw volatility signal.",
-            "rv_cmd = mean annualized 20d vol across commodity basket\n"
-            "z      = EWM_zscore(rv_cmd, span=60)\n"
-            "CmdVol = 100 / (1 + exp(−0.44·z))   [sigmoid, k=11/25]",
-            "Residualization against equity vol was removed; raw vol z-score is used instead."
-        )
-    with r2c3:
-        _signal_card(
-            "corr_accel", "Correlation Accel", 0.15, "#27ae60",
-            "Second derivative of the EWM-smoothed (span=20) average equity-commodity correlation. "
-            "Captures whether cross-asset coupling is accelerating, not just its level. "
-            "Orthogonal to CIS geographic_diffusion (level-based) - eliminates double-counting.",
-            "smooth    = avg_corr.ewm(span=20).mean()\n"
-            "velocity  = smooth.diff()\n"
-            "accel     = velocity.ewm(span=20).mean()\n"
-            "CorrAccel = pct_rank(accel) × 100  ∈ [0, 100]",
-            "Fallback: 50 if < 90 observations. Replaced old correlation-percentile signal."
+            "cmd_vol", "Commodity Vol", 0.30, "#8E9AAA",
+            "20d annualized realized vol across energy/metals basket "
+            "(WTI, Brent, NatGas, Gold, Silver, Copper). EWM z-scored (span=252). "
+            "No OLS residualization — removing equity beta eliminates the legitimate co-movement "
+            "during war/blockade, when oil vol and equity fear rise together.",
+            "rv_cmd = mean annualized 20d vol  [energy/metals basket]\n"
+            "z      = EWM_zscore(rv_cmd, span=252)\n"
+            "CmdVol = (50 + z × 14).clip(0, 100)",
+            "Symmetric: fires on price crash as well as spike — both indicate supply disruption."
         )
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -711,26 +656,34 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("6 · Composite Geopolitical Risk Score")
     _prose(
-        "The composite score assembles CIS, TPS, and MCS into a single 0–100 index. "
-        "A session-dynamic market freshness multiplier re-ranks conflicts by <em>today's</em> market moves "
-        "before aggregation - ensuring the command center reflects live crises, not just historical intensity. "
-        "A scenario geo-multiplier is applied after assembly for stress testing."
+        "The GRS is a 4-layer index inspired by Caldara &amp; Iacoviello (2022) GPR methodology "
+        "and ACLED-style event-driven conflict measurement. "
+        "News flow leads as the primary layer &mdash; it is the most responsive and least "
+        "market-contaminated signal available in near-real-time. "
+        "Equity vol has been removed from the scoring pipeline entirely: it fires on rate cycles, "
+        "earnings, and growth scares that are not geopolitical in origin, producing false "
+        "positives during peacetime and undercounting genuine conflict periods once markets stabilise."
     )
 
     _h3("Architecture")
     _arch_flow()
 
-    _h3("Layer Weights & Score Bands")
+    _h3("Layer Weights &amp; Score Bands")
     col_lw, col_sb = st.columns([1, 1])
     with col_lw:
-        # Proportional weight bars
         for abbr, full, pct, col, val, rationale in [
-            ("CIS", "Conflict Intensity",    "35%", "#c0392b", 35,
-             "Structural severity - direction and magnitude of active hostilities."),
-            ("TPS", "Transmission Pressure", "30%", "#e67e22", 30,
-             "Channel specificity - which commodities and markets are exposed."),
-            ("MCS", "Market Confirmation",   "35%", _G,        35,
-             "Live signal - confirms or dampens the structural signal."),
+            ("NEWS GPR", "News GPR",          "40%", "#c0392b", 40,
+             "Caldara-Iacoviello style: threat + act classification of RSS headlines. "
+             "Falls back to conflict escalation proxy when feed unavailable."),
+            ("CIS",      "Conflict Events",   "30%", "#e67e22", 30,
+             "ACLED-calibrated event intensity. Additive breadth bonus (log scale) "
+             "prevents inflation when multiple low-intensity conflicts coexist."),
+            ("CP",       "Chokepoint Stress", "20%", "#2980b9", 20,
+             "PortWatch live Hormuz disruption + active conflict transmission pressure. "
+             "Explicit physical channel — not a judgment about future impact."),
+            ("MCS",      "Market Conf.",      "10%", _G,        10,
+             "Oil-gold joint signal + commodity vol. Confirmatory only — "
+             "not primary. Geo supply-shock signature, not generic market stress."),
         ]:
             st.markdown(
                 f'<div style="margin:.35rem 0">'
@@ -756,10 +709,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                 f'<span style="{_S}font-size:0.62rem;color:{_MUT}">{interp}</span>'
                 f'</div></div>'
                 for band, lo, hi, c, interp in [
-                    ("HIGH/CRISIS", 75, 100, "#c0392b", "Active conflict + market stress confirmed"),
-                    ("ELEVATED",    50,  75, "#e67e22", "Significant transmission pressure building"),
-                    ("MODERATE",    25,  50, _G,        "Latent risk or mild market dislocations"),
-                    ("LOW",          0,  25, "#27ae60", "Calm - no active confirmed spillover"),
+                    ("HIGH/CRISIS", 75, 100, "#c0392b", "Active conflict confirmed by news flow + chokepoint disruption"),
+                    ("ELEVATED",    50,  75, "#e67e22", "Significant news activity or chokepoint stress building"),
+                    ("MODERATE",    25,  50, _G,        "Latent risk — news background noise or isolated events"),
+                    ("LOW",          0,  25, "#27ae60", "Quiet — minimal news, no chokepoint disruption"),
                 ]
             )
             + f'</div>',
@@ -768,11 +721,13 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
 
     _h3("Portfolio Aggregation")
     _formula(
-        "CIS_portfolio = Σᵢ [ CIS(i) × CIS(i) ] / Σᵢ CIS(i)   ← intensity-weighted avg\n"
-        "TPS_portfolio = Σᵢ [ TPS(i) × CIS(i) ] / Σᵢ CIS(i)   ← same weights\n\n"
-        "GRS_raw = 0.35 × CIS_portfolio + 0.30 × TPS_portfolio + 0.35 × MCS\n"
+        "CIS_portfolio = weighted_mean(CIS_i) + breadth_bonus\n"
+        "breadth_bonus = min(8, 2.5 × ln(n_eff + 1))   ← n_eff = 1/HHI (conflict concentration)\n\n"
+        "GRS_raw = 0.40 × NewsGPR + 0.30 × CIS_portfolio + 0.20 × Chokepoint + 0.10 × MCS\n"
         "GRS     = clip( GRS_raw × geo_mult , 0, 100 )",
-        "High-CIS conflicts dominate. Latent/frozen conflicts already discounted via state_mult in CIS computation."
+        "Additive breadth bonus (log scale) replaces the prior n_eff^0.25 multiplicative factor, "
+        "which inflated a 64-point weighted mean to 97 when 6 conflicts coexisted. "
+        "Log bonus adds ≤8 pts regardless of portfolio size."
     )
 
     _h3("Market Freshness Multiplier")
@@ -857,63 +812,73 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'<div style="border:1px solid #1e1e1e;margin:.4rem 0 .2rem">'
         f'<div style="background:#0a0a0a;padding:.35rem .7rem;border-bottom:1px solid #1e1e1e">'
         f'<span style="{_M}font-size:7px;font-weight:700;color:{_G};letter-spacing:.12em">'
-        f'CONFIDENCE  =  0.50 × conflict_conf  +  0.30 × mcs_agreement  +  0.20 × data_availability</span>'
+        f'CONFIDENCE  =  0.35 × conflict_conf  +  0.35 × news_conf  +  0.20 × mcs_agreement  +  0.10 × data_availability</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
     _confidence_component(
-        "Conflict Confidence", "50%",
+        "Conflict Confidence", "35%",
         "0.30×source_cov + 0.25×data_conf + 0.25×freshness + 0.20×completeness",
         "CIS-intensity-weighted avg across active conflicts. Staleness multipliers applied (×0.90 at 90d, ×0.70 at 180d).",
         "#c0392b",
     )
     _confidence_component(
-        "MCS Signal Agreement", "30%",
-        "1 − std(MCS sub-signals) / 50",
-        "High agreement (all 6 signals point same direction) → score near 1.0. Divergence → lower weight on MCS.",
+        "News Confidence", "35%",
+        "0.90 if live RSS feed active · 0.45 if conflict-escalation fallback used",
+        "Live RSS feed → high confidence. Fallback (feed unavailable or no classified headlines) → lower weight.",
         "#e67e22",
     )
     _confidence_component(
-        "Data Availability", "20%",
+        "MCS Signal Agreement", "20%",
+        "1 − std(MCS sub-signals) / 50",
+        "High agreement (both oil-gold and commodity vol pointing same direction) → score near 1.0.",
+        _G,
+    )
+    _confidence_component(
+        "Data Availability", "10%",
         "1.0 if avg_corr non-empty  ·  0.5 otherwise",
         "Penalizes sessions where cross-asset correlation series is unavailable (data load failure).",
-        _G,
+        _DIM,
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
     _formula(
-        "σ_CIS  = (1 − conflict_conf) × CIS_portfolio × 0.40\n"
-        "σ_TPS  = (1 − conflict_conf) × TPS_portfolio × 0.35\n"
-        "σ_MCS  = (1 − mcs_agreement) × MCS           × 0.25\n\n"
-        "Uncertainty = √( σ_CIS² + σ_TPS² + σ_MCS² )\n"
+        "σ_CIS  = (1 − conflict_conf)     × CIS_portfolio × 0.30\n"
+        "σ_news = (1 − news_conf)          × news_layer   × 0.40\n"
+        "σ_MCS  = (1 − mcs_agreement)      × MCS          × 0.10\n"
+        "σ_CP   = 0.0  (PortWatch present or static fallback; no partial uncertainty)\n\n"
+        "Uncertainty = √( σ_CIS² + σ_news² + σ_MCS² )\n"
         "score_low   = max(0,   GRS − Uncertainty)\n"
         "score_high  = min(100, GRS + Uncertainty)",
         "Quadrature (RSS) - assumes layer errors are independent. "
-        "At 100% confidence → Uncertainty = 0. At 0% → uncertainty = max layer-weighted error."
+        "At 100% confidence → Uncertainty = 0. At 0% → max layer-weighted error."
     )
 
     _h3("Historical Score  (risk_score_history)")
     _prose(
-        "The historical chart plots a daily rolling index over the selected date range. "
-        "Structural CIS/TPS are not available at daily frequency (point-in-time analyst snapshots), "
-        "so the historical series uses market-observable signals only - weighted to approximate "
-        "the live model's dominant drivers."
+        "The historical chart plots a daily VIX-mimic index — cross-asset realized volatility "
+        "z-scored against a 3-year trailing baseline. Structural CIS/News GPR/Chokepoint layers "
+        "are not available at daily historical frequency, so the series uses realized fear directly: "
+        "when markets are calm, the score is low; when they are in distress, it spikes."
     )
     _weight_table([
-        ("eq_vol",     "Equity Vol (hist.)",    0.40, "Dominant live driver - 20d realized vol EWM z-score. Matches live construction exactly."),
-        ("oil_gold",   "Oil-Gold (hist.)",       0.35, "Same construction as live: g_z×14 + o_z×8 + flat +5 bonus. Rolling EWM z-scores."),
-        ("cmd_vol",    "Commodity Vol (hist.)",  0.13, "Residualized commodity vol - same construction as live MCS sub-signal."),
-        ("corr_accel", "Corr. Accel (hist.)",   0.12, "2nd derivative of corr - same construction as live. Replaced old corr-pct (was 0.30 weight)."),
+        ("eq_vol",  "Equity Realized Vol",     0.55, "20d annualized realized vol across all equity indices. Core VIX analogue — spikes during GFC, COVID, Ukraine selloffs."),
+        ("cmd_vol", "Commodity Realized Vol",  0.45, "20d annualized realized vol across WTI, Brent, NatGas, Gold, Silver, Copper. Captures geo supply shocks and energy crises."),
     ])
     _formula(
-        "HistScore(t) = 0.40·EqVol(t) + 0.35·OilGold(t)\n"
-        "             + 0.13·CmdVol(t) + 0.12·CorrAccel(t)",
-        "Rolling daily. All signals EWM z-scored (span=60), clipped to [0, 100] before weighting."
+        "composite_vol(t) = 0.55 · eq_rv(t) + 0.45 · cmd_rv(t)\n\n"
+        "rv(t)      = rolling(20).std() × √252 × 100   [annualized %]\n"
+        "z(t)       = EWM_zscore(composite_vol, span=756)   [3-year baseline]\n"
+        "HistScore  = 100 / (1 + exp(−0.56 · z))   [sigmoid → 0–100]\n\n"
+        "z=0 → 50  ·  z=+2 → 77  ·  z=+3 → 88  ·  z=−2 → 23",
+        "span=756 (3-year EWM): baseline adapts slowly so multi-year crises stay elevated. "
+        "span=252 adapted in ~12 months, normalising Ukraine 2023 to z≈0."
     )
     _section_note(
-        "HistScore ≠ GRS on any given day. The live score includes 40%+35% structural layers (CIS/TPS) "
-        "which are not backcasted. Treat HistScore as a market-stress proxy - directionally aligned "
-        "with GRS but not numerically equivalent."
+        "HistScore ≠ live GRS on any given day — the live model uses news flow, conflict events, "
+        "and chokepoint data unavailable historically. Treat HistScore as a market fear proxy: "
+        "2008 GFC and 2020 COVID score highest; 2012-13 QE era (VIX ~15) scores low; "
+        "2022 Ukraine invasion spikes; recent active war environment reads Elevated."
     )
 
     _h3("GRS vs Global Conflict Risk Map - Separate Pipelines")
@@ -928,7 +893,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'<p style="{_M}font-size:7px;font-weight:700;color:{_G};letter-spacing:.12em;margin:0 0 5px">GRS PIPELINE</p>'
         f'<p style="{_S}font-size:0.65rem;color:{_DIM};margin:0;line-height:1.6">'
         f'<b style="color:#e8e9ed">Source:</b> <code>conflict_model.py</code> · CONFLICTS registry (6 parametric conflicts)<br>'
-        f'<b style="color:#e8e9ed">Inputs:</b> CIS (analyst-scored dimensions) + TPS (channel weights) + MCS (live market signals)<br>'
+        f'<b style="color:#e8e9ed">Inputs:</b> News GPR (RSS classification) + CIS (conflict events) + Chokepoint (PortWatch) + MCS (oil-gold)<br>'
         f'<b style="color:#e8e9ed">Output:</b> Single composite GRS 0–100 · used on Overview, Geopolitical, Watchlist, and 12 other pages</p>'
         f'</div>'
         f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
@@ -956,11 +921,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("7 · News GPR Layer - Threat / Act Classification")
     _prose(
-        "The News GPR layer extends the structural CIS/TPS signal with a real-time headline feed. "
+        "The News GPR layer is the <strong>primary driver</strong> of the composite GRS (40% weight), "
+        "following the Caldara &amp; Iacoviello (2022) intuition that news flow is the most responsive "
+        "and least market-contaminated geopolitical risk signal. "
         "Headlines are classified as <b>Threat</b> (leading: rhetoric, military signalling, diplomatic breakdown) "
         "or <b>Act</b> (contemporaneous: strikes, sanctions imposed, vessels seized). "
-        "This distinction is critical - markets react differently to escalation rhetoric vs realized events. "
-        "The News GPR is <em>diagnostic</em>: it does not enter the composite GRS formula."
+        "When the live feed returns a weak signal, a conflict-state floor prevents it from "
+        "overriding the structural reality of active wars: "
+        "<code>news_layer = max(live_gpr, fallback × 0.60)</code>."
     )
 
     _h3("Ingestion Pipeline")
@@ -1591,12 +1559,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     st.markdown(_maint_html, unsafe_allow_html=True)
 
     _takeaway_block(
-        "This dashboard implements a three-layer geopolitical risk framework grounded in "
-        "academic spillover literature (Diebold-Yilmaz 2009/2012, Engle DCC 2002) and "
-        "practitioner scenario design conventions (SR 11-7, CCAR). All formulae, weights, "
+        "This dashboard implements a four-layer geopolitical risk framework grounded in "
+        "academic spillover literature (Caldara-Iacoviello 2022 GPR, Diebold-Yilmaz 2009/2012, Engle DCC 2002) and "
+        "practitioner scenario design conventions (SR 11-7, CCAR). "
+        "News flow leads as the primary signal; conflict event intensity, chokepoint disruption, "
+        "and oil-gold market confirmation follow. All formulae, weights, "
         "and assumptions are fully transparent and documented above. The model is designed "
-        "to be challenged, stress-tested, and improved - contributions to the conflict registry "
-        "and channel weight calibration are the highest-leverage points of intervention."
+        "to be challenged, stress-tested, and improved — contributions to the conflict registry "
+        "and news GPR keyword taxonomy are the highest-leverage points of intervention."
     )
 
     _page_footer()

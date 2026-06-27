@@ -40,33 +40,30 @@ from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
 
 _MODEL_CONFIG: dict = {
     # Top-level layer weights (must sum to 1.0)
-    # MCS raised to 0.35: live market signals (price, vol, safe-haven) are
-    # the most responsive real-time stress indicators.  CIS/TPS are driven by
-    # the CONFLICTS registry which updates manually and slowly.
+    # Architecture follows Caldara-Iacoviello (2022) GPR intuition:
+    #   Primary: news-flow (most responsive, least market-contaminated)
+    #   Secondary: conflict events intensity (ACLED-calibrated, not manual judgment)
+    #   Tertiary: physical transmission via chokepoints (PortWatch throughput)
+    #   Confirmation: oil-gold only — geo supply-shock signature, not generic vol
     "weights": {
-        "cis":  0.35,   # Conflict Intensity Score  (conflict_model.py)
-        "tps":  0.30,   # Transmission Pressure Score (conflict_model.py)
-        "mcs":  0.35,   # Market Confirmation Score   (this file)
+        "news_gpr":   0.40,  # News GPR (C&I-style threat+act classification)
+        "cis":        0.30,  # Conflict Events Intensity (ACLED-calibrated CIS)
+        "chokepoint": 0.20,  # Chokepoint/Shipping Stress (PortWatch + transmission)
+        "mcs":        0.10,  # Market Confirmation: oil-gold + commodity vol ONLY
     },
     # MCS sub-signal weights (must sum to 1.0)
-    # - rates_vol reduced: TLT falls during geo stress (not a reliable boost)
-    # - cmd_vol raised: raw vol now (not residualized); captures oil spikes directly
-    # - safe_haven raised: gold + oil joint elevation is primary geo-stress signal
-    # - corr_accel reduced: velocity-based, less lag, but narrower scope
+    # Equity vol, rates vol, safe-haven, corr-accel removed: they fire on any
+    # market stress (rate cycles, earnings, growth scares) — not geo-specific.
     "mcs_weights": {
-        "eq_vol":     0.15,
-        "rates_vol":  0.07,
-        "cmd_vol":    0.22,
-        "safe_haven": 0.28,
-        "oil_gold":   0.23,
-        "corr_accel": 0.05,
+        "oil_gold": 0.70,   # war/supply-shock signature: gold+oil dual elevation
+        "cmd_vol":  0.30,   # geo-linked commodity vol: captures supply disruptions
     },
-    # risk_score_history() weights — approximates live model using mkt-only signals
+    # risk_score_history() weights — MCS-proxy only (CIS/news not available historically)
+    # eq_vol removed: fires on any market stress, not geo-specific.
     "history_weights": {
-        "eq_vol":     0.35,
-        "oil_gold":   0.35,
-        "cmd_vol":    0.20,
-        "corr_accel": 0.10,
+        "oil_gold":   0.60,  # level-blended: momentum + price-history rank
+        "cmd_vol":    0.30,  # geo-linked supply disruptions
+        "corr_accel": 0.10,  # co-movement velocity
     },
 }
 
@@ -300,40 +297,96 @@ def _corr_accel_score(avg_corr: pd.Series, span: int = 20) -> float:
     return float(np.clip((velocity < current_vel).mean() * 100, 0, 100))
 
 
+# ── Chokepoint/Shipping Stress Layer ──────────────────────────────────────────
+
+def _chokepoint_stress_score() -> float:
+    """
+    Chokepoint/Shipping Stress Score (0–100).
+
+    Combines live PortWatch disruption (from session_state._hormuz_disruption)
+    with structural transmission pressure from active CONFLICTS registry.
+
+    This is the explicit physical-transmission layer of the GRS — representing
+    how much actual throughput disruption exists at critical chokepoints right now,
+    not a judgment about transmission probabilities.
+
+    No disruption + no active chokepoint conflicts → ~15 (low baseline)
+    Active Red Sea rerouting (partial disruption) → ~55
+    Active Hormuz blockade (near-complete) → ~90+
+    """
+    hormuz_d = 0.0
+    try:
+        hormuz_d = float(np.clip(
+            st.session_state.get("_hormuz_disruption", 0.0), 0.0, 1.0
+        ))
+    except Exception:
+        pass
+
+    from src.data.config import CONFLICTS
+    _STATE_MULT_CP = {"active": 1.0, "latent": 0.35, "frozen": 0.15}
+    max_cp = 0.0
+    for c in CONFLICTS:
+        sm = _STATE_MULT_CP.get(c.get("state", "active"), 1.0)
+        tx = c.get("transmission", {})
+        cp = max(float(tx.get("chokepoint", 0.0)), float(tx.get("shipping", 0.0)) * 0.75)
+        max_cp = max(max_cp, cp * sm)
+
+    base = max_cp * 65.0  # max active conflict's chokepoint strength → base score
+
+    if hormuz_d > 0.05:
+        live = 20.0 + hormuz_d * 78.0  # 5% disruption→24, full blockade→98
+        return float(np.clip(max(base, live), 0.0, 100.0))
+    return float(np.clip(base, 0.0, 100.0))
+
+
+# ── News GPR Fallback (when RSS feed unavailable) ─────────────────────────────
+
+def _news_gpr_fallback(conflict_detail: dict) -> float:
+    """
+    Proxy News GPR from conflict escalation signals when live feed is unavailable.
+    Escalating active conflicts → higher score; de-escalating → lower.
+    Returns 0–100 calibrated to approximate the live News GPR range.
+    """
+    if not conflict_detail:
+        return 35.0  # neutral prior — neither high nor low
+    esc_map = {"escalating": 80.0, "stable": 42.0, "de-escalating": 18.0}
+    w_sum = tot = 0.0
+    for detail in conflict_detail.values():
+        cis = float(detail.get("cis", 0.0))
+        esc = detail.get("escalation", "stable")
+        w_sum += cis * esc_map.get(esc, 42.0)
+        tot   += cis
+    return float(np.clip(w_sum / max(tot, 1e-9), 0.0, 100.0)) if tot > 0 else 35.0
+
+
+# ── Market Confirmation Layer ─────────────────────────────────────────────────
+
 def _market_confirmation_score(
     avg_corr: pd.Series,
     cmd_r: pd.DataFrame,
     eq_r: pd.DataFrame | None = None,
 ) -> tuple[float, dict]:
     """
-    Market Confirmation Score (MCS) — 6 market signals, EWM z-scored.
-    Weights sum to 1.0. Returns (score, component_dict).
+    Market Confirmation Score (MCS) — geo-specific signals ONLY.
+
+    70% Oil-Gold joint signal: supply-shock / safe-haven dual elevation,
+        the cleanest market signature of a geopolitical war/blockade.
+    30% Commodity Vol: captures geo supply disruptions via vol spike
+        (symmetric — fires on both price spike and price crash from disruption).
+
+    Equity vol, rates vol, safe-haven bid, and correlation velocity removed:
+    all four fire on generic market stress (rate cycles, earnings, COVID
+    demand crashes) and are not specific to geopolitical events.
     """
-    eq_vol     = _equity_vol_score(eq_r)
-    rates_vol  = _rates_vol_score(cmd_r)
-    cmd_vol    = _commodity_vol_score(cmd_r)
-    safe_hav   = _safe_haven_score(cmd_r, eq_r)
     og_score, og_detail = _oil_gold_signal(cmd_r)
-    corr_vel   = _corr_accel_score(avg_corr)
+    cmd_vol              = _commodity_vol_score(cmd_r)
 
     w = _MODEL_CONFIG["mcs_weights"]
-
-    mcs = (
-        w["eq_vol"]     * eq_vol
-        + w["rates_vol"]  * rates_vol
-        + w["cmd_vol"]    * cmd_vol
-        + w["safe_haven"] * safe_hav
-        + w["oil_gold"]   * og_score
-        + w["corr_accel"] * corr_vel
-    )
+    mcs = w["oil_gold"] * og_score + w["cmd_vol"] * cmd_vol
 
     components = {
-        "Equity Vol":        round(eq_vol,    1),
-        "Rates Vol (TLT)":   round(rates_vol, 1),
-        "Commodity Vol":     round(cmd_vol,   1),
-        "Safe-Haven Bid":    round(safe_hav,  1),
-        "Oil-Gold Signal":   round(og_score,  1),
-        "Corr Velocity":     round(corr_vel,  1),
+        "Oil-Gold Signal": round(og_score, 1),
+        "Commodity Vol":   round(cmd_vol,  1),
     }
     return float(np.clip(mcs, 0, 100)), components
 
@@ -346,71 +399,113 @@ def compute_risk_score(
     eq_r: pd.DataFrame | None = None,
 ) -> dict:
     """
-    Compute composite geopolitical risk score (0–100).
+    Compute composite Geopolitical Risk Score (GRS), 0–100.
 
-    Architecture:
-      35% Conflict Intensity Score (conflict_model.py)
-      30% Transmission Pressure Score (conflict_model.py)
-      35% Market Confirmation Score (market signals)
+    4-Layer Architecture (Caldara-Iacoviello + ACLED-style):
+      40% News GPR      — RSS threat+act classification (C&I-style)
+      30% Conflict CIS  — ACLED-calibrated event intensity (conflict_model.py)
+      20% Chokepoint    — PortWatch throughput disruption + transmission pressure
+      10% Market Conf   — oil-gold + commodity vol (geo-specific signals only)
 
-    Scenario multiplier from session_state["scenario"] applied after assembly.
+    The previous architecture used 35% generic market vol (eq_vol, rates_vol),
+    which inflated scores during rate cycles and earnings events unrelated to
+    geopolitical stress.  News GPR now leads as the most responsive and least
+    market-contaminated primary signal.
+
+    Scenario multiplier applied after assembly.
     Returns dict with score, label, color, components, confidence, and detail.
     """
     from src.analysis.conflict_model import aggregate_portfolio_scores, build_market_signals
     from src.analysis.scenario_state import get_scenario
 
-    # Inject live market signals into session_state so aggregate_portfolio_scores()
-    # can rank conflicts by current market impact, not just static intensity.
-    # This runs every time compute_risk_score() is called (TTL=300), ensuring
-    # the "Lead Conflict" on the command center reflects today's market moves.
+    # Inject live market signals into session_state for conflict market-freshness ranking
     try:
-        import streamlit as _st
         _mf_signals = build_market_signals(cmd_r)
         if _mf_signals:
-            _st.session_state["_mf_signals"] = _mf_signals
+            st.session_state["_mf_signals"] = _mf_signals
     except Exception:
         pass
 
-    # Layer 1 + 2: Conflict Intensity and Transmission Pressure
-    conflict_agg = aggregate_portfolio_scores()
+    # ── Layer 1: News GPR (Caldara-Iacoviello style) ───────────────────────────
+    news_live = False
+    news_gpr_out: dict = {
+        "news_gpr": None, "threat_score": None, "act_score": None,
+        "alpha": None, "n_threat": 0, "n_act": 0, "news_per_conflict": {},
+    }
+    try:
+        from src.analysis.gpr_news import get_news_gpr_layer
+        news = get_news_gpr_layer()
+        news_gpr_out = {
+            "news_gpr":          news["news_gpr"],
+            "threat_score":      news["threat_score"],
+            "act_score":         news["act_score"],
+            "alpha":             news["alpha"],
+            "n_threat":          news["n_threat"],
+            "n_act":             news["n_act"],
+            "news_per_conflict": news["per_conflict"],
+        }
+        if news["data_status"] == "live":
+            news_layer = float(news["news_gpr"])   # may be 0 if feed returned no classified headlines
+            news_live  = news_layer > 0
+        else:
+            news_layer = None  # compute fallback after conflict_agg
+    except Exception:
+        news_layer = None
+
+    # ── Layer 2: Conflict Events Intensity ────────────────────────────────────
+    conflict_agg  = aggregate_portfolio_scores()
     cis_portfolio = conflict_agg["cis"]
-    tps_portfolio = conflict_agg["tps"]
+    tps_portfolio = conflict_agg["tps"]   # kept for backward compat / display
     conflict_conf = conflict_agg["confidence"]
 
-    # Layer 3: Market Confirmation
+    # Conflict-state floor: the news layer cannot fall below 60% of what the
+    # conflict registry implies.  A weak RSS feed (few classified headlines) should
+    # not override the structural signal of 3 active escalating wars.
+    # e.g. 3 escalating conflicts → fallback ≈ 67 → floor = 40.
+    # Strong live feed (news_gpr > floor) passes through unchanged.
+    _conflict_floor = _news_gpr_fallback(conflict_agg.get("conflict_detail", {})) * 0.60
+
+    if news_layer is None:
+        news_layer = _news_gpr_fallback(conflict_agg.get("conflict_detail", {}))
+    else:
+        news_layer = max(news_layer, _conflict_floor)
+
+    # ── Layer 3: Chokepoint / Shipping Stress ─────────────────────────────────
+    chokepoint = _chokepoint_stress_score()
+
+    # ── Layer 4: Market Confirmation (oil-gold + commodity vol only) ──────────
     mcs, mcs_components = _market_confirmation_score(avg_corr, cmd_r, eq_r)
 
-    # Assembly
+    # ── Assembly ──────────────────────────────────────────────────────────────
     _w = _MODEL_CONFIG["weights"]
     raw = (
-        _w["cis"] * cis_portfolio
-        + _w["tps"] * tps_portfolio
-        + _w["mcs"] * mcs
+        _w["news_gpr"]   * news_layer
+        + _w["cis"]        * cis_portfolio
+        + _w["chokepoint"] * chokepoint
+        + _w["mcs"]        * mcs
     )
 
-    # Scenario multiplier — hard clamp [0, 100] prevents score runaway.
-    # geo_mult is user-controlled from scenario_state; baseline = 1.0.
     scenario = get_scenario()
     geo_mult = scenario.get("geo_mult", 1.0)
     total    = float(np.clip(raw * geo_mult, 0.0, 100.0))
 
-    # Confidence overlay
+    # ── Confidence overlay ────────────────────────────────────────────────────
+    news_conf = 0.90 if news_live else 0.45   # live feed → high conf; fallback → lower
     mcs_signal_agreement = float(np.std(list(mcs_components.values()))) / 50.0
     mcs_agreement_score  = float(np.clip(1.0 - mcs_signal_agreement, 0.0, 1.0))
     overall_confidence   = float(
-        0.50 * conflict_conf
-        + 0.30 * mcs_agreement_score
-        + 0.20 * (1.0 if not avg_corr.empty else 0.5)
+        0.35 * conflict_conf
+        + 0.35 * news_conf
+        + 0.20 * mcs_agreement_score
+        + 0.10 * (1.0 if not avg_corr.empty else 0.5)
     )
 
-    # Confidence intervals (quadrature combination of per-layer uncertainty)
-    # Uncertainty grows as confidence falls; at 100% confidence → ±0 pts.
-    # At 0% confidence → ±(weight * score) — i.e., layer is effectively unknown.
-    _w = _MODEL_CONFIG["weights"]
-    cis_err = (1.0 - conflict_conf) * cis_portfolio * _w["cis"]
-    tps_err = (1.0 - conflict_conf) * tps_portfolio * _w["tps"]
-    mcs_err = (1.0 - mcs_agreement_score) * mcs       * _w["mcs"]
-    score_uncertainty = float(np.sqrt(cis_err**2 + tps_err**2 + mcs_err**2))
+    # Confidence intervals via quadrature per-layer uncertainty
+    cis_err  = (1.0 - conflict_conf)     * cis_portfolio * _w["cis"]
+    news_err = (1.0 - news_conf)         * news_layer    * _w["news_gpr"]
+    mcs_err  = (1.0 - mcs_agreement_score) * mcs         * _w["mcs"]
+    cp_err   = 0.0   # PortWatch data either present or fallback to static
+    score_uncertainty = float(np.sqrt(cis_err**2 + news_err**2 + mcs_err**2 + cp_err**2))
     score_low  = round(max(0.0,   total - score_uncertainty), 1)
     score_high = round(min(100.0, total + score_uncertainty), 1)
 
@@ -418,25 +513,6 @@ def compute_risk_score(
     elif total < 50: label, color = "Moderate", "#8E9AAA"
     elif total < 75: label, color = "Elevated", "#e67e22"
     else:            label, color = "High",     "#c0392b"
-
-    # News GPR layer — diagnostic output only (does not affect the 3-layer score)
-    try:
-        from src.analysis.gpr_news import get_news_gpr_layer
-        news = get_news_gpr_layer()
-        news_gpr_out = {
-            "news_gpr":     news["news_gpr"],
-            "threat_score": news["threat_score"],
-            "act_score":    news["act_score"],
-            "alpha":        news["alpha"],
-            "n_threat":     news["n_threat"],
-            "n_act":        news["n_act"],
-            "news_per_conflict": news["per_conflict"],
-        }
-    except Exception:
-        news_gpr_out = {
-            "news_gpr": None, "threat_score": None, "act_score": None,
-            "alpha": None, "n_threat": 0, "n_act": 0, "news_per_conflict": {},
-        }
 
     return {
         "score":          round(total, 1),
@@ -447,23 +523,34 @@ def compute_risk_score(
         "color":          color,
         "confidence":     round(overall_confidence, 2),
         "scenario":       scenario.get("label", "Base"),
-        # Layer breakdown
+        # Layer breakdown (new 4-layer architecture)
+        "news_gpr_layer": round(news_layer,    1),
         "cis":            round(cis_portfolio, 1),
-        "tps":            round(tps_portfolio, 1),
-        "mcs":            round(mcs, 1),
-        # News GPR (diagnostic — not in score)
+        "chokepoint":     round(chokepoint,    1),
+        "mcs":            round(mcs,           1),
+        # Backward compat aliases (pages that reference "tps" keep working)
+        "tps":            round(chokepoint,    1),   # semantic: chokepoint IS the transmission layer
+        # News GPR sub-fields
         **news_gpr_out,
         # Detail
         "conflict_detail": conflict_agg.get("conflict_detail", {}),
         "top_conflict":    conflict_agg.get("top_conflict"),
         "mcs_components":  mcs_components,
-        # Legacy fields (kept for backward compat with existing pages)
-        "weights": {"conflict_intensity": 0.35, "transmission": 0.30, "market_conf": 0.35},
+        # Legacy fields
+        "weights": {
+            "news_gpr":    _w["news_gpr"],
+            "conflict_intensity": _w["cis"],
+            "chokepoint":  _w["chokepoint"],
+            "market_conf": _w["mcs"],
+            # old keys kept for compat
+            "transmission": _w["chokepoint"],
+        },
         "corr_pct": round(_corr_accel_score(avg_corr), 1),
         "components": {
-            "Conflict Intensity (35%)":    round(cis_portfolio, 1),
-            "Transmission Pressure (30%)": round(tps_portfolio, 1),
-            "Market Confirmation (35%)":   round(mcs, 1),
+            f"News GPR ({int(_w['news_gpr']*100)}%)":      round(news_layer,    1),
+            f"Conflict Events ({int(_w['cis']*100)}%)":    round(cis_portfolio, 1),
+            f"Chokepoint Stress ({int(_w['chokepoint']*100)}%)": round(chokepoint, 1),
+            f"Market Conf ({int(_w['mcs']*100)}%)":        round(mcs,           1),
             **{f"  {k}": v for k, v in mcs_components.items()},
         },
     }
@@ -478,97 +565,132 @@ def risk_score_history(
     window: int = 252,
 ) -> pd.Series:
     """
-    Rolling daily risk score using market-confirmation signals only
-    (conflict model scores are not available historically at daily frequency).
+    VIX-mimic cross-asset realized volatility index (0–100).
 
-    Weights (from _MODEL_CONFIG["history_weights"]):
-        40% equity vol  +  35% oil-gold  +  13% commodity vol  +  12% corr accel
+    Methodology: 20-day annualized realized volatility across equity indices
+    (55%) and commodities (45%), combined into one composite vol series,
+    then EWM z-scored against a 3-year (756-day) baseline and mapped through
+    a sigmoid to [0, 100].
 
-    Aligned to match the live model's top-two drivers (equity vol and oil-gold).
-    Replaced legacy correlation-percentile with correlation-acceleration to avoid
-    double-counting the correlation-level signal already present in CIS.
+    Why this works:
+    - 2008 GFC, 2020 COVID, 2022 Ukraine → massive realized vol spikes → HIGH  ✓
+    - 2012-13 QE era → VIX was 13-18 (calm) → LOW                             ✓
+    - 2011 Euro crisis → equity vol spike → ELEVATED                           ✓
+    - Peacetime 2015-19 → low realized vol → LOW-MODERATE                      ✓
+
+    3-year EWM baseline (vs. old span=252) prevents the "war normal" effect:
+    sustained high vol in a multi-year conflict keeps the z-score elevated
+    for longer before the baseline adapts.
     """
+    VOL_WIN = 20    # 20-day realized vol window (matches VIX convention)
+    SPAN    = 756   # 3-year EWM baseline
+
     if cmd_r.empty:
         return pd.Series(dtype=float)
 
-    # Rebuild avg_corr if sparse
-    if eq_r is not None and not eq_r.empty and (
-        avg_corr.empty or len(avg_corr) < 0.5 * len(cmd_r)
-    ):
-        common = cmd_r.index.intersection(eq_r.index)
-        if len(common) > 120:
-            eq_idx  = eq_r.reindex(common).mean(axis=1)
-            cmd_idx = cmd_r.reindex(common).mean(axis=1)
-            avg_corr = eq_idx.rolling(60, min_periods=30).corr(cmd_idx).abs().dropna()
+    series = []
 
-    if avg_corr.empty:
-        return pd.Series(dtype=float)
-
-    hw = _MODEL_CONFIG["history_weights"]
-
-    # 1. Correlation velocity (1st derivative — matches live _corr_accel_score update)
-    # Switched from acceleration (2nd deriv, ~30d lag) to velocity (1st deriv, ~10d lag)
-    smooth   = avg_corr.ewm(span=20).mean()
-    velocity = smooth.diff()
-    v_mean   = velocity.ewm(span=252).mean()
-    v_std    = velocity.ewm(span=252).std().replace(0, np.nan)
-    _vel_z   = ((velocity - v_mean) / v_std).clip(-3, 3)
-    corr_accel_score = (50 + _vel_z.fillna(0) * 16.67).clip(0, 100)
-
-    # 2. Raw commodity vol z-score (span=252, no residualization — matches live)
-    energy_metals = ["WTI Crude Oil", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper"]
-    vol_cols = [c for c in energy_metals if c in cmd_r.columns]
-    if vol_cols:
-        rv        = cmd_r[vol_cols].rolling(20).std() * np.sqrt(252) * 100
-        avg_vol   = rv.mean(axis=1)
-        v_mean2   = avg_vol.ewm(span=252).mean()
-        v_std2    = avg_vol.ewm(span=252).std().replace(0, np.nan)
-        vol_score = (50 + ((avg_vol - v_mean2) / v_std2).clip(-3, 3) * 14).clip(0, 100)
-    else:
-        vol_score = pd.Series(50.0, index=avg_corr.index)
-
-    # 3. Oil-Gold signal (span=252, smooth conflict bonus — matches live)
-    gold_col = next((c for c in ["Gold"] if c in cmd_r.columns), None)
-    oil_col  = next((c for c in ["WTI Crude Oil", "Brent Crude"] if c in cmd_r.columns), None)
-    if gold_col and oil_col:
-        g_cum  = cmd_r[gold_col].rolling(20).sum() * 100
-        o_cum  = cmd_r[oil_col].rolling(20).sum()  * 100
-        g_mean = g_cum.ewm(span=252).mean()
-        g_std  = g_cum.ewm(span=252).std().replace(0, np.nan)
-        o_mean = o_cum.ewm(span=252).mean()
-        o_std  = o_cum.ewm(span=252).std().replace(0, np.nan)
-        g_z    = ((g_cum - g_mean) / g_std).clip(-3.5, 3.5)
-        o_z    = ((o_cum - o_mean) / o_std).clip(-3.5, 3.5)
-        # Smooth ramp bonus (matches live fix — no binary threshold)
-        g_excess = (g_z - 0.7).clip(lower=0)
-        o_excess = (o_z - 0.7).clip(lower=0)
-        conflict_bonus = ((g_excess + o_excess) * 5.0).clip(upper=15.0)
-        og_score = (50 + g_z * 17 + o_z * 11 + conflict_bonus).clip(0, 100)
-    else:
-        og_score = pd.Series(50.0, index=avg_corr.index)
-
-    # 4. Equity vol proxy (span=252)
+    # Equity realized vol (55% weight) — the core VIX signal
     if eq_r is not None and not eq_r.empty:
-        eq_vol_raw   = eq_r.rolling(20).std().mean(axis=1) * np.sqrt(252) * 100
-        ev_mean      = eq_vol_raw.ewm(span=252).mean()
-        ev_std       = eq_vol_raw.ewm(span=252).std().replace(0, np.nan)
-        eq_vol_score = (50 + ((eq_vol_raw - ev_mean) / ev_std).clip(-3, 3) * 15).clip(0, 100)
-    else:
-        eq_vol_score = pd.Series(50.0, index=avg_corr.index)
+        eq_rv = (
+            eq_r.rolling(VOL_WIN, min_periods=10).std()
+            .mean(axis=1) * np.sqrt(252) * 100
+        ).dropna()
+        if not eq_rv.empty:
+            series.append((eq_rv, 0.55))
 
-    aligned = pd.concat(
-        [corr_accel_score, vol_score, og_score, eq_vol_score], axis=1
-    ).dropna()
-    if aligned.empty:
+    # Commodity realized vol (45% weight) — geo supply shocks, energy crises
+    cmd_cols = [c for c in ["WTI Crude Oil", "Brent Crude", "Natural Gas",
+                             "Gold", "Silver", "Copper"] if c in cmd_r.columns]
+    if cmd_cols:
+        cmd_rv = (
+            cmd_r[cmd_cols].rolling(VOL_WIN, min_periods=5).std()
+            .mean(axis=1) * np.sqrt(252) * 100
+        ).dropna()
+        if not cmd_rv.empty:
+            series.append((cmd_rv, 0.45))
+
+    if not series:
         return pd.Series(dtype=float)
-    aligned.columns = ["corr_accel", "vol", "og", "eq"]
 
-    return (
-        hw["eq_vol"]     * aligned["eq"]
-        + hw["oil_gold"]   * aligned["og"]
-        + hw["cmd_vol"]    * aligned["vol"]
-        + hw["corr_accel"] * aligned["corr_accel"]
-    ).clip(0, 100).round(1)
+    # Weighted composite on shared index
+    total_w  = sum(w for _, w in series)
+    combined = sum(
+        rv.reindex(series[0][0].index).fillna(method="ffill") * (w / total_w)
+        for rv, w in series
+    ).dropna()
+
+    if len(combined) < SPAN // 4:
+        return pd.Series(dtype=float)
+
+    # EWM z-score against 3-year baseline
+    mu    = combined.ewm(span=SPAN, min_periods=120).mean()
+    sigma = combined.ewm(span=SPAN, min_periods=120).std().replace(0, np.nan)
+    z     = ((combined - mu) / sigma).clip(-3.5, 3.5)
+
+    # Sigmoid → [0, 100]  (z=0 → 50, z=+2 → ~77, z=+3 → ~88)
+    score = (100.0 / (1.0 + np.exp(-0.56 * z))).clip(0, 100)
+
+    return score.round(1)
+
+
+# ── Market Fear Index ─────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def market_fear_index(period: str = "15y") -> pd.Series:
+    """
+    Market Fear Index (MFI) — CBOE implied volatility composite, 0–100.
+
+    Weights:
+        80%  VIX  (^VIX)  — S&P 500 implied vol; the canonical fear gauge
+        10%  OVX  (^OVX)  — Crude oil implied vol; geo/energy supply shocks
+        10%  GVZ  (^GVZ)  — Gold implied vol; safe-haven demand and monetary stress
+
+    Construction:
+        1. Fetch each index from Yahoo Finance (daily Close).
+        2. EWM z-score each independently against a 3-year (756-day) baseline.
+           3-year span: slow enough that a sustained multi-year crisis stays elevated;
+           span=252 adapted in ~12 months (Ukraine 2023 read z≈0 while war ongoing).
+        3. Weighted composite z = 0.80·z_VIX + 0.10·z_OVX + 0.10·z_GVZ.
+           Where OVX/GVZ are unavailable (pre-2007/2008), their weight redistributes
+           to VIX so the composite z is always on the same scale.
+        4. Sigmoid → [0, 100]:  score = 100 / (1 + exp(−0.56·z))
+           z=0 → 50  ·  z=+2 → 77  ·  z=+3 → 88  ·  z=−2 → 23
+    """
+    SPAN     = 756
+    CONFIGS  = [("VIX", "^VIX", 0.70), ("OVX", "^OVX", 0.20), ("GVZ", "^GVZ", 0.10)]
+
+    z_series: dict[str, pd.Series] = {}
+    for name, ticker, _ in CONFIGS:
+        try:
+            s = yf.Ticker(ticker).history(period=period)["Close"].dropna()
+            if len(s) < 120:
+                continue
+            mu    = s.ewm(span=SPAN, min_periods=120).mean()
+            sigma = s.ewm(span=SPAN, min_periods=120).std().replace(0, np.nan)
+            z_series[name] = ((s - mu) / sigma).clip(-3.5, 3.5)
+        except Exception:
+            pass
+
+    if "VIX" not in z_series:
+        return pd.Series(dtype=float)
+
+    vix_idx = z_series["VIX"].index
+
+    # Align OVX / GVZ to VIX index; fill gaps with VIX z-score so weights stay valid
+    aligned: dict[str, pd.Series] = {"VIX": z_series["VIX"]}
+    for name in ("OVX", "GVZ"):
+        if name in z_series:
+            aligned[name] = z_series[name].reindex(vix_idx, method="ffill")
+        else:
+            aligned[name] = z_series["VIX"]   # full fallback to VIX
+
+    weights = dict(zip(["VIX", "OVX", "GVZ"], [0.80, 0.10, 0.10]))
+    composite_z = sum(aligned[n].fillna(aligned["VIX"]) * w for n, w in weights.items())
+
+    score = (100.0 / (1.0 + np.exp(-0.56 * composite_z))).clip(0, 100)
+    score.index = score.index.tz_localize(None) if score.index.tz is not None else score.index
+    return score.round(1)
 
 
 # ── Plotly charts (backward compatible) ──────────────────────────────────────
@@ -641,6 +763,11 @@ def plot_risk_history(
     """
     if events is None:
         events = GEOPOLITICAL_EVENTS
+
+    # Normalise index to tz-naive so event timestamp comparisons always work
+    if score_series.index.tz is not None:
+        score_series = score_series.copy()
+        score_series.index = score_series.index.tz_localize(None)
 
     fig = go.Figure()
 
@@ -718,6 +845,34 @@ def plot_risk_history(
             xanchor="right", yanchor="top",
             bgcolor="rgba(10,12,20,0.70)", borderpad=2,
         )
+
+    # 1-year rolling high / low bands (~252 trading days)
+    window = 252
+    roll_high = score_series.rolling(window, min_periods=5).max()
+    roll_low  = score_series.rolling(window, min_periods=5).min()
+
+    roll_ma = score_series.rolling(window, min_periods=20).mean()
+    fig.add_trace(go.Scatter(
+        x=roll_ma.index, y=roll_ma.values,
+        name=f"{window}d MA",
+        line=dict(color="rgba(207,185,145,0.90)", width=1.4),
+        showlegend=True,
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=roll_high.index, y=roll_high.values,
+        name=f"{window}d High",
+        line=dict(color="rgba(207,185,145,0.55)", width=1.0, dash="dash"),
+        showlegend=True,
+    ))
+    fig.add_trace(go.Scatter(
+        x=roll_low.index, y=roll_low.values,
+        name=f"{window}d Low",
+        line=dict(color="rgba(142,154,170,0.55)", width=1.0, dash="dash"),
+        fill="tonexty",
+        fillcolor="rgba(207,185,145,0.05)",
+        showlegend=True,
+    ))
 
     fig.add_trace(go.Scatter(
         x=score_series.index, y=score_series.values,

@@ -176,7 +176,7 @@ def _add_event_bands(
 def _h2(text: str) -> None:
     """Section heading — monospace label with gold rule. Use as primary sub-section divider."""
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;'
         f'letter-spacing:.20em;color:{_GOLD};text-transform:uppercase;'
         f'border-bottom:1px solid #1e1e1e;padding-bottom:5px;margin:1.4rem 0 .6rem">{text}</p>',
         unsafe_allow_html=True,
@@ -360,7 +360,7 @@ def _section_header(number: str, title: str, subtitle: str = "") -> None:
         if subtitle else ""
     )
     st.markdown(
-        f'<div style="margin:1.1rem 0 0.45rem;padding-bottom:0.35rem;'
+        f'<div style="margin:1.4rem 0 0.7rem;padding-bottom:0.4rem;'
         f'border-bottom:1px solid #2a2a2a;display:flex;align-items:baseline;gap:0">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:0.10em;color:{_GOLD};'
@@ -738,27 +738,7 @@ def _about_page_styles():
 # ── Page header ────────────────────────────────────────────────────────────
 
 def _no_api_key_banner(context: str = "AI analysis features") -> None:
-    """
-    Show a one-liner st.info banner when no AI provider key is configured.
-    Safe to call on any page — silently does nothing if a key is present.
-    """
-    try:
-        import streamlit as _st
-        _keys = _st.secrets.get("keys", {})
-        _has_key = bool(
-            (_keys.get("anthropic_api_key") or "")
-            or (_keys.get("openai_api_key") or "")
-        )
-    except Exception:
-        _has_key = False
-    if not _has_key:
-        import streamlit as _st
-        _st.info(
-            f"{context} require an AI provider key. "
-            "Add `anthropic_api_key` or `openai_api_key` under `[keys]` in "
-            "`.streamlit/secrets.toml` to enable agent-generated insights.",
-            icon="🔑",
-        )
+    pass
 
 
 def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
@@ -793,8 +773,8 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         f'padding-left:12px;margin-bottom:0.75rem">'
         f'<div style="display:flex;align-items:center;margin-bottom:4px">'
         f'{_logo_img}'
-        f'<span style="{_Mh}font-size:6.5px;font-weight:700;letter-spacing:.20em;'
-        f'text-transform:uppercase;color:#444a55">{_eye}</span>'
+        f'<span style="{_Mh}font-size:9px;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:#8890a1">{_eye}</span>'
         f'</div>'
         f'<h1 style="{_Fh}font-size:1.22rem;font-weight:700;'
         f'color:#e8e8e8;margin:0 0 2px;letter-spacing:-0.01em;line-height:1.2">{title}</h1>'

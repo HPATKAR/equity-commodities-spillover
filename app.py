@@ -993,15 +993,7 @@ _OPENAI_KEY      = _get_secret("openai_api_key")
 
 
 def _validate_api_keys() -> None:
-    """Check that at least one AI provider key is present. No live API calls."""
-    if not st.session_state.get("_api_keys_validated"):
-        if not _ANTHROPIC_KEY and not _OPENAI_KEY:
-            st.warning(
-                "No AI provider key configured — agents will run in monitoring mode only. "
-                "Add `anthropic_api_key` under `[keys]` in `.streamlit/secrets.toml`.",
-                icon="🔑",
-            )
-        st.session_state["_api_keys_validated"] = True
+    st.session_state["_api_keys_validated"] = True
 
 # ── Navigation state ──────────────────────────────────────────────────────────
 _VALID_PAGES = {

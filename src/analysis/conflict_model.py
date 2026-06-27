@@ -739,10 +739,14 @@ def aggregate_portfolio_scores(
     # conflict at CIS=70 to a portfolio at CIS=83 should raise the score, not lower it.
     hhi = sum(w ** 2 for w in weights.values())
     n_eff = 1.0 / max(hhi, 1e-9)
-    breadth_mult = n_eff ** 0.25
+    # Additive log bonus: rewards breadth without inflating an already-high
+    # weighted mean.  n_eff=1→+1.7pt, n_eff=3→+3.5pt, n_eff=5→+4.5pt, cap at 8.
+    # Replaces n_eff^0.25 multiplicative factor which reached 1.50x for 6 conflicts,
+    # inflating a 64-point weighted mean to 97 even when individual scores were modest.
+    breadth_bonus = float(min(8.0, 2.5 * math.log(n_eff + 1)))
 
-    portfolio_cis = float(np.clip(weighted_mean_cis * breadth_mult, 0, 100))
-    portfolio_tps = float(np.clip(weighted_mean_tps * breadth_mult, 0, 100))
+    portfolio_cis = float(np.clip(weighted_mean_cis + breadth_bonus, 0, 100))
+    portfolio_tps = float(np.clip(weighted_mean_tps + breadth_bonus, 0, 100))
 
     avg_conf = float(np.mean([r["confidence"] for r in conflict_results.values()]))
 
