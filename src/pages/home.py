@@ -4914,6 +4914,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     with _col_right:
         _section_header("03", "Market Signals", "instruments · risk arc · channels")
+        # § R0  Hot stocks — top mega-caps by 24h news activity, clickable headlines
+        _section_header("", "Stocks to Watch", "most active by news · click to read")
+        try:
+            _render_hot_stocks()
+        except Exception:
+            pass
         # § R1  Market pulse cards — 6 live instrument cards with sparklines
         _render_market_pulse_cards()
         # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
@@ -4945,12 +4951,6 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_yield_curve_snap()
         # § R11 Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
         _render_vol_trio()
-        # § R12 Hot stocks — top mega-caps by 24h news activity, clickable headlines
-        _section_header("", "Stocks to Watch", "most active by news · click to read")
-        try:
-            _render_hot_stocks()
-        except Exception:
-            pass
 
     # ── Full-width below 3-col ────────────────────────────────────────────────
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
