@@ -67,7 +67,7 @@ def page_about_jiahe() -> None:
             f"<span class='abt-label'>This Project</span>"
             f"<span class='abt-body' style='display:block;margin-bottom:6px;'>"
             f"Quantitative Research contributor on the Equity-Commodities Spillover Monitor "
-            f"&mdash; Course Project 3 for Prof. Cinder Zhang's MGMT 69000-120.</span>"
+            f"&mdash; a research terminal built during the MSF program at Purdue Daniels School of Business.</span>"
             f"<ul style='margin:0 0 10px;padding-left:14px;list-style:disc;'>"
             f"<li style='margin-bottom:4px;'><span class='abt-body'>Designed the 4-state correlation "
             f"regime taxonomy (Low / Moderate / Elevated / Crisis) and calibrated rolling window "
@@ -184,7 +184,7 @@ def page_about_jiahe() -> None:
             f"<span class='abt-label'>Acknowledgments</span>"
             + _ack(
                 "Prof. Cinder Zhang",
-                "MGMT 69000 &middot; Regime-based thinking and equity-commodities spillover "
+                "AI for Finance &middot; Regime-based thinking and equity-commodities spillover "
                 "framework design",
             )
             + "</div>",

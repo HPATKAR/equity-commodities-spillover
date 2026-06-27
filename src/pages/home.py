@@ -4600,6 +4600,25 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _render_masthead(conflict_agg)
     _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
 
+    # § 1.0  Project intro — context for first-time visitors
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid {_GOLD};padding:.55rem 1rem;margin-bottom:.5rem;'
+        f'display:flex;align-items:baseline;gap:1.2rem;flex-wrap:wrap">'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:{_GOLD};flex-shrink:0">About This Terminal</span>'
+        f'<span style="{_F}font-size:0.70rem;color:#b8b8b8;line-height:1.65;">'
+        f'A research-grade cross-asset intelligence platform built during the MSF program '
+        f'at Purdue Daniels School of Business. Tracks geopolitical risk, correlation regimes, '
+        f'and spillover dynamics across 32 assets &mdash; equities, commodities, fixed income, '
+        f'and FX &mdash; using the Diebold-Yilmaz FEVD methodology, live data from 6 sources, '
+        f'and an 8-agent AI orchestration pipeline. '
+        f'<span style="color:#8890a1">Not investment advice.</span>'
+        f'</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
     # § 1.1  Analytical reading guide — orients first-time reviewers to the workflow
     _steps = [
         ("1", "Shock / Scenario",    "What geopolitical event or scenario are we analysing?",  _C["warn"]),

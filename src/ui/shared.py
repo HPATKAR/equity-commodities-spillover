@@ -776,7 +776,7 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
 </style>""", unsafe_allow_html=True)
     _Fh = "font-family:'DM Sans',sans-serif;"
     _Mh = "font-family:'JetBrains Mono',monospace;"
-    _eye = eyebrow or "Cross-Asset Spillover Monitor \u00b7 Purdue Daniels \u00b7 MGMT 69000-120"
+    _eye = eyebrow or "Cross-Asset Spillover Monitor \u00b7 Purdue Daniels School of Business \u00b7 MSF Research Terminal"
     _logo = _footer_logo_b64()
     _logo_img = (
         f'<img src="{_logo}" alt="" style="height:14px;width:auto;object-fit:contain;'
@@ -1120,7 +1120,7 @@ function nav(page) {{
 
     <div>
       {logo_html}
-      <p class="ft-desc">MGMT 69000-120 &middot; AI for Finance<br/>West Lafayette, Indiana</p>
+      <p class="ft-desc">Purdue Daniels School of Business<br/>West Lafayette, Indiana</p>
       <p class="ft-ts">Last updated {ts}</p>
     </div>
 
@@ -1172,7 +1172,7 @@ function nav(page) {{
   </div>
 </div>
 <div class="ft-bar">
-  <p>&copy; {yr} Cross-Asset Spillover Monitor &middot; Purdue Daniels &middot; MGMT 69000-120 &middot; For educational purposes only &middot; Not investment advice</p>
+  <p>&copy; {yr} Cross-Asset Spillover Monitor &middot; Purdue Daniels School of Business &middot; For research and educational purposes only &middot; Not investment advice</p>
 </div>
 </body></html>""", height=300, scrolling=False)
     # components.html() always returns None — navigation is handled entirely

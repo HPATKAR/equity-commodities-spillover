@@ -1,7 +1,7 @@
 """
 Institutional-grade PDF report generator.
 Purdue University · Daniels School of Business
-MGMT 69000-120 · AI for Finance
+Purdue Daniels School of Business · MSF Research Terminal
 
 Narrative structure:
   1. Cover page          - branding, contributors, metadata
@@ -455,8 +455,8 @@ def _cover_page(canvas, doc):
         c.drawString(x, panel_y + 26*mm, val)
 
     for lbl, val, x in zip(
-        ["ANALYSIS PERIOD", "COURSE"],
-        [getattr(doc, "_date_range", "-"), "MGMT 69000-120 · AI for Finance"],
+        ["ANALYSIS PERIOD", "PROGRAM"],
+        [getattr(doc, "_date_range", "-"), "Purdue Daniels School of Business · MSF Research Terminal"],
         [24*mm, 90*mm],
     ):
         c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 6.5)
@@ -1096,8 +1096,8 @@ def generate_report(
     story += [
         Table(
             [[Paragraph(
-                "This report is produced for educational purposes only as part of MGMT 69000-120 "
-                "(AI for Finance) at Purdue University's Daniels School of Business. "
+                "This report is produced for research and educational purposes at "
+                "Purdue University's Daniels School of Business. "
                 "It does not constitute investment advice, a solicitation, or a recommendation "
                 "to buy or sell any security or financial instrument. Past performance is not "
                 "indicative of future results. All trade ideas are illustrative examples of "
@@ -1121,7 +1121,7 @@ def generate_report(
         Spacer(1, 10),
         Paragraph(
             f"© {datetime.now().year} Purdue University · Daniels School of Business · "
-            f"MGMT 69000-120 AI for Finance",
+            f"MSF Research Terminal",
             S["copy"],
         ),
         Paragraph(

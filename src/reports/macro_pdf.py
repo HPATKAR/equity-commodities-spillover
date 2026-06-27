@@ -503,7 +503,7 @@ def build_macro_pdf(
     story.append(Paragraph("Dashboard Report", S["cover_title"]))
     story.append(Spacer(1, 6 * mm))
     story.append(Paragraph(
-        f"Purdue University · Daniels School of Business · MGMT 69000-120",
+        f"Purdue University · Daniels School of Business · MSF Research Terminal",
         S["cover_sub"]))
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph(
@@ -745,7 +745,7 @@ def build_macro_pdf(
     story.append(HRFlowable(width="100%", thickness=0.5, color=LGRAY))
     story.append(Spacer(1, 3 * mm))
     story.append(Paragraph(
-        "DISCLAIMER: This report is produced for academic purposes as part of Purdue University MGMT 69000-120. "
+        "DISCLAIMER: This report is produced for research and educational purposes at Purdue University Daniels School of Business. "
         "It does not constitute investment advice. All data is sourced from public providers (FRED, Yahoo Finance) "
         "and may contain errors or omissions. Past performance is not indicative of future results.",
         S["caption"]))

@@ -258,7 +258,7 @@ def build_insights_pdf(cards: list[dict], start: str, end: str) -> bytes:
     story.append(Paragraph("Market Intelligence Brief", S["cover_title"]))
     story.append(Spacer(1, 6 * mm))
     story.append(Paragraph(
-        "Purdue University · Daniels School of Business · MGMT 69000-120",
+        "Purdue University · Daniels School of Business · MSF Research Terminal",
         S["cover_sub"],
     ))
     story.append(Spacer(1, 4 * mm))
@@ -294,8 +294,8 @@ def build_insights_pdf(cards: list[dict], start: str, end: str) -> bytes:
     story.append(HRFlowable(width="100%", thickness=0.5, color=LGRAY))
     story.append(Spacer(1, 3 * mm))
     story.append(Paragraph(
-        "DISCLAIMER: This report is produced for academic purposes as part of "
-        "Purdue University MGMT 69000-120. It does not constitute investment advice. "
+        "DISCLAIMER: This report is produced for research and educational purposes at "
+        "Purdue University Daniels School of Business. It does not constitute investment advice. "
         "All data is sourced from public providers (Yahoo Finance, FRED, CFTC) and may "
         "contain errors or omissions. Past performance is not indicative of future results. "
         "Confidence scores are model outputs, not guarantees.",

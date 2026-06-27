@@ -73,8 +73,8 @@ def page_about_heramb() -> None:
             f"<span class='abt-label'>This Project</span>"
             f"<span class='abt-body' style='display:block;margin-bottom:8px;'>"
             f"Lead developer and quantitative architect on the "
-            f"Equity-Commodities Spillover Monitor &mdash; Course Project 3 for "
-            f"Prof. Cinder Zhang's MGMT 69000-120 (AI for Finance). Responsible for the "
+            f"Equity-Commodities Spillover Monitor, a research terminal built during the "
+            f"MSF program at Purdue Daniels School of Business. Responsible for the "
             f"entire codebase, architecture, and all 20 analytical dashboard pages."
             f"</span>"
             f"<ul style='margin:0 0 10px;padding-left:14px;list-style:disc;'>"
@@ -195,7 +195,7 @@ def page_about_heramb() -> None:
             f"<span class='abt-label'>Selected Projects</span>"
             + _exp(
                 "Equity-Commodities Spillover Terminal",
-                "Purdue Daniels &middot; MGMT 69000-120 (Prof. C. Zhang)", "",
+                "Purdue Daniels School of Business &middot; MSF Program", "",
                 [
                     "Built a research-grade cross-asset analytics dashboard tracking spillover "
                     "dynamics across 15 equity indices, 17 commodity futures, fixed income, and FX.",
@@ -205,7 +205,7 @@ def page_about_heramb() -> None:
             )
             + _exp(
                 "JGB Repricing Framework",
-                "Purdue Daniels &middot; MGMT 69000-119 (Prof. C. Zhang)", "",
+                "Purdue Daniels School of Business &middot; AI for Finance", "",
                 [
                     "Built a quantitative dashboard for JGB repricing as the BOJ exits YCC, using "
                     "regime filters (MS/HMM/GARCH), yield PCA, DCC spillovers, and cross-asset "
@@ -335,11 +335,11 @@ def page_about_heramb() -> None:
             f"<span class='abt-label'>Acknowledgments</span>"
             + _ack(
                 "Prof. Cinder Zhang",
-                "MGMT 69000 &middot; Framework-first thinking behind regime and spillover design",
+                "AI for Finance &middot; Framework-first thinking behind regime and spillover design",
             )
             + _ack(
                 "Prof. Adem Atmaz",
-                "MGMT 511 &middot; Fixed income intuition behind DCC-GARCH and transfer entropy",
+                "Fixed Income &middot; Fixed income intuition behind DCC-GARCH and transfer entropy",
             )
             + "</div>",
             unsafe_allow_html=True,

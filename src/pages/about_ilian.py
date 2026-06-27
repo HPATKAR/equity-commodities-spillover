@@ -68,7 +68,7 @@ def page_about_ilian() -> None:
             f"<span class='abt-body' style='display:block;margin-bottom:8px;'>"
             f"Geopolitical Research and Scenario Design contributor on the "
             f"Equity-Commodities Spillover Monitor &mdash; "
-            f"Course Project 3 for Prof. Cinder Zhang&rsquo;s MGMT 69000-120.</span>"
+            f"a research terminal built during the MSF program at Purdue Daniels School of Business.</span>"
             f"<ul style='margin:0 0 10px;padding-left:14px;list-style:disc;'>"
             f"<li style='margin-bottom:4px;'><span class='abt-body'>Designed the War Impact Map "
             f"scoring framework: per-war baseline scores, country-level commodity exposure weights, "
@@ -219,8 +219,8 @@ def page_about_ilian() -> None:
             f"<span class='abt-label'>Acknowledgments</span>"
             + _ack(
                 "Prof. Cinder Zhang",
-                "MGMT 69000 &middot; Connecting geopolitical events to systematic regime-based "
-                "market analysis and teaching us to ground quantitative outputs in real-world "
+                "AI for Finance &middot; Connecting geopolitical events to systematic regime-based "
+                "market analysis and grounding quantitative outputs in real-world "
                 "market implications.",
             )
             + "</div>",

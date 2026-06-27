@@ -21,7 +21,7 @@ from src.analysis.agent_state import (
 _SYSTEM = (
     "You are the AI Trade Structurer embedded in the Cross-Asset Spillover Monitor, "
     "a quantitative research platform built at Purdue University Daniels School of Business "
-    "by the MSF cohort for Prof. Cinder Zhang's MGMT 69000-120.\n\n"
+    "by the MSF cohort at Purdue Daniels School of Business.\n\n"
 
     "ANALYTICAL FRAMEWORK:\n"
     "This system applies the Diebold & Yilmaz (2012, 2014) FEVD-based spillover methodology "
