@@ -987,9 +987,9 @@ def _render_geo_risk_block(
             "market stress signals are rising - equity vol and safe-haven demand "
             "are beginning to confirm the geopolitical signal"
         )
-        _top_cis_conflict = max(conflict_results.items(), key=lambda x: x[1]["cis"])
-        _lead_name  = _top_cis_conflict[1]["name"]
-        _lead_cis   = _top_cis_conflict[1]["cis"]
+        _top_cis_conflict = max(conflict_results.items(), key=lambda x: x[1]["cis"]) if conflict_results else None
+        _lead_name  = _top_cis_conflict[1]["name"] if _top_cis_conflict else "N/A"
+        _lead_cis   = _top_cis_conflict[1]["cis"]  if _top_cis_conflict else 0.0
         _gap        = _lead_cis - score
         st.markdown(
             f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};border-left:3px solid rgba(207,185,145,.35);'
