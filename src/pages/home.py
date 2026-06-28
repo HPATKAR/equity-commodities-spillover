@@ -3660,23 +3660,46 @@ def _load_hot_stocks() -> list[dict]:
             pass
         return None
 
+    def _parse_article(a: dict) -> tuple[float, str, str, str]:
+        """Return (pub_ts, title, url, source) handling both old and new yfinance formats."""
+        import datetime as _dt
+        c = a.get("content", {})
+        if c:
+            # New format (yfinance ≥0.2.50): nested under "content"
+            pub_str = c.get("pubDate", "") or c.get("displayTime", "")
+            try:
+                ts = _dt.datetime.fromisoformat(pub_str.replace("Z", "+00:00")).timestamp()
+            except Exception:
+                ts = 0.0
+            title  = c.get("title", "")
+            url    = (c.get("clickThroughUrl") or {}).get("url", "") or (c.get("canonicalUrl") or {}).get("url", "")
+            source = (c.get("provider") or {}).get("displayName", "")
+        else:
+            # Old format: flat keys
+            ts     = float(a.get("providerPublishTime", 0) or 0)
+            title  = a.get("title", "")
+            url    = a.get("link", "")
+            source = a.get("publisher", "")
+        return ts, title, url, source
+
     def _fetch_news(ticker: str) -> dict | None:
         try:
             news = yf.Ticker(ticker).news or []
-            recent = [a for a in news if (now - a.get("providerPublishTime", 0)) / 3600 < 24]
+            parsed = [_parse_article(a) for a in news]
+            recent = [(ts, title, url, src) for ts, title, url, src in parsed if (now - ts) / 3600 < 24]
             if not recent:
                 return None
-            score = sum(max(0.0, 1.0 - (now - a.get("providerPublishTime", 0)) / 86400.0) for a in recent)
-            top = recent[0]
+            score = sum(max(0.0, 1.0 - (now - ts) / 86400.0) for ts, *_ in recent)
+            ts0, title0, url0, src0 = recent[0]
             return {
                 "ticker":   ticker,
                 "score":    score,
                 "n_recent": len(recent),
                 "day_ret":  _day_ret(ticker),
-                "headline": top.get("title", ""),
-                "url":      top.get("link", ""),
-                "source":   top.get("publisher", ""),
-                "pub_ts":   top.get("providerPublishTime", 0),
+                "headline": title0,
+                "url":      url0,
+                "source":   src0,
+                "pub_ts":   ts0,
             }
         except Exception:
             return None
