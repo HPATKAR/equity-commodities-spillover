@@ -3747,23 +3747,29 @@ def _render_hot_stocks() -> None:
         age_h   = (now - pub_ts) / 3600 if pub_ts else 0
         age_str = (f"{int(age_h*60)}m" if age_h < 1 else f"{int(age_h)}h") + " ago"
 
-        hl = (headline[:80] + "…") if len(headline) > 80 else headline
-        link_open  = f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">' if url else "<span>"
-        link_close = "</a>" if url else "</span>"
+        hl = (headline[:90] + "…") if len(headline) > 90 else headline
+        link_open  = f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:block">' if url else "<div>"
+        link_close = "</a>" if url else "</div>"
 
         cards_html += (
-            f'<div style="border-bottom:1px solid {_C["border"]};padding:6px 0">'
-            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;'
-            f'color:{_GOLD};background:#1a1500;border:1px solid #3a2f00;padding:1px 6px">{ticker}</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:600;color:{ret_col}">{ret_str}</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["muted"]};margin-left:auto">'
-            f'{n} article{"s" if n!=1 else ""} · {age_str}</span>'
+            f'<div style="border-bottom:1px solid {_C["border"]};padding:7px 0;display:flex;gap:10px;align-items:stretch">'
+            # Left: large ticker block
+            f'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;'
+            f'min-width:52px;background:#1a1500;border:1px solid #3a2f00;padding:4px 6px;flex-shrink:0">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:800;'
+            f'color:{_GOLD};letter-spacing:.04em;line-height:1">{ticker}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:600;'
+            f'color:{ret_col};margin-top:3px">{ret_str}</span>'
             f'</div>'
+            # Right: meta + headline
+            f'<div style="flex:1;min-width:0">'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["muted"]};margin-bottom:3px">'
+            f'{n} article{"s" if n!=1 else ""} · {age_str}</div>'
             f'{link_open}'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#dde0e8;line-height:1.4">{hl}</div>'
             f'{link_close}'
             f'<div style="margin-top:2px;font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["label"]}">{source}</div>'
+            f'</div>'
             f'</div>'
         )
 
