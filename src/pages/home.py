@@ -4939,14 +4939,14 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     with _col_right:
         _section_header("03", "Market Signals", "instruments · risk arc · channels")
-        # § R0  Hot stocks — top mega-caps by 24h news activity, clickable headlines
+        # § R1  Market pulse cards — 6 live instrument cards with sparklines
+        _render_market_pulse_cards()
+        # § R2a Hot stocks — top mega-caps by 24h news activity, clickable headlines
         _section_header("", "Stocks to Watch", "most active by news · click to read")
         try:
             _render_hot_stocks()
         except Exception:
             pass
-        # § R1  Market pulse cards — 6 live instrument cards with sparklines
-        _render_market_pulse_cards()
         # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
         _render_risk_arc(risk)
         # § R3  Risk convergence — showpiece directly under risk arc:
