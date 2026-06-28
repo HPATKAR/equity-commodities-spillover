@@ -637,7 +637,7 @@ def risk_score_history(
 # ── Market Fear Index ─────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def market_fear_index(period: str = "15y") -> pd.Series:
+def market_fear_index(period: str = "3y") -> pd.Series:
     """
     Market Fear Index (MFI) — CBOE implied volatility composite, 0–100.
 

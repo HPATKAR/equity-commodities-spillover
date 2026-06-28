@@ -1932,33 +1932,41 @@ st.session_state.pop("_morning_briefing_tid", None)
 
 _validate_api_keys()
 
-if not st.session_state.get("_startup_warmed"):
-    # Market risk + geo risk (already in place)
-    try:
-        from src.pages.home import _load_market_risk
-        from src.analysis.scenario_state import get_scenario_id
-        _load_market_risk(_start, _end, get_scenario_id())
-    except Exception:
-        pass
-    # Credit spreads proxy (HYG/LQD via yfinance) - records fred_spreads freshness
-    try:
-        from src.data.loader import load_fixed_income_prices
-        load_fixed_income_prices(_start, _end)
-    except Exception:
-        pass
-    # RSS headlines - records rss_headlines freshness (public feeds, no API key)
-    try:
-        from src.ingestion.geo_rss import ingest_headlines
-        ingest_headlines()
-    except Exception:
-        pass
-    # COT positioning - records cot_positioning freshness (CFTC public data)
-    try:
-        from src.analysis.cot import load_cot_data
-        load_cot_data(years=2)
-    except Exception:
-        pass
-    st.session_state["_startup_warmed"] = True
+@st.cache_resource(show_spinner=False)
+def _warm_caches_once(start: str, end: str) -> bool:
+    """
+    Process-level cache warm — runs exactly once per Render dyno lifecycle,
+    not once per user session. Fires a background thread so the first page
+    render isn't blocked; subsequent requests hit warm @st.cache_data entries.
+    """
+    import threading
+
+    def _do_warm() -> None:
+        try:
+            from src.pages.home import _load_market_risk
+            _load_market_risk(start, end, "base")
+        except Exception:
+            pass
+        try:
+            from src.data.loader import load_fixed_income_prices
+            load_fixed_income_prices(start, end)
+        except Exception:
+            pass
+        try:
+            from src.ingestion.geo_rss import ingest_headlines
+            ingest_headlines()
+        except Exception:
+            pass
+        try:
+            from src.analysis.cot import load_cot_data
+            load_cot_data(years=2)
+        except Exception:
+            pass
+
+    threading.Thread(target=_do_warm, daemon=True).start()
+    return True
+
+_warm_caches_once(_start, _end)
 
 
 # ── Global floating AI chat launcher ─────────────────────────────────────────

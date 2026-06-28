@@ -4634,13 +4634,14 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     with st.spinner("Loading market data & intelligence…"):
         _scenario_id = get_scenario_id()
-        _pool = ThreadPoolExecutor(max_workers=2)
-        _f_conflict = _pool.submit(score_all_conflicts)
-        _f_pulse    = _pool.submit(_load_market_pulse)
+        _pool = ThreadPoolExecutor(max_workers=3)
+        _f_conflict    = _pool.submit(score_all_conflicts)
+        _f_pulse       = _pool.submit(_load_market_pulse)
+        _f_hot_stocks  = _pool.submit(_load_hot_stocks)   # warm RSS feed in parallel
         # Main thread: market risk (contains st.session_state write — must not thread)
         risk, _score_hist = _load_market_risk(start, end, _scenario_id)
 
-        # Collect thread results — 25s timeout each so a hung GDELT/yfinance can't block the page
+        # Collect thread results — 25s timeout each so a hung external call can't block the page
         try:
             conflict_results = _f_conflict.result(timeout=25)
             record_fetch("conflict_model")
@@ -4648,6 +4649,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             conflict_results = {}
         try:
             _f_pulse.result(timeout=25)   # cache is now warm; result consumed by _render_market_pulse_cards
+        except Exception:
+            pass
+        try:
+            _f_hot_stocks.result(timeout=25)   # cache warm; consumed by _render_hot_stocks
         except Exception:
             pass
         _pool.shutdown(wait=False)
