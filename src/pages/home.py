@@ -3636,18 +3636,22 @@ _HOT_STOCKS_TICKERS = (
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def _load_hot_stocks() -> list[dict]:
-    """Fetch yfinance news for mega-cap tickers; rank by 24h article activity."""
-    import time
+    """
+    Fetch Yahoo Finance RSS news per ticker; rank by 24h article count.
+    Uses feedparser RSS (same infra as geo_rss) — more reliable than yfinance .news scraping.
+    """
+    import time, calendar
     import yfinance as yf
+    import feedparser
     from concurrent.futures import ThreadPoolExecutor
 
     now = time.time()
     tickers = list(_HOT_STOCKS_TICKERS)
 
-    # Batch price fetch — one call for 1-day return on all tickers
+    # Batch price fetch — one yf.download call for all tickers
     try:
         raw_px = yf.download(tickers, period="2d", auto_adjust=True, progress=False, threads=True)
-        closes = raw_px["Close"] if isinstance(raw_px.columns, pd.MultiIndex) else raw_px.get("Close", pd.DataFrame())
+        closes = raw_px["Close"] if isinstance(raw_px.columns, pd.MultiIndex) else pd.DataFrame()
     except Exception:
         closes = pd.DataFrame()
 
@@ -3660,56 +3664,43 @@ def _load_hot_stocks() -> list[dict]:
             pass
         return None
 
-    def _parse_article(a: dict) -> tuple[float, str, str, str]:
-        """Return (pub_ts, title, url, source) handling both old and new yfinance formats."""
-        import datetime as _dt
-        c = a.get("content", {})
-        if c:
-            # New format (yfinance ≥0.2.50): nested under "content"
-            pub_str = c.get("pubDate", "") or c.get("displayTime", "")
-            try:
-                ts = _dt.datetime.fromisoformat(pub_str.replace("Z", "+00:00")).timestamp()
-            except Exception:
-                ts = 0.0
-            title  = c.get("title", "")
-            url    = (c.get("clickThroughUrl") or {}).get("url", "") or (c.get("canonicalUrl") or {}).get("url", "")
-            source = (c.get("provider") or {}).get("displayName", "")
-        else:
-            # Old format: flat keys
-            ts     = float(a.get("providerPublishTime", 0) or 0)
-            title  = a.get("title", "")
-            url    = a.get("link", "")
-            source = a.get("publisher", "")
-        return ts, title, url, source
-
-    def _fetch_news(ticker: str) -> dict | None:
+    def _fetch_rss(ticker: str) -> dict | None:
         try:
-            news = yf.Ticker(ticker).news or []
-            parsed = [_parse_article(a) for a in news]
-            recent = [(ts, title, url, src) for ts, title, url, src in parsed if (now - ts) / 3600 < 24]
+            rss_url = f"https://finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US"
+            feed    = feedparser.parse(rss_url)
+            entries = feed.get("entries") or []
+            recent  = []
+            for e in entries[:20]:
+                pub = getattr(e, "published_parsed", None)
+                ts  = float(calendar.timegm(pub)) if pub else 0.0  # UTC-safe
+                if (now - ts) / 3600 < 24:
+                    src = ""
+                    if hasattr(e, "source") and isinstance(e.source, dict):
+                        src = e.source.get("title", "")
+                    recent.append({"ts": ts, "title": e.get("title", ""), "url": e.get("link", ""), "source": src})
             if not recent:
                 return None
-            score = sum(max(0.0, 1.0 - (now - ts) / 86400.0) for ts, *_ in recent)
-            ts0, title0, url0, src0 = recent[0]
+            score = sum(max(0.0, 1.0 - (now - a["ts"]) / 86400.0) for a in recent)
+            top   = recent[0]
             return {
                 "ticker":   ticker,
                 "score":    score,
                 "n_recent": len(recent),
                 "day_ret":  _day_ret(ticker),
-                "headline": title0,
-                "url":      url0,
-                "source":   src0,
-                "pub_ts":   ts0,
+                "headline": top["title"],
+                "url":      top["url"],
+                "source":   top["source"] or "Yahoo Finance",
+                "pub_ts":   top["ts"],
             }
         except Exception:
             return None
 
     results: list[dict] = []
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        futures = [pool.submit(_fetch_news, t) for t in tickers]
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(_fetch_rss, t) for t in tickers]
         for f in futures:
             try:
-                r = f.result(timeout=15)
+                r = f.result(timeout=20)
                 if r:
                     results.append(r)
             except Exception:
@@ -3724,6 +3715,11 @@ def _render_hot_stocks() -> None:
     import time
     data = _load_hot_stocks()
     if not data:
+        st.markdown(
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'color:{_C["muted"]};padding:6px 0">No stock news available · retries in 30 min</div>',
+            unsafe_allow_html=True,
+        )
         return
 
     now = time.time()
