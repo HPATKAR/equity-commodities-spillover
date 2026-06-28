@@ -259,8 +259,12 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[
     """
     from src.analysis.risk_score import compute_risk_score
     computed_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Clamp to 3 years — rolling corr needs 60 days, charts need ~2y.
+    # Full 16-year fetch (DEFAULT_START=2010) made cold start take 60s+ on Render.
+    _floor = str((datetime.date.today() - datetime.timedelta(days=3 * 365)))
+    effective_start = _floor if start < _floor else start
     try:
-        eq_r, cmd_r = load_returns(start, end)
+        eq_r, cmd_r = load_returns(effective_start, end)
         if eq_r.empty or cmd_r.empty:
             return {
                 "_computed_at": computed_at,
