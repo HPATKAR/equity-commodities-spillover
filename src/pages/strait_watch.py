@@ -267,66 +267,76 @@ def page_strait_watch(start: str, end: str) -> None:
         unsafe_allow_html=True,
     )
 
-    # ── Load PortWatch live data early so cards can use real counts ───────────
+    # ── Load PortWatch + commodity prices in parallel ─────────────────────────
     import copy
-    _straits  = copy.deepcopy(_STRAITS)  # mutable local copy
-    _pw_df    = pd.DataFrame()           # shared across the full page
+    from concurrent.futures import ThreadPoolExecutor
+    _straits   = copy.deepcopy(_STRAITS)  # mutable local copy
+    _pw_df     = pd.DataFrame()           # shared across the full page
     _pw_loaded = False
+    _live_straits: dict = {}
 
     try:
         from src.data.portwatch import load_hormuz_tankers, load_all_straits_live, STRAIT_TO_PORTID
+        _portwatch_ok = True
+    except Exception:
+        _portwatch_ok = False
 
-        with st.spinner("Fetching IMF PortWatch live data for all straits…"):
-            # Legacy Hormuz load (used for the detailed 365-day chart later in the page)
-            _pw_df = load_hormuz_tankers(days=365)
+    with st.spinner("Loading strait and commodity data…"):
+        with ThreadPoolExecutor(max_workers=3) as _sw_pool:
+            if _portwatch_ok:
+                _f_hormuz = _sw_pool.submit(load_hormuz_tankers, 365)
+                _f_live   = _sw_pool.submit(load_all_straits_live, 7)
+            _f_prices = _sw_pool.submit(load_all_prices, start, end)
 
-            # New: live snapshot for ALL mapped straits
-            _live_straits = load_all_straits_live(days_lookback=7)
+        if _portwatch_ok:
+            try:
+                _pw_df        = _f_hormuz.result()
+                _live_straits = _f_live.result()
+                _pw_loaded    = not _pw_df.empty
+            except Exception as _pw_err:
+                st.caption(f"PortWatch live counts unavailable ({type(_pw_err).__name__}) — showing last-known estimates.")
 
-        _pw_loaded = not _pw_df.empty
-
-        for s in _straits:
-            sid = s["id"]
-            live = _live_straits.get(sid, {})
-
-            if live.get("source") == "PortWatch live" and live.get("ships_current") is not None:
-                _live_total = live.get("ships_current")
-                _live_delta = live.get("ships_24h_change") or 0
-                _live_date  = live.get("as_of") or "live"
-                _live_7d    = live.get("ships_7d_avg", "n/a")
-
-                s["ships_current"]    = _live_total
-                s["ships_24h_change"] = _live_delta
-                s["_live"]            = True
-                s["_live_date"]       = _live_date
-                s["ships_context"] = (
-                    f"IMF PortWatch (as of {_live_date} · ~7d publication lag): "
-                    f"{_live_total} tankers/day "
-                    f"({'↓' if _live_delta < 0 else '↑'}{abs(_live_delta)} vs prior day). "
-                    f"7-day avg: {_live_7d}. "
-                    f"Baseline: {s['ships_baseline']}/day."
-                )
-
-                # Publish disruption fraction to session_state for conflict_model.py
-                if sid == "hormuz":
-                    _baseline_oil = round(s["ships_baseline"] * 0.60)
-                    _oil_proxy    = round(_live_total * 0.60)
-                    _disruption   = max(0.0, 1.0 - _oil_proxy / max(_baseline_oil, 1))
-                    st.session_state["_hormuz_disruption"]  = round(_disruption, 3)
-
-                    # Also store for Hormuz chart (legacy path uses _pw_df)
-                    if not _pw_df.empty:
-                        s["_live_total"] = _live_total
-
-    except Exception as _pw_err:
-        st.caption(f"PortWatch live counts unavailable ({type(_pw_err).__name__}) — showing last-known estimates.")
-
-    # ── Load price data ────────────────────────────────────────────────────────
-    with st.spinner("Loading commodity price data…"):
         try:
-            _, cmd_px = load_all_prices(start, end)
+            _, cmd_px = _f_prices.result()
         except Exception:
             cmd_px = pd.DataFrame()
+
+    # ── Enrich _straits with live data (serial — touches session_state) ──────
+    if _portwatch_ok and _live_straits:
+        try:
+            for s in _straits:
+                sid = s["id"]
+                live = _live_straits.get(sid, {})
+
+                if live.get("source") == "PortWatch live" and live.get("ships_current") is not None:
+                    _live_total = live.get("ships_current")
+                    _live_delta = live.get("ships_24h_change") or 0
+                    _live_date  = live.get("as_of") or "live"
+                    _live_7d    = live.get("ships_7d_avg", "n/a")
+
+                    s["ships_current"]    = _live_total
+                    s["ships_24h_change"] = _live_delta
+                    s["_live"]            = True
+                    s["_live_date"]       = _live_date
+                    s["ships_context"] = (
+                        f"IMF PortWatch (as of {_live_date} · ~7d publication lag): "
+                        f"{_live_total} tankers/day "
+                        f"({'↓' if _live_delta < 0 else '↑'}{abs(_live_delta)} vs prior day). "
+                        f"7-day avg: {_live_7d}. "
+                        f"Baseline: {s['ships_baseline']}/day."
+                    )
+
+                    # Publish disruption fraction to session_state for conflict_model.py
+                    if sid == "hormuz":
+                        _baseline_oil = round(s["ships_baseline"] * 0.60)
+                        _oil_proxy    = round(_live_total * 0.60)
+                        _disruption   = max(0.0, 1.0 - _oil_proxy / max(_baseline_oil, 1))
+                        st.session_state["_hormuz_disruption"] = round(_disruption, 3)
+
+                        if not _pw_df.empty:
+                            s["_live_total"] = _live_total
+        except Exception as _pw_err:
+            st.caption(f"PortWatch live counts unavailable ({type(_pw_err).__name__}) — showing last-known estimates.")
 
     def _safe_series(name: str) -> pd.Series:
         if not cmd_px.empty and name in cmd_px.columns:
