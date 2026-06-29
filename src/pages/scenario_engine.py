@@ -755,11 +755,16 @@ def page_scenario_engine(
     except Exception:
         pass
 
-    # ── Load data ─────────────────────────────────────────────────────────
+    # ── Load data in parallel — all three are @st.cache_data, no st.* calls ──
+    from concurrent.futures import ThreadPoolExecutor
     with st.spinner("Computing betas and historical tail risk…"):
-        betas        = _compute_betas(start, end)
-        regime_betas = _compute_regime_betas(start, end)
-        var_es       = _compute_var_es(start, end)
+        with ThreadPoolExecutor(max_workers=3) as _se_pool:
+            _f_betas  = _se_pool.submit(_compute_betas,        start, end)
+            _f_regime = _se_pool.submit(_compute_regime_betas, start, end)
+            _f_var    = _se_pool.submit(_compute_var_es,       start, end)
+        betas        = _f_betas.result()
+        regime_betas = _f_regime.result()
+        var_es       = _f_var.result()
 
     data_ok = bool(betas) and bool(var_es)
     if not data_ok:

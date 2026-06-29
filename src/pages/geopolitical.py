@@ -51,9 +51,13 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
         "used in the Scenario Engine and Conflict Intelligence pages."
     )
 
+    from concurrent.futures import ThreadPoolExecutor
     with st.spinner("Loading market data…"):
-        eq_p, cmd_p = load_all_prices(start, end)
-        eq_r, cmd_r = load_returns(start, end)
+        with ThreadPoolExecutor(max_workers=2) as _geo_pool:
+            _f_prices  = _geo_pool.submit(load_all_prices, start, end)
+            _f_returns = _geo_pool.submit(load_returns,    start, end)
+        eq_p, cmd_p = _f_prices.result()
+        eq_r, cmd_r = _f_returns.result()
 
     if eq_p.empty or cmd_p.empty:
         st.error("Market data unavailable.")
