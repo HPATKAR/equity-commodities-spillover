@@ -118,21 +118,28 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     _period_days = (_end_dt - _start_dt).days
     _load_start = (_start_dt - _dt.timedelta(days=_period_days)).strftime("%Y-%m-%d")
 
+    from concurrent.futures import ThreadPoolExecutor
     with st.spinner("Loading returns…"):
-        eq_r, cmd_r = load_returns(_load_start, end)
+        with ThreadPoolExecutor(max_workers=3) as _cr_pool:
+            _f_ret = _cr_pool.submit(load_returns, _load_start, end)
+            _f_fi  = _cr_pool.submit(load_fixed_income_returns, _load_start, end)
+            _f_fx  = _cr_pool.submit(load_fx_returns, _load_start, end)
+        try:
+            eq_r, cmd_r = _f_ret.result()
+        except Exception:
+            eq_r, cmd_r = pd.DataFrame(), pd.DataFrame()
+        try:
+            fi_r = _f_fi.result()
+        except Exception:
+            fi_r = pd.DataFrame()
+        try:
+            fx_r = _f_fx.result()
+        except Exception:
+            fx_r = pd.DataFrame()
 
     if eq_r.empty or cmd_r.empty:
         st.error("Market data unavailable.")
         return
-
-    try:
-        fi_r = load_fixed_income_returns(_load_start, end)
-    except Exception:
-        fi_r = pd.DataFrame()
-    try:
-        fx_r = load_fx_returns(_load_start, end)
-    except Exception:
-        fx_r = pd.DataFrame()
 
     avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
     regimes  = detect_correlation_regime(avg_corr)
