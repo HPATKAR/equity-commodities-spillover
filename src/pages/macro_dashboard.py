@@ -508,15 +508,44 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         st.info("Add a FRED API key in Settings to unlock bond, macro, and money-flow data. "
                 "Valuations and index performance load without it.")
 
-    today = date.today()
+    today      = date.today()
+    perf_start = (today - timedelta(days=400)).isoformat()
 
-    # initialise all data stores so later sections and narratives can safely reference them
+    # Pre-load all data in parallel — all loaders are @st.cache_data with no st.* calls.
+    from concurrent.futures import ThreadPoolExecutor
     macro_data: dict = {}
     money_data: dict = {}
     yields_df  = pd.DataFrame()
     spreads_df = pd.DataFrame()
     val_df     = pd.DataFrame()
     idx_prices = pd.DataFrame()
+    _pc_px = pd.DataFrame()
+    _pc_hy = pd.Series(dtype=float)
+    _pc_ig = pd.Series(dtype=float)
+
+    with st.spinner("Loading macro data…"):
+        with ThreadPoolExecutor(max_workers=9) as _md_pool:
+            if fred_key:
+                _f_macro   = _md_pool.submit(_load_macro,   fred_key, start, end)
+                _f_money   = _md_pool.submit(_load_money,   fred_key, start, end)
+                _f_yields  = _md_pool.submit(_load_yields,  fred_key, start, end)
+                _f_spreads = _md_pool.submit(_load_spreads, fred_key, start, end)
+                _f_pc_hy   = _md_pool.submit(_fred, fred_key, "BAMLH0A0HYM2", start, end)
+                _f_pc_ig   = _md_pool.submit(_fred, fred_key, "BAMLC0A0CM",   start, end)
+            _f_val = _md_pool.submit(_load_valuations)
+            _f_idx = _md_pool.submit(_load_index_perf, perf_start)
+            _f_pc  = _md_pool.submit(_load_pc_proxies, start, end)
+
+        if fred_key:
+            macro_data = _f_macro.result()
+            money_data = _f_money.result()
+            yields_df  = _f_yields.result()
+            spreads_df = _f_spreads.result()
+            _pc_hy     = _f_pc_hy.result()
+            _pc_ig     = _f_pc_ig.result()
+        val_df     = _f_val.result()
+        idx_prices = _f_idx.result()
+        _pc_px     = _f_pc.result()
 
     # ── Regime banner - quick upfront read using spread data ─────────────────
     if fred_key:
@@ -549,11 +578,8 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     if no_fred:
         st.caption("Requires FRED API key.")
-    else:
-        with st.spinner("Loading macro indicators…"):
-            macro_data = _load_macro(fred_key, start, end)
 
-        if macro_data:
+    if macro_data:
             kpi_keys = [
                 "Real GDP Growth (QoQ %)",
                 "ISM Manufacturing PMI",
@@ -712,11 +738,8 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     if no_fred:
         st.caption("Requires FRED API key.")
-    else:
-        with st.spinner("Loading money flow data…"):
-            money_data = _load_money(fred_key, start, end)
 
-        if money_data:
+    if money_data:
             mf_l, mf_r, mf_s = st.columns(3)
 
             with mf_l:
@@ -786,11 +809,8 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     if no_fred:
         st.caption("Requires FRED API key.")
-    else:
-        with st.spinner("Loading yield data…"):
-            yields_df = _load_yields(fred_key, start, end)
 
-        if not yields_df.empty:
+    if not yields_df.empty:
             y_l, y_r = st.columns([1.8, 1])
 
             with y_l:
@@ -850,11 +870,8 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
     if no_fred:
         st.caption("Requires FRED API key.")
-    else:
-        with st.spinner("Loading spread data…"):
-            spreads_df = _load_spreads(fred_key, start, end)
 
-        if not spreads_df.empty:
+    if not spreads_df.empty:
             sp_l, sp_r = st.columns(2)
 
             with sp_l:
@@ -912,9 +929,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     # 6. VALUATIONS & EARNINGS - Are equities priced for this environment?
     # ══════════════════════════════════════════════════════════════════════════
     _section_header("06", "Valuations & Expected Earnings Growth", "Forward P/E · earnings yield · equity risk premium")
-
-    with st.spinner("Loading valuation data…"):
-        val_df = _load_valuations()
 
     if not val_df.empty and "Trailing P/E" in val_df.columns:
         v_l, v_r = st.columns([1.2, 1])
@@ -1031,10 +1045,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     _section_header("07", "Index Performance & Market Stress", "Rolling returns · VIX - the market's verdict on everything above")
 
     perf_windows = {"1W": 5, "1M": 21, "3M": 63, "6M": 126, "YTD": None}
-    perf_start = (today - timedelta(days=400)).isoformat()
-
-    with st.spinner("Loading index data…"):
-        idx_prices = _load_index_perf(perf_start)
 
     if not idx_prices.empty:
         perf_rows = []
@@ -1154,10 +1164,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
-    with st.spinner("Loading private credit data…"):
-        _pc_px = _load_pc_proxies(start, end)
-        _pc_hy = _fred(fred_key, "BAMLH0A0HYM2", start, end) if not no_fred else pd.Series(dtype=float)
-        _pc_ig = _fred(fred_key, "BAMLC0A0CM",   start, end) if not no_fred else pd.Series(dtype=float)
+    # _pc_px, _pc_hy, _pc_ig pre-loaded in parallel block above
 
     # ── compute metrics ──────────────────────────────────────────────────────
     _hy_curr = _hy_pct = _hy_90d = _ig_curr = None
