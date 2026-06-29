@@ -249,10 +249,14 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=1800, show_spinner=False, max_entries=1)
-def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[dict, pd.Series]:
+def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
     """
     Load market returns, compute avg_corr, then run the full 3-layer risk score.
-    Returns (risk_result, score_history).
+    Returns risk_result dict.
+
+    NOTE: does NOT call any other @st.cache_data functions internally — Streamlit 1.35+
+    raises StreamlitAPIException on nested cached calls. market_fear_index() is called
+    separately in page_home() on the main thread.
 
     risk_result always contains:
       _computed_at  : ISO timestamp string of when this computation ran
@@ -263,7 +267,6 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[
     from src.analysis.risk_score import compute_risk_score
     computed_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # Clamp to 3 years — rolling corr needs 60 days, charts need ~2y.
-    # Full 16-year fetch (DEFAULT_START=2010) made cold start take 60s+ on Render.
     _floor = str((datetime.date.today() - datetime.timedelta(days=3 * 365)))
     effective_start = _floor if start < _floor else start
     try:
@@ -274,24 +277,22 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[
                 "_market_fallback": True,
                 "_is_eod": None,
                 "_data_date": None,
-            }, pd.Series(dtype=float)
+            }
 
-        # Detect whether latest data is a prior close (EOD) or same-day
-        today = datetime.date.today()
+        today     = datetime.date.today()
         last_date = cmd_r.index[-1].date() if hasattr(cmd_r.index[-1], "date") else None
-        is_eod = last_date is not None and last_date < today
+        is_eod    = last_date is not None and last_date < today
 
         avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
         risk     = compute_risk_score(avg_corr, cmd_r, eq_r=eq_r)
-        hist     = market_fear_index()
 
-        risk["_computed_at"]      = computed_at
-        risk["_market_fallback"]  = False
-        risk["_is_eod"]           = is_eod
-        risk["_data_date"]        = str(last_date) if last_date else None
+        risk["_computed_at"]     = computed_at
+        risk["_market_fallback"] = False
+        risk["_is_eod"]          = is_eod
+        risk["_data_date"]       = str(last_date) if last_date else None
 
         record_fetch("risk_score")
-        return risk, hist
+        return risk
 
     except Exception:
         return {
@@ -299,7 +300,7 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> tuple[
             "_market_fallback": True,
             "_is_eod": None,
             "_data_date": None,
-        }, pd.Series(dtype=float)
+        }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4685,8 +4686,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _f_conflict    = _pool.submit(score_all_conflicts)
     _f_pulse       = _pool.submit(_load_market_pulse)
     _f_hot_stocks  = _pool.submit(_load_hot_stocks)   # warm RSS feed in parallel
-    # Main thread: market risk (contains st.session_state write — must not thread)
-    risk, _score_hist = _load_market_risk(start, end, _scenario_id)
+    # Main thread: market risk (must not thread — session_state writes inside)
+    risk        = _load_market_risk(start, end, _scenario_id)
+    _score_hist = market_fear_index()  # separate call — avoids nested @st.cache_data
 
     # Collect thread results — 25s timeout each so a hung external call can't block the page
     try:
