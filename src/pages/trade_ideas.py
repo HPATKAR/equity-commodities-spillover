@@ -1677,8 +1677,25 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     except Exception as _geo_err:
         st.caption(f"Geo context unavailable - conflict model load failed: {_geo_err}")
 
+    from concurrent.futures import ThreadPoolExecutor
+    from src.data.loader import load_fixed_income_returns, load_fx_returns
     with st.spinner("Loading data…"):
-        eq_r, cmd_r = load_returns(start, end)
+        with ThreadPoolExecutor(max_workers=3) as _ti_pool:
+            _f_ret = _ti_pool.submit(load_returns, start, end)
+            _f_fi  = _ti_pool.submit(load_fixed_income_returns, start, end)
+            _f_fx  = _ti_pool.submit(load_fx_returns, start, end)
+        try:
+            eq_r, cmd_r = _f_ret.result()
+        except Exception:
+            eq_r, cmd_r = pd.DataFrame(), pd.DataFrame()
+        try:
+            _fi_r = _f_fi.result()
+        except Exception:
+            _fi_r = pd.DataFrame()
+        try:
+            _fx_r = _f_fx.result()
+        except Exception:
+            _fx_r = pd.DataFrame()
 
     if eq_r.empty or cmd_r.empty:
         st.error("Market data unavailable.")
@@ -1801,18 +1818,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
-    # Expand backtest universe to include Fixed Income + FX so new macro trades are backtested
+    # Expand backtest universe to include Fixed Income + FX
     _extra_frames: list[pd.DataFrame] = []
-    try:
-        from src.data.loader import load_fixed_income_returns, load_fx_returns
-        _fi_r  = load_fixed_income_returns(start, end)
-        _fx_r  = load_fx_returns(start, end)
-        if not _fi_r.empty:
-            _extra_frames.append(_fi_r)
-        if not _fx_r.empty:
-            _extra_frames.append(_fx_r)
-    except Exception:
-        pass
+    if not _fi_r.empty:
+        _extra_frames.append(_fi_r)
+    if not _fx_r.empty:
+        _extra_frames.append(_fx_r)
     all_r_concat = pd.concat([eq_r, cmd_r] + _extra_frames, axis=1)
 
     _thread(
