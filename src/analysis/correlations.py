@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 from scipy.stats import pearsonr
 from typing import Optional
 
@@ -152,6 +153,7 @@ def detect_correlation_regime(
     return result
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
 def average_cross_corr_series(
     equity_returns: pd.DataFrame,
     commodity_returns: pd.DataFrame,
@@ -184,6 +186,7 @@ _ENERGY_METALS = [
 ]
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
 def compute_regime_features(
     equity_returns: pd.DataFrame,
     commodity_returns: pd.DataFrame,
@@ -246,6 +249,7 @@ def compute_regime_features(
     return out.dropna()
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
 def composite_stress_index(
     equity_returns: pd.DataFrame,
     commodity_returns: pd.DataFrame,
