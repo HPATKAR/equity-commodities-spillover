@@ -4646,11 +4646,16 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     from concurrent.futures import ThreadPoolExecutor
 
     # ── Immediate shell: renders before any data fetch so the screen isn't black ──
-    # Skip the loading indicator on warm-cache reruns (e.g. 60 s heartbeat) to avoid
-    # the bar flashing every minute. _MARKET_RISK_TTL matches @st.cache_data(ttl=1800).
+    # Show the loading bar on (a) cache TTL expiry and (b) scenario switches, which
+    # evict _load_market_risk's single-entry cache and force a ~3-5s recompute.
     _MARKET_RISK_TTL = 1800
     _last_load_ts    = st.session_state.get("_home_last_load_ts", 0.0)
-    _is_cold         = (time.time() - _last_load_ts) > _MARKET_RISK_TTL
+    _last_scenario   = st.session_state.get("_home_last_scenario", "")
+    _cur_scenario_id = get_scenario_id()
+    _is_cold = (
+        (time.time() - _last_load_ts) > _MARKET_RISK_TTL
+        or _cur_scenario_id != _last_scenario
+    )
 
     _header_slot = st.empty()
     if _is_cold:
@@ -4675,7 +4680,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # score_all_conflicts (GDELT HTTP) and _load_market_pulse (yfinance 6-ticker)
     # run in background threads while _load_market_risk (yfinance 30+ tickers,
     # has st.session_state write) runs on the main thread.
-    _scenario_id = get_scenario_id()
+    _scenario_id = _cur_scenario_id
     _pool = ThreadPoolExecutor(max_workers=3)
     _f_conflict    = _pool.submit(score_all_conflicts)
     _f_pulse       = _pool.submit(_load_market_pulse)
@@ -4810,7 +4815,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         pass
 
     # § 1  Masthead — replaces the loading header rendered above
-    st.session_state["_home_last_load_ts"] = time.time()   # mark cache as warm
+    st.session_state["_home_last_load_ts"]  = time.time()   # mark cache as warm
+    st.session_state["_home_last_scenario"] = _scenario_id  # mark scenario as loaded
     with _header_slot.container():
         _render_masthead(conflict_agg)
     _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
@@ -4886,7 +4892,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     with _col_left:
         _section_header("01", "Intelligence Feed", "alerts · signals · chokepoints")
         # § L1  Intelligence feed — live alerts + morning briefing + chokepoint watch
-        _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
+        try:
+            _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
+        except Exception:
+            _err_slot("intelligence feed")
         # § L2  Threat radar — visually striking showpiece directly under intel feed
         #        polar scatter: CIS radius × TPS angle, animated pulse on top conflict
         try:
@@ -4923,7 +4932,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # Portfolio pulse (conditional — hidden unless CSV uploaded)
         _render_portfolio_pulse()
         # Geo risk block: gauge + history chart + decomposition — the CENTERPIECE
-        _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
+        try:
+            _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
+        except Exception:
+            _err_slot("geo risk")
         # Critical alert banner (inline, no empty space when no alerts)
         try:
             from src.ui.alert_banner import render_alert_banner
