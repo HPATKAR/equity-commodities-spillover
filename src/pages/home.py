@@ -238,6 +238,9 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 /* Typing cursor blink */
 @keyframes hm-cursor{0%,49%{border-color:currentColor}50%,100%{border-color:transparent}}
 .hm-cursor{border-right:.12em solid;animation:hm-cursor 1.1s step-end infinite;padding-right:.06em}
+/* Loading sweep bar */
+@keyframes hm-load-sweep{0%{left:-45%;width:45%}100%{left:110%;width:45%}}
+.hm-load-sweep{position:absolute;top:0;height:100%;background:linear-gradient(90deg,transparent,#CFB991,transparent);animation:hm-load-sweep 1.4s ease-in-out infinite}
 </style>"""
 
 
@@ -4629,37 +4632,54 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     init_agents()
     init_scenario()
 
+    from concurrent.futures import ThreadPoolExecutor
+
+    # ── Immediate shell: renders before any data fetch so the screen isn't black ──
+    _header_slot = st.empty()
+    with _header_slot.container():
+        _page_header(
+            "Command Center",
+            "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
+        )
+        st.markdown(
+            f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
+            f'border-left:3px solid {_GOLD};padding:.35rem 1rem;display:flex;'
+            f'align-items:center;gap:12px;margin-bottom:.75rem">'
+            f'<span class="nx-live-dot"></span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'color:{_C["label"]};letter-spacing:.12em">FETCHING LIVE DATA</span>'
+            f'<div style="flex:1;height:1px;background:{_C["border"]};overflow:hidden;position:relative">'
+            f'<div class="hm-load-sweep"></div></div></div>',
+            unsafe_allow_html=True,
+        )
+
     # ── Parallel data load ────────────────────────────────────────────────
     # score_all_conflicts (GDELT HTTP) and _load_market_pulse (yfinance 6-ticker)
     # run in background threads while _load_market_risk (yfinance 30+ tickers,
-    # has st.session_state write) runs on the main thread. This overlaps the two
-    # largest I/O operations and cuts cold-start time by ~50%.
-    from concurrent.futures import ThreadPoolExecutor
+    # has st.session_state write) runs on the main thread.
+    _scenario_id = get_scenario_id()
+    _pool = ThreadPoolExecutor(max_workers=3)
+    _f_conflict    = _pool.submit(score_all_conflicts)
+    _f_pulse       = _pool.submit(_load_market_pulse)
+    _f_hot_stocks  = _pool.submit(_load_hot_stocks)   # warm RSS feed in parallel
+    # Main thread: market risk (contains st.session_state write — must not thread)
+    risk, _score_hist = _load_market_risk(start, end, _scenario_id)
 
-    with st.spinner("Loading market data & intelligence…"):
-        _scenario_id = get_scenario_id()
-        _pool = ThreadPoolExecutor(max_workers=3)
-        _f_conflict    = _pool.submit(score_all_conflicts)
-        _f_pulse       = _pool.submit(_load_market_pulse)
-        _f_hot_stocks  = _pool.submit(_load_hot_stocks)   # warm RSS feed in parallel
-        # Main thread: market risk (contains st.session_state write — must not thread)
-        risk, _score_hist = _load_market_risk(start, end, _scenario_id)
-
-        # Collect thread results — 25s timeout each so a hung external call can't block the page
-        try:
-            conflict_results = _f_conflict.result(timeout=25)
-            record_fetch("conflict_model")
-        except Exception:
-            conflict_results = {}
-        try:
-            _f_pulse.result(timeout=25)   # cache is now warm; result consumed by _render_market_pulse_cards
-        except Exception:
-            pass
-        try:
-            _f_hot_stocks.result(timeout=25)   # cache warm; consumed by _render_hot_stocks
-        except Exception:
-            pass
-        _pool.shutdown(wait=False)
+    # Collect thread results — 25s timeout each so a hung external call can't block the page
+    try:
+        conflict_results = _f_conflict.result(timeout=25)
+        record_fetch("conflict_model")
+    except Exception:
+        conflict_results = {}
+    try:
+        _f_pulse.result(timeout=25)   # cache is now warm; result consumed by _render_market_pulse_cards
+    except Exception:
+        pass
+    try:
+        _f_hot_stocks.result(timeout=25)   # cache warm; consumed by _render_hot_stocks
+    except Exception:
+        pass
+    _pool.shutdown(wait=False)
 
     conflict_agg = aggregate_portfolio_scores(conflict_results)
     if not conflict_agg:
@@ -4771,8 +4791,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # § 1  Masthead — full-width above 3-col
-    _render_masthead(conflict_agg)
+    # § 1  Masthead — replaces the loading header rendered above
+    with _header_slot.container():
+        _render_masthead(conflict_agg)
     _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
 
     # § 1.0  Project intro — context for first-time visitors
