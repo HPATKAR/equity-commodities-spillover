@@ -120,21 +120,30 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # ── Load all data upfront ──────────────────────────────────────────────
-    with st.spinner("Loading commodity data…"):
-        cmd_p  = load_commodity_prices(start, end)
-        _, cmd_r = load_returns(start, end)
-        h_prices = load_hourly_commodity_prices(start, end)
-        h_eq_r, h_cmd_r = load_hourly_returns(start, end)
+    # ── Load all data upfront in parallel ─────────────────────────────────
+    from concurrent.futures import ThreadPoolExecutor
+    watch_tickers = {name: tk for (tk, name, _, _) in WATCHLIST}
+
+    with st.spinner("Loading commodity and live market data…"):
+        with ThreadPoolExecutor(max_workers=5) as _wl_pool:
+            _f_cmdp = _wl_pool.submit(load_commodity_prices, start, end)
+            _f_ret  = _wl_pool.submit(load_returns, start, end)
+            _f_hcmd = _wl_pool.submit(load_hourly_commodity_prices, start, end)
+            _f_hret = _wl_pool.submit(load_hourly_returns, start, end)
+            _f_live = _wl_pool.submit(load_live_snapshot, watch_tickers)
+        cmd_p          = _f_cmdp.result()
+        _, cmd_r       = _f_ret.result()
+        h_prices       = _f_hcmd.result()
+        h_eq_r, h_cmd_r = _f_hret.result()
+        snapshot       = _f_live.result()
         try:
             from src.analysis.freshness import record_fetch
             record_fetch("yfinance_prices")
         except Exception:
             pass
 
-    watch_tickers  = {name: tk for (tk, name, _, _) in WATCHLIST}
-    watch_names    = [n for (_, n, _, _) in WATCHLIST if n in cmd_p.columns]
-    watch_names_h  = [n for (_, n, _, _) in WATCHLIST if n in h_prices.columns]
+    watch_names   = [n for (_, n, _, _) in WATCHLIST if n in cmd_p.columns]
+    watch_names_h = [n for (_, n, _, _) in WATCHLIST if n in h_prices.columns]
 
     # ── Controls strip ────────────────────────────────────────────────────
     with st.expander("Asset & window controls", expanded=False):
@@ -170,8 +179,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     # ROW 1: Live Snapshot (full-width compact table)
     # ══════════════════════════════════════════════════════════════════════
     _label("Live Market Snapshot")
-    with st.spinner("Fetching live prices…"):
-        snapshot = load_live_snapshot(watch_tickers)
+    # snapshot pre-loaded in parallel block above
 
     if not snapshot.empty:
         _TBL_CSS_SNAP = """

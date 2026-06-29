@@ -352,7 +352,10 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
         'CIS-WEIGHTED CONFLICT × CHANNEL HEATMAP</p>',
         unsafe_allow_html=True,
     )
-    _render_weighted_heatmap(results)
+    try:
+        _render_weighted_heatmap(results)
+    except Exception:
+        st.caption("Heatmap unavailable.")
 
     # ── Section 2: Channel dominance + Sankey ──────────────────────────────
     col_l, col_r = st.columns([1, 1.4])
@@ -364,7 +367,10 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
             'PORTFOLIO CHANNEL STRESS</p>',
             unsafe_allow_html=True,
         )
-        _render_channel_dominance(results)
+        try:
+            _render_channel_dominance(results)
+        except Exception:
+            st.caption("Channel dominance unavailable.")
 
     with col_r:
         st.markdown(
@@ -373,7 +379,10 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
             'CONFLICT → CHANNEL → ASSET FLOW</p>',
             unsafe_allow_html=True,
         )
-        _render_sankey(results)
+        try:
+            _render_sankey(results)
+        except Exception:
+            st.caption("Sankey diagram unavailable.")
 
     # ── Section 3: Commodity exposure ──────────────────────────────────────
     st.markdown(
@@ -383,6 +392,9 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
         '<span style="color:#555960">(CIS-weighted relevance)</span></p>',
         unsafe_allow_html=True,
     )
-    _render_commodity_exposure(results)
+    try:
+        _render_commodity_exposure(results)
+    except Exception:
+        st.caption("Commodity exposure unavailable.")
 
     _page_footer()
