@@ -4632,26 +4632,34 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     init_agents()
     init_scenario()
 
+    import time
     from concurrent.futures import ThreadPoolExecutor
 
     # ── Immediate shell: renders before any data fetch so the screen isn't black ──
+    # Skip the loading indicator on warm-cache reruns (e.g. 60 s heartbeat) to avoid
+    # the bar flashing every minute. _MARKET_RISK_TTL matches @st.cache_data(ttl=1800).
+    _MARKET_RISK_TTL = 1800
+    _last_load_ts    = st.session_state.get("_home_last_load_ts", 0.0)
+    _is_cold         = (time.time() - _last_load_ts) > _MARKET_RISK_TTL
+
     _header_slot = st.empty()
-    with _header_slot.container():
-        _page_header(
-            "Command Center",
-            "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
-        )
-        st.markdown(
-            f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
-            f'border-left:3px solid {_GOLD};padding:.35rem 1rem;display:flex;'
-            f'align-items:center;gap:12px;margin-bottom:.75rem">'
-            f'<span class="nx-live-dot"></span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
-            f'color:{_C["label"]};letter-spacing:.12em">FETCHING LIVE DATA</span>'
-            f'<div style="flex:1;height:1px;background:{_C["border"]};overflow:hidden;position:relative">'
-            f'<div class="hm-load-sweep"></div></div></div>',
-            unsafe_allow_html=True,
-        )
+    if _is_cold:
+        with _header_slot.container():
+            _page_header(
+                "Command Center",
+                "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
+            )
+            st.markdown(
+                f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
+                f'border-left:3px solid {_GOLD};padding:.35rem 1rem;display:flex;'
+                f'align-items:center;gap:12px;margin-bottom:.75rem">'
+                f'<span class="nx-live-dot"></span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                f'color:{_C["label"]};letter-spacing:.12em">FETCHING LIVE DATA</span>'
+                f'<div style="flex:1;height:1px;background:{_C["border"]};overflow:hidden;position:relative">'
+                f'<div class="hm-load-sweep"></div></div></div>',
+                unsafe_allow_html=True,
+            )
 
     # ── Parallel data load ────────────────────────────────────────────────
     # score_all_conflicts (GDELT HTTP) and _load_market_pulse (yfinance 6-ticker)
@@ -4792,6 +4800,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         pass
 
     # § 1  Masthead — replaces the loading header rendered above
+    st.session_state["_home_last_load_ts"] = time.time()   # mark cache as warm
     with _header_slot.container():
         _render_masthead(conflict_agg)
     _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
