@@ -302,17 +302,28 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 st.session_state[f"w_{tk}"]  = round(w * 100, 2)
                 st.session_state[f"sw_{tk}"] = round(w * 100, 2)
 
-    with st.spinner("Loading index and commodity price data…"):
-        eq_p, cmd_p = load_all_prices(start, end)
+    from concurrent.futures import ThreadPoolExecutor
+    with st.spinner("Loading market data…"):
+        with ThreadPoolExecutor(max_workers=3) as _st_pool:
+            _f_prices = _st_pool.submit(load_all_prices, start, end)
+            _f_fi     = _st_pool.submit(load_fixed_income_prices, start, end)
+            _f_sp500  = _st_pool.submit(get_sp500_constituents)
+        try:
+            eq_p, cmd_p = _f_prices.result()
+        except Exception:
+            eq_p, cmd_p = pd.DataFrame(), pd.DataFrame()
+        try:
+            fi_prices = _f_fi.result()
+        except Exception:
+            fi_prices = pd.DataFrame()
+        try:
+            sp500_df = _f_sp500.result()
+        except Exception:
+            sp500_df = pd.DataFrame(columns=["ticker", "name", "sector"])
 
     if eq_p.empty or cmd_p.empty:
         st.error("Market data unavailable.")
         return
-
-    try:
-        fi_prices = load_fixed_income_prices(start, end)
-    except Exception:
-        fi_prices = pd.DataFrame()
 
     # ── Section A: Indices & Commodities ────────────────────────────────────
     _sh("A · Global Indices & Commodities")
@@ -453,9 +464,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "Stock prices are fetched from Yahoo Finance on demand (may take a few seconds for large baskets).",
     )
 
-    with st.spinner("Fetching S&P 500 constituents…"):
-        sp500_df = get_sp500_constituents()
-
+    # sp500_df pre-loaded in parallel block above
     sp500_dict     = dict(zip(sp500_df["ticker"], sp500_df["name"]))
     sp500_sector   = dict(zip(sp500_df["ticker"], sp500_df["sector"]))
     all_sectors    = sorted(sp500_df["sector"].unique().tolist())
