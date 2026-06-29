@@ -1071,9 +1071,14 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         "COT contrarian signals are scored by win rate. A signal that fails here should not drive trade decisions."
     )
 
+    from concurrent.futures import ThreadPoolExecutor
+
     with st.spinner("Loading market data…"):
-        eq_r, cmd_r = load_returns(start, end)
-        cmd_p = load_commodity_prices(start, end)
+        with ThreadPoolExecutor(max_workers=2) as _ma_pool:
+            _f_returns = _ma_pool.submit(load_returns, start, end)
+            _f_cmdp    = _ma_pool.submit(load_commodity_prices, start, end)
+        eq_r, cmd_r = _f_returns.result()
+        cmd_p       = _f_cmdp.result()
 
     if eq_r.empty or cmd_r.empty:
         st.error("Market data unavailable.")
@@ -1095,15 +1100,17 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         )
         feat_df    = compute_regime_features(eq_r, cmd_r, avg_corr_slow=avg_corr)
 
-    with st.spinner("Loading VIX ground truth…"):
-        vix_mask     = _vix_ground_truth(regimes.index, threshold=25.0)
+    with st.spinner("Loading VIX and computing risk score…"):
+        with ThreadPoolExecutor(max_workers=2) as _ma_pool:
+            _f_vix   = _ma_pool.submit(_vix_ground_truth, regimes.index, 25.0)
+            _f_score = _ma_pool.submit(risk_score_history, avg_corr, cmd_r, eq_r)
+        vix_mask   = _f_vix.result()
+        score_hist = _f_score.result()
+
     if vix_mask is not None:
         _rf("yfinance_vix")
     ground_truth = vix_mask if vix_mask is not None else _event_onset_mask(regimes.index, GEOPOLITICAL_EVENTS)
     stats        = _regime_classification_stats(regimes, ground_truth)
-
-    with st.spinner("Computing risk score…"):
-        score_hist = risk_score_history(avg_corr, cmd_r, eq_r=eq_r)
     _rf("risk_score")
     _, r2   = _risk_score_vs_vix(score_hist, cmd_r)
     r2_pct  = round((r2 or 0.0) * 100, 1)
