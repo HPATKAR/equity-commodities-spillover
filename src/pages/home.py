@@ -316,6 +316,16 @@ def _home_logo_b64() -> str:
     return ""
 
 
+def _err_slot(label: str) -> None:
+    """One-liner placeholder when a render section fails — muted, non-alarming."""
+    st.markdown(
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
+        f'color:{_C["muted"]};margin:2px 0 10px;letter-spacing:.06em">'
+        f'{label} · unavailable</p>',
+        unsafe_allow_html=True,
+    )
+
+
 def _render_masthead(conflict_agg: dict) -> None:
     now      = datetime.datetime.now()
     cis      = conflict_agg.get("portfolio_cis", conflict_agg.get("cis",  50.0))
@@ -4882,7 +4892,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         try:
             _render_threat_radar(conflict_results, risk)
         except Exception:
-            pass
+            _err_slot("threat radar")
         # § L3  Correlation pulse — 60-day equity↔commodity sparkline + regime badge
         _render_correlation_pulse(_al_corr, _al_regimes)
         # § L4  Conflict landscape — CIS×TPS 2-D scatter of all tracked conflicts
@@ -4899,12 +4909,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         try:
             _render_commodity_sector_returns(_al_cmd_r)
         except Exception:
-            pass
+            _err_slot("commodity sector returns")
         # § L10 Lead-lag bars — CMD→EQ cross-correlation at lags 0–5d
         try:
             _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
         except Exception:
-            pass
+            _err_slot("cross-corr lag")
 
     with _col_ctr:
         _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals")
@@ -4948,7 +4958,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         try:
             _render_top_corr_pairs(_al_eq_r, _al_cmd_r)
         except Exception:
-            pass
+            _err_slot("cross-asset correlations")
         # § C1–C4  2-column sub-grid: each panel ~half the center width (~340px)
         _cc_l, _cc_r = st.columns(2, gap="small")
         with _cc_l:
@@ -4956,25 +4966,25 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             try:
                 _render_corr_heatmap(_al_eq_r, _al_cmd_r)
             except Exception:
-                pass
+                _err_slot("correlation heatmap")
             st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
             # § C3  Conflict × Commodity Impact Matrix
             try:
                 _render_conflict_commodity_matrix(conflict_results)
             except Exception:
-                pass
+                _err_slot("conflict × commodity matrix")
         with _cc_r:
             # § C2  Cross-Model Signal Waterfall
             try:
                 _render_risk_signal_waterfall(risk, conflict_results, _al_regimes, _cached_alerts)
             except Exception:
-                pass
+                _err_slot("signal waterfall")
             st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
             # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per conflict
             try:
                 _render_geo_event_timeline(conflict_results)
             except Exception:
-                pass
+                _err_slot("severity timeline")
 
     with _col_right:
         _section_header("03", "Market Signals", "instruments · risk arc · channels")
@@ -4993,7 +5003,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         try:
             _render_risk_convergence(_score_hist, _al_corr)
         except Exception:
-            pass
+            _err_slot("risk convergence")
         # § R4  Next action — routing recommendation based on dominant risk driver
         _render_next_action(conflict_agg, conflict_results, compact=True)
         # § R5  Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
