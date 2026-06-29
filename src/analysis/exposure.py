@@ -182,7 +182,12 @@ def score_all_assets(
     )
     from src.analysis.scenario_state import get_scenario
 
-    conflict_results = score_all_conflicts()
+    # Use __wrapped__ to bypass @st.cache_data — avoids nested cached call
+    # (Streamlit 1.35+ raises StreamlitAPIException when a cached function calls
+    # another cached function on cache miss). The underlying ACLED/GDELT I/O
+    # is still cached at the lower level, so this only re-runs the aggregation loop.
+    _conflicts_fn = getattr(score_all_conflicts, "__wrapped__", score_all_conflicts)
+    conflict_results = _conflicts_fn()
 
     agg = aggregate_portfolio_scores(conflict_results)
 

@@ -1636,6 +1636,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
+    _ti_cr: dict = {}  # initialised here so conflict-driven block can reuse it
+
     # ── Geopolitical context & filter gate (shown BEFORE any trades) ──────────
     try:
         from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
@@ -1719,7 +1721,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         from src.analysis.trade_generator import generate_conflict_trades, merge_with_library
         from src.analysis.exposure import score_all_assets
         from src.analysis.conflict_model import score_all_conflicts
-        _cr  = score_all_conflicts()
+        _cr  = _ti_cr if _ti_cr else score_all_conflicts()
         _aa  = score_all_assets()
         generated = generate_conflict_trades(regime=current, conflict_results=_cr, all_assets=_aa)
         # Retain full exposure data for ranking and card display

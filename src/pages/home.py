@@ -248,7 +248,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 # Score history loader (cached - market data only fetched once per TTL)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=1800, show_spinner=False, max_entries=1)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=5)
 def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
     """
     Load market returns, compute avg_corr, then run the full 3-layer risk score.
