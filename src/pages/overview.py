@@ -620,16 +620,32 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     )
 
     # ── ROW: Risk gauge | Risk history ─────────────────────────────────────
-    with st.spinner("Computing risk score…"):
-        risk_result = compute_risk_score(avg_corr, cmd_r)
-        score_hist  = risk_score_history(avg_corr, cmd_r, eq_r=eq_r)
+    # Run risk score, EWS, and COT load concurrently — all pure/cached, no st.* calls.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _ov_ews():
+        tm = regime_transition_matrix(regimes)
+        return early_warning_signals(avg_corr, cmd_r, eq_r, regimes, tm)
+
+    def _ov_cot():
+        try:
+            from src.analysis.cot import load_cot_data
+            return load_cot_data(years=2)
+        except Exception:
+            return None
+
+    with st.spinner("Computing risk score and early warning signals…"):
+        with ThreadPoolExecutor(max_workers=4) as _ov_pool:
+            _f_risk  = _ov_pool.submit(compute_risk_score, avg_corr, cmd_r)
+            _f_score = _ov_pool.submit(risk_score_history, avg_corr, cmd_r, eq_r)
+            _f_ews   = _ov_pool.submit(_ov_ews)
+            _f_cot   = _ov_pool.submit(_ov_cot)
+        risk_result = _f_risk.result()
+        score_hist  = _f_score.result()
+        ews         = _f_ews.result()
+        _cot_df     = _f_cot.result()
 
     # ── Proactive AI alert feed ─────────────────────────────────────────────
-    try:
-        from src.analysis.cot import load_cot_data
-        _cot_df = load_cot_data(years=2)
-    except Exception:
-        _cot_df = None
     _alerts = compute_alerts(
         eq_r=eq_r, cmd_r=cmd_r, avg_corr=avg_corr, regimes=regimes,
         risk_score=float(risk_result["score"]),
@@ -671,11 +687,8 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     _r_colors = {0: "#2e7d32", 1: "#555960", 2: "#e67e22", 3: "#c0392b"}
 
-
     # ── ROW: EWS composite (left) | 5 signal cards (right) ────────────────
-    with st.spinner("Computing early warning signals…"):
-        trans_matrix = regime_transition_matrix(regimes)
-        ews = early_warning_signals(avg_corr, cmd_r, eq_r, regimes, trans_matrix)
+    # ews already computed above in parallel block
 
     def _ews_score_color(s: float) -> str:
         if s >= 70: return "#c0392b"
