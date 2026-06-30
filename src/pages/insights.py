@@ -109,10 +109,20 @@ def _build_insights(
     cards: list[dict] = []
     _n_attempted = 0  # tracks how many sections were attempted (for load-count display)
 
+    # Pre-compute shared series once — sections 1, 2, 4 all use these
+    try:
+        _avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
+        _regimes   = detect_correlation_regime(_avg_corr)
+        _trans_mat = regime_transition_matrix(_regimes)
+    except Exception:
+        _avg_corr  = pd.Series(dtype=float)
+        _regimes   = pd.Series(dtype=int)
+        _trans_mat = {}
+
     # ── 1. Overall market stress ──────────────────────────────────────────────
     _n_attempted += 1
     try:
-        avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
+        avg_corr = _avg_corr
         risk     = compute_risk_score(avg_corr, cmd_r)
         score    = risk["score"]
         if score < 30:
@@ -174,8 +184,8 @@ def _build_insights(
     # ── 2. Diversification: are stocks and commodities moving together? ───────
     _n_attempted += 1
     try:
-        avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
-        regimes   = detect_correlation_regime(avg_corr)
+        avg_corr  = _avg_corr
+        regimes   = _regimes
         cur_regime = int(regimes.iloc[-1]) if not regimes.empty else 1
         cur_corr   = float(avg_corr.iloc[-1]) if not avg_corr.empty else 0.0
 
@@ -295,9 +305,9 @@ def _build_insights(
     # ── 4. Early warning: is a stress event approaching? ─────────────────────
     _n_attempted += 1
     try:
-        avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
-        regimes   = detect_correlation_regime(avg_corr)
-        trans_mat = regime_transition_matrix(regimes)
+        avg_corr  = _avg_corr
+        regimes   = _regimes
+        trans_mat = _trans_mat
         ew        = early_warning_signals(avg_corr, cmd_r, eq_r, regimes, trans_mat)
         ew_score  = float(ew.get("composite", 50))
 
