@@ -29,7 +29,7 @@ from src.analysis.risk_score import risk_score_history
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
-    _insight_note,
+    _insight_note, EC_TABLE_CSS,
 )
 
 
@@ -1637,17 +1637,6 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
             gc1, gc2 = st.columns([1, 1])
             with gc1:
-                _TBL_CSS = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
                 rows_html = ""
                 for _, row in hr_df.iterrows():
                     edge_val = row.get("Edge (pp)")
@@ -1681,7 +1670,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         f"</tr>"
                     )
                 html_tbl = (
-                    _TBL_CSS
+                    EC_TABLE_CSS
                     + "<table class='ec-table'>"
                     + "<thead><tr>"
                     + "<th>Cause</th><th>Effect</th><th>p-value</th>"
@@ -1766,17 +1755,6 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
 
             ca1, ca2 = st.columns([1, 1])
             with ca1:
-                _TBL_CSS2 = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
                 def _acc_style(val):
                     if val is None or (isinstance(val, float) and pd.isna(val)):
                         return "color:#8890a1", "–"
@@ -1799,7 +1777,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 cot_extra_cols = [c for c in cot_acc.columns if c not in ("Commodity","Long Accuracy (%)","Short Accuracy (%)")]
                 cot_extra_headers = "".join(f"<th>{c}</th>" for c in cot_extra_cols)
                 html_tbl2 = (
-                    _TBL_CSS2
+                    EC_TABLE_CSS
                     + "<table class='ec-table'>"
                     + "<thead><tr>"
                     + "<th>Commodity</th><th>Long Accuracy</th><th>Short Accuracy</th>"

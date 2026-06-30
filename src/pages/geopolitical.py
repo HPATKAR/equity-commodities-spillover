@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.data.loader import load_all_prices, load_returns
-from src.data.config import GEOPOLITICAL_EVENTS, EQUITY_TICKERS, COMMODITY_TICKERS, PALETTE
+from src.data.config import GEOPOLITICAL_EVENTS, PALETTE
 from src.analysis.events import (
     event_window_returns, event_normalised_prices,
     pre_post_volatility, correlation_shift,
@@ -20,19 +20,11 @@ from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _insight_note, _line_style, _EQUITY_REGIONS, _no_api_key_banner,
+    _label, _F, EC_TABLE_CSS,
 )
 
-_F = "font-family:'DM Sans',sans-serif;"
 _M = "font-family:'JetBrains Mono',monospace;"
 _G = "#CFB991"
-
-
-def _label(txt: str) -> None:
-    st.markdown(
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
 
 
 def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
@@ -237,17 +229,6 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 pre_days=pre_days, post_days=post_days,
             )
             if not corr_shift.empty:
-                _TBL_CSS = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
                 headers = list(corr_shift.columns)
                 header_html = "".join(f"<th>{h}</th>" for h in headers)
                 rows_html = ""
@@ -267,7 +248,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                             cells += f"<td style='color:#b8b8b8'>{val if not (isinstance(val, float) and pd.isna(val)) else '-'}</td>"
                     rows_html += f"<tr>{cells}</tr>"
                 html_tbl = (
-                    _TBL_CSS
+                    EC_TABLE_CSS
                     + "<table class='ec-table'>"
                     + f"<thead><tr>{header_html}</tr></thead>"
                     + f"<tbody>{rows_html}</tbody>"

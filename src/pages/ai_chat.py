@@ -354,7 +354,7 @@ def render_chat_core(start: str, end: str, show_status_bar: bool = True) -> None
 
     # Auto-load context on first call (shared with refresh button in page_ai_chat)
     if st.session_state["chat_context"] is None:
-        with st.spinner("Loading market context..."):
+        with st.spinner("Loading market context…"):
             st.session_state["chat_context"]    = _build_market_context(start, end)
             st.session_state["chat_context_ts"] = datetime.datetime.now()
 
@@ -600,7 +600,7 @@ def page_ai_chat(start: str, end: str) -> None:
     status_col, btn_col = st.columns([6, 1])
     _refresh = btn_col.button("Refresh context", key="refresh_ctx", width="stretch")
     if _refresh:
-        with st.spinner("Loading live market context..."):
+        with st.spinner("Loading live market context…"):
             st.session_state["chat_context"]    = _build_market_context(start, end)
             st.session_state["chat_context_ts"] = datetime.datetime.now()
 

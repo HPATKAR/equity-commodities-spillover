@@ -16,21 +16,12 @@ from datetime import date, timedelta
 from src.ui.shared import (
     _style_fig, _chart, _insight_note, _definition_block,
     _page_header, _page_footer, _section_header, _regime_banner, _narrative_box, _page_intro,
+    _label, _F, EC_TABLE_CSS,
 )
+from src.data.config import PALETTE
 
-_F = "font-family:'DM Sans',sans-serif;"
 _M = "font-family:'JetBrains Mono',monospace;"
 _G = "#CFB991"
-
-
-def _label(txt: str) -> None:
-    import streamlit as _st
-    _st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
-from src.data.config import PALETTE
 
 # ── FRED series used on this page ──────────────────────────────────────────
 _YIELD_SERIES = {
@@ -948,17 +939,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 return              "color:#c0392b;font-weight:700"
 
             display_df = val_df.set_index("Market") if "Market" in val_df.columns else val_df
-            _TBL_CSS_VAL = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
             val_cols = list(display_df.columns)
             val_header_html = "<th>Market</th>" + "".join(f"<th>{c}</th>" for c in val_cols)
             val_rows_html = ""
@@ -997,7 +977,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                         cells += f"<td style='color:#e8e9ed'>{v}</td>"
                 val_rows_html += f"<tr>{cells}</tr>"
             html_val = (
-                _TBL_CSS_VAL
+                EC_TABLE_CSS
                 + "<table class='ec-table'>"
                 + f"<thead><tr>{val_header_html}</tr></thead>"
                 + f"<tbody>{val_rows_html}</tbody>"
@@ -1077,17 +1057,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
         idx_l, idx_r = st.columns([1.6, 1])
         with idx_l:
-            _TBL_CSS_PERF = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
             perf_all_cols = ["Latest"] + ret_cols
             perf_header = "<th>Index</th>" + "".join(f"<th>{c}</th>" for c in perf_all_cols)
             perf_rows_html = ""
@@ -1109,7 +1078,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                         cells += f"<td style='color:#f87171;font-weight:600'>{v:+.2f}%</td>"
                 perf_rows_html += f"<tr>{cells}</tr>"
             html_perf = (
-                _TBL_CSS_PERF
+                EC_TABLE_CSS
                 + "<table class='ec-table'>"
                 + f"<thead><tr>{perf_header}</tr></thead>"
                 + f"<tbody>{perf_rows_html}</tbody>"

@@ -18,9 +18,25 @@ from src.ui.palette import (
     GOLD as _GOLD, BG as _BLACK,
     BG as _BG, BG_WARM as _BG_WARM,
     GRID as _GRID, TICK as _TICK, LEGEND as _LEGEND,
+    DANGER as _DANGER, WARN as _WARN, SAFE as _SAFE, LABEL as _LABEL,
 )
 
 _ASSETS = Path(__file__).parents[2] / "assets"
+
+# ── Shared inline-style shorthands ────────────────────────────────────────────
+# Pages import these instead of re-defining locally.
+_F = "font-family:'DM Sans',sans-serif;"
+
+EC_TABLE_CSS: str = """<style>
+.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
+.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
+    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
+.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
+.ec-table tr:nth-child(even) td{background:#171717}
+.ec-table tr:nth-child(odd) td{background:#111111}
+.ec-table tr:hover td{background:#202020}
+</style>"""
 
 _PURDUE_TEMPLATE = go.layout.Template(
     layout=go.Layout(
@@ -189,6 +205,23 @@ def _h3(text: str) -> None:
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
         f'letter-spacing:.12em;color:#8890a1;text-transform:uppercase;'
         f'margin:.8rem 0 .3rem">{text}</p>',
+        unsafe_allow_html=True,
+    )
+
+
+def _label(txt: str) -> None:
+    """Uppercase micro-label above a data panel."""
+    st.markdown(
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
+        unsafe_allow_html=True,
+    )
+
+
+def _panel_note(txt: str) -> None:
+    """Small muted note beneath a panel."""
+    st.markdown(
+        f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.55;margin:4px 0 0 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 

@@ -6,6 +6,8 @@ KPIs, equity-commodities correlation heatmap snapshot, regime status, recent eve
 from __future__ import annotations
 
 import base64
+import datetime as _dt
+import time as _time
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -37,11 +39,10 @@ from src.ui.shared import (
     _definition_block, _takeaway_block, _page_conclusion,
     _page_header, _page_footer, _add_event_bands, _insight_note,
     _data_status_bar, _no_api_key_banner,
+    _label, _F,
 )
 from src.analysis.proactive_alerts import compute_alerts
 from src.ui.alert_banner import render_alert_banner
-
-_F = "font-family:'DM Sans',sans-serif;"
 
 # ── Market Snapshot - Bloomberg-style strip (Benjamin feedback) ────────────
 _SNAPSHOT_TICKERS = {
@@ -83,7 +84,7 @@ def _fetch_snapshot_prices() -> dict[str, dict]:
         _max_date = None
         for tk in tickers:
             try:
-                if isinstance(close, __import__("pandas").Series):
+                if isinstance(close, pd.Series):
                     s = close.dropna()
                 else:
                     if tk not in close.columns:
@@ -168,16 +169,7 @@ def _render_market_snapshot(snap: dict) -> None:
             )
 
 
-def _label(txt: str) -> None:
-    st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
-
-
 def page_overview(start: str, end: str, fred_key: str = "") -> None:
-    import datetime as _dt
     _now_str = _dt.datetime.now().strftime("%H:%M:%S UTC")
 
     # Auto-refresh: track last load time; offer manual refresh button
@@ -334,7 +326,6 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
          f"{recent_cmd[best_cmd]*100:+.1f}%", "#2e7d32")
 
     # ── Data freshness & implied vol strip ────────────────────────────────
-    import time as _time
     _now_ts = _time.time()
     _status_items: list[tuple[str, str, int | None]] = [
         ("Regime", regime_name, None),
@@ -497,11 +488,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     try:
         fi_r = load_fixed_income_returns(start, end)
     except Exception:
-        fi_r = __import__("pandas").DataFrame()
+        fi_r = pd.DataFrame()
     try:
         fx_r = load_fx_returns(start, end)
     except Exception:
-        fx_r = __import__("pandas").DataFrame()
+        fx_r = pd.DataFrame()
 
     # ── FI / FX KPI strip ────────────────────────────────────────────────
     st.markdown(
@@ -965,7 +956,6 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             pass
 
         if _ai_key:
-            import datetime as _dt
             _active_events = [e["label"] for e in GEOPOLITICAL_EVENTS
                               if e["end"] >= _dt.date.today()]
             _prompt = (

@@ -1319,7 +1319,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
         eq_r, cmd_r = load_returns(start, end)
 
     if eq_r.empty or cmd_r.empty:
-        st.error("Market data unavailable. Check your internet connection.")
+        st.error("Market data unavailable.")
         return
 
     cards, _n_attempted = _build_insights(eq_r, cmd_r, fred_key, start, end)

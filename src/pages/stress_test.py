@@ -24,7 +24,7 @@ from src.data.config import GEOPOLITICAL_EVENTS, PALETTE, EQUITY_REGIONS, COMMOD
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
-    _no_api_key_banner,
+    _no_api_key_banner, EC_TABLE_CSS,
 )
 
 
@@ -299,7 +299,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             # ── Auto-populate weights into session state so Sections A/B pick them up ──
             _pf_weights = _pf["weights"]
             for tk, w in _pf_weights.items():
-                st.session_state[f"w_{tk}"]  = round(w * 100, 2)
                 st.session_state[f"sw_{tk}"] = round(w * 100, 2)
 
     from concurrent.futures import ThreadPoolExecutor
@@ -731,17 +730,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         "Sharpe":     round(r["sharpe"],    2) if r["sharpe"] and not np.isnan(r["sharpe"]) else None,
     } for r in results])
 
-    _TBL_CSS_ST = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
     st_pct_cols = ["Pre (%)", "During (%)", "Post (%)"]
     st_rows_html = ""
     for _, row in summary.iterrows():
@@ -771,7 +759,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             cells += f"<td style='color:#e8e9ed'>{sharpe_v:.2f}</td>"
         st_rows_html += f"<tr>{cells}</tr>"
     html_st = (
-        _TBL_CSS_ST
+        EC_TABLE_CSS
         + "<table class='ec-table'>"
         + "<thead><tr>"
         + "<th>Event</th><th>Name</th><th>Pre (%)</th><th>During (%)</th>"
@@ -1017,17 +1005,6 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 "Portfolio Wt (%)": round(norm_w, 2),
             })
         stock_sum_df = pd.DataFrame(stock_summary).sort_values("Portfolio Wt (%)", ascending=False)
-        _TBL_CSS_STK = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
         stk_rows_html = ""
         for _, row in stock_sum_df.iterrows():
             wt = row.get("Portfolio Wt (%)", 0)
@@ -1040,7 +1017,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 f"</tr>"
             )
         html_stk = (
-            _TBL_CSS_STK
+            EC_TABLE_CSS
             + "<table class='ec-table'>"
             + "<thead><tr>"
             + "<th>Ticker</th><th>Company</th><th>Sector</th><th>Portfolio Wt (%)</th>"
@@ -1146,8 +1123,8 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 pass
             _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
             _api_key  = _anthropic_key or _openai_key
-            _n_scenarios = len(results) if "results" in dir() else 0
-            _scenario_names = [r["event"] for r in results] if "results" in dir() and results else []
+            _n_scenarios = len(results)
+            _scenario_names = [r["event"] for r in results]
             _cqo_ctx = {
                 "n_obs": len(eq_r.dropna(how="all")), "date_range": f"{start} to {end}",
                 "n_events": _n_scenarios, "model": "Historical scenario simulation using realised returns",

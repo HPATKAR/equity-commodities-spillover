@@ -679,6 +679,12 @@ SECURITY_EXPOSURE: dict[str, dict] = {
 DEFAULT_START = date(2005, 1, 1)
 DEFAULT_END   = date.today()
 
+# ── Analysis constants ──────────────────────────────────────────────────────
+CORR_WINDOW  = 60   # rolling window (days) for average_cross_corr_series
+CIS_HIGH      = 70  # conflict intensity score ≥ this → HIGH
+CIS_ELEVATED  = 50  # conflict intensity score ≥ this → ELEVATED
+CIS_LOW       = 40  # conflict intensity score < this → LOW / MODERATE
+
 # ── Equity tickers (yfinance) ──────────────────────────────────────────────
 EQUITY_TICKERS = {
     # United States

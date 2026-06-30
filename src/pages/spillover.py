@@ -25,28 +25,12 @@ from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _insight_note, _no_api_key_banner,
+    _label, _panel_note, _F, EC_TABLE_CSS,
 )
-
-_F = "font-family:'DM Sans',sans-serif;"
 
 _DEFAULT_EQ  = ["S&P 500", "DAX", "Nikkei 225", "Shanghai Comp", "Sensex"]
 _DEFAULT_CMD = ["WTI Crude Oil", "Gold", "Wheat", "Copper", "Natural Gas"]
 _DEFAULT_ALL = _DEFAULT_EQ + _DEFAULT_CMD
-
-
-def _label(txt: str) -> None:
-    st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
-
-
-def _panel_note(txt: str) -> None:
-    st.markdown(
-        f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.5;margin:4px 0 0 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
 
 
 def page_spillover(start: str, end: str, fred_key: str = "") -> None:
@@ -229,17 +213,6 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             # Top pairs table in expander
             if not sig_df.empty:
                 with st.expander(f"Top significant pairs ({len(sig_df)})"):
-                    _TBL_CSS = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
                     tbl_df = (
                         sig_df[["cause","effect","direction","min_p","best_lag"]]
                         .sort_values("min_p").head(20)
@@ -258,7 +231,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                             f"</tr>"
                         )
                     html_tbl = (
-                        _TBL_CSS
+                        EC_TABLE_CSS
                         + "<table class='ec-table'>"
                         + "<thead><tr>"
                         + "<th>Cause</th><th>Effect</th><th>Direction</th><th>Min P</th><th>Best Lag</th>"
@@ -813,17 +786,6 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     _pivot_df = pd.DataFrame(_pivot_data).T
 
                     # Build HTML table with color-coded p-values
-                    _TBL_CSS_CA = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#1c1c1c;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
                     _header_cells = "<th>Effect \\ Cause</th>" + "".join(
                         f"<th>{c}</th>" for c in _pivot_df.columns
                     )
@@ -843,7 +805,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         _body_rows += f"<tr>{_cells}</tr>"
 
                     _html_ca = (
-                        _TBL_CSS_CA
+                        EC_TABLE_CSS
                         + "<table class='ec-table'>"
                         + f"<thead><tr>{_header_cells}</tr></thead>"
                         + f"<tbody>{_body_rows}</tbody>"

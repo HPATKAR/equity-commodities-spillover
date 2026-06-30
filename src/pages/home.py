@@ -30,7 +30,7 @@ from src.analysis.scenario_state import (
     set_scenario, set_compound_scenario,
 )
 from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores, transmission_lag_signal
-from src.analysis.freshness import freshness_badge_html, record_fetch
+from src.analysis.freshness import record_fetch
 from src.data.loader import load_returns
 from src.analysis.correlations import average_cross_corr_series
 from src.analysis.risk_score import market_fear_index, plot_risk_history

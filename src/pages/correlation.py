@@ -25,26 +25,11 @@ from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
     _add_event_bands, _insight_note, _line_style, _EQUITY_REGIONS,
+    _label, _panel_note, _F,
 )
 
 _REGIME_NAMES  = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
 _REGIME_COLORS = {0: "#2e7d32",      1: "#555960", 2: "#e67e22",  3: "#c0392b"}
-_F = "font-family:'DM Sans',sans-serif;"
-
-
-def _label(txt: str) -> None:
-    st.markdown(
-        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
-
-
-def _panel_note(txt: str) -> None:
-    st.markdown(
-        f'<p style="{_F}font-size:0.64rem;color:#8890a1;line-height:1.55;margin:4px 0 0 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
 
 
 def page_correlation(start: str, end: str, fred_key: str = "") -> None:

@@ -25,31 +25,15 @@ from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer, _insight_note,
     _line_style, _EQUITY_REGIONS,
+    _label, _panel_note, _F, EC_TABLE_CSS,
 )
 
-_F = "font-family:'DM Sans',sans-serif;"
 _ALERT_MAP = {name: alert for (_, name, _, alert) in WATCHLIST}
 _GROUP_MAP  = {name: grp  for (_, name, grp,  _)   in WATCHLIST}
 _HOURLY_ANNUAL = np.sqrt(252 * 23)   # ≈ 76.1
 
-
 _M = "font-family:'JetBrains Mono',monospace;"
 _G = "#CFB991"
-
-
-def _label(txt: str) -> None:
-    st.markdown(
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.58rem;font-weight:700;'
-        f'text-transform:uppercase;letter-spacing:0.14em;color:#8890a1;margin:0.8rem 0 0.4rem 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
-
-
-def _panel_note(txt: str) -> None:
-    st.markdown(
-        f'<p style="{_F}font-size:0.64rem;color:#666;line-height:1.5;margin:2px 0 6px 0">{txt}</p>',
-        unsafe_allow_html=True,
-    )
 
 
 def _vol_regime(vol_pct: float) -> tuple[str, str]:
@@ -182,17 +166,6 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
     # snapshot pre-loaded in parallel block above
 
     if not snapshot.empty:
-        _TBL_CSS_SNAP = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#080808;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
         snap_pct_cols = ["1D %", "5D %", "YTD %"]
         snap_cols = list(snapshot.columns)
         snap_header = "<th>Asset</th>" + "".join(f"<th>{c}</th>" for c in snap_cols)
@@ -217,7 +190,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                     cells += f"<td style='color:#e8e9ed'>{v}</td>"
             snap_rows += f"<tr>{cells}</tr>"
         html_snap = (
-            _TBL_CSS_SNAP
+            EC_TABLE_CSS
             + "<table class='ec-table'>"
             + f"<thead><tr>{snap_header}</tr></thead>"
             + f"<tbody>{snap_rows}</tbody>"
@@ -568,17 +541,6 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
             _label("Current Positioning Extremes")
             ext_tbl = cot_extremes_table(cot_df)
             if not ext_tbl.empty:
-                _TBL_CSS_COT = """
-<style>
-.ec-table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:0.78rem}
-.ec-table th{background:#080808;color:#CFB991;padding:7px 10px;text-align:left;
-    border-bottom:1px solid rgba(207,185,145,0.3);font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;font-size:0.68rem}
-.ec-table td{padding:5px 10px;border-bottom:1px solid #1e1e1e;color:#e8e9ed}
-.ec-table tr:nth-child(even) td{background:#171717}
-.ec-table tr:nth-child(odd) td{background:#111111}
-.ec-table tr:hover td{background:#202020}
-</style>"""
                 cot_cols = list(ext_tbl.columns)
                 cot_header = "".join(f"<th>{c}</th>" for c in cot_cols)
                 cot_rows = ""
@@ -601,7 +563,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                                 cells += f"<td style='color:#b8b8b8'>{v}</td>"
                     cot_rows += f"<tr>{cells}</tr>"
                 html_cot = (
-                    _TBL_CSS_COT
+                    EC_TABLE_CSS
                     + "<table class='ec-table'>"
                     + f"<thead><tr>{cot_header}</tr></thead>"
                     + f"<tbody>{cot_rows}</tbody>"
