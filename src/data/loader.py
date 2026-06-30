@@ -313,23 +313,21 @@ def load_commodity_prices(
     return _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def load_all_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_prices, commodity_prices)."""
+    """Return (equity_prices, commodity_prices). Not cached — delegates to cached leaf loaders."""
     eq  = load_equity_prices(start, end)
     cmd = load_commodity_prices(start, end)
     return eq, cmd
 
 
-@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_returns, commodity_returns) as log-return DataFrames."""
+    """Return (equity_returns, commodity_returns) as log-return DataFrames. Not cached — delegates to cached leaf loaders."""
     eq, cmd = load_all_prices(start, end)
     eq_r  = _log_returns(eq)
     cmd_r = _log_returns(cmd)
@@ -347,12 +345,11 @@ def load_returns(
     return eq_r, cmd_r
 
 
-@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_combined_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Single DataFrame: equity + commodity log returns, aligned on date index."""
+    """Single DataFrame: equity + commodity log returns, aligned on date index. Not cached — delegates to cached leaf loaders."""
     eq_r, cmd_r = load_returns(start, end)
     combined = pd.concat([eq_r, cmd_r], axis=1)
     return combined.dropna(how="all")
@@ -456,23 +453,21 @@ def load_hourly_commodity_prices(
     return _fill_gaps(_fetch_yf_hourly(COMMODITY_TICKERS, _clamp_hourly_start(start), end))
 
 
-@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
 def load_hourly_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_hourly_prices, commodity_hourly_prices). Max ~730 days."""
+    """Return (equity_hourly_prices, commodity_hourly_prices). Not cached — delegates to cached leaf loaders."""
     eq  = load_hourly_equity_prices(start, end)
     cmd = load_hourly_commodity_prices(start, end)
     return eq, cmd
 
 
-@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
 def load_hourly_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_hourly_returns, commodity_hourly_returns) as log-return DataFrames."""
+    """Return (equity_hourly_returns, commodity_hourly_returns) as log-return DataFrames. Not cached — delegates to cached leaf loaders."""
     eq, cmd = load_hourly_prices(start, end)
     return _log_returns(eq), _log_returns(cmd)
 
@@ -712,12 +707,11 @@ def load_fixed_income_prices(
     return result
 
 
-@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_fixed_income_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Daily log returns for fixed income ETF proxies."""
+    """Daily log returns for fixed income ETF proxies. Not cached — delegates to cached leaf loader."""
     result = _log_returns(load_fixed_income_prices(start, end))
     return _validate_returns(result, "fixed_income_returns")
 
@@ -732,12 +726,11 @@ def load_fx_prices(
     return _fill_gaps(_fetch_yf(FX_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))
 
 
-@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_fx_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Daily log returns for FX pairs."""
+    """Daily log returns for FX pairs. Not cached — delegates to cached leaf loader."""
     return _log_returns(load_fx_prices(start, end))
 
 
