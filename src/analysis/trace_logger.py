@@ -59,7 +59,10 @@ def _accumulate_in_session(row: dict) -> None:
         import streamlit as st
         if "_trace_buffer" not in st.session_state:
             st.session_state["_trace_buffer"] = []
-        st.session_state["_trace_buffer"].append(row)
+        buf = st.session_state["_trace_buffer"]
+        if len(buf) >= 500:
+            return  # cap at ~150KB per session; oldest entries already on disk or lost
+        buf.append(row)
     except Exception:
         pass
 

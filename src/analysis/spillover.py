@@ -488,6 +488,10 @@ def diebold_yilmaz(
         except Exception:
             result = model.fit(lag_order)
         fevd   = result.fevd(horizon)
+        # Validate FEVD rows sum to 1 — fixed-lag fallback can produce mis-scaled
+        # decompositions that look valid but corrupt FROM/TO/NET figures.
+        if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
+            return _empty
 
         # fevd.decomp shape: (n_vars, n_steps, n_vars) in statsmodels ≥ 0.14
         # decomp[i, h, j] = fraction of variable i's forecast variance at horizon h
@@ -592,6 +596,8 @@ def rolling_diebold_yilmaz(
             except Exception:
                 result = model.fit(lag_order)
             fevd   = result.fevd(horizon)
+            if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
+                continue  # discard window with mis-scaled FEVD rather than corrupt the series
             n      = len(chunk.columns)
             tbl    = pd.DataFrame(
                 fevd.decomp[:, -1, :] * 100,

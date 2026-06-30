@@ -145,7 +145,7 @@ def fetch_gdelt_escalation(
         if (datetime.datetime.now() - _cached_at).total_seconds() < _GDELT_TTL_S:
             return _result
         # TTL expired — remove stale entry and fall through to live fetch
-        del _GDELT_CACHE[_cache_key]
+        _GDELT_CACHE.pop(_cache_key, None)  # pop avoids KeyError under concurrent sessions
 
     cfg = _GDELT_CONFLICT_QUERIES[conflict_id]
 
