@@ -260,14 +260,19 @@ def _fetch_yf(tickers: dict[str, str], start, end) -> pd.DataFrame:
     if isinstance(end, str):
         end = date.fromisoformat(end)
     end_exclusive = str(end + timedelta(days=1))
-    raw = yf.download(
-        list(tickers.values()),
-        start=str(start),
-        end=end_exclusive,
-        auto_adjust=True,
-        progress=False,
-        threads=True,
-    )
+    try:
+        raw = yf.download(
+            list(tickers.values()),
+            start=str(start),
+            end=end_exclusive,
+            auto_adjust=True,
+            progress=False,
+            threads=True,
+        )
+    except Exception:
+        return pd.DataFrame()
+    if raw.empty:
+        return pd.DataFrame()
     if isinstance(raw.columns, pd.MultiIndex):
         prices = raw["Close"]
     else:

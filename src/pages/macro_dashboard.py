@@ -515,7 +515,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     _pc_ig = pd.Series(dtype=float)
 
     with st.spinner("Loading macro data…"):
-        with ThreadPoolExecutor(max_workers=9) as _md_pool:
+        with ThreadPoolExecutor(max_workers=4) as _md_pool:
             if fred_key:
                 _f_macro   = _md_pool.submit(_load_macro,   fred_key, start, end)
                 _f_money   = _md_pool.submit(_load_money,   fred_key, start, end)
