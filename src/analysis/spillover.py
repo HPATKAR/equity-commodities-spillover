@@ -418,6 +418,12 @@ def diebold_yilmaz(
     """
     Diebold-Yilmaz (2012) forecast error variance decomposition spillover index.
 
+    Implementation note: uses statsmodels Cholesky FEVD, not the generalized FEVD
+    (Pesaran & Shin 1998) that D-Y (2012) §2.2 formally specifies. Cholesky FEVD
+    is column-order-dependent; FROM/TO/NET values shift if assets are reordered.
+    The column order here is: equities first, then commodities (set by callers).
+    This is a documented approximation — GFEVD requires a custom implementation.
+
     Returns full FROM/TO/NET decomposition per asset plus total spillover index.
 
     FROM[i] = % of i's forecast variance explained by shocks from ALL OTHER assets

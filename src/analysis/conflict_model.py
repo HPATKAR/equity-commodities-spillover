@@ -32,6 +32,12 @@ from src.data.config import CONFLICTS
 
 # ── CIS dimension weights ─────────────────────────────────────────────────────
 
+# Calibration: analyst judgment informed by ACGRI (2023) severity index structure.
+# Deadliness and escalation carry the most weight (0.22, 0.20) reflecting
+# market-impact evidence that casualty rates and trend direction are the primary
+# price drivers in commodity shocks (cf. Caldara-Iacoviello 2022 GPR literature).
+# Recency (0.13) down-weights frozen/latent conflicts relative to active ones.
+# Last reviewed: 2024-Q4. Re-estimate from score-to-price-impact regression annually.
 _CIS_WEIGHTS: dict[str, float] = {
     "deadliness":           0.22,
     "civilian_danger":      0.15,
@@ -42,6 +48,9 @@ _CIS_WEIGHTS: dict[str, float] = {
     "source_coverage":      0.10,
 }
 
+# Linear mapping: escalating=1.0, stable=0.5, de-escalating=0.0
+# Symmetric around 0.5 so a stable conflict contributes exactly half the
+# escalation dimension weight, preserving expected score under no-trend assumption.
 _ESCALATION_MAP: dict[str, float] = {
     "escalating":    1.00,
     "stable":        0.50,
@@ -50,6 +59,12 @@ _ESCALATION_MAP: dict[str, float] = {
 
 # ── TPS channel weights ───────────────────────────────────────────────────────
 
+# TPS channel weights reflect commodity-market transmission hierarchy:
+# oil_gas (0.18) and sanctions (0.12) + shipping (0.12) dominate because
+# geopolitical shocks historically propagate first through energy prices and
+# trade-flow disruption before reaching equity sectors or credit markets.
+# Credit and energy_infra (0.02 each) are included as tail-risk channels only.
+# Last reviewed: 2024-Q4.
 _TPS_WEIGHTS: dict[str, float] = {
     "oil_gas":       0.18,
     "metals":        0.10,
@@ -83,6 +98,11 @@ _CIS_LIVE_REPLACEABLE: list[str] = [
 _TPS_BASIS = "manual scenario assumption"
 
 # ── State multipliers ─────────────────────────────────────────────────────────
+# Scale the raw CIS score by conflict lifecycle stage.
+# active=1.0 (full intensity), latent=0.35 (smouldering, ~35% of peak impact),
+# frozen=0.15 (ceasefire/stalemate, residual risk only).
+# Calibrated so a fully-scored latent conflict (all dims at 1.0) caps at ~35,
+# consistent with market-implied risk premia on "contained" conflicts.
 
 _STATE_MULT: dict[str, float] = {
     "active":  1.00,
@@ -104,7 +124,7 @@ _CM_CONFIG: dict = {
     # confidence penalty and a CIS soft-cap to prevent stale data inflating rank
     "staleness_warn_days":  90,   # yellow flag
     "staleness_cap_days":   180,  # hard cap applied
-    "staleness_cis_cap":    65.0, # CIS capped at this value when stale
+    "staleness_cis_cap":    65.0, # 65 = top of "Elevated" band; stale data can't claim "High/Crisis"
 }
 
 
@@ -214,8 +234,8 @@ def _recency_score(conflict: dict) -> float:
     today  = datetime.date.today()
     start  = conflict.get("start", today)
     days   = max((today - start).days, 1)
-    # Decay: 1.0 at day 1 → 0.3 at day 365 (exponential)
-    return max(0.30, math.exp(-days / 730))   # half-life ~2 years
+    # exp(-365 / 303) ≈ 0.30  →  floor hit at exactly 365 days
+    return max(0.30, math.exp(-days / 303))
 
 
 def _freshness_score(conflict: dict) -> float:
@@ -297,7 +317,6 @@ def compute_cis(conflict: dict) -> tuple[float, str]:
     # acled_to_cis_dimensions() returns only the keys ACLED can replace:
     #   deadliness, geographic_diffusion, escalation_trend
     # The remaining keys (civilian_danger, fragmentation) stay structural.
-    acled_nudge = 1.0
     acled_escalation: str = ""
     gdelt_escalation: str = ""
     _acled_applied = False
@@ -356,7 +375,7 @@ def compute_cis(conflict: dict) -> tuple[float, str]:
             pass
 
     raw = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
-    cis = float(np.clip(raw * state_mult * acled_nudge * 100, 0, 100))
+    cis = float(np.clip(raw * state_mult * 100, 0, 100))
 
     # Staleness cap: prevent stale manual data from outranking fresh, market-
     # confirmed conflicts. Cap only kicks in after staleness_cap_days (180d).

@@ -142,7 +142,7 @@ def _rates_vol_score(cmd_r: pd.DataFrame) -> float:
         tlt = _fetch_tlt()
         if tlt.empty or len(tlt) < 80:
             return 50.0
-        tlt_r = tlt.pct_change().dropna()
+        tlt_r = np.log(tlt / tlt.shift(1)).dropna()
         rv    = tlt_r.rolling(20).std() * np.sqrt(252) * 100
         rv    = rv.dropna()
         z = float(_ewm_zscore(rv).iloc[-1])

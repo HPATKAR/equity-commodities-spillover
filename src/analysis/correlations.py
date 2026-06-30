@@ -422,9 +422,12 @@ def regime_transition_matrix(regimes: pd.Series) -> pd.DataFrame:
     labels = [0, 1, 2, 3]
     counts = pd.DataFrame(0, index=labels, columns=labels, dtype=float)
 
-    r = regimes.dropna().astype(int).values
-    for t in range(len(r) - 1):
-        counts.loc[r[t], r[t + 1]] += 1
+    # Use shift(1) to preserve date alignment before dropping NaN:
+    # dropna() on the raw series collapses gaps, pairing non-adjacent dates
+    # as consecutive transitions (phantom transitions across missing periods).
+    pairs = pd.DataFrame({"t": regimes, "t1": regimes.shift(-1)}).dropna()
+    for _, row in pairs.iterrows():
+        counts.loc[int(row["t"]), int(row["t1"])] += 1
 
     row_sums = counts.sum(axis=1)
     # Avoid division by zero - fill uniform for rows with zero observations
