@@ -1906,7 +1906,6 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             SNAPSHOTS, run_full_benchmark, compute_dynamic_posteriors, POSTERIOR_ACCURACY,
         )
         from src.analysis.agent_state import AGENTS as _AGENTS
-        import pandas as _bm_pd
 
         _bm_agent_ids = [
             "risk_officer", "macro_strategist", "geopolitical_analyst",
@@ -1959,7 +1958,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 "Used in conf?":    "✓ dynamic" if (_hr is not None and _res.get("total", 0) >= 3) else "static prior",
             })
 
-        _bm_df = _bm_pd.DataFrame(_bm_rows)
+        _bm_df = pd.DataFrame(_bm_rows)
         st.dataframe(_bm_df, width="stretch", hide_index=True)
         st.caption(
             "Hit Rate = model assertions passed on historical price data for each snapshot date. "
@@ -1988,7 +1987,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     }
                     for d in _sel_res["details"]
                 ]
-                st.dataframe(_bm_pd.DataFrame(_detail_rows), width="stretch", hide_index=True)
+                st.dataframe(pd.DataFrame(_detail_rows), width="stretch", hide_index=True)
             else:
                 st.caption("No assertions for this agent in the benchmark registry.")
 
@@ -2005,7 +2004,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     "Assertions":   _n_assert,
                     "Agents":       ", ".join(_s.get("assertions", {}).keys()),
                 })
-            st.dataframe(_bm_pd.DataFrame(_snap_rows), width="stretch", hide_index=True)
+            st.dataframe(pd.DataFrame(_snap_rows), width="stretch", hide_index=True)
             st.caption("VIX > 35 = Crisis ground truth · VIX > 22 = Elevated · else Normal. "
                        "CIS/TPS proxied from risk_score when conflict model can't be back-tested.")
     except Exception as _bm_err:

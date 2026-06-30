@@ -6,6 +6,7 @@ Sources: EIA, IEA WEO 2024, Lloyd's, BIMCO, ACLED. Scores updated quarterly.
 
 from __future__ import annotations
 
+import copy
 import datetime
 import numpy as np
 import pandas as pd
@@ -268,7 +269,6 @@ def page_strait_watch(start: str, end: str) -> None:
     )
 
     # ── Load PortWatch + commodity prices in parallel ─────────────────────────
-    import copy
     from concurrent.futures import ThreadPoolExecutor
     _straits   = copy.deepcopy(_STRAITS)  # mutable local copy
     _pw_df     = pd.DataFrame()           # shared across the full page

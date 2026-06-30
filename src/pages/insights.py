@@ -6,6 +6,7 @@ Click any insight to expand the full quant reasoning behind it.
 
 from __future__ import annotations
 
+import datetime
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -423,8 +424,7 @@ def _build_insights(
     # ── 6. Active geopolitical events ─────────────────────────────────────────
     _n_attempted += 1
     try:
-        from datetime import date
-        today = date.today()
+        today = datetime.date.today()
         active = [
             ev for ev in GEOPOLITICAL_EVENTS
             if ev["start"] <= today <= ev.get("end", today)

@@ -5,6 +5,7 @@ Event timeline, pre/during/post performance, correlation shifts, vol comparison.
 
 from __future__ import annotations
 
+import datetime
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -390,8 +391,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             # Build context from geopolitical events config
             _geo_ctx: dict = {}
             try:
-                import datetime as _dt
-                _today = _dt.date.today()
+                _today = datetime.date.today()
                 _active = [
                     e for e in GEOPOLITICAL_EVENTS
                     if e.get("end", _today) >= _today or

@@ -5,6 +5,7 @@ Rolling correlations, DCC-GARCH dynamic pairs, regime detection, pair explorer.
 
 from __future__ import annotations
 
+import datetime
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -97,11 +98,10 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     # A 252d window on a 1m selection would otherwise return all NaN.
     # Burn-in = same length as the selected period (1m → +1m, 3m → +3m, 6m → +6m).
     # This guarantees the rolling window is always satisfied at the period boundary.
-    import datetime as _dt
     _start_dt   = pd.Timestamp(start)
     _end_dt     = pd.Timestamp(end)
     _period_days = (_end_dt - _start_dt).days
-    _load_start = (_start_dt - _dt.timedelta(days=_period_days)).strftime("%Y-%m-%d")
+    _load_start = (_start_dt - datetime.timedelta(days=_period_days)).strftime("%Y-%m-%d")
 
     from concurrent.futures import ThreadPoolExecutor
     with st.spinner("Loading returns…"):
@@ -700,7 +700,6 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             _current_regime = regimes.iloc[-1] if not regimes.empty else "Unknown"
             _regime_changed = (len(regimes) > 5 and regimes.iloc[-1] != regimes.iloc[-6]) if not regimes.empty else False
             try:
-                import numpy as np
                 _cm = eq_r.join(cmd_r).corr().abs()
                 _max_corr = float(_cm.where(~(_cm == 1.0)).stack().max())
             except Exception:

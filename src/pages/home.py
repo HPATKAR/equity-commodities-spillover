@@ -16,7 +16,9 @@ Page hierarchy:
 from __future__ import annotations
 
 import datetime
+import itertools
 import math
+from collections import Counter, OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -2560,7 +2562,6 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
 
 def _render_top_commodities(conflict_results: dict) -> None:
     """Left column: commodities most exposed across active conflicts."""
-    from collections import Counter
 
     # Collect commodities from active conflicts, weighted by CIS
     ctr: Counter = Counter()
@@ -3103,7 +3104,6 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
     cur_lbl = _REG_LAB.get(cur_v, "UNKNOWN")
 
     # count of days in each regime
-    from collections import Counter
     cnt = Counter(vals)
 
     legend = ""
@@ -3135,7 +3135,6 @@ def _render_alert_summary(alerts: list) -> None:
     if not alerts:
         return
 
-    from collections import Counter, OrderedDict
     sev_order = ["critical", "high", "medium", "low"]
     sev_col   = {"critical": _C["danger"], "high": _C["warn"], "medium": _C["warn"], "low": _C["info"]}
     cnt = Counter(getattr(a, "severity", "low") for a in alerts)
@@ -3179,8 +3178,7 @@ def _render_alert_summary(alerts: list) -> None:
 
 def _render_grs_trend(score_hist: "pd.Series | None") -> None:
     """Right column: 60-day GRS sparkline with risk zone bands and delta."""
-    import pandas as _pd
-    if score_hist is None or (isinstance(score_hist, _pd.Series) and len(score_hist.dropna()) < 5):
+    if score_hist is None or (isinstance(score_hist, pd.Series) and len(score_hist.dropna()) < 5):
         return
 
     vals = list(score_hist.dropna().iloc[-60:])
@@ -3349,8 +3347,7 @@ def _render_macro_snapshot() -> None:
 
 def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
     """Left column: 5-day average return by commodity sector group."""
-    import pandas as _pd
-    if cmd_r is None or (isinstance(cmd_r, _pd.DataFrame) and cmd_r.empty):
+    if cmd_r is None or (isinstance(cmd_r, pd.DataFrame) and cmd_r.empty):
         return
 
     from src.data.config import COMMODITY_GROUPS, COMMODITY_TICKERS
@@ -3411,12 +3408,11 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
 
 def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
     """Left column: cross-correlation of avg equity vs avg commodity at lags 0–5."""
-    import pandas as _pd, numpy as _np
     if eq_r is None or cmd_r is None:
         return
-    if isinstance(eq_r, _pd.DataFrame) and eq_r.empty:
+    if isinstance(eq_r, pd.DataFrame) and eq_r.empty:
         return
-    if isinstance(cmd_r, _pd.DataFrame) and cmd_r.empty:
+    if isinstance(cmd_r, pd.DataFrame) and cmd_r.empty:
         return
 
     try:
@@ -3432,7 +3428,7 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
         corrs = []
         for lag in lags:
             shifted = cmd_s.shift(lag)
-            aligned = _pd.concat([eq_s, shifted], axis=1).dropna()
+            aligned = pd.concat([eq_s, shifted], axis=1).dropna()
             if len(aligned) >= 20:
                 corrs.append(float(aligned.iloc[:, 0].corr(aligned.iloc[:, 1])))
             else:
@@ -3963,7 +3959,6 @@ def _render_risk_convergence(
     corr_series: "pd.Series | None",
 ) -> None:
     """Right column: 3 risk signals as overlapping filled area charts (60 days)."""
-    import pandas as _pd, math as _math
 
     W, H  = 210, 90
     ML, MR, MT, MB = 20, 8, 6, 16
@@ -3971,7 +3966,7 @@ def _render_risk_convergence(
     PH    = H - MT - MB
     N     = 60
 
-    def _norm(s: "_pd.Series", lo: float = 0, hi: float = 100) -> list[float]:
+    def _norm(s: "pd.Series", lo: float = 0, hi: float = 100) -> list[float]:
         s = s.dropna().iloc[-N:]
         mn, mx = float(s.min()), float(s.max())
         span   = mx - mn or 1.0
@@ -3996,13 +3991,13 @@ def _render_risk_convergence(
     series_data = []
 
     # Series 1: GRS (0–100 native)
-    if isinstance(score_hist, _pd.Series) and len(score_hist.dropna()) >= 10:
+    if isinstance(score_hist, pd.Series) and len(score_hist.dropna()) >= 10:
         v1 = _norm(score_hist, 0, 100)
         if len(v1) >= 5:
             series_data.append(("GRS", v1, _C["danger"], float(v1[-1])))
 
     # Series 2: Coupling (avg_corr → 0–100 via percentile rank)
-    if isinstance(corr_series, _pd.Series) and len(corr_series.dropna()) >= 10:
+    if isinstance(corr_series, pd.Series) and len(corr_series.dropna()) >= 10:
         v2 = _norm(corr_series, 0, 100)
         if len(v2) >= 5:
             series_data.append(("COUP", v2, _C["info"], float(v2[-1])))
@@ -4012,7 +4007,7 @@ def _render_risk_convergence(
         pulse = _load_market_pulse()
         vix_d = next((d for d in pulse if d["sym"] == "^VIX"), None)
         if vix_d and len(vix_d.get("series", [])) >= 3:
-            vix_s = _pd.Series(vix_d["series"])
+            vix_s = pd.Series(vix_d["series"])
             # normalise using 5-day series and scale to 0-100 (VIX 40 = 100)
             vix_norm = [min(v / 40.0 * 100.0, 100.0) for v in vix_d["series"]]
             # pad to N by repeating first value
@@ -4092,8 +4087,7 @@ def _render_risk_convergence(
 def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
     """Ranked horizontal bars for top 10 equity × commodity correlation pairs (60d)."""
     try:
-        import pandas as _pd, itertools as _it
-
+    
         _EQ  = {"^GSPC":"SPX","^IXIC":"NDX","^DJI":"DOW","^RUT":"RUT",
                 "EEM":"EEM","GLD":"GLD","^VIX":"VIX"}
         _CMD = {"CL=F":"WTI","GC=F":"Gold","SI=F":"Silv","NG=F":"NatG",
@@ -4105,7 +4099,7 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
         if not eq_cols or not cmd_cols:
             raise ValueError("no data")
 
-        combined = _pd.concat(
+        combined = pd.concat(
             [eq_r[eq_cols].rename(columns=_EQ),
              cmd_r[cmd_cols].rename(columns=_CMD)],
             axis=1,
@@ -4217,9 +4211,7 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
     """60-day rolling correlation heatmap for top equity + commodity pairs."""
     try:
-        import numpy as _np
-        import pandas as _pd
-
+    
         _EQ_LABELS  = {"^GSPC": "SPX", "^IXIC": "NDX", "^DJI": "DOW",
                        "^RUT": "RUT", "EEM": "EEM", "GLD": "GLD"}
         _CMD_LABELS = {"CL=F": "WTI", "GC=F": "Gold", "SI=F": "Silver",
@@ -4243,7 +4235,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         if len(frames) < 2:
             raise ValueError("insufficient data")
 
-        combined = _pd.concat(frames, axis=1).dropna()
+        combined = pd.concat(frames, axis=1).dropna()
         if len(combined) > 60:
             combined = combined.iloc[-60:]
         corr = combined.corr()
@@ -4334,7 +4326,6 @@ def _render_risk_signal_waterfall(
 ) -> None:
     """Stacked signal bars from all analytical layers — geo / regime / vol / FI."""
     try:
-        import numpy as _np
         if isinstance(conflict_results, dict):
             conflict_results = list(conflict_results.values())
 
@@ -4450,8 +4441,7 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
             raise ValueError("no conflicts")
 
         # Build matrix: conflict × group → max exposure score
-        import numpy as _np
-        matrix = _np.zeros((len(active), len(GROUPS)))
+        matrix = np.zeros((len(active), len(GROUPS)))
         for i, c in enumerate(active):
             for exp in c.get("commodity_exposures", []):
                 cname = exp.get("commodity", "")

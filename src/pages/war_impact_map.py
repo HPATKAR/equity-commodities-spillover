@@ -1056,8 +1056,7 @@ All intermediate scores triangulate from these anchors, cross-checked against:
                 _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
                 _api_key  = _anthropic_key or _openai_key
 
-                import datetime as _dt2
-                _today2 = _dt2.date.today()
+                _today2 = date.today()
                 _geo_ctx2 = {
                     "n_events":      len(_GEO_EVENTS),
                     "high_severity": sum(1 for e in _GEO_EVENTS if e.get("category","") in ("War","Conflict","Crisis")),

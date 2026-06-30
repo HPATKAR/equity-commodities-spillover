@@ -857,8 +857,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         st.markdown('<div style="margin:0.6rem 0;border-top:1px solid #2a2a2a"></div>',
                     unsafe_allow_html=True)
         _label("Active Geopolitical Events")
-        from datetime import date as _date
-        today  = _date.today()
+        today  = _dt.date.today()
         active = [e for e in GEOPOLITICAL_EVENTS if e["end"] >= today]
         if active:
             for ev in active:
