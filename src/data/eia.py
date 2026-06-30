@@ -143,9 +143,9 @@ def fetch_eia_series(series_key: str, weeks: int = 260) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=21600, show_spinner=False, max_entries=3)
 def fetch_all_eia_inventory(weeks: int = 260) -> dict[str, pd.DataFrame]:
-    """Fetch all tracked EIA series. Returns {series_key: DataFrame}."""
+    """Fetch all tracked EIA series. Returns {series_key: DataFrame}.
+    Not cached — delegates to cached leaf fetch_eia_series()."""
     return {k: fetch_eia_series(k, weeks=weeks) for k in _SERIES}
 
 

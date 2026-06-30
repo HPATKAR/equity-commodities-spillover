@@ -240,10 +240,10 @@ def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
     return df[["date", "n_tanker", "oil_tanker", "n_total", "capacity_tanker"]]
 
 
-@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_all_straits_live(days_lookback: int = 7) -> dict[str, dict]:
     """
     Fetch live ship count snapshot for all mapped straits via PortWatch.
+    Not cached — delegates to cached leaf load_strait_tankers().
 
     Returns {strait_id: {ships_current, ships_prior, ships_24h_change,
                          ships_7d_avg, source, as_of}}

@@ -204,13 +204,13 @@ def fetch_acled_intensity(
         return {**_empty, "source": f"ACLED fetch error: {type(e).__name__}"}
 
 
-@st.cache_data(ttl=21600, show_spinner=False, max_entries=3)
 def fetch_all_conflict_intensities(
     days: int = 30,
     api_key: Optional[str] = None,
     email: Optional[str] = None,
 ) -> dict[str, dict]:
-    """Fetch ACLED intensity for all tracked conflicts. Returns {conflict_id: result}."""
+    """Fetch ACLED intensity for all tracked conflicts. Returns {conflict_id: result}.
+    Not cached — delegates to cached leaf fetch_acled_intensity()."""
     return {
         cid: fetch_acled_intensity(cid, days=days, api_key=api_key, email=email)
         for cid in _ACLED_CONFLICT_MAP

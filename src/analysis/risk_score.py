@@ -616,7 +616,7 @@ def risk_score_history(
     # Weighted composite on shared index
     total_w  = sum(w for _, w in series)
     combined = sum(
-        rv.reindex(series[0][0].index).fillna(method="ffill") * (w / total_w)
+        rv.reindex(series[0][0].index).ffill() * (w / total_w)
         for rv, w in series
     ).dropna()
 
