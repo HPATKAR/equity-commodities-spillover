@@ -266,7 +266,7 @@ def _regime_classification_stats(
 
 # ── ML Regime Classifier ───────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=False, ttl=3600)
+@st.cache_data(show_spinner=False, max_entries=3, ttl=3600)
 def _ml_regime_classifier(
     features_key: str,           # cache key (str repr)
     _features_df: pd.DataFrame,  # underscore = excluded from hash

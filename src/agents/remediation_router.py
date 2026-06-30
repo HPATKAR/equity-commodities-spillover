@@ -134,7 +134,7 @@ def route_flags(flags: list[dict]) -> dict[str, list[dict]]:
     return routing
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def _call_remediation_ai(
     agent_id: str,
     flags_text: str,

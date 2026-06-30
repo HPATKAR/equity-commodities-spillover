@@ -36,7 +36,7 @@ _SYSTEM = (
 _AGENT = "quality_officer"
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def _call_ai(context_str: str, page: str, provider: str, api_key: str) -> str:
     """Returns narrative text. Cached 30 minutes."""
     prompt = (

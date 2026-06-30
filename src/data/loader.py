@@ -289,7 +289,7 @@ def _fill_gaps(df: pd.DataFrame, method: str = "ffill", limit: int = 5) -> pd.Da
 
 # ── Cached loaders ─────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=1800, show_spinner=False)   # 5 min when LSEG live; 1 hr otherwise
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)   # 5 min when LSEG live; 1 hr otherwise
 def load_equity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -301,7 +301,7 @@ def load_equity_prices(
     return _fill_gaps(_fetch_yf(EQUITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def load_commodity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -313,7 +313,7 @@ def load_commodity_prices(
     return _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def load_all_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -324,7 +324,7 @@ def load_all_prices(
     return eq, cmd
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -347,7 +347,7 @@ def load_returns(
     return eq_r, cmd_r
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_combined_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -358,7 +358,7 @@ def load_combined_returns(
     return combined.dropna(how="all")
 
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=3)
 def load_fred_series(
     fred_api_key: Optional[str] = None,
     start: str = str(DEFAULT_START),
@@ -440,7 +440,7 @@ def _fetch_yf_hourly(tickers: dict[str, str], start: str, end: str) -> pd.DataFr
     return prices.sort_index()
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
 def load_hourly_equity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -448,7 +448,7 @@ def load_hourly_equity_prices(
     return _fill_gaps(_fetch_yf_hourly(EQUITY_TICKERS, _clamp_hourly_start(start), end))
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
 def load_hourly_commodity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -456,7 +456,7 @@ def load_hourly_commodity_prices(
     return _fill_gaps(_fetch_yf_hourly(COMMODITY_TICKERS, _clamp_hourly_start(start), end))
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
 def load_hourly_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -467,7 +467,7 @@ def load_hourly_prices(
     return eq, cmd
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
 def load_hourly_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -479,7 +479,7 @@ def load_hourly_returns(
 
 # ── S&P 500 individual stock loaders ──────────────────────────────────────
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=1)
 def get_sp500_constituents() -> pd.DataFrame:
     """
     Fetch S&P 500 constituent list from Wikipedia.
@@ -605,7 +605,7 @@ _SP500_FALLBACK = pd.DataFrame([
 ], columns=["ticker", "name", "sector"])
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=2)
 def load_sp500_prices(
     tickers_tuple: tuple,          # tuple for hashability
     start: str = str(DEFAULT_START),
@@ -695,7 +695,7 @@ def load_live_snapshot(tickers: dict[str, str]) -> pd.DataFrame:
     return pd.DataFrame(rows).set_index("Name") if rows else pd.DataFrame()
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_fixed_income_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -712,7 +712,7 @@ def load_fixed_income_prices(
     return result
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_fixed_income_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -722,7 +722,7 @@ def load_fixed_income_returns(
     return _validate_returns(result, "fixed_income_returns")
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_fx_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -732,7 +732,7 @@ def load_fx_prices(
     return _fill_gaps(_fetch_yf(FX_TICKERS, date.fromisoformat(start), date.fromisoformat(end)))
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_fx_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -741,7 +741,7 @@ def load_fx_returns(
     return _log_returns(load_fx_prices(start, end))
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def load_implied_vol(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
@@ -774,7 +774,7 @@ def load_implied_vol(
     return result
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False, max_entries=1)
 def load_iv_snapshot() -> dict[str, float]:
     """
     Live spot values for VIX, OVX, GVZ, VVIX.
@@ -796,7 +796,7 @@ def load_iv_snapshot() -> dict[str, float]:
     return result
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_private_credit_proxies(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),

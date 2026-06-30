@@ -294,7 +294,7 @@ def _per_conflict_scores(
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def get_news_gpr_layer(max_headlines: int = 60) -> dict:
     """
     Fetch, classify, and aggregate the News GPR layer.

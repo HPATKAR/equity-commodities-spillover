@@ -91,7 +91,7 @@ def _fred(fred_key: str, series_id: str, start: str, end: str) -> pd.Series:
         return pd.Series(dtype=float, name=series_id)
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _load_yields(fred_key: str, start: str, end: str) -> pd.DataFrame:
     frames = {}
     for label, sid in _YIELD_SERIES.items():
@@ -101,7 +101,7 @@ def _load_yields(fred_key: str, start: str, end: str) -> pd.DataFrame:
     return pd.DataFrame(frames) if frames else pd.DataFrame()
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _load_spreads(fred_key: str, start: str, end: str) -> pd.DataFrame:
     frames = {}
     for label, sid in _SPREAD_SERIES.items():
@@ -111,7 +111,7 @@ def _load_spreads(fred_key: str, start: str, end: str) -> pd.DataFrame:
     return pd.DataFrame(frames) if frames else pd.DataFrame()
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _load_macro(fred_key: str, start: str, end: str) -> dict[str, pd.Series]:
     out = {}
     for label, sid in _MACRO_SERIES.items():
@@ -127,7 +127,7 @@ def _load_macro(fred_key: str, start: str, end: str) -> dict[str, pd.Series]:
     return out
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _load_money(fred_key: str, start: str, end: str) -> dict[str, pd.Series]:
     out = {}
     for label, sid in _MONEY_SERIES.items():
@@ -141,7 +141,7 @@ def _load_money(fred_key: str, start: str, end: str) -> dict[str, pd.Series]:
     return out
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _load_valuations() -> pd.DataFrame:
     rows = []
     for name, ticker in _VAL_ETFS.items():
@@ -171,7 +171,7 @@ def _load_valuations() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def _load_index_perf(start: str) -> pd.DataFrame:
     """Returns cumulative return from `start` for each index."""
     tickers = list(_INDEX_ETFS.values())
@@ -183,7 +183,7 @@ def _load_index_perf(start: str) -> pd.DataFrame:
     return raw
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _load_pc_proxies(start: str, end: str) -> pd.DataFrame:
     """BKLN, ARCC, OBDC, FSK, SPY daily close prices - private credit proxy basket."""
     raw = yf.download(

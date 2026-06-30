@@ -81,7 +81,7 @@ _ACLED_CONFLICT_MAP: dict[str, dict] = {
 _ACLED_BASE = "https://api.acleddata.com/acled/read"
 
 
-@st.cache_data(ttl=21600, show_spinner=False)  # 6-hour cache
+@st.cache_data(ttl=21600, show_spinner=False, max_entries=3)  # 6-hour cache
 def fetch_acled_intensity(
     conflict_id: str,
     days: int = 30,
@@ -204,7 +204,7 @@ def fetch_acled_intensity(
         return {**_empty, "source": f"ACLED fetch error: {type(e).__name__}"}
 
 
-@st.cache_data(ttl=21600, show_spinner=False)
+@st.cache_data(ttl=21600, show_spinner=False, max_entries=3)
 def fetch_all_conflict_intensities(
     days: int = 30,
     api_key: Optional[str] = None,

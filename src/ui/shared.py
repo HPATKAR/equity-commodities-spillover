@@ -819,7 +819,7 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
 
 # ── Footer ─────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=86400)
+@st.cache_data(ttl=86400, max_entries=3)
 def _footer_logo_b64() -> str:
     # Prefer the project logo; fall back to Purdue reverse logo
     for name in ("logo.png", "purdue_daniels_logo_reverse.png"):

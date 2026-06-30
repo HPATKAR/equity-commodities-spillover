@@ -25,7 +25,7 @@ _SYSTEM = (
 _AGENT = "stress_engineer"
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     prompt = (
         f"STRESS TEST RESULTS (live scenarios):\n{context_str}\n\n"

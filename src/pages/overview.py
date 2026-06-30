@@ -17,7 +17,7 @@ from pathlib import Path
 _ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
 
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=3)
 def _logo_b64() -> str:
     p = _ASSETS / "logo.png"
     if p.exists():
@@ -70,7 +70,7 @@ _SNAPSHOT_TICKERS = {
     "^VIX": ("VIX",            "macro"),
 }
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False, max_entries=3)
 def _fetch_snapshot_prices() -> dict[str, dict]:
     """Fetch 2-day close for snapshot tickers, return {ticker: {price, chg_pct, chg_abs}}."""
     import yfinance as yf

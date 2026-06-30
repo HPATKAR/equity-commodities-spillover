@@ -261,7 +261,7 @@ _ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
 _GEO_FILE = _ASSETS / "ne_110m_countries_compact.geojson"
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=1)
 def _load_globe_geojson() -> list[dict]:
     """Load [{iso, name, g}] from the bundled compact GeoJSON. Cached for the session."""
     try:

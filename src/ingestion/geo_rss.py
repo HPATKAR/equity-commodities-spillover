@@ -150,7 +150,7 @@ def _make_id(url: str, title: str) -> str:
 
 # ── Ingestion ─────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def ingest_headlines(
     auto_publish_threshold: float = 65.0,
     max_per_feed: int = 20,

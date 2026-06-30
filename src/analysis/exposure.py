@@ -160,7 +160,7 @@ def _top_conflict(
 
 # ── Main scorer ───────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=1)
 def score_all_assets(
     scenario_id: Optional[str] = None,
 ) -> dict[str, dict]:

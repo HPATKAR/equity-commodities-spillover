@@ -285,7 +285,7 @@ def fetch_gdelt_escalation(
         return {**_empty, "source": _msg}
 
 
-@st.cache_data(ttl=10800, show_spinner=False)
+@st.cache_data(ttl=10800, show_spinner=False, max_entries=3)
 def fetch_all_gdelt_signals(timespan: str = "7d") -> dict[str, dict]:
     """
     Fetch GDELT escalation signals for all tracked conflicts.

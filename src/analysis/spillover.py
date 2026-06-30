@@ -142,7 +142,7 @@ def granger_test(
         return {"min_p": np.nan, "significant": False, "results": {}, "bic_lag": max_lag}
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def granger_grid(
     equity_returns: pd.DataFrame,
     commodity_returns: pd.DataFrame,
@@ -335,7 +335,7 @@ def optimal_te_lag(
     return best_lag
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def transfer_entropy_matrix(
     equity_returns: pd.DataFrame,
     commodity_returns: pd.DataFrame,
@@ -408,7 +408,7 @@ def net_flow_matrix(
 
 # ── Diebold-Yilmaz spillover index ────────────────────────────────────────
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def diebold_yilmaz(
     returns: pd.DataFrame,
     lag_order: int = 4,
@@ -555,7 +555,7 @@ def diebold_yilmaz(
         return _empty
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def rolling_diebold_yilmaz(
     returns: pd.DataFrame,
     window: int = 200,

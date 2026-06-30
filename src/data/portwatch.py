@@ -69,7 +69,7 @@ def _get_endpoint_and_token() -> tuple[str, str]:
     return url, token
 
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=3)
 def _discover_portids() -> dict[str, str]:
     """Map portname.lower() → portid. Cached 24 h. Returns {} on failure."""
     import requests
@@ -107,7 +107,7 @@ def _hormuz_portid() -> str:
     return _HORMUZ_PORTID
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
     """
     Fetch daily tanker transit counts for Strait of Hormuz from IMF PortWatch.
@@ -182,7 +182,7 @@ def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
     return df[["date", "n_tanker", "oil_tanker", "n_total", "capacity_tanker"]]
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
     """
     Generic version of load_hormuz_tankers for any PortWatch chokepoint.
@@ -240,7 +240,7 @@ def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
     return df[["date", "n_tanker", "oil_tanker", "n_total", "capacity_tanker"]]
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def load_all_straits_live(days_lookback: int = 7) -> dict[str, dict]:
     """
     Fetch live ship count snapshot for all mapped straits via PortWatch.

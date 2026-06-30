@@ -70,7 +70,7 @@ _MODEL_CONFIG: dict = {
 
 # ── Cached auxiliary fetches ──────────────────────────────────────────────────
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False, max_entries=3)
 def _fetch_tlt() -> pd.Series:
     """
     Single cached TLT fetch (200d) shared by _rates_vol_score and _safe_haven_score.
@@ -636,7 +636,7 @@ def risk_score_history(
 
 # ── Market Fear Index ─────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def market_fear_index(period: str = "3y") -> pd.Series:
     """
     Market Fear Index (MFI) — CBOE implied volatility composite, 0–100.

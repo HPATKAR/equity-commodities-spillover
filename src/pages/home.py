@@ -309,7 +309,7 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
 # § 1  MASTHEAD
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=3)
 def _home_logo_b64() -> str:
     import base64
     from pathlib import Path
@@ -1937,7 +1937,7 @@ _PULSE_TICKERS = [
 ]
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def _load_market_pulse() -> list[dict]:
     """Fetch last 2 closes for macro pulse tickers. Returns list of dicts."""
     try:
@@ -2018,7 +2018,7 @@ def _render_market_pulse() -> None:
 # § 1.6  PORTFOLIO PULSE - NAV + 1-day P&L + top movers (conditional)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False, max_entries=3)
 def _load_portfolio_returns(tickers_key: str, tickers: tuple) -> dict[str, float]:
     """
     Fetch 2-day closes for portfolio tickers, return {ticker: pct_change_1d}.
@@ -3025,7 +3025,7 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
 # § EXTRA DATA FETCHERS  (cached; warm after first load)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def _load_yield_curve() -> dict[str, float]:
     """Fetch 4 yield-curve points: 3M / 5Y / 10Y / 30Y via yfinance."""
     try:
@@ -3045,7 +3045,7 @@ def _load_yield_curve() -> dict[str, float]:
         return {}
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def _load_vol_trio() -> dict[str, dict]:
     """Fetch VIX / OVX / GVZ with 1-year high/low for gauge normalisation."""
     try:
@@ -3648,7 +3648,7 @@ _HOT_STOCKS_TICKERS = (
     "NFLX", "UNH", "BAC", "GS", "CVX",
 )
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def _load_hot_stocks() -> list[dict]:
     """
     Fetch Yahoo Finance RSS news per ticker; rank by 24h article count.

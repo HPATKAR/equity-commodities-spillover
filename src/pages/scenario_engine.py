@@ -48,7 +48,7 @@ _COMMODITY_TARGETS = [
 
 # ── Beta computation ──────────────────────────────────────────────────────
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _compute_regime_betas(start: str, end: str) -> dict[int, dict[str, dict[str, float]]]:
     """
     Regime-conditional OLS betas: separate beta estimates for each correlation regime.
@@ -110,7 +110,7 @@ def _compute_regime_betas(start: str, end: str) -> dict[int, dict[str, dict[str,
         return {}
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _compute_betas(start: str, end: str) -> dict[str, dict[str, float]]:
     """
     OLS betas of each target asset return on each shock-proxy return.
@@ -143,7 +143,7 @@ def _compute_betas(start: str, end: str) -> dict[str, dict[str, float]]:
     return betas
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _compute_var_es(start: str, end: str) -> dict[str, dict[str, float]]:
     """
     Historical-simulation VaR and ES at 95% and 99% for each asset.

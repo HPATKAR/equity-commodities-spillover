@@ -90,7 +90,7 @@ _CONTANGO_THRESHOLD      =  0.5    # curve slope >  0.5% → contango
 
 # ── Data fetch ──────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def fetch_curve_snapshot() -> pd.DataFrame:
     """
     Fetch latest front-month and 6-month deferred prices for each commodity.
@@ -171,7 +171,7 @@ def fetch_curve_snapshot() -> pd.DataFrame:
     return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def fetch_rolling_basis(
     commodity_name: str,
     period: str = "6mo",

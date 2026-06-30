@@ -752,7 +752,7 @@ def _select_sectors_for_signal(regime_level: int, scenario_id: str | None) -> li
     return combined[:7]  # cap at 7 sectors ≈ 40-50 stocks
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def _fetch_stock_prices(sectors: tuple[str, ...] = ()) -> dict[str, float]:
     """
     Fetch latest closing prices for S&P 500 universe stocks.
@@ -1024,7 +1024,7 @@ def _compute_leg_weights(
     return [w / total for w in weights]
 
 
-@st.cache_data(show_spinner=False, ttl=3600)
+@st.cache_data(show_spinner=False, max_entries=3, ttl=3600)
 def _backtest_trade(
     _all_r: pd.DataFrame,
     _regimes: pd.Series,

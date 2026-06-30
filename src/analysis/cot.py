@@ -109,7 +109,7 @@ def _load_via_socrata(session, years: int = 3) -> "pd.DataFrame | None":
 
 # ── Downloader ──────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=3)
 def load_cot_data(years: int = 3) -> pd.DataFrame:
     """
     Download CFTC disaggregated COT data for the last `years` annual files.

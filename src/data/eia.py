@@ -78,7 +78,7 @@ def _get_eia_key() -> str:
         return "DEMO_KEY"
 
 
-@st.cache_data(ttl=21600, show_spinner=False)  # 6-hour cache (EIA updates Wednesdays)
+@st.cache_data(ttl=21600, show_spinner=False, max_entries=3)  # 6-hour cache (EIA updates Wednesdays)
 def fetch_eia_series(series_key: str, weeks: int = 260) -> pd.DataFrame:
     """
     Fetch a single EIA weekly series.
@@ -143,7 +143,7 @@ def fetch_eia_series(series_key: str, weeks: int = 260) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=21600, show_spinner=False)
+@st.cache_data(ttl=21600, show_spinner=False, max_entries=3)
 def fetch_all_eia_inventory(weeks: int = 260) -> dict[str, pd.DataFrame]:
     """Fetch all tracked EIA series. Returns {series_key: DataFrame}."""
     return {k: fetch_eia_series(k, weeks=weeks) for k in _SERIES}

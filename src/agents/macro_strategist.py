@@ -25,7 +25,7 @@ _SYSTEM = (
 _AGENT = "macro_strategist"
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def _call_ai(context_str: str, provider: str, api_key: str) -> str:
     """Returns narrative text. Cached 1 hour."""
     import time

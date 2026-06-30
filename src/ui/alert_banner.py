@@ -33,7 +33,7 @@ _PAGE_LABELS = {
 
 # ── AI briefing (cached) ─────────────────────────────────────────────────────
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
 def _generate_briefing(alert_summary: str, market_context: str,
                         provider: str, api_key: str) -> str:
     """
