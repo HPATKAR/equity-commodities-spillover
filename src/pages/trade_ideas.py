@@ -2672,25 +2672,138 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 )
 
         if _run_pv:
-            with st.spinner("Running walk-forward pipeline validation… (Stage 3 × windows)"):
+            _anim = st.empty()
+            _anim.markdown("""
+<style>
+@keyframes _pv_scan {
+  0%   { left: -30%; }
+  100% { left: 110%; }
+}
+@keyframes _pv_pulse {
+  0%,100% { opacity: .35; }
+  50%      { opacity: 1;   }
+}
+@keyframes _pv_bar {
+  0%   { width: 0%; }
+  15%  { width: 22%; }
+  40%  { width: 45%; }
+  65%  { width: 68%; }
+  85%  { width: 84%; }
+  100% { width: 93%; }
+}
+@keyframes _pv_msg0 { 0%,18%{opacity:1} 22%,100%{opacity:0} }
+@keyframes _pv_msg1 { 0%,18%{opacity:0} 22%,38%{opacity:1} 42%,100%{opacity:0} }
+@keyframes _pv_msg2 { 0%,38%{opacity:0} 42%,58%{opacity:1} 62%,100%{opacity:0} }
+@keyframes _pv_msg3 { 0%,58%{opacity:0} 62%,78%{opacity:1} 82%,100%{opacity:0} }
+@keyframes _pv_msg4 { 0%,78%{opacity:0} 82%,100%{opacity:1} }
+._pv_wrap {
+  background:#080808; border:1px solid #1e1e1e; border-radius:6px;
+  padding:1.2rem 1.4rem; margin:.6rem 0; position:relative; overflow:hidden;
+}
+._pv_title {
+  font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:.18em;
+  color:#CFB991; margin-bottom:1rem;
+  animation: _pv_pulse 2s ease-in-out infinite;
+}
+._pv_stages { display:flex; gap:8px; margin-bottom:1rem; }
+._pv_stage {
+  flex:1; background:#0d0d0d; border:1px solid #1e1e1e; border-radius:4px;
+  padding:.5rem .4rem; text-align:center; position:relative; overflow:hidden;
+}
+._pv_stage_lbl {
+  font-family:'JetBrains Mono',monospace; font-size:6px; letter-spacing:.12em;
+  color:#555960; display:block; margin-bottom:4px;
+}
+._pv_stage_name {
+  font-family:'DM Sans',sans-serif; font-size:.62rem; color:#8890a1;
+}
+._pv_scan_bar {
+  position:absolute; top:0; left:-30%; width:30%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(207,185,145,.18),transparent);
+  animation: _pv_scan 2.4s ease-in-out infinite;
+}
+._pv_stage:nth-child(1) ._pv_scan_bar { animation-delay: 0s; }
+._pv_stage:nth-child(2) ._pv_scan_bar { animation-delay: .3s; }
+._pv_stage:nth-child(3) ._pv_scan_bar { animation-delay: .6s; }
+._pv_stage:nth-child(4) ._pv_scan_bar { animation-delay: .9s; }
+._pv_stage:nth-child(5) ._pv_scan_bar { animation-delay:1.2s; }
+._pv_msgs { position:relative; height:1.1rem; margin-bottom:.9rem; }
+._pv_msg {
+  position:absolute; top:0; left:0; width:100%; opacity:0;
+  font-family:'JetBrains Mono',monospace; font-size:.58rem; color:#8890a1;
+}
+._pv_msg:nth-child(1){animation:_pv_msg0 10s linear infinite}
+._pv_msg:nth-child(2){animation:_pv_msg1 10s linear infinite}
+._pv_msg:nth-child(3){animation:_pv_msg2 10s linear infinite}
+._pv_msg:nth-child(4){animation:_pv_msg3 10s linear infinite}
+._pv_msg:nth-child(5){animation:_pv_msg4 10s linear infinite}
+._pv_bar_track {
+  background:#111; border-radius:2px; height:3px; overflow:hidden;
+}
+._pv_bar_fill {
+  height:100%; background:#CFB991; border-radius:2px;
+  animation: _pv_bar 180s cubic-bezier(.1,.4,.3,1) forwards;
+}
+</style>
+<div class="_pv_wrap">
+  <div class="_pv_title">PIPELINE VALIDATION IN PROGRESS</div>
+  <div class="_pv_stages">
+    <div class="_pv_stage">
+      <div class="_pv_scan_bar"></div>
+      <span class="_pv_stage_lbl">S1</span>
+      <span class="_pv_stage_name">Thesis</span>
+    </div>
+    <div class="_pv_stage">
+      <div class="_pv_scan_bar"></div>
+      <span class="_pv_stage_lbl">S2</span>
+      <span class="_pv_stage_name">Signal</span>
+    </div>
+    <div class="_pv_stage">
+      <div class="_pv_scan_bar"></div>
+      <span class="_pv_stage_lbl">S3</span>
+      <span class="_pv_stage_name">Confirm</span>
+    </div>
+    <div class="_pv_stage">
+      <div class="_pv_scan_bar"></div>
+      <span class="_pv_stage_lbl">S4</span>
+      <span class="_pv_stage_name">Sizing</span>
+    </div>
+    <div class="_pv_stage">
+      <div class="_pv_scan_bar"></div>
+      <span class="_pv_stage_lbl">S5</span>
+      <span class="_pv_stage_name">DSR Gate</span>
+    </div>
+  </div>
+  <div class="_pv_msgs">
+    <div class="_pv_msg">Fitting LP-IRF on training window — past data only&hellip;</div>
+    <div class="_pv_msg">Stage 3 confirming sign direction per leg&hellip;</div>
+    <div class="_pv_msg">Running DSR gate — deflating Sharpe by trial count&hellip;</div>
+    <div class="_pv_msg">Computing OOS returns in test window&hellip;</div>
+    <div class="_pv_msg">Monte Carlo random-admission baseline (500 draws)&hellip;</div>
+  </div>
+  <div class="_pv_bar_track"><div class="_pv_bar_fill"></div></div>
+</div>
+""", unsafe_allow_html=True)
+            try:
+                _pv = _run_pipeline_validator_cached(
+                    all_r_concat, regimes,
+                    train_days=756, test_days=63,
+                    n_strategies=_effective_n,
+                    n_random_trials=500,
+                )
+                st.session_state[_pv_key] = _pv
+                # Persist to disk so the next session loads instantly
                 try:
-                    _pv = _run_pipeline_validator_cached(
-                        all_r_concat, regimes,
-                        train_days=756, test_days=63,
-                        n_strategies=_effective_n,
-                        n_random_trials=500,
-                    )
-                    st.session_state[_pv_key] = _pv
-                    # Persist to disk so the next session loads instantly
-                    try:
-                        from src.utils.page_cache import save_cache as _sv
-                        _sv(_PV_DISK_KEY, _pv)
-                        _pv_disk_age = None  # now fresh
-                    except Exception:
-                        pass
-                except Exception as _pv_exc:
-                    st.error(f"Validation error: {_pv_exc}")
-                    _pv = None
+                    from src.utils.page_cache import save_cache as _sv
+                    _sv(_PV_DISK_KEY, _pv)
+                    _pv_disk_age = None  # now fresh
+                except Exception:
+                    pass
+            except Exception as _pv_exc:
+                st.error(f"Validation error: {_pv_exc}")
+                _pv = None
+            finally:
+                _anim.empty()
         else:
             _pv = st.session_state.get(_pv_key)
 
