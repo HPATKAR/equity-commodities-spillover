@@ -2220,6 +2220,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     # Trade cards removed — the pipeline is the deliverable, not individual strategy scores.
     active_trades: list[dict] = []
+    asset_exposure: dict = {}   # was populated by score_all_assets(); empty without trade cards
 
     # Extend returns to include Fixed Income + FX (used by Integrity Audit and Multiple Testing)
     _extra_frames: list[pd.DataFrame] = []
