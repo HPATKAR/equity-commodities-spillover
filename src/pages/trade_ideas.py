@@ -2088,6 +2088,22 @@ def _render_trade_card(
 
 
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
+    # ── Stale-while-revalidate: pre-populate session state from disk cache ───
+    # Runs once per session. If a prior run saved results to disk, the user
+    # sees them immediately without clicking "Run Validation".
+    _PV_DISK_KEY = "pipeline_validation"
+    _PV_SESSION_KEY = "pipeline_validation_result"
+    _pv_disk_age: "str | None" = None
+    if _PV_SESSION_KEY not in st.session_state:
+        try:
+            from src.utils.page_cache import load_cache, age_str as _age_str
+            _disk_data, _disk_saved_at = load_cache(_PV_DISK_KEY)
+            if _disk_data is not None:
+                st.session_state[_PV_SESSION_KEY] = _disk_data
+                _pv_disk_age = _age_str(_disk_saved_at)
+        except Exception:
+            pass
+
     st.markdown(_TI_STYLE, unsafe_allow_html=True)
     _page_header("Structured Trade Ideas",
                  "Step 6 of 7 · AI Conclusions · Regime-driven · Conflict-linked · Exposure-ranked · QC-graded")
@@ -2547,9 +2563,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             st.caption("No gradeable strategies to report.")
 
     # ── Thesis Pipeline ─────────────────────────────────────────────────────
+    # Auto-expand when we have results (from disk cache or a prior run this session).
+    _tp_has_results = bool(st.session_state.get(_PV_SESSION_KEY))
     with st.expander(
         "Thesis Pipeline — 5-Stage Economic Mechanism Validation",
-        expanded=False,
+        expanded=_tp_has_results,
     ):
         _TP_M = "font-family:'JetBrains Mono',monospace;"
         _TP_S = "font-family:'DM Sans',sans-serif;"
@@ -2624,20 +2642,34 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
 
-        _pv_key = "pipeline_validation_result"
+        _pv_key = _PV_SESSION_KEY
         _pv_col1, _pv_col2 = st.columns([1, 4])
         with _pv_col1:
             _run_pv = st.button(
-                "Run Validation", key="run_pipeline_val", type="primary",
-                help="First run: ~2-4 minutes (Stage 3 on each training window). Cached for 24h.",
+                "Refresh Validation", key="run_pipeline_val", type="primary",
+                help="Re-runs walk-forward validation (~2-4 min). Saves result to disk for next session.",
             )
         with _pv_col2:
-            st.markdown(
-                f'<span style="{_TP_M}font-size:0.57rem;color:#555960">'
-                f'First run takes 2-4 min — Stage 3 on each walk-forward window. '
-                f'Result cached 24h.</span>',
-                unsafe_allow_html=True,
-            )
+            # Show staleness banner if showing data from a previous session
+            if _pv_disk_age and not _run_pv:
+                st.markdown(
+                    f'<span style="{_TP_M}font-size:0.57rem;color:#e67e22">'
+                    f'Showing cached results from {_pv_disk_age}. '
+                    f'Click Refresh Validation to recompute.</span>',
+                    unsafe_allow_html=True,
+                )
+            elif st.session_state.get(_pv_key) and not _run_pv:
+                st.markdown(
+                    f'<span style="{_TP_M}font-size:0.57rem;color:#555960">'
+                    f'Results from this session. Click Refresh to recompute.</span>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<span style="{_TP_M}font-size:0.57rem;color:#555960">'
+                    f'First run: ~2-4 min. Result saved to disk for instant load next session.</span>',
+                    unsafe_allow_html=True,
+                )
 
         if _run_pv:
             with st.spinner("Running walk-forward pipeline validation… (Stage 3 × windows)"):
@@ -2649,6 +2681,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         n_random_trials=500,
                     )
                     st.session_state[_pv_key] = _pv
+                    # Persist to disk so the next session loads instantly
+                    try:
+                        from src.utils.page_cache import save_cache as _sv
+                        _sv(_PV_DISK_KEY, _pv)
+                        _pv_disk_age = None  # now fresh
+                    except Exception:
+                        pass
                 except Exception as _pv_exc:
                     st.error(f"Validation error: {_pv_exc}")
                     _pv = None
