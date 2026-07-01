@@ -19,6 +19,7 @@ from src.analysis.correlations import (
     average_cross_corr_series, detect_correlation_regime, rolling_correlation,
     composite_stress_index,
 )
+from src.analysis.backtest import walk_forward_backtest, qc_grade_backtest
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
@@ -1024,7 +1025,7 @@ def _compute_leg_weights(
     return [w / total for w in weights]
 
 
-@st.cache_data(show_spinner=False, max_entries=3, ttl=3600)
+@st.cache_data(show_spinner=False, max_entries=3, ttl=86400)
 def _backtest_trade(
     _all_r: pd.DataFrame,
     _regimes: pd.Series,
@@ -1133,6 +1134,233 @@ def _backtest_trade(
     }
 
 
+@st.cache_data(show_spinner=False, max_entries=1, ttl=3600)
+def _thesis_stage3_cached(
+    strat_name: str,
+    conflict_id: str | None,
+    regime_list: tuple[int, ...],
+    assets: tuple[str, ...],
+    directions: tuple[str, ...],
+    predicted_sign_items: tuple[tuple[str, int], ...],
+    horizon_days: int,
+    _all_r: pd.DataFrame,
+    _regimes: pd.Series | None,
+) -> dict:
+    """
+    Cached Stage 3 confirmation for one thesis strategy.
+    Returns a plain dict (serialisable) so Streamlit's cache can store it.
+    """
+    from src.analysis.thesis_engine import (
+        ThesisBlock, ThesisStrategy, SignalSpec, run_stage3,
+    )
+
+    _predicted_sign = dict(predicted_sign_items)
+    _thesis = ThesisBlock(
+        shock="", tps_channels=[], conflict_id=conflict_id, chokepoint=None,
+        predicted_sign=_predicted_sign, horizon_days=horizon_days, persistence="",
+    )
+    _signal = SignalSpec(
+        assets=list(assets), direction=list(directions),
+        regime=list(regime_list), holding_period=horizon_days, signal_vars=[],
+    )
+    _tmp = ThesisStrategy(name=strat_name, category="", thesis=_thesis, signal=_signal)
+    _tmp.stage1_passed = True
+    _tmp.stage2_passed = True
+
+    _tmp = run_stage3(_tmp, _all_r, _regimes)
+    conf = _tmp.confirmation
+    if conf is None:
+        return {
+            "stage_passed": False, "track": "unknown", "confirmation_score": 0.0,
+            "per_leg": {}, "irf_df_records": None, "regime_stats": None,
+            "rejection_reason": "Stage 3 not computed",
+        }
+
+    return {
+        "stage_passed":       conf.stage_passed,
+        "sign_matched":       conf.sign_matched,
+        "track":              conf.track,
+        "confirmation_score": conf.confirmation_score,
+        "per_leg":            conf.per_leg,
+        "irf_df_records":     conf.irf_df.to_dict("records") if conf.irf_df is not None else None,
+        "regime_stats":       conf.regime_stats,
+        "rejection_reason":   conf.rejection_reason,
+    }
+
+
+@st.cache_data(show_spinner=False, ttl=86400, max_entries=1)
+def _run_pipeline_validator_cached(
+    _all_r: pd.DataFrame,
+    _regimes: "pd.Series | None",
+    train_days: int = 756,
+    test_days: int = 63,
+    n_strategies: int = 9,
+    n_random_trials: int = 500,
+) -> dict:
+    """
+    Walk-forward pipeline validation. Returns a serialisable dict.
+    Builds the validation universe internally — these theses are the
+    classification test set, not a ranked catalogue.
+    """
+    from src.analysis.thesis_engine import ThesisStrategy, ThesisBlock, SignalSpec
+    from src.analysis.pipeline_validator import walk_forward_pipeline_validation
+
+    def _ts(name, cat, shock, channels, conflict, chokepoint, pred,
+            horizon, persistence, assets, directions, regime, hold, weights=None):
+        return ThesisStrategy(
+            name=name, category=cat,
+            thesis=ThesisBlock(
+                shock=shock, tps_channels=channels,
+                conflict_id=conflict, chokepoint=chokepoint,
+                predicted_sign=pred, horizon_days=horizon, persistence=persistence,
+            ),
+            signal=SignalSpec(
+                assets=assets, direction=directions,
+                regime=regime, holding_period=hold,
+                signal_vars=[], leg_weights=weights,
+            ),
+        )
+
+    universe = [
+        _ts("Long Gold / Short Eurostoxx 50", "Crisis Hedge",
+            "Cross-asset correlation spike, DCC(Gold/SPX) < −0.10.",
+            ["equity_sector","fx","inflation"], None, None,
+            {"Gold":+1,"Eurostoxx 50":-1}, 20, "Safe-haven demand persists until regime normalises.",
+            ["Gold","Eurostoxx 50"],["Long","Short"],[2,3],20),
+
+        _ts("Long Natural Gas / Short Nikkei 225", "Geopolitical",
+            "Energy supply shock: Ukraine escalation OR Hormuz closure.",
+            ["oil_gas","shipping","chokepoint","fx"],"ukraine_russia","Strait of Hormuz",
+            {"Natural Gas":+1,"Nikkei 225":-1}, 15, "Japan largest LNG importer; yen weakens.",
+            ["Natural Gas","Nikkei 225"],["Long","Short"],[2,3],15),
+
+        _ts("Long Wheat / Long Gold / Short Emerging Markets", "Macro",
+            "Ukraine war food supply disruption; Wheat 30d return > +15%.",
+            ["agriculture","inflation","fx","equity_sector"],"ukraine_russia","Black Sea Grain Corridor",
+            {"Wheat":+1,"Gold":+1,"Sensex":-1}, 20, "Food inflation structural; EM CAD deteriorates.",
+            ["Wheat","Gold","Sensex"],["Long","Long","Short"],[2,3],20,[0.4,0.3,0.3]),
+
+        _ts("Long Copper / Long S&P 500", "Growth",
+            "Global growth recovery: Copper 60d momentum > 0, ISM > 50.",
+            ["metals","equity_sector","supply_chain"],None,None,
+            {"Copper":+1,"S&P 500":+1}, 30, "Copper leads earnings by 1-2 quarters.",
+            ["Copper","S&P 500"],["Long","Long"],[0,1],30),
+
+        _ts("Long WTI Crude / Short S&P 500", "Macro",
+            "Oil supply shock: OPEC+ cut or Hormuz closure → Brent-WTI spread widens.",
+            ["oil_gas","chokepoint","equity_sector","inflation"],"iran_conflict","Strait of Hormuz",
+            {"WTI Crude Oil":+1,"S&P 500":-1}, 20, "Equity margin compression persists ~6-8 weeks.",
+            ["WTI Crude Oil","S&P 500"],["Long","Short"],[1,2],20),
+
+        _ts("Long Gold, Long Silver / Short Copper, Short Shanghai", "Crisis Hedge",
+            "Full crisis: VIX > 35, DXY trending up — monetary vs industrial metals decouple.",
+            ["metals","equity_sector","fx","credit"],"taiwan_strait",None,
+            {"Gold":+1,"Silver":+1,"Copper":-1,"Shanghai Comp":-1}, 10,
+            "Flight from industrial metals persists until VIX < 25.",
+            ["Gold","Silver","Copper","Shanghai Comp"],["Long","Long","Short","Short"],[3],10,
+            [0.3,0.2,0.25,0.25]),
+
+        _ts("Long Brent Crude / Short Nifty 50", "India/EM",
+            "Brent spike > 15% in 60d AND USD/INR depreciating > 3% in 30d.",
+            ["oil_gas","fx","inflation","equity_sector"],"iran_conflict","Strait of Hormuz",
+            {"Brent Crude":+1,"Nifty 50":-1}, 20, "India imports ~85% crude; CAD widens sequentially.",
+            ["Brent Crude","Nifty 50"],["Long","Short"],[2,3],20),
+
+        _ts("Long Nifty 50 / Short Brent Crude", "India/EM",
+            "RBI rate cut cycle: Brent below $80 and declining; INR stable.",
+            ["oil_gas","fx","inflation","equity_sector"],None,None,
+            {"Nifty 50":+1,"Brent Crude":-1}, 30, "Oil below $80 → India CAD improves multi-quarter.",
+            ["Nifty 50","Brent Crude"],["Long","Short"],[0,1],30),
+
+        _ts("Short Shanghai Comp / Long Nikkei 225", "Asia Divergence",
+            "China property crisis deepening AND Japan BOJ normalisation.",
+            ["equity_sector","credit","fx","supply_chain"],"taiwan_strait",None,
+            {"Shanghai Comp":-1,"Nikkei 225":+1}, 30,
+            "China property crisis structural; Japan yen weakness self-reinforcing.",
+            ["Shanghai Comp","Nikkei 225"],["Short","Long"],[2,3],30),
+    ]
+
+    result = walk_forward_pipeline_validation(
+        theses=universe,
+        returns=_all_r,
+        regimes=_regimes if _regimes is not None else pd.Series(dtype=int),
+        train_days=train_days,
+        test_days=test_days,
+        n_strategies=n_strategies,
+        n_random_trials=n_random_trials,
+    )
+
+    return {
+        "admitted_vs_rejected_gap":  result.admitted_vs_rejected_gap,
+        "admitted_vs_rejected_pval": result.admitted_vs_rejected_pval,
+        "admitted_vs_random_gap":    result.admitted_vs_random_gap,
+        "random_p_value":            result.random_p_value,
+        "random_distribution":       result.random_distribution,
+        "n_windows":                 result.n_windows,
+        "n_theses":                  result.n_theses,
+        "passed":                    result.passed(),
+        "buckets": {
+            k: {
+                "mean":      v.mean,
+                "std":       v.std,
+                "n_obs":     v.n_obs,
+                "n_windows": v.n_windows,
+            }
+            for k, v in result.buckets.items()
+        },
+        # Decision trace for the worked example thesis (WTI / S&P Iran/Hormuz).
+        # Filtered here so the worked example display never calls a separate backtest.
+        "worked_example_trace": [
+            {
+                "window_idx":       d.window_idx,
+                "train_end":        str(d.train_end.date()),
+                "test_end":         str(d.test_end.date()),
+                "stage3_confirmed": d.stage3_confirmed,
+                "stage3_sign":      d.stage3_sign_matched,
+                "decision":         d.pipeline_decision,
+                "dsr_prob":         d.dsr_prob,
+                "oos_return":       d.oos_mean_return,
+                "oos_n_signals":    d.oos_n_signals,
+            }
+            for d in result.decisions
+            if d.thesis_name == "Long WTI Crude / Short S&P 500"
+        ],
+    }
+
+
+@st.cache_data(show_spinner=False, max_entries=3, ttl=86400)
+def _wf_backtest_trade(
+    _all_r: pd.DataFrame,
+    _avg_corr: pd.Series,
+    trade_name: str,          # included in cache key
+    trigger_regimes: list[int],
+    assets: list[str],
+    directions: list[str],
+    holding_days: int = 30,
+    leg_weights: tuple[float, ...] | None = None,
+    avg_corr_n: int = 0,     # sentinel: busts cache when avg_corr row count changes
+    n_strategies: int = 9,
+    is_economic_prior: bool = True,
+) -> dict:
+    """Cached walk-forward backtest for a single trade card."""
+    from src.analysis.backtest import _N_LIBRARY_STRATEGIES
+    trade_stub = {
+        "name":           trade_name,
+        "assets":         assets,
+        "direction":      directions,
+        "regime":         trigger_regimes,
+        "holding_period": holding_days,
+    }
+    return walk_forward_backtest(
+        returns=_all_r,
+        avg_corr=_avg_corr,
+        trade=trade_stub,
+        leg_weights=list(leg_weights) if leg_weights else None,
+        n_strategies=n_strategies,
+        is_economic_prior=is_economic_prior,
+    )
+
+
 def _render_trade_card(
     col,
     trade: dict,
@@ -1141,6 +1369,10 @@ def _render_trade_card(
     trade_idx: int,
     asset_exposure: dict | None = None,
     regimes: "pd.Series | None" = None,
+    avg_corr: "pd.Series | None" = None,
+    _dup_registry: "dict | None" = None,
+    n_strategies: int = 9,
+    is_economic_prior: bool = True,
 ) -> None:
     """Render a single trade card with QC grade, confidence, payoff table, and debate thread."""
     # Suppress low-confidence generated ideas to keep the page signal-to-noise high
@@ -1515,6 +1747,252 @@ def _render_trade_card(
                 except Exception as exc:
                     st.caption(f"Payoff projection unavailable: {exc}")
 
+        # ── Walk-forward backtest expander ────────────────────────────────
+        try:
+            if avg_corr is not None and not all_r_concat.empty:
+                _n_strategies = 9    # strategies with all declared legs in return data (data-integrity audit)
+                _leg_w_wf = _compute_leg_weights(trade, asset_exposure)
+                _leg_w_wf_tuple = tuple(_leg_w_wf) if _leg_w_wf else None
+                _wfbt = _wf_backtest_trade(
+                    all_r_concat,
+                    avg_corr,
+                    trade_name=trade["name"],
+                    trigger_regimes=trade.get("regime", [2, 3]),
+                    assets=trade.get("assets", []),
+                    directions=trade.get("direction", []),
+                    holding_days=_parse_holding_days(trade),
+                    leg_weights=_leg_w_wf_tuple,
+                    avg_corr_n=len(avg_corr),
+                    n_strategies=n_strategies,
+                    is_economic_prior=is_economic_prior,
+                )
+                # ── Duplicate detection ───────────────────────────────────────
+                # Two strategies are considered duplicates when their OOS
+                # trade-return series are identical (same assets resolve, same
+                # regime, same holding period). We use (n_trades, sharpe, hit_rate)
+                # as a lightweight signature; a full element-wise comparison is
+                # deferred to the diagnostic script.
+                _dup_of: str | None = None
+                if _dup_registry is not None and _wfbt.get("n_trades", 0) >= 3:
+                    _dup_sig = (
+                        _wfbt.get("n_trades"),
+                        round(float(_wfbt.get("sharpe") or 0), 3),
+                        _wfbt.get("hit_rate"),
+                    )
+                    if _dup_sig in _dup_registry:
+                        _dup_of = _dup_registry[_dup_sig]
+                    else:
+                        _dup_registry[_dup_sig] = trade["name"]
+
+                _wf_qc    = _wfbt.get("qc", {})
+                _wf_grade = _wf_qc.get("grade", "D")
+                _wf_score = _wf_qc.get("score", 0)
+                _dsr_prob = _wf_qc.get("dsr_prob", 0.0)
+                _wf_decay = _wf_qc.get("decay")
+                _is_sh    = _wf_qc.get("is_sharpe")
+                _pbo_val  = _wf_qc.get("pbo")   # CSCV PBO (from qc dict)
+                _GC = {"A": "#27ae60", "B": "#2980b9", "C": "#e67e22",
+                       "D": "#c0392b",  "F": "#6c0000"}
+                _gc = _GC.get(_wf_grade, "#555960")
+                _has_result   = "error" not in _wfbt and _wfbt.get("n_trades", 0) >= 3
+                _missing_legs = _wfbt.get("missing_legs", [])
+
+                _dsr_pct = f"{_dsr_prob:.0%}" if _has_result else "─"
+                _pbo_pct = f"{_pbo_val:.0%}" if (_has_result and _pbo_val is not None) else None
+                _wf_label = (
+                    (f"Backtest (Walk-Forward OOS) — {_wf_grade} · DSR {_dsr_pct}"
+                     + (f" · PBO {_pbo_pct}" if _pbo_pct else ""))
+                    if _has_result else
+                    ("Backtest (Walk-Forward OOS) — MISSING DATA"
+                     if _missing_legs else
+                     "Backtest (Walk-Forward OOS)")
+                )
+                with col:
+                    with st.expander(_wf_label, expanded=False):
+                        if _missing_legs:
+                            _dropped_str = ", ".join(_missing_legs)
+                            _present_str = ", ".join(
+                                a for a in trade.get("assets", []) if a not in _missing_legs
+                            ) or "none"
+                            st.markdown(
+                                f'<div style="background:#1a0000;border:1px solid #c0392b;'
+                                f'border-radius:4px;padding:8px 12px;margin-bottom:8px;'
+                                f'font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:#e74c3c">'
+                                f'<b>MISSING LEGS — NOT GRADEABLE</b><br>'
+                                f'Declared: {", ".join(trade.get("assets", []))}<br>'
+                                f'Present in return data: {_present_str}<br>'
+                                f'Absent: <b>{_dropped_str}</b><br>'
+                                f'Previous behavior silently traded the subset. '
+                                f'A strategy that cannot execute all declared legs '
+                                f'is mislabeled and has been excluded from grading.</div>',
+                                unsafe_allow_html=True,
+                            )
+                        elif not _has_result:
+                            st.caption(_wfbt.get("error", "Backtest unavailable"))
+                        else:
+                            # Duplicate strategy banner
+                            if _dup_of is not None:
+                                st.markdown(
+                                    f'<div style="background:#0d1a2a;border:1px solid #2980b9;'
+                                    f'border-radius:4px;padding:6px 10px;margin-bottom:8px;'
+                                    f'font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:#5dade2">'
+                                    f'DUPLICATE DETECTED — trade-return series is identical to '
+                                    f'<b>{_dup_of[:50]}</b>. '
+                                    f'Non-Gold leg absent from return data. '
+                                    f'Counts as ×1 unique strategy in N for DSR multiple-testing correction.</div>',
+                                    unsafe_allow_html=True,
+                                )
+
+                            # LOW N warning
+                            _low_n = _wf_qc.get("low_confidence", False)
+                            if _low_n:
+                                _n_actual = _wfbt.get("n_trades", 0)
+                                st.markdown(
+                                    f'<div style="background:#2a1f00;border:1px solid #e67e22;'
+                                    f'border-radius:4px;padding:6px 10px;margin-bottom:8px;'
+                                    f'font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:#e67e22">'
+                                    f'LOW N — {_n_actual} trades (need ≥20). '
+                                    f'Sharpe SE is too wide for A/B. Grade capped at C.</div>',
+                                    unsafe_allow_html=True,
+                                )
+
+                            # ── Grade chip + DSR robustness strip ────────────────
+                            _bt_cols = st.columns([1, 1, 1, 1, 1, 1])
+                            _gc_display = _gc if not _low_n else "#e67e22"
+                            _bt_cols[0].markdown(
+                                f'<div style="text-align:center;padding:6px 0">'
+                                f'<span style="font-size:1.6rem;font-weight:700;color:{_gc_display}">{_wf_grade}</span>'
+                                f'<br><span style="font-size:0.60rem;color:#8890a1">DSR {_dsr_pct}'
+                                + (' · LOW N' if _low_n else '')
+                                + f'</span></div>',
+                                unsafe_allow_html=True,
+                            )
+                            _bt_cols[1].metric("OOS Sharpe", f"{_wfbt['sharpe']:.2f}")
+                            _bt_cols[2].metric("Max DD",     f"{_wfbt['max_drawdown']:.1f}%")
+                            _bt_cols[3].metric("Hit Rate",   f"{_wfbt['hit_rate']:.0f}%")
+                            _bt_cols[4].metric("Trades",     str(_wfbt["n_trades"]))
+                            _bt_cols[5].metric(
+                                "W/L",
+                                f"{_wfbt.get('win_loss_ratio', 0):.2f}",
+                                help="Avg win / |Avg loss|",
+                            )
+
+                            # ── Robustness strip: DSR, IS Sharpe, decay, PBO ─────
+                            _sr_star  = _wf_qc.get("sr_star", 0.0)
+                            _dec_str  = f"{_wf_decay:.0%}" if _wf_decay is not None else "n/a"
+                            _is_str   = f"{_is_sh:.2f}"    if _is_sh   is not None else "n/a"
+                            _dec_col  = ("#c0392b" if (_wf_decay or 0) > 0.70
+                                         else "#e67e22" if (_wf_decay or 0) > 0.40
+                                         else "#27ae60")
+                            # PBO: green <30%, yellow 30–50%, red >50% (grade-gating threshold)
+                            _pbo_col  = ("#c0392b" if (_pbo_val or 0) > 0.50
+                                         else "#e67e22" if (_pbo_val or 0) > 0.30
+                                         else "#27ae60")
+                            _pbo_str  = f"{_pbo_val:.0%}" if _pbo_val is not None else "n/a"
+                            _n_cscv   = _wfbt.get("n_cscv", 0)
+
+                            # ── HLZ cross-check fields ─────────────────────
+                            _hlz_t    = _wf_qc.get("hlz_tstat")
+                            _hlz_thr  = _wf_qc.get("hlz_threshold", 0.0)
+                            _hlz_pass = _wf_qc.get("hlz_pass")
+                            _hlz_ag   = _wf_qc.get("hlz_agree_dsr")
+                            _hlz_t_str = f"{_hlz_t:.2f}" if _hlz_t is not None else "n/a"
+                            _hlz_thr_str = f"{_hlz_thr:.2f}"
+                            if _hlz_pass is True:
+                                _hlz_col, _hlz_verdict = "#27ae60", "PASS"
+                            elif _hlz_pass is False:
+                                _hlz_col, _hlz_verdict = "#c0392b", "FAIL"
+                            else:
+                                _hlz_col, _hlz_verdict = "#555960", "n/a"
+                            _prior_tag = "THEORY" if is_economic_prior else "GRID"
+                            _agree_str = ""
+                            if _hlz_ag is False:
+                                _agree_str = (
+                                    f'<span style="background:#3d1a00;color:#e67e22;'
+                                    f'border-radius:3px;padding:1px 5px;margin-left:4px;'
+                                    f'font-weight:700">⚠ DSR/HLZ DISAGREE</span>'
+                                )
+
+                            st.markdown(
+                                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:4px;'
+                                f'padding:7px 10px;margin:6px 0 2px;display:flex;gap:20px;flex-wrap:wrap;'
+                                f'font-family:\'JetBrains Mono\',monospace;font-size:0.62rem">'
+                                f'<span style="color:#8890a1">DSR PROB '
+                                f'<b style="color:{_gc_display}">{_dsr_pct}</b>'
+                                f' <span style="color:#555960">(SR*={_sr_star:.3f})</span></span>'
+                                f'<span style="color:#8890a1">IS SHARPE '
+                                f'<b style="color:#c8c8c8">{_is_str}</b></span>'
+                                f'<span style="color:#8890a1">IS→OOS DECAY '
+                                f'<b style="color:{_dec_col}">{_dec_str}</b></span>'
+                                f'<span style="color:#8890a1">CSCV PBO '
+                                f'<b style="color:{_pbo_col}">{_pbo_str}</b>'
+                                f'<span style="color:#555960"> ({_n_cscv} partitions)</span></span>'
+                                f'<span style="color:#8890a1">HLZ t={_hlz_t_str} vs '
+                                f'<span style="color:#555960">hurdle {_hlz_thr_str}</span> '
+                                f'<b style="color:{_hlz_col}">{_hlz_verdict}</b>'
+                                f'{_agree_str}</span>'
+                                f'<span style="color:#555960">N={n_strategies} '
+                                f'({_prior_tag}) · cross-check only, DSR gates</span>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                            # Avg win / avg loss detail row
+                            _aw = _wfbt.get("avg_win", 0)
+                            _al = _wfbt.get("avg_loss", 0)
+                            _nf = _wfbt.get("n_folds", 1)
+                            _od = _wfbt.get("oos_days", 0)
+                            st.markdown(
+                                f'<div style="display:flex;gap:16px;padding:4px 0 8px;'
+                                f'font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;color:#8890a1">'
+                                f'<span>Avg win <b style="color:#27ae60">{_aw:+.2f}%</b></span>'
+                                f'<span>Avg loss <b style="color:#c0392b">{_al:+.2f}%</b></span>'
+                                f'<span>{_nf} folds · {_od}d OOS · {_wfbt["tc_bps"]}bps TC + {_wfbt["slippage_bps"]}bps slip</span>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                            # Equity curve
+                            _eq = _wfbt.get("equity_curve")
+                            if _eq is not None and len(_eq) > 2:
+                                _eq_profitable = float(_eq.iloc[-1]) >= 100
+                                _eq_color  = "#27ae60" if _eq_profitable else "#c0392b"
+                                _eq_fill   = "rgba(39,174,96,0.10)" if _eq_profitable else "rgba(192,57,43,0.10)"
+                                _fig_eq = go.Figure()
+                                _fig_eq.add_trace(go.Scatter(
+                                    x=list(_eq.index),
+                                    y=list(_eq.values),
+                                    mode="lines",
+                                    line=dict(color=_eq_color, width=1.5),
+                                    fill="tozeroy",
+                                    fillcolor=_eq_fill,
+                                    hovertemplate="%{x|%b %Y}<br>Equity: %{y:.1f}<extra></extra>",
+                                    showlegend=False,
+                                ))
+                                _fig_eq.add_hline(y=100, line_dash="dot", line_color="#555960", line_width=1)
+                                _fig_eq.update_layout(
+                                    template="plotly_dark",
+                                    height=160,
+                                    margin=dict(l=40, r=10, t=10, b=30),
+                                    yaxis=dict(title="Equity (base 100)", tickfont=dict(size=9)),
+                                    xaxis=dict(tickfont=dict(size=9)),
+                                    plot_bgcolor="#0d0d0d",
+                                    paper_bgcolor="#0d0d0d",
+                                )
+                                _chart(_fig_eq)
+
+                            # QC flags
+                            _wf_flags = _wf_qc.get("flags", [])
+                            if _wf_flags:
+                                st.markdown(
+                                    '<div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px 0">'
+                                    + "".join(f'<span class="ti-qc-flag">⚠ {f}</span>' for f in _wf_flags)
+                                    + "</div>",
+                                    unsafe_allow_html=True,
+                                )
+        except Exception:
+            pass
+
         # ── Agent debate thread ───────────────────────────────────────────
         _is_geo_trade = trade.get("generated", False)
         _debate_open  = _is_geo_trade
@@ -1682,14 +2160,25 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     from concurrent.futures import ThreadPoolExecutor
     from src.data.loader import load_fixed_income_returns, load_fx_returns
     with st.spinner("Loading data…"):
-        with ThreadPoolExecutor(max_workers=3) as _ti_pool:
-            _f_ret = _ti_pool.submit(load_returns, start, end)
-            _f_fi  = _ti_pool.submit(load_fixed_income_returns, start, end)
-            _f_fx  = _ti_pool.submit(load_fx_returns, start, end)
+        # load_returns must run on the main Streamlit thread so @st.cache_data
+        # context is available on cold-start cache misses.  fi/fx are lighter
+        # and parallelise safely because they are typically already warm.
         try:
-            eq_r, cmd_r = _f_ret.result()
+            eq_r, cmd_r = load_returns(start, end)
         except Exception:
             eq_r, cmd_r = pd.DataFrame(), pd.DataFrame()
+
+        # Retry once with default date range if the custom range returned empty
+        # (can happen when start/end differ from warmup keys and yfinance is slow).
+        if (eq_r.empty or cmd_r.empty):
+            try:
+                eq_r, cmd_r = load_returns()
+            except Exception:
+                eq_r, cmd_r = pd.DataFrame(), pd.DataFrame()
+
+        with ThreadPoolExecutor(max_workers=2) as _ti_pool:
+            _f_fi = _ti_pool.submit(load_fixed_income_returns, start, end)
+            _f_fx = _ti_pool.submit(load_fx_returns, start, end)
         try:
             _fi_r = _f_fi.result()
         except Exception:
@@ -1713,114 +2202,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     r_name   = _REGIME_NAMES[current]
     r_color  = _REGIME_COLORS[current]
 
-    # ── Conflict-driven candidates ─────────────────────────────────────────
-    generated: list[dict] = []
-    conflict_betas: dict  = {}
-    asset_exposure: dict  = {}
-    try:
-        from src.analysis.trade_generator import generate_conflict_trades, merge_with_library
-        from src.analysis.exposure import score_all_assets
-        from src.analysis.conflict_model import score_all_conflicts
-        _cr  = _ti_cr if _ti_cr else score_all_conflicts()
-        _aa  = score_all_assets()
-        generated = generate_conflict_trades(regime=current, conflict_results=_cr, all_assets=_aa)
-        # Retain full exposure data for ranking and card display
-        asset_exposure = dict(_aa)
-        conflict_betas = {
-            name: {"beta": d["beta"]}
-            for name, d in _aa.items()
-        }
-    except Exception:
-        pass  # silently degrade if exposure/conflict data unavailable
+    # Trade cards removed — the pipeline is the deliverable, not individual strategy scores.
+    active_trades: list[dict] = []
 
-    # ── Merge with static library ──────────────────────────────────────────
-    try:
-        from src.analysis.trade_generator import merge_with_library as _merge
-        all_candidates = _merge(generated, _TRADE_LIBRARY, current)
-    except Exception:
-        all_candidates = list(_TRADE_LIBRARY)
-        for t in all_candidates:
-            t.setdefault("confidence", 0.60)
-            t.setdefault("qc_flags",  [])
-
-    # ── Apply filters ──────────────────────────────────────────────────────
-    try:
-        from src.analysis.trade_filter import apply_filters, build_filter_ui
-        from src.analysis.scenario_state import get_scenario_id
-        _filters      = build_filter_ui(key_prefix="ti")
-        _scenario_id  = get_scenario_id()
-        active_trades = apply_filters(
-            all_candidates,
-            filters=_filters,
-            current_regime=current,
-            current_scenario_id=_scenario_id,
-            conflict_betas=conflict_betas,
-            asset_exposure=asset_exposure,
-        )
-    except Exception:
-        # Fallback: basic regime filter
-        active_trades = [t for t in all_candidates if current in t.get("regime", [current])]
-
-    # ── Re-rank by exposure × confidence composite ─────────────────────────
-    if asset_exposure:
-        def _exposure_rank_key(t: dict) -> float:
-            conf = float(t.get("confidence", 0.5))
-            sas_vals = [asset_exposure[a]["sas"] for a in t.get("assets", []) if a in asset_exposure]
-            avg_sas = (sum(sas_vals) / len(sas_vals)) if sas_vals else 0.0
-            return conf * (1 + avg_sas / 200)
-        active_trades.sort(key=_exposure_rank_key, reverse=True)
-
-    # ── KPI strip ──────────────────────────────────────────────────────────
-    _n_geo  = sum(1 for t in active_trades if t.get("generated"))
-    _n_stat = len(active_trades) - _n_geo
-    _n_bull = sum(1 for t in active_trades if t.get("direction", [""])[0] == "Long")
-    _n_bear = sum(1 for t in active_trades if t.get("direction", [""])[0] == "Short")
-
-    def _ti_kpi(col, label, value, value_color="#e8e8e8", border_color="#1e1e1e"):
-        col.markdown(
-            f'<div class="ti-kpi" style="border-color:{border_color}">'
-            f'<div class="ti-kpi-lbl">{label}</div>'
-            f'<div class="ti-kpi-val" style="color:{value_color}">{value}</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
-    _insuf_note = (
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-        f'color:#e67e22;margin-top:3px">INSUF DATA ({_regime_n_obs}&lt;60 obs)</div>'
-        if _regime_insuf else ""
-    )
-    k1.markdown(
-        f'<div class="ti-kpi" style="border-color:{r_color}">'
-        f'<div class="ti-kpi-lbl">Regime</div>'
-        f'<div class="ti-kpi-val" style="color:{r_color}">{r_name}</div>'
-        + _insuf_note
-        + '</div>',
-        unsafe_allow_html=True,
-    )
-    _ti_kpi(k2, "Avg Corr (60d)",  f"{avg_corr.iloc[-1]:.3f}")
-    _ti_kpi(k3, "Active Ideas",    str(len(active_trades)), "#CFB991")
-    _ti_kpi(k4, "Conflict-Driven", str(_n_geo),  "#e67e22")
-    _ti_kpi(k5, "Long-First",      str(_n_bull), "#27ae60")
-    _ti_kpi(k6, "Short-First",     str(_n_bear), "#c0392b")
-
-    if not active_trades:
-        st.info(f"No trade ideas pass current filters for {r_name} regime.")
-        st.stop()
-
-    st.markdown(
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
-        f'color:#8890a1;margin-bottom:.6rem">'
-        f'<b style="color:#e8e9ed">{len(active_trades)}</b> ideas — '
-        f'<b style="color:#e67e22">{_n_geo}</b> conflict-driven · '
-        f'<b style="color:#8890a1">{_n_stat}</b> static · '
-        f'sorted by exposure × confidence · regime: '
-        f'<b style="color:{r_color}">{r_name}</b></p>',
-        unsafe_allow_html=True,
-    )
-
-    # Expand backtest universe to include Fixed Income + FX
+    # Extend returns to include Fixed Income + FX (used by Integrity Audit and Multiple Testing)
     _extra_frames: list[pd.DataFrame] = []
     if not _fi_r.empty:
         _extra_frames.append(_fi_r)
@@ -1828,18 +2213,876 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _extra_frames.append(_fx_r)
     all_r_concat = pd.concat([eq_r, cmd_r] + _extra_frames, axis=1)
 
-    _thread(
-        "Conflict-driven ideas are generated live from current CIS/TPS/SAS scores. "
-        "Static ideas fire when the regime matches their structural trigger. "
-        "Both sets are QC-graded and filtered by the active filter settings above."
-    )
+    # Effective N for DSR and HLZ multiple-testing gates
+    _RAW_N = 18
+    _effective_n: int = st.session_state.get("_effective_n", 9)
 
-    # ── 2-column card grid ──────────────────────────────────────────────────
-    for row_start in range(0, len(active_trades), 2):
-        pair = active_trades[row_start:row_start + 2]
-        card_cols = st.columns(len(pair), gap="medium")
-        for col, (trade, idx) in zip(card_cols, [(t, row_start + i) for i, t in enumerate(pair)]):
-            _render_trade_card(col, trade, all_r_concat, current, idx, asset_exposure or None, regimes=regimes)
+    # ── Data Integrity Audit ────────────────────────────────────────────────
+    with st.expander("Data Integrity Audit — Leg Coverage & Strategy Correlation", expanded=False):
+        _DI_M = "font-family:'JetBrains Mono',monospace;"
+        st.markdown(
+            f'<p style="{_DI_M}font-size:0.60rem;color:#8890a1;margin-bottom:.8rem">'
+            'Checks every strategy\'s declared legs against the loaded return data. '
+            'Strategies with missing legs are mislabeled — their backtest results are excluded. '
+            'The correlation matrix identifies hidden duplicate bets.</p>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Leg coverage table ──────────────────────────────────────────────
+        _avail_cols = set(all_r_concat.columns)
+        _audit_rows = []
+        for _tr in _TRADE_LIBRARY:
+            _declared  = _tr.get("assets", [])
+            _present   = [a for a in _declared if a in _avail_cols]
+            _dropped   = [a for a in _declared if a not in _avail_cols]
+            if _dropped and not _present:
+                _status = "UNGRADEABLE"
+            elif _dropped:
+                _status = "MISLABELED"
+            else:
+                _status = "OK"
+            _audit_rows.append({
+                "Strategy":    _tr["name"],
+                "Declared":    ", ".join(_declared),
+                "Present":     ", ".join(_present) if _present else "—",
+                "Dropped":     ", ".join(_dropped) if _dropped else "—",
+                "Status":      _status,
+            })
+
+        _audit_df = pd.DataFrame(_audit_rows)
+        _n_ok      = (_audit_df["Status"] == "OK").sum()
+        _n_mis     = (_audit_df["Status"] == "MISLABELED").sum()
+        _n_ung     = (_audit_df["Status"] == "UNGRADEABLE").sum()
+
+        st.markdown(
+            f'<p style="{_DI_M}font-size:0.65rem;color:#e8e9ed;margin-bottom:.4rem">'
+            f'<b style="color:#27ae60">{_n_ok}</b> strategies have all legs · '
+            f'<b style="color:#e67e22">{_n_mis}</b> mislabeled (partial data) · '
+            f'<b style="color:#c0392b">{_n_ung}</b> ungradeable (0 legs)</p>',
+            unsafe_allow_html=True,
+        )
+
+        def _status_color(s):
+            if s == "UNGRADEABLE":
+                return ["background-color:#1a0000;color:#e74c3c"] * len(s.index)
+            if s == "MISLABELED":
+                return ["background-color:#1a0d00;color:#e67e22"] * len(s.index)
+            return [""] * len(s.index)
+
+        st.dataframe(
+            _audit_df.style.apply(
+                lambda row: (
+                    ["background-color:#1a0000;color:#e74c3c"] * len(row) if row["Status"] == "UNGRADEABLE"
+                    else ["background-color:#1a0d00;color:#e67e22"] * len(row) if row["Status"] == "MISLABELED"
+                    else [""] * len(row)
+                ),
+                axis=1,
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        # ── Pairwise correlation matrix ─────────────────────────────────────
+        st.markdown(
+            f'<p style="{_DI_M}font-size:0.60rem;color:#8890a1;margin-top:1rem;margin-bottom:.4rem">'
+            'Pairwise correlation of daily equity-curve returns across all strategies '
+            '(OOS walk-forward). Clusters above r ≈ 0.90 are hidden duplicates — '
+            'they count as 1 distinct bet for DSR multiple-testing correction.</p>',
+            unsafe_allow_html=True,
+        )
+        if avg_corr is not None:
+            _curves: dict[str, pd.Series] = {}
+            for _tr in _TRADE_LIBRARY:
+                try:
+                    _lw  = _compute_leg_weights(_tr, asset_exposure or {})
+                    _lwt = tuple(_lw) if _lw else None
+                    _r   = _wf_backtest_trade(
+                        all_r_concat, avg_corr,
+                        trade_name=_tr["name"],
+                        trigger_regimes=_tr.get("regime", [2, 3]),
+                        assets=_tr.get("assets", []),
+                        directions=_tr.get("direction", []),
+                        holding_days=_parse_holding_days(_tr),
+                        leg_weights=_lwt,
+                        avg_corr_n=len(avg_corr),
+                    )
+                    _ec = _r.get("equity_curve")
+                    if _ec is not None and len(_ec) > 10 and _r.get("n_trades", 0) >= 3:
+                        _short_name = _tr["name"].split(" (")[0][:35]
+                        _curves[_short_name] = _ec.pct_change().dropna()
+                except Exception:
+                    pass
+
+            if len(_curves) >= 2:
+                import plotly.express as px
+                _ec_df   = pd.DataFrame(_curves).dropna(how="all")
+                _corr_m  = _ec_df.corr().round(2)
+                _n_names = len(_corr_m)
+
+                # Cluster report: pairs above r = 0.90
+                _clusters: list[str] = []
+                _seen: set = set()
+                for _i, _ni in enumerate(_corr_m.columns):
+                    for _j, _nj in enumerate(_corr_m.columns):
+                        if _j <= _i:
+                            continue
+                        _rv = float(_corr_m.loc[_ni, _nj])
+                        if _rv >= 0.90:
+                            _pair_key = (min(_ni, _nj), max(_ni, _nj))
+                            if _pair_key not in _seen:
+                                _seen.add(_pair_key)
+                                _clusters.append(f"r={_rv:.2f}: **{_ni}** ↔ **{_nj}**")
+
+                if _clusters:
+                    st.markdown(
+                        f'<div style="background:#1a1200;border:1px solid #e67e22;'
+                        f'border-radius:4px;padding:8px 12px;margin-bottom:.6rem;'
+                        f'{_DI_M}font-size:0.63rem;color:#e67e22">'
+                        f'<b>HIGH-CORRELATION CLUSTERS (r ≥ 0.90) — count as 1 distinct bet each:</b><br>'
+                        + "<br>".join(_clusters)
+                        + "</div>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f'<p style="{_DI_M}font-size:0.63rem;color:#27ae60">'
+                        'No clusters above r = 0.90 detected among gradeable strategies.</p>',
+                        unsafe_allow_html=True,
+                    )
+
+                _fig_corr = px.imshow(
+                    _corr_m,
+                    color_continuous_scale="RdYlGn",
+                    zmin=-1, zmax=1,
+                    text_auto=".2f",
+                    title="Strategy Pairwise Correlation (OOS Daily Equity-Curve Returns)",
+                    aspect="auto",
+                )
+                _fig_corr.update_layout(
+                    height=max(400, _n_names * 28),
+                    font=dict(family="JetBrains Mono", size=9),
+                    paper_bgcolor="#080808", plot_bgcolor="#080808",
+                    title_font=dict(size=10, color="#8890a1"),
+                    coloraxis_colorbar=dict(tickfont=dict(size=8)),
+                    margin=dict(l=0, r=0, t=40, b=0),
+                )
+                st.plotly_chart(_fig_corr, use_container_width=True)
+
+                # Effective distinct-bet count
+                _gradeable = sum(
+                    1 for _tr in _TRADE_LIBRARY
+                    if not [a for a in _tr.get("assets", []) if a not in _avail_cols]
+                    and _tr["name"].split(" (")[0][:35] in _curves
+                )
+                _n_cluster_pairs = len(_seen)
+                _effective_n = _gradeable - _n_cluster_pairs
+                st.markdown(
+                    f'<p style="{_DI_M}font-size:0.65rem;color:#e8e9ed;margin-top:.6rem">'
+                    f'Gradeable strategies: <b>{_gradeable}</b> · '
+                    f'Hidden duplicate pairs: <b>{_n_cluster_pairs}</b> · '
+                    f'Effective distinct bets for DSR N: '
+                    f'<b style="color:#CFB991">{_effective_n}</b></p>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.caption("Insufficient gradeable strategies to compute correlation matrix.")
+        else:
+            st.caption("avg_corr unavailable — cannot run pairwise correlation.")
+
+    # ── Multiple Testing Report ─────────────────────────────────────────────
+    # Reports effective N vs raw N, per-strategy DSR vs HLZ cross-check,
+    # and flags disagreements. Opening this panel also updates session_state
+    # so subsequent rerenders use the dynamic effective N in card grades.
+    with st.expander(
+        "Multiple Testing Report — DSR vs HLZ Cross-Check (Effective N)",
+        expanded=False,
+    ):
+        from src.analysis.backtest import (
+            compute_effective_n as _compute_eff_n,
+            hlz_tstat_threshold as _hlz_threshold_fn,
+            _N_LIBRARY_STRATEGIES as _STATIC_N,
+        )
+        _MT_M = "font-family:'JetBrains Mono',monospace;"
+        st.markdown(
+            f'<p style="{_MT_M}font-size:0.60rem;color:#8890a1;margin-bottom:.8rem">'
+            'DSR is the single grading gate — it already corrects for N via the expected maximum SR under '
+            'H₀ (Bailey &amp; Lopez de Prado 2014). '
+            'HLZ (Harvey, Liu &amp; Zhu 2016) BHY-adjusted t-hurdle is shown as a cross-check only. '
+            'Disagreements are flagged for manual review. '
+            'Effective N = distinct bets after r &gt; 0.90 return-series collapse (union-find). '
+            'Generated candidates use raw N (penalty for implicit grid search).</p>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Step 1: collect all walk-forward results from cache ─────────────
+        _mt_results: dict[str, dict] = {}
+        _avail_cols_mt = set(all_r_concat.columns)
+        for _tr in _TRADE_LIBRARY:
+            _missing = [a for a in _tr.get("assets", []) if a not in _avail_cols_mt]
+            if _missing:
+                continue   # ungradeable — skip for N computation
+            try:
+                _lw  = _compute_leg_weights(_tr, asset_exposure or {})
+                _lwt = tuple(_lw) if _lw else None
+                _r   = _wf_backtest_trade(
+                    all_r_concat, avg_corr,
+                    trade_name=_tr["name"],
+                    trigger_regimes=_tr.get("regime", [2, 3]),
+                    assets=_tr.get("assets", []),
+                    directions=_tr.get("direction", []),
+                    holding_days=_parse_holding_days(_tr),
+                    leg_weights=_lwt,
+                    avg_corr_n=len(avg_corr),
+                    n_strategies=_STATIC_N,   # placeholder; will re-grade below
+                    is_economic_prior=not bool(_tr.get("generated", False)),
+                )
+                if _r.get("n_trades", 0) >= 3 and "error" not in _r:
+                    _mt_results[_tr["name"]] = _r
+            except Exception:
+                pass
+
+        # ── Step 2: compute effective N and update session state ─────────────
+        _eff_n, _cluster_pairs = _compute_eff_n(_mt_results, corr_threshold=0.90)
+        _raw_n_gradeable       = len(_mt_results)
+        if _eff_n != st.session_state.get("_effective_n"):
+            st.session_state["_effective_n"] = _eff_n
+
+        st.markdown(
+            f'<div style="{_MT_M}font-size:0.70rem;color:#e8e9ed;margin-bottom:.6rem">'
+            f'Raw N (declared): <b style="color:#CFB991">{_RAW_N}</b> · '
+            f'Gradeable (all legs present): <b style="color:#CFB991">{_raw_n_gradeable}</b> · '
+            f'Effective N (r&gt;0.90 collapse): <b style="color:#27ae60">{_eff_n}</b>'
+            + (f' · <b style="color:#e67e22">{len(_cluster_pairs)} duplicate pair(s) collapsed</b>'
+               if _cluster_pairs else '')
+            + '</div>',
+            unsafe_allow_html=True,
+        )
+
+        if _cluster_pairs:
+            st.markdown(
+                f'<div style="background:#1a1200;border:1px solid #e67e22;border-radius:4px;'
+                f'padding:6px 10px;margin-bottom:.6rem;{_MT_M}font-size:0.62rem;color:#e67e22">'
+                + "<br>".join(
+                    f'r={r:.3f}: <b>{a}</b> ↔ <b>{b}</b> (count as 1 bet)'
+                    for a, b, r in sorted(_cluster_pairs, key=lambda x: -x[2])
+                )
+                + '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Step 3: re-grade each strategy with dynamic effective N ─────────
+        _report_rows = []
+        for _tr in _TRADE_LIBRARY:
+            _is_gen    = bool(_tr.get("generated", False))
+            _n_used    = _RAW_N if _is_gen else _eff_n
+            _is_prior  = not _is_gen
+            _missing   = [a for a in _tr.get("assets", []) if a not in _avail_cols_mt]
+            if _missing:
+                _report_rows.append({
+                    "Strategy": _tr["name"][:45],
+                    "Prior":    "THEORY",
+                    "N used":   "—",
+                    "DSR %":    "—",
+                    "Grade":    "—",
+                    "t-stat":   "—",
+                    "HLZ hurdle": "—",
+                    "HLZ":      "MISSING",
+                    "Agree?":   "—",
+                })
+                continue
+            _base = _mt_results.get(_tr["name"])
+            if _base is None:
+                continue
+            # Re-grade with dynamic N (pure function — cheap)
+            from src.analysis.backtest import qc_grade_backtest as _regrade
+            _qc = _regrade(_base, n_strategies=_n_used, is_economic_prior=_is_prior)
+            _hlz_p = _qc.get("hlz_pass")
+            _ag    = _qc.get("hlz_agree_dsr")
+            _report_rows.append({
+                "Strategy":   _tr["name"][:45],
+                "Prior":      "THEORY" if _is_prior else "GRID",
+                "N used":     str(_n_used),
+                "DSR %":      f'{_qc.get("dsr_prob", 0):.0%}',
+                "Grade":      _qc.get("grade", "—"),
+                "t-stat":     f'{_qc["hlz_tstat"]:.2f}' if _qc.get("hlz_tstat") is not None else "n/a",
+                "HLZ hurdle": f'{_qc.get("hlz_threshold", 0):.2f}',
+                "HLZ":        ("PASS" if _hlz_p is True else "FAIL" if _hlz_p is False else "n/a"),
+                "Agree?":     ("✓" if _ag is True else "⚠ REVIEW" if _ag is False else "—"),
+            })
+
+        if _report_rows:
+            _mt_df = pd.DataFrame(_report_rows)
+
+            def _mt_style(row):
+                base = [""] * len(row)
+                if row.get("Agree?") == "⚠ REVIEW":
+                    base = ["background-color:#1a1200;color:#e67e22"] * len(row)
+                elif row.get("HLZ") == "MISSING":
+                    base = ["background-color:#0d0d0d;color:#555960"] * len(row)
+                elif row.get("Grade") in ("A", "B"):
+                    base = ["background-color:#0a1a0a"] * len(row)
+                elif row.get("Grade") in ("F",):
+                    base = ["background-color:#0d0000"] * len(row)
+                return base
+
+            st.dataframe(
+                _mt_df.style.apply(_mt_style, axis=1),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            # Count disagreements
+            _n_disagree = sum(1 for r in _report_rows if r.get("Agree?") == "⚠ REVIEW")
+            _n_agree    = sum(1 for r in _report_rows if r.get("Agree?") == "✓")
+            st.markdown(
+                f'<p style="{_MT_M}font-size:0.65rem;color:#8890a1;margin-top:.4rem">'
+                f'<b style="color:#27ae60">{_n_agree}</b> DSR/HLZ agree · '
+                f'<b style="color:{"#e67e22" if _n_disagree else "#27ae60"}">'
+                f'{_n_disagree}</b> disagree (manual review recommended) · '
+                f'HLZ cross-check only — DSR is the binding grade criterion'
+                f'</p>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("No gradeable strategies to report.")
+
+    # ── Thesis Pipeline ─────────────────────────────────────────────────────
+    with st.expander(
+        "Thesis Pipeline — 5-Stage Economic Mechanism Validation",
+        expanded=False,
+    ):
+        _TP_M = "font-family:'JetBrains Mono',monospace;"
+        _TP_S = "font-family:'DM Sans',sans-serif;"
+        _TP_GRADE_COLOR = {"A": "#27ae60", "B": "#2980b9", "C": "#e67e22",
+                           "D": "#e74c3c", "F": "#c0392b",
+                           "IE": "#8e44ad",
+                           "MT": "#16a085"}
+        import plotly.graph_objects as _go_tp
+
+        # ── PART 1: Stage Gate Methodology ──────────────────────────────────
+        st.markdown(
+            f'<p style="{_TP_M}font-size:0.58rem;color:#8890a1;margin-bottom:1rem">'
+            'The five-stage pipeline is the deliverable. Each gate is a binary contract: '
+            'a thesis that fails any gate cannot advance. The pipeline is tested as a '
+            'decision rule — does its admit/reject classification predict out-of-sample '
+            'returns? Individual trade P&amp;L is not the output.</p>',
+            unsafe_allow_html=True,
+        )
+
+        _stage_defs = [
+            ("#CFB991", "STAGE 1 — THESIS",
+             "Researcher constructs shock → TPS channel → predicted sign → holding horizon from first "
+             "principles. No optimisation. The economic narrative must be stated before any data is viewed. "
+             "Gate: shock is named, ≥1 TPS channel specified, predicted direction signed per leg, horizon set."),
+            ("#2980b9", "STAGE 2 — SIGNAL",
+             "Every declared leg must be present in the loaded return data. Any missing leg "
+             "is a hard stop — the thesis cannot be tested and the researcher must revise the leg specification. "
+             "Gate: all assets in return index. Fail-loud: never silently drop a leg."),
+            ("#27ae60", "STAGE 3 — PRIOR-ALIGNED CONFIRMATION",
+             "LP-IRF (local projection) or regime-conditional returns confirm that the data's sign "
+             "matches the predicted sign from Stage 1 at the stated horizon. "
+             "Outcomes: CONFIRM (sign + significance), IE (sign matched but n &lt; 20 — insufficient evidence, "
+             "not a rejection), REJECT (sign contradicted). "
+             "Gate: sign matched AND significant at 10%."),
+            ("#e67e22", "STAGE 4 — SIZING",
+             "Vol-scaled allocation: target 10% annual vol ÷ estimated strategy vol → base weight. "
+             "IRF scale factor applied (larger coef at horizon → larger weight). "
+             "Capped at 20% per conflict source. Gate: sizing computed; output is final weight %."),
+            ("#8e44ad", "STAGE 5 — GRADE",
+             "Deflated Sharpe Ratio (DSR) gate on per-trade Sharpe (de-annualised, Bailey &amp; Lopez de Prado 2014). "
+             "DSR ≥ 0.50 required. If Stage 3 confirmed AND DSR &lt; 0.50 → MT (mechanism real, not tradeable: "
+             "transmission genuine but too weak or already priced). "
+             "If n &lt; 20 AND sign matched → IE. If sign contradicted → REJECT. "
+             "Grade A/B/C/D from DSR: A ≥ 0.85, B ≥ 0.70, C ≥ 0.55, D ≥ 0.50."),
+        ]
+        _stage_cols = st.columns(5, gap="small")
+        for _sci, (_sc, _sh, _st) in enumerate(_stage_defs):
+            with _stage_cols[_sci]:
+                st.markdown(
+                    f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                    f'border-top:3px solid {_sc};border-radius:4px;padding:.6rem .7rem;height:100%">'
+                    f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;color:{_sc};'
+                    f'margin-bottom:6px">{_sh}</div>'
+                    f'<div style="{_TP_S}font-size:0.60rem;color:#a8a8b8;line-height:1.55">{_st}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown("---")
+
+        # ── PART 2: Pipeline Validation ──────────────────────────────────────
+        st.markdown(
+            f'<p style="{_TP_M}font-size:0.58rem;font-weight:700;letter-spacing:.10em;'
+            f'color:#CFB991;margin-bottom:.3rem">WALK-FORWARD PIPELINE VALIDATION</p>'
+            f'<p style="{_TP_S}font-size:0.65rem;color:#8890a1;margin-bottom:.6rem;'
+            f'line-height:1.6">'
+            f'Tests the five-stage pipeline as a decision rule over a 3-year rolling training window '
+            f'(756 days) with 1-quarter test steps (63 days). At each window the pipeline classifies '
+            f'each thesis as admit / mt / ie / reject using only past data. The three required outputs: '
+            f'(1) admitted vs rejected OOS gap, (2) admitted vs random gap (500 draws), '
+            f'(3) MT and IE bucket means as labeled. The pipeline passes only if gaps 1 and 2 are positive.</p>',
+            unsafe_allow_html=True,
+        )
+
+        _pv_key = "pipeline_validation_result"
+        _pv_col1, _pv_col2 = st.columns([1, 4])
+        with _pv_col1:
+            _run_pv = st.button(
+                "Run Validation", key="run_pipeline_val", type="primary",
+                help="First run: ~2-4 minutes (Stage 3 on each training window). Cached for 24h.",
+            )
+        with _pv_col2:
+            st.markdown(
+                f'<span style="{_TP_M}font-size:0.57rem;color:#555960">'
+                f'First run takes 2-4 min — Stage 3 on each walk-forward window. '
+                f'Result cached 24h.</span>',
+                unsafe_allow_html=True,
+            )
+
+        if _run_pv:
+            with st.spinner("Running walk-forward pipeline validation… (Stage 3 × windows)"):
+                try:
+                    _pv = _run_pipeline_validator_cached(
+                        all_r_concat, regimes,
+                        train_days=756, test_days=63,
+                        n_strategies=_effective_n,
+                        n_random_trials=500,
+                    )
+                    st.session_state[_pv_key] = _pv
+                except Exception as _pv_exc:
+                    st.error(f"Validation error: {_pv_exc}")
+                    _pv = None
+        else:
+            _pv = st.session_state.get(_pv_key)
+
+        if _pv is not None:
+            _pv_pass = _pv.get("passed", False)
+            _pv_color = "#27ae60" if _pv_pass else "#c0392b"
+            _pv_label = "PIPELINE PASSES" if _pv_pass else "PIPELINE FAILS (gaps not both positive)"
+
+            st.markdown(
+                f'<div style="background:#080808;border:2px solid {_pv_color};'
+                f'border-radius:6px;padding:.8rem 1.2rem;margin-bottom:.8rem">'
+                f'<div style="{_TP_M}font-size:0.65rem;font-weight:700;color:{_pv_color}">'
+                f'{_pv_label}</div>'
+                f'<div style="{_TP_M}font-size:0.58rem;color:#8890a1;margin-top:4px">'
+                f'{_pv["n_windows"]} windows · {_pv["n_theses"]} theses · '
+                f'756d train / 63d test</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Gap 1 and Gap 2
+            _g1 = _pv.get("admitted_vs_rejected_gap")
+            _g1p = _pv.get("admitted_vs_rejected_pval")
+            _g2 = _pv.get("admitted_vs_random_gap")
+            _g2p = _pv.get("random_p_value")
+
+            _gap_cols = st.columns(2, gap="medium")
+            for _gc_idx, (_gtitle, _gval, _gpval, _gdesc) in enumerate([
+                ("GAP 1 — Admitted vs Rejected",
+                 _g1, _g1p,
+                 "Mean OOS return of admitted theses minus rejected theses (%). "
+                 "Must be positive: the gates must discriminate."),
+                ("GAP 2 — Admitted vs Random",
+                 _g2, _g2p,
+                 "Mean OOS return of admitted theses minus 500 random-draw baselines "
+                 "(same N selected per window). Must be positive: gates must beat luck."),
+            ]):
+                with _gap_cols[_gc_idx]:
+                    _gval_str = (f'{_gval:+.2f}%' if _gval is not None else 'n/a')
+                    _gpval_str = (f'p={_gpval:.3f}' if _gpval is not None else '')
+                    _gpass = _gval is not None and _gval > 0
+                    _gcol  = "#27ae60" if _gpass else "#c0392b" if _gval is not None else "#555960"
+                    st.markdown(
+                        f'<div style="background:#090909;border:1px solid #1e1e1e;'
+                        f'border-left:3px solid {_gcol};border-radius:4px;padding:.7rem 1rem">'
+                        f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                        f'color:#8890a1;margin-bottom:5px">{_gtitle}</div>'
+                        f'<div style="{_TP_M}font-size:1.3rem;font-weight:700;color:{_gcol}">'
+                        f'{_gval_str}</div>'
+                        f'<div style="{_TP_M}font-size:0.58rem;color:#555960;margin-top:2px">'
+                        f'{_gpval_str}</div>'
+                        f'<div style="{_TP_S}font-size:0.60rem;color:#8890a1;'
+                        f'margin-top:6px;line-height:1.5">{_gdesc}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+            # Bucket behavior
+            st.markdown(
+                f'<p style="{_TP_M}font-size:6px;letter-spacing:.12em;color:#8890a1;'
+                f'margin:1rem 0 .4rem">BUCKET BEHAVIOR — OOS MEAN RETURN (%)</p>',
+                unsafe_allow_html=True,
+            )
+            _bkt_labels = {
+                "admit":  ("ADMIT",  "#27ae60", "S3 confirmed + DSR ≥ 0.50"),
+                "mt":     ("MT",     "#16a085", "Mechanism real, not tradeable (S3 ✓ + DSR < 0.50)"),
+                "ie":     ("IE",     "#8e44ad", "Insufficient evidence (sign matched, n < 20)"),
+                "reject": ("REJECT", "#c0392b", "S3 not confirmed or wrong OOS sign"),
+            }
+            _bkt_cols = st.columns(4, gap="small")
+            for _bi, (_bkey, (_blabel, _bcol, _bdesc)) in enumerate(_bkt_labels.items()):
+                with _bkt_cols[_bi]:
+                    _b = _pv["buckets"].get(_bkey, {})
+                    _bmean = _b.get("mean")
+                    _bmean_str = (f'{_bmean:+.2f}%' if _bmean is not None else '—')
+                    _bstd  = _b.get("std")
+                    _bstd_str = (f'±{_bstd:.2f}%' if _bstd is not None else '')
+                    _bn = _b.get("n_obs", 0)
+                    st.markdown(
+                        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+                        f'border-top:2px solid {_bcol};border-radius:4px;padding:.55rem .7rem">'
+                        f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                        f'color:{_bcol};margin-bottom:4px">{_blabel}</div>'
+                        f'<div style="{_TP_M}font-size:1.0rem;font-weight:700;color:{_bcol}">'
+                        f'{_bmean_str}</div>'
+                        f'<div style="{_TP_M}font-size:0.55rem;color:#555960">'
+                        f'{_bstd_str}  n={_bn}</div>'
+                        f'<div style="{_TP_S}font-size:0.55rem;color:#555960;'
+                        f'margin-top:4px;line-height:1.4">{_bdesc}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+            # Random distribution histogram
+            _rdist = _pv.get("random_distribution", [])
+            if _rdist and _g2 is not None:
+                import numpy as _np_tp
+                _fig_rdist = _go_tp.Figure()
+                _fig_rdist.add_trace(_go_tp.Histogram(
+                    x=_rdist, nbinsx=30,
+                    marker_color="#2980b9", opacity=0.7,
+                    name="Random admission",
+                ))
+                _adm_mean_oos = (_g2 + float(_np_tp.mean(_rdist))) if _rdist else None
+                if _adm_mean_oos is not None:
+                    _fig_rdist.add_vline(
+                        x=_adm_mean_oos, line_color="#CFB991", line_dash="dash", line_width=2,
+                        annotation_text="Pipeline", annotation_font=dict(size=8, color="#CFB991"),
+                    )
+                _fig_rdist.update_layout(
+                    title="Gap 2: Pipeline vs Random Admission (500 draws)",
+                    height=200, margin=dict(l=0, r=0, t=28, b=0),
+                    paper_bgcolor="#080808", plot_bgcolor="#080808",
+                    font=dict(family="JetBrains Mono", size=8),
+                    xaxis=dict(title="Mean OOS return (%)", color="#555960", gridcolor="#1e1e1e"),
+                    yaxis=dict(title="Count", color="#555960", gridcolor="#1e1e1e"),
+                    title_font=dict(size=9, color="#8890a1"),
+                    showlegend=False,
+                )
+                st.plotly_chart(_fig_rdist, use_container_width=True)
+
+        st.markdown("---")
+
+        # ── PART 3: Worked Example — Pipeline decision trace for one thesis ───
+        st.markdown(
+            f'<p style="{_TP_M}font-size:0.58rem;font-weight:700;letter-spacing:.10em;'
+            f'color:#CFB991;margin-bottom:.3rem">WORKED EXAMPLE — PIPELINE DECISION TRACE</p>'
+            f'<p style="{_TP_S}font-size:0.65rem;color:#8890a1;margin-bottom:.6rem;'
+            f'line-height:1.6">'
+            f'Thesis: Iran conflict → Strait of Hormuz → WTI crude supply shock → S&amp;P 500 margin '
+            f'compression. Left: the mechanism narrative and Stage 3 confirmation result (how the pipeline '
+            f'reads the data). Right: the pipeline\'s admit/reject/MT/IE decision at each walk-forward window '
+            f'and the OOS return that followed — this is approach-testing, not trade performance.</p>',
+            unsafe_allow_html=True,
+        )
+
+        # Worked example thesis spec (constructed inline, not from a catalogue)
+        _WE_NAME    = "Long WTI Crude / Short S&P 500 (Iran / Hormuz)"
+        _WE_SHOCK   = ("Iran conflict escalation → Strait of Hormuz partial or full closure → "
+                       "OPEC+ supply disruption → WTI spot spike. S&amp;P 500 sectors with high "
+                       "energy input costs (consumer discretionary, industrials, airlines) face "
+                       "immediate margin compression. The transmission is via input-cost inflation, "
+                       "not demand destruction.")
+        _WE_CHANNELS = ["oil_gas", "chokepoint", "equity_sector", "inflation"]
+        _WE_CONFLICT = "iran_conflict"
+        _WE_CHOKEPOINT = "Strait of Hormuz"
+        _WE_PRED    = {"WTI Crude Oil": +1, "S&P 500": -1}
+        _WE_HORIZON = 20
+        _WE_PERSIST = ("WTI price spikes from supply shocks are not quickly demand-destroyed at "
+                       "short horizons — consumption is inelastic for 2-4 weeks. Equity margin "
+                       "compression persists until the next earnings revision cycle (~6-8 weeks). "
+                       "The Brent-WTI spread widening also signals physical tightness independent "
+                       "of financial positioning.")
+        _WE_ASSETS  = ["WTI Crude Oil", "S&P 500"]
+        _WE_DIRS    = ["Long", "Short"]
+        _WE_REGIME  = [1, 2]
+
+        _we_col1, _we_col2 = st.columns([1, 1], gap="medium")
+
+        with _we_col1:
+            # Stage 1
+            st.markdown(
+                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+                f'border-left:3px solid #CFB991;border-radius:4px;'
+                f'padding:.7rem 1rem;margin-bottom:.5rem">'
+                f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                f'color:#CFB991;margin-bottom:6px">STAGE 1 — THESIS ✓</div>'
+                f'<div style="{_TP_S}font-size:0.68rem;color:#e8e9ed;line-height:1.6">'
+                f'<b>Shock:</b> {_WE_SHOCK}<br>'
+                f'<b>Channels:</b> {", ".join(_WE_CHANNELS)}<br>'
+                f'<b>Conflict:</b> {_WE_CONFLICT}<br>'
+                f'<b>Chokepoint:</b> {_WE_CHOKEPOINT}<br>'
+                f'<b>Horizon:</b> {_WE_HORIZON} trading days<br>'
+                f'<b>Persistence:</b> {_WE_PERSIST}'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Stage 2
+            _we_s2_ok = all(a in set(all_r_concat.columns) for a in _WE_ASSETS)
+            _we_s2_color = "#27ae60" if _we_s2_ok else "#c0392b"
+            _we_leg_str = " · ".join(
+                f'<span style="color:{"#27ae60" if d=="Long" else "#c0392b"}">{d}</span> '
+                f'{a} ({"+" if _WE_PRED.get(a,0)>0 else "−"}1)'
+                for a, d in zip(_WE_ASSETS, _WE_DIRS)
+            )
+            st.markdown(
+                f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+                f'border-left:3px solid {_we_s2_color};border-radius:4px;'
+                f'padding:.6rem 1rem;margin-bottom:.5rem">'
+                f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                f'color:{_we_s2_color};margin-bottom:5px">'
+                f'STAGE 2 — SIGNAL {"✓" if _we_s2_ok else "✗"}</div>'
+                f'<div style="{_TP_S}font-size:0.68rem;color:#c8c8c8">{_we_leg_str}</div>'
+                f'<div style="{_TP_M}font-size:0.58rem;color:{_we_s2_color};margin-top:4px">'
+                f'{"All legs present in return data." if _we_s2_ok else "Missing legs — thesis untestable."}'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Stage 3 (using cached computation on full dataset)
+            if _we_s2_ok:
+                _we_pred_items = tuple(sorted(_WE_PRED.items()))
+                try:
+                    _we_s3d = _thesis_stage3_cached(
+                        strat_name=_WE_NAME,
+                        conflict_id=_WE_CONFLICT,
+                        regime_list=tuple(_WE_REGIME),
+                        assets=tuple(_WE_ASSETS),
+                        directions=tuple(_WE_DIRS),
+                        predicted_sign_items=_we_pred_items,
+                        horizon_days=_WE_HORIZON,
+                        _all_r=all_r_concat,
+                        _regimes=regimes,
+                    )
+                except Exception as _e:
+                    _we_s3d = {
+                        "stage_passed": False, "sign_matched": False, "track": "error",
+                        "confirmation_score": 0.0, "per_leg": {}, "irf_df_records": None,
+                        "regime_stats": None, "rejection_reason": str(_e),
+                    }
+                _we_s3_ok   = bool(_we_s3d.get("stage_passed", False))
+                _we_s3_sign = bool(_we_s3d.get("sign_matched", False))
+                _we_track   = _we_s3d.get("track", "—")
+                _we_score   = float(_we_s3d.get("confirmation_score", 0.0))
+                _we_s3_color = "#27ae60" if _we_s3_ok else "#e67e22"
+                _we_per_leg = _we_s3d.get("per_leg", {})
+                _we_leg_rows = "".join(
+                    f'<tr><td style="color:#c8c8c8;padding-right:8px">{_a}</td>'
+                    f'<td style="color:{"#27ae60" if _v.get("matched_sign") else "#c0392b"}">'
+                    f'{"✓" if _v.get("matched_sign") else "✗"} sign</td>'
+                    f'<td style="color:{"#27ae60" if _v.get("significant") else "#8890a1"}">'
+                    f'{"sig" if _v.get("significant") else "n.s."}</td>'
+                    + (f'<td style="color:#8890a1">{_v.get("irf_coef","")}</td>'
+                       if _we_track.startswith("lp") else
+                       f'<td style="color:#8890a1">{_v.get("mean_ret","—")}%</td>')
+                    + '</tr>'
+                    for _a, _v in _we_per_leg.items()
+                )
+                if _we_s3_ok:
+                    _we_s3_verdict = f"CONFIRMED ({_we_score:.0%} legs)"
+                elif _we_s3_sign:
+                    _we_s3_verdict = f"SIGN MATCHED, NOT SIGNIFICANT — IE if n &lt; 20"
+                else:
+                    _we_s3_verdict = "REJECTED — predicted sign not matched"
+                st.markdown(
+                    f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
+                    f'border-left:3px solid {_we_s3_color};border-radius:4px;'
+                    f'padding:.6rem 1rem;margin-bottom:.5rem">'
+                    f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                    f'color:{_we_s3_color};margin-bottom:5px">'
+                    f'STAGE 3 — CONFIRMATION ({_we_track.upper()}) · {_we_s3_verdict}</div>'
+                    + (f'<table style="{_TP_M}font-size:0.60rem;border-collapse:collapse">'
+                       f'<tr><th style="color:#555960;text-align:left">Leg</th>'
+                       f'<th style="color:#555960">Sign</th>'
+                       f'<th style="color:#555960">Sig</th>'
+                       f'<th style="color:#555960">{"IRF coef" if _we_track.startswith("lp") else "Regime ret"}</th></tr>'
+                       + _we_leg_rows + '</table>'
+                       if _we_leg_rows else
+                       f'<div style="{_TP_S}font-size:0.63rem;color:#8890a1">'
+                       f'{_we_s3d.get("rejection_reason","No result")}</div>')
+                    + '</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                _we_s3d  = {}
+                _we_s3_ok = False
+                _we_s3_sign = False
+                _we_track = "—"
+                st.markdown(
+                    f'<div style="{_TP_M}font-size:0.60rem;color:#c0392b;padding:.4rem">'
+                    f'Stage 3 skipped — Stage 2 failed.</div>',
+                    unsafe_allow_html=True,
+                )
+
+        with _we_col2:
+            # Stage 3 chart
+            if _we_s2_ok and _we_s3d:
+                if _we_track.startswith("lp") and _we_s3d.get("irf_df_records"):
+                    import pandas as _pd_tp
+                    _we_irf = _pd_tp.DataFrame(_we_s3d["irf_df_records"])
+                    _fig_we = _go_tp.Figure()
+                    for _ai, _a in enumerate(_we_irf["asset"].unique() if "asset" in _we_irf.columns else []):
+                        _ad = _we_irf[_we_irf["asset"] == _a]
+                        _col_a = ["#CFB991","#2980b9"][_ai % 2]
+                        _psign = _WE_PRED.get(_a, 0)
+                        _cifa  = "rgba(39,174,96,0.12)" if _psign == 1 else "rgba(231,76,60,0.12)"
+                        _fig_we.add_trace(_go_tp.Scatter(
+                            x=_ad["horizon"], y=_ad["ci_hi"], mode="lines",
+                            line=dict(width=0), showlegend=False,
+                        ))
+                        _fig_we.add_trace(_go_tp.Scatter(
+                            x=_ad["horizon"], y=_ad["ci_lo"], mode="lines",
+                            line=dict(width=0), fill="tonexty", fillcolor=_cifa, showlegend=False,
+                        ))
+                        _fig_we.add_trace(_go_tp.Scatter(
+                            x=_ad["horizon"], y=_ad["coef"], mode="lines+markers",
+                            name=_a, line=dict(color=_col_a, width=1.5), marker=dict(size=4),
+                        ))
+                    _fig_we.add_hline(y=0, line_dash="dot", line_color="#555960")
+                    _fig_we.add_vline(
+                        x=_WE_HORIZON, line_dash="dash", line_color="#CFB991", line_width=1,
+                        annotation_text=f"h={_WE_HORIZON}d",
+                        annotation_font=dict(size=8, color="#CFB991"),
+                    )
+                    _fig_we.update_layout(
+                        title="LP-IRF: Oil shock → WTI and S&P 500",
+                        height=240, margin=dict(l=0, r=0, t=30, b=0),
+                        paper_bgcolor="#080808", plot_bgcolor="#080808",
+                        font=dict(family="JetBrains Mono", size=8),
+                        legend=dict(font=dict(size=7), bgcolor="rgba(0,0,0,0)"),
+                        xaxis=dict(title="Horizon (days)", color="#555960", gridcolor="#1e1e1e"),
+                        yaxis=dict(title="Coef", color="#555960", gridcolor="#1e1e1e"),
+                        title_font=dict(size=9, color="#8890a1"),
+                    )
+                    st.plotly_chart(_fig_we, use_container_width=True)
+                elif _we_s3d.get("per_leg"):
+                    _we_bar_a = list(_we_s3d["per_leg"].keys())
+                    _we_bar_m = [_we_s3d["per_leg"][_a].get("mean_ret", 0) or 0 for _a in _we_bar_a]
+                    _we_bar_c = ["#27ae60" if _we_s3d["per_leg"][_a].get("matched_sign") else "#c0392b"
+                                 for _a in _we_bar_a]
+                    _fig_we = _go_tp.Figure(data=[_go_tp.Bar(
+                        x=_we_bar_a, y=_we_bar_m, marker_color=_we_bar_c,
+                        text=[f'{_v:.2f}%' for _v in _we_bar_m],
+                        textfont=dict(size=8, family="JetBrains Mono"),
+                        textposition="outside",
+                    )])
+                    _fig_we.add_hline(y=0, line_color="#555960", line_dash="dot")
+                    _fig_we.update_layout(
+                        title="Regime-Conditional Returns in Trigger Regime",
+                        height=240, margin=dict(l=0, r=0, t=30, b=0),
+                        paper_bgcolor="#080808", plot_bgcolor="#080808",
+                        font=dict(family="JetBrains Mono", size=8),
+                        xaxis=dict(color="#555960"),
+                        yaxis=dict(title="Mean return (%)", color="#555960", gridcolor="#1e1e1e"),
+                        title_font=dict(size=9, color="#8890a1"),
+                    )
+                    st.plotly_chart(_fig_we, use_container_width=True)
+
+            # Decision trace — pipeline's classification of this thesis at each window
+            _we_trace = (_pv or {}).get("worked_example_trace", [])
+            if _we_trace:
+                import numpy as _np_we
+                _dec_color = {
+                    "admit":  "#27ae60",
+                    "mt":     "#16a085",
+                    "ie":     "#8e44ad",
+                    "reject": "#c0392b",
+                }
+                # Decision timeline chart
+                _trace_x   = [_r["test_end"] for _r in _we_trace]
+                _trace_oos = [_r["oos_return"] if _r["oos_return"] is not None else 0.0
+                              for _r in _we_trace]
+                _trace_dec = [_r["decision"] for _r in _we_trace]
+                _trace_col = [_dec_color.get(_d, "#555960") for _d in _trace_dec]
+                _fig_trace = _go_tp.Figure()
+                _fig_trace.add_hline(y=0, line_dash="dot", line_color="#555960", line_width=1)
+                _fig_trace.add_trace(_go_tp.Bar(
+                    x=_trace_x,
+                    y=_trace_oos,
+                    marker_color=_trace_col,
+                    customdata=[[_d, f'{_r["dsr_prob"]:.0%}',
+                                 _r["oos_n_signals"],
+                                 '✓' if _r["stage3_confirmed"] else ('~ sign' if _r["stage3_sign"] else '✗')]
+                                for _r, _d in zip(_we_trace, _trace_dec)],
+                    hovertemplate=(
+                        "<b>%{x}</b><br>"
+                        "Decision: %{customdata[0]}<br>"
+                        "OOS return: %{y:.2f}%<br>"
+                        "DSR (train): %{customdata[1]}<br>"
+                        "OOS signals: %{customdata[2]}<br>"
+                        "S3: %{customdata[3]}<extra></extra>"
+                    ),
+                ))
+                _fig_trace.update_layout(
+                    title="Pipeline Decision Trace — WTI / S&P 500 across Walk-Forward Windows",
+                    height=240, margin=dict(l=0, r=0, t=30, b=0),
+                    paper_bgcolor="#080808", plot_bgcolor="#080808",
+                    font=dict(family="JetBrains Mono", size=8),
+                    xaxis=dict(title="Test window end", color="#555960", gridcolor="#1e1e1e",
+                               tickangle=-45, tickfont=dict(size=7)),
+                    yaxis=dict(title="OOS return (%)", color="#555960", gridcolor="#1e1e1e"),
+                    title_font=dict(size=9, color="#8890a1"),
+                    showlegend=False,
+                )
+                st.plotly_chart(_fig_trace, use_container_width=True)
+
+                # Summary of decision-conditional means
+                _adm_rets = [_r["oos_return"] for _r in _we_trace
+                             if _r["decision"] == "admit" and _r["oos_return"] is not None]
+                _rej_rets = [_r["oos_return"] for _r in _we_trace
+                             if _r["decision"] == "reject" and _r["oos_return"] is not None]
+                _mt_rets  = [_r["oos_return"] for _r in _we_trace
+                             if _r["decision"] == "mt" and _r["oos_return"] is not None]
+                _ie_rets  = [_r["oos_return"] for _r in _we_trace
+                             if _r["decision"] == "ie" and _r["oos_return"] is not None]
+                _summary_parts = []
+                for _label, _vals, _col in [
+                    ("admit",  _adm_rets, "#27ae60"),
+                    ("reject", _rej_rets, "#c0392b"),
+                    ("mt",     _mt_rets,  "#16a085"),
+                    ("ie",     _ie_rets,  "#8e44ad"),
+                ]:
+                    if _vals:
+                        _m = float(_np_we.mean(_vals))
+                        _n = len(_vals)
+                        _summary_parts.append(
+                            f'<span style="color:{_col};font-weight:700">{_label.upper()}</span>'
+                            f'<span style="color:#8890a1"> {_m:+.2f}% (n={_n})</span>'
+                        )
+                if _summary_parts:
+                    st.markdown(
+                        f'<div style="{_TP_M}font-size:0.60rem;margin-top:.4rem;'
+                        f'padding:.5rem .8rem;background:#090909;border-radius:4px;'
+                        f'border:1px solid #1e1e1e">'
+                        + " &nbsp;·&nbsp; ".join(_summary_parts)
+                        + f'<span style="color:#555960;font-size:0.55rem"> — mean OOS return by pipeline decision</span>'
+                        + '</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.markdown(
+                    f'<div style="{_TP_M}font-size:0.62rem;color:#555960;'
+                    f'padding:.6rem;border:1px dashed #2a2a2a;border-radius:4px">'
+                    f'Run Walk-Forward Validation above to see the pipeline decision trace '
+                    f'for this thesis across all historical windows.</div>',
+                    unsafe_allow_html=True,
+                )
+
+        # Individual strategy cards removed — pipeline is the deliverable, not per-thesis P&L.
+        # The worked example shows the pipeline's decision trace across windows, not a trade grade.
 
     # ── Download report ─────────────────────────────────────────────────────
     st.markdown(
@@ -1908,123 +3151,5 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "Use Granger and transfer entropy results from the Spillover page to validate lead-lag direction."
     )
 
-    # ── AI Trade Structurer + Pending Review Panel ─────────────────────────
-    try:
-        from src.agents.trade_structurer import run as _ts_run
-        from src.ui.agent_panel import render_agent_output_block, render_pending_review
-        from src.analysis.agent_state import is_enabled, get_agent
-
-        if is_enabled("trade_structurer"):
-            _anthropic_key = _openai_key = ""
-            try:
-                _keys = st.secrets.get("keys", {})
-                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
-                _openai_key    = _keys.get("openai_api_key",    "") or ""
-            except Exception:
-                pass
-            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
-            _api_key  = _anthropic_key or _openai_key
-
-            # Build context from what's been computed on this page
-            _ts_ctx: dict = {
-                "regime_name":   r_name,
-                "regime_level":  current,
-                "avg_corr":      float(avg_corr.iloc[-1]) if not avg_corr.empty else 0.0,
-            }
-            try:
-                from src.analysis.risk_score import compute_risk_score
-                from src.data.loader import load_returns as _lr3
-                _eq_r3, _cmd_r3 = _lr3(start, end)
-                from src.analysis.correlations import average_cross_corr_series as _acs
-                _avg_c3 = _acs(_eq_r3, _cmd_r3, window=60)
-                _rs = compute_risk_score(_avg_c3, _cmd_r3, _eq_r3)
-                _ts_ctx["risk_score"] = float(_rs.get("score", 0))
-                if len(_cmd_r3) >= 5:
-                    _w5c = _cmd_r3.iloc[-5:].sum()
-                    _ts_ctx["top_commodity"]     = str(_w5c.idxmax())
-                    _ts_ctx["top_commodity_ret"] = float(_w5c.max()) * 100
-                if len(_eq_r3) >= 5:
-                    _w5e = _eq_r3.iloc[-5:].sum()
-                    _ts_ctx["worst_equity"]      = str(_w5e.idxmin())
-                    _ts_ctx["worst_equity_ret"]  = float(_w5e.min()) * 100
-            except Exception:
-                pass
-
-            # Live S&P 500 stock prices — sector-filtered by current regime/scenario
-            try:
-                _scenario_id: str | None = None
-                try:
-                    from src.analysis.scenario_state import get_scenario_id as _gsi
-                    _scenario_id = _gsi()
-                except Exception:
-                    pass
-                _sel_sectors = _select_sectors_for_signal(current, _scenario_id)
-                _stock_px    = _fetch_stock_prices(tuple(_sel_sectors))
-                if _stock_px:
-                    _ts_ctx["stock_prices_text"] = _format_stock_context(_stock_px, _sel_sectors)
-            except Exception:
-                pass
-
-            # Peer context from orchestrator (structured, freshness-aware)
-            _peer_signals = {}
-            try:
-                from src.analysis.agent_orchestrator import get_orchestrator as _get_orch_ts
-                _peer_signals = _get_orch_ts(_provider, _api_key).get_peer_context("trade_structurer")
-            except Exception:
-                # Fallback: read directly from agent state
-                for _pid in ("macro_strategist", "geopolitical_analyst",
-                             "stress_engineer", "commodities_specialist"):
-                    _pa = get_agent(_pid)
-                    if _pa.get("last_output"):
-                        _raw = _pa["last_output"]
-                        _lines = [l for l in _raw.split("\n") if "confidence:" not in l.lower()]
-                        _peer_signals[_pid] = " ".join(_lines).strip()[:250]
-            if _peer_signals:
-                _ts_ctx["peer_signals"] = _peer_signals
-
-            with st.spinner("AI Trade Structurer generating idea…"):
-                _ts_result = _ts_run(_ts_ctx, _provider, _api_key)
-
-            if _ts_result.get("narrative"):
-                st.markdown("---")
-                render_agent_output_block("trade_structurer", _ts_result)
-
-        # Always show the review queue on this page
-        st.markdown("---")
-        render_pending_review()
-
-    except Exception as _ts_err:
-        st.caption(f"AI Trade Structurer unavailable: {_ts_err}")
-
-    # CQO runs silently - output visible in About > AI Workforce
-    try:
-        from src.agents.quality_officer import run as _cqo_run
-        from src.analysis.agent_state import is_enabled
-        if is_enabled("quality_officer"):
-            _anthropic_key = _openai_key = ""
-            try:
-                _keys = st.secrets.get("keys", {})
-                _anthropic_key = _keys.get("anthropic_api_key", "") or ""
-                _openai_key    = _keys.get("openai_api_key",    "") or ""
-            except Exception:
-                pass
-            _provider = "anthropic" if _anthropic_key else ("openai" if _openai_key else None)
-            _api_key  = _anthropic_key or _openai_key
-            _cqo_ctx = {
-                "n_obs": len(eq_r.dropna(how="all")), "date_range": f"{start} to {end}",
-                "model": "Conflict-driven + regime-filtered illustrative trade structures", "regime": r_name,
-                "assumption_count": 5, "trade_has_stop": True,
-                "notes": [
-                    f"Current regime index: {current}/3 - {len(active_trades)} ideas active after filters",
-                    f"{_n_geo} conflict-generated candidates, {_n_stat} static library ideas",
-                    "Trade entry/exit levels are illustrative ranges, not live-calibrated prices",
-                    "Correlation-based regime uses 60d rolling window - whipsaws in trending vol regimes",
-                    "No walk-forward backtest - ideas are not validated against historical win rates",
-                    "All ideas assume liquid markets - slippage and execution risk not modelled",
-                ],
-            }
-            _cqo_run(_cqo_ctx, _provider, _api_key, page="Structured Trade Ideas")
-    except Exception:
-        pass
 
     _page_footer()
