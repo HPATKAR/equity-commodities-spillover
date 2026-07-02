@@ -2266,37 +2266,52 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 "Status":      _status,
             })
 
-        _audit_df = pd.DataFrame(_audit_rows)
-        _n_ok      = (_audit_df["Status"] == "OK").sum()
-        _n_mis     = (_audit_df["Status"] == "MISLABELED").sum()
-        _n_ung     = (_audit_df["Status"] == "UNGRADEABLE").sum()
+        _n_ok  = sum(1 for r in _audit_rows if r["Status"] == "OK")
+        _n_mis = sum(1 for r in _audit_rows if r["Status"] == "MISLABELED")
+        _n_ung = sum(1 for r in _audit_rows if r["Status"] == "UNGRADEABLE")
 
         st.markdown(
-            f'<p style="{_DI_M}font-size:0.65rem;color:#e8e9ed;margin-bottom:.4rem">'
+            f'<p style="{_DI_M}font-size:0.65rem;color:#e8e9ed;margin-bottom:.6rem">'
             f'<b style="color:#27ae60">{_n_ok}</b> strategies have all legs · '
             f'<b style="color:#e67e22">{_n_mis}</b> mislabeled (partial data) · '
             f'<b style="color:#c0392b">{_n_ung}</b> ungradeable (0 legs)</p>',
             unsafe_allow_html=True,
         )
 
-        def _status_color(s):
-            if s == "UNGRADEABLE":
-                return ["background-color:#1a0000;color:#e74c3c"] * len(s.index)
-            if s == "MISLABELED":
-                return ["background-color:#1a0d00;color:#e67e22"] * len(s.index)
-            return [""] * len(s.index)
-
-        st.dataframe(
-            _audit_df.style.apply(
-                lambda row: (
-                    ["background-color:#1a0000;color:#e74c3c"] * len(row) if row["Status"] == "UNGRADEABLE"
-                    else ["background-color:#1a0d00;color:#e67e22"] * len(row) if row["Status"] == "MISLABELED"
-                    else [""] * len(row)
-                ),
-                axis=1,
-            ),
-            use_container_width=True,
-            hide_index=True,
+        _th = (f'style="color:#555960;text-align:left;padding:5px 10px;'
+               f'font-family:\'JetBrains Mono\',monospace;font-size:.58rem;'
+               f'letter-spacing:.10em;border-bottom:1px solid #2a2a2a;white-space:nowrap"')
+        _audit_body = ""
+        for _r in _audit_rows:
+            _s = _r["Status"]
+            _bg = "#1a0000" if _s == "UNGRADEABLE" else "#1a0d00" if _s == "MISLABELED" else "#0d0d0d"
+            _sc = "#e74c3c" if _s == "UNGRADEABLE" else "#e67e22" if _s == "MISLABELED" else "#27ae60"
+            _td = f'style="padding:5px 10px;border-bottom:1px solid #1a1a1a;font-size:.63rem"'
+            _audit_body += (
+                f'<tr style="background:{_bg}">'
+                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
+                f'font-size:.63rem;color:#c8c8c8;max-width:260px">{_r["Strategy"]}</td>'
+                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
+                f'font-size:.60rem;color:#8890a1">{_r["Declared"]}</td>'
+                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
+                f'font-size:.60rem;color:#8890a1">{_r["Present"]}</td>'
+                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
+                f'font-size:.60rem;color:#c0392b">{_r["Dropped"] or "—"}</td>'
+                f'<td style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
+                f'font-size:.60rem;font-weight:700;color:{_sc};'
+                f'font-family:\'JetBrains Mono\',monospace">{_s}</td>'
+                f'</tr>'
+            )
+        st.markdown(
+            f'<div style="overflow-x:auto;border:1px solid #1e1e1e;border-radius:4px;'
+            f'margin-bottom:.8rem">'
+            f'<table style="width:100%;border-collapse:collapse;'
+            f'font-family:\'DM Sans\',sans-serif">'
+            f'<thead><tr style="background:#0a0a0a">'
+            f'<th {_th}>STRATEGY</th><th {_th}>DECLARED LEGS</th>'
+            f'<th {_th}>PRESENT</th><th {_th}>DROPPED</th><th {_th}>STATUS</th>'
+            f'</tr></thead><tbody>{_audit_body}</tbody></table></div>',
+            unsafe_allow_html=True,
         )
 
         # ── Pairwise correlation matrix ─────────────────────────────────────
@@ -2325,7 +2340,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     )
                     _ec = _r.get("equity_curve")
                     if _ec is not None and len(_ec) > 10 and _r.get("n_trades", 0) >= 3:
-                        _short_name = _tr["name"].split(" (")[0][:35]
+                        _short_name = _tr["name"].split(" (")[0][:50]
                         _curves[_short_name] = _ec.pct_change().dropna()
                 except Exception:
                     pass
@@ -2375,13 +2390,22 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     title="Strategy Pairwise Correlation (OOS Daily Equity-Curve Returns)",
                     aspect="auto",
                 )
+                _fig_corr.update_traces(textfont_size=11)
                 _fig_corr.update_layout(
-                    height=max(400, _n_names * 28),
-                    font=dict(family="JetBrains Mono", size=9),
+                    height=max(600, _n_names * 42),
+                    font=dict(family="JetBrains Mono", size=11),
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
-                    title_font=dict(size=10, color="#8890a1"),
-                    coloraxis_colorbar=dict(tickfont=dict(size=8)),
-                    margin=dict(l=0, r=0, t=40, b=0),
+                    title_font=dict(size=11, color="#8890a1"),
+                    coloraxis_colorbar=dict(tickfont=dict(size=10)),
+                    margin=dict(l=10, r=10, t=50, b=200),
+                    xaxis=dict(
+                        tickfont=dict(size=10),
+                        tickangle=-45,
+                        side="bottom",
+                    ),
+                    yaxis=dict(
+                        tickfont=dict(size=10),
+                    ),
                 )
                 st.plotly_chart(_fig_corr, use_container_width=True)
 
@@ -2389,7 +2413,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 _gradeable = sum(
                     1 for _tr in _TRADE_LIBRARY
                     if not [a for a in _tr.get("assets", []) if a not in _avail_cols]
-                    and _tr["name"].split(" (")[0][:35] in _curves
+                    and _tr["name"].split(" (")[0][:50] in _curves
                 )
                 _n_cluster_pairs = len(_seen)
                 _effective_n = _gradeable - _n_cluster_pairs
@@ -2528,24 +2552,45 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             })
 
         if _report_rows:
-            _mt_df = pd.DataFrame(_report_rows)
-
-            def _mt_style(row):
-                base = [""] * len(row)
-                if row.get("Agree?") == "⚠ REVIEW":
-                    base = ["background-color:#1a1200;color:#e67e22"] * len(row)
-                elif row.get("HLZ") == "MISSING":
-                    base = ["background-color:#0d0d0d;color:#555960"] * len(row)
-                elif row.get("Grade") in ("A", "B"):
-                    base = ["background-color:#0a1a0a"] * len(row)
-                elif row.get("Grade") in ("F",):
-                    base = ["background-color:#0d0000"] * len(row)
-                return base
-
-            st.dataframe(
-                _mt_df.style.apply(_mt_style, axis=1),
-                use_container_width=True,
-                hide_index=True,
+            _mt_cols = ["Strategy", "Prior", "N used", "DSR %", "Grade",
+                        "t-stat", "HLZ hurdle", "HLZ", "Agree?"]
+            _mt_th = (f'style="color:#555960;text-align:left;padding:5px 10px;'
+                      f'font-family:\'JetBrains Mono\',monospace;font-size:.58rem;'
+                      f'letter-spacing:.10em;border-bottom:1px solid #2a2a2a;'
+                      f'white-space:nowrap"')
+            _mt_body = ""
+            for _r in _report_rows:
+                _ag = _r.get("Agree?", "—")
+                _gr = _r.get("Grade", "")
+                _hl = _r.get("HLZ", "")
+                if _ag == "⚠ REVIEW":
+                    _bg = "#1a1200"; _rc = "#e67e22"
+                elif _hl == "MISSING":
+                    _bg = "#0d0d0d"; _rc = "#555960"
+                elif _gr in ("A", "B"):
+                    _bg = "#0a1a0a"; _rc = "#c8c8c8"
+                elif _gr == "F":
+                    _bg = "#0d0000"; _rc = "#c8c8c8"
+                else:
+                    _bg = "#0d0d0d"; _rc = "#c8c8c8"
+                _ag_col = "#27ae60" if _ag == "✓" else "#e67e22" if _ag == "⚠ REVIEW" else "#555960"
+                _cells = "".join(
+                    f'<td style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
+                    f'font-size:.62rem;color:'
+                    f'{"#e67e22" if (_c == "HLZ" and _r.get(_c) == "FAIL") else _ag_col if _c == "Agree?" else _rc}">'
+                    f'{_r.get(_c, "—")}</td>'
+                    for _c in _mt_cols
+                )
+                _mt_body += f'<tr style="background:{_bg}">{_cells}</tr>'
+            _mt_thead = "".join(f'<th {_mt_th}>{_c.upper()}</th>' for _c in _mt_cols)
+            st.markdown(
+                f'<div style="overflow-x:auto;border:1px solid #1e1e1e;border-radius:4px;'
+                f'margin-bottom:.8rem">'
+                f'<table style="width:100%;border-collapse:collapse;'
+                f'font-family:\'DM Sans\',sans-serif">'
+                f'<thead><tr style="background:#0a0a0a">{_mt_thead}</tr></thead>'
+                f'<tbody>{_mt_body}</tbody></table></div>',
+                unsafe_allow_html=True,
             )
 
             # Count disagreements
