@@ -2244,65 +2244,67 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "Dollar Cycle": "#1abc9c", "Asia Divergence": "#9b59b6",
         "Fixed Income": "#2471a3", "India/EM": "#d35400",
     }
-    # Build thesis list for right column
-    _thesis_rows_html = ""
-    for _tr in _TRADE_LIBRARY:
-        _cat_dl  = _tr.get("category", "Macro")
-        _col_dl  = _CAT_HEX_DL.get(_cat_dl, "#555960")
-        _nm_dl   = _tr["name"].split("(")[0].strip()
-        if len(_nm_dl) > 40: _nm_dl = _nm_dl[:38] + "…"
-        _dirs_dl = _tr.get("direction", [])
-        _legs_dl = "  ".join(
+
+    def _thesis_item_html(tr: dict) -> str:
+        cat  = tr.get("category", "Macro")
+        col  = _CAT_HEX_DL.get(cat, "#555960")
+        nm   = tr["name"].split("(")[0].strip()
+        dirs = tr.get("direction", [])
+        legs = "  ".join(
             f'{"▲" if d == "Long" else "▼"} {a}'
-            for a, d in zip(_tr.get("assets", [])[:2], _dirs_dl[:2])
+            for a, d in zip(tr.get("assets", [])[:2], dirs[:2])
         )
-        _thesis_rows_html += (
-            f'<div style="display:flex;align-items:flex-start;gap:7px;'
-            f'padding:5px 0;border-bottom:1px solid #111">'
+        return (
+            f'<div style="display:flex;align-items:flex-start;gap:6px;'
+            f'padding:6px 8px;border-bottom:1px solid #151515">'
             f'<span style="width:6px;height:6px;border-radius:50%;'
-            f'background:{_col_dl};flex-shrink:0;margin-top:4px"></span>'
+            f'background:{col};flex-shrink:0;margin-top:3px"></span>'
             f'<div style="min-width:0">'
-            f'<div style="font-size:.61rem;color:#d0d0d0;'
-            f'font-family:\'DM Sans\',sans-serif;line-height:1.3;'
-            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_nm_dl}</div>'
+            f'<div style="font-size:.62rem;color:#d8d8d8;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.4;'
+            f'word-break:break-word">{nm}</div>'
+            f'<div style="font-size:.54rem;color:{col};opacity:.85;'
+            f'font-family:\'JetBrains Mono\',monospace;margin-top:2px;'
+            f'word-break:break-word">{cat}</div>'
             f'<div style="font-size:.54rem;color:#555960;'
-            f'font-family:\'JetBrains Mono\',monospace;margin-top:1px">'
-            f'{_cat_dl} · {_legs_dl}</div>'
+            f'font-family:\'JetBrains Mono\',monospace;margin-top:1px;'
+            f'word-break:break-word">{legs}</div>'
             f'</div></div>'
         )
+
+    # Split 18 theses evenly across two columns
+    _half = (_n_theses + 1) // 2
+    _col1_html = "".join(_thesis_item_html(t) for t in _TRADE_LIBRARY[:_half])
+    _col2_html = "".join(_thesis_item_html(t) for t in _TRADE_LIBRARY[_half:])
+
     # Build section list for left column
     _dl_sections = [
-        ("01", "Regime Analysis",
-         f"Current: {r_name} · 60d rolling avg |corr|"),
-        ("02", "Cross-Asset Heatmap",
-         "Pearson matrix · 8 equity × 8 commodity"),
-        ("03", "Composite Stress Index",
-         "0–100 · vol 45% · corr 35% · vol 15%"),
-        ("04", "Commodity Performance",
-         "Indexed returns · 252 trading days"),
-        ("05", f"Trade Ideas  ({_n_theses} theses)",
-         f"{_n_theses} illustrative pairs · 4 categories"),
-        ("06", f"Geopolitical Context  ({_n_geo} events)",
-         f"{_n_geo} events · commodity transmission"),
-        ("07", "Methodology & Data Sources",
-         "DCC-GARCH · DY Spillover · Granger · FRED"),
+        ("01", "Regime Analysis",       f"Current: {r_name} · 60d rolling avg |corr|"),
+        ("02", "Cross-Asset Heatmap",   "Pearson matrix · 8 equity × 8 commodity"),
+        ("03", "Composite Stress Index","0–100 · vol 45% · corr 35% · vol 15%"),
+        ("04", "Commodity Performance", "Indexed returns · 252 trading days"),
+        ("05", f"Trade Ideas ({_n_theses} theses)",         f"{_n_theses} pairs · 4 categories"),
+        ("06", f"Geopolitical ({_n_geo} events)",           f"{_n_geo} events · commodity transmission"),
+        ("07", "Methodology & Sources", "DCC-GARCH · DY Spillover · Granger · FRED"),
     ]
     _sec_rows_html = ""
-    for _sn, _st, _ss in _dl_sections:
+    for _sn, _st_lbl, _ss in _dl_sections:
         _sec_rows_html += (
-            f'<div style="display:flex;gap:9px;padding:6px 10px;'
-            f'border-bottom:1px solid #111">'
+            f'<div style="display:flex;gap:9px;padding:7px 10px;'
+            f'border-bottom:1px solid #151515">'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
             f'color:#CFB991;font-weight:700;flex-shrink:0;padding-top:2px">{_sn}</span>'
             f'<div><div style="font-size:.63rem;color:#e8e9ed;font-weight:600;'
-            f'font-family:\'DM Sans\',sans-serif;line-height:1.3">{_st}</div>'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.3">{_st_lbl}</div>'
             f'<div style="font-size:.57rem;color:#555960;'
-            f'font-family:\'DM Sans\',sans-serif;margin-top:1px">{_ss}</div>'
+            f'font-family:\'DM Sans\',sans-serif;margin-top:2px">{_ss}</div>'
             f'</div></div>'
         )
+
     st.markdown(
         f'<div style="border:1px solid #CFB99130;border-radius:6px;overflow:hidden;'
         f'margin-bottom:1.2rem;background:#080808">'
+        # Gold header bar
         f'<div style="background:#CFB991;padding:6px 14px;display:flex;'
         f'justify-content:space-between;align-items:center">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.57rem;'
@@ -2311,6 +2313,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.53rem;'
         f'color:#4a3000;letter-spacing:.08em">A4 · PDF · 7 SECTIONS</span>'
         f'</div>'
+        # Title + regime badge
         f'<div style="padding:13px 14px 10px;border-bottom:1px solid #1a1a1a;'
         f'display:flex;justify-content:space-between;align-items:flex-start">'
         f'<div>'
@@ -2331,23 +2334,33 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         f'Heramb S. Patkar<br>Jiahe Miao · Ilian Zalomai</div>'
         f'</div>'
         f'</div>'
-        f'<div style="display:grid;grid-template-columns:46% 54%;'
-        f'border-bottom:1px solid #1a1a1a">'
+        # Three-column body: sections | theses-col-1 | theses-col-2
+        f'<div style="display:grid;grid-template-columns:30% 35% 35%;'
+        f'border-bottom:1px solid #1a1a1a;align-items:start">'
+        # Sections
         f'<div style="border-right:1px solid #1a1a1a">'
         f'<div style="padding:5px 10px;background:#050505;border-bottom:1px solid #1a1a1a;'
         f'font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
         f'color:#555960;letter-spacing:.10em">REPORT SECTIONS</div>'
         f'{_sec_rows_html}'
         f'</div>'
-        f'<div>'
+        # Theses col 1 (top half)
+        f'<div style="border-right:1px solid #1a1a1a">'
         f'<div style="padding:5px 10px;background:#050505;border-bottom:1px solid #1a1a1a;'
         f'font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
         f'color:#555960;letter-spacing:.10em">'
-        f'THESES REFERENCED — {_n_theses} ILLUSTRATIVE PAIRS</div>'
-        f'<div style="padding:6px 12px;max-height:248px;overflow-y:auto">'
-        f'{_thesis_rows_html}</div>'
+        f'THESES REFERENCED — {_n_theses} PAIRS</div>'
+        f'{_col1_html}'
+        f'</div>'
+        # Theses col 2 (bottom half)
+        f'<div>'
+        f'<div style="padding:5px 10px;background:#050505;border-bottom:1px solid #1a1a1a;'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
+        f'color:#050505;letter-spacing:.10em">&nbsp;</div>'
+        f'{_col2_html}'
         f'</div>'
         f'</div>'
+        # Footer bar
         f'<div style="padding:7px 14px;background:#050505;display:flex;'
         f'justify-content:space-between;align-items:center">'
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:.57rem;color:#555960">'
