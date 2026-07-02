@@ -45,6 +45,13 @@ _COMMODITY_TARGETS = [
     "Copper", "Natural Gas", "Wheat", "Corn",
 ]
 
+# ── Historical analog constants ────────────────────────────────────────────
+_ANALOG_FEATURES  = ["WTI Crude Oil", "Gold", "S&P 500", "Copper", "Natural Gas"]
+_ANALOG_WINDOW    = 20   # rolling return window for feature construction (trading days)
+_ANALOG_HORIZON   = 20   # forward days to observe after each analog
+_ANALOG_K         = 5    # number of nearest neighbors
+_ANALOG_GAP       = 30   # exclusion radius around each selected analog (days)
+
 
 # ── Beta computation ──────────────────────────────────────────────────────
 
@@ -192,6 +199,121 @@ def _parametric_var_es(
             "es99":  round(base["es99"]  * scale, 3),
         }
     return result
+
+
+# ── Historical analog engine ──────────────────────────────────────────────
+
+def _build_analog_feature_matrix(returns_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    20-day rolling cumulative return for each analog feature column.
+    Rows with any NaN dropped; index aligned to returns_df dates.
+    """
+    series = {}
+    for col in _ANALOG_FEATURES:
+        if col in returns_df.columns:
+            series[col] = returns_df[col].rolling(_ANALOG_WINDOW, min_periods=_ANALOG_WINDOW // 2).sum()
+    if not series:
+        return pd.DataFrame()
+    return pd.DataFrame(series).dropna()
+
+
+def _find_historical_analogs(
+    returns_df: pd.DataFrame,
+    k: int = _ANALOG_K,
+    horizon: int = _ANALOG_HORIZON,
+    gap: int = _ANALOG_GAP,
+) -> list[dict]:
+    """
+    K nearest-neighbour historical analogs for today's market state.
+
+    State: z-scored 20-day rolling cumulative returns on _ANALOG_FEATURES.
+    "Today" = last row of the feature matrix.
+    Candidates: rows with at least `horizon` forward trading days remaining.
+    Non-overlapping: after selecting an analog, block ±gap rows from future selection.
+    Distance: Euclidean in z-score space. No cherry-picking.
+
+    Returns list of dicts ordered by distance (closest first):
+      rank, date, distance, similarity_pct, feature_snapshot (%), fwd_returns {asset: [day0..dayN]}
+    """
+    feat = _build_analog_feature_matrix(returns_df)
+    if feat.empty:
+        return []
+
+    avail = [c for c in _ANALOG_FEATURES if c in feat.columns]
+    if not avail:
+        return []
+
+    F = feat[avail].copy()
+    mu, sd = F.mean(), F.std().replace(0, 1.0)
+    Z = (F - mu) / sd
+
+    today_z = Z.iloc[-1].values
+
+    # Candidate pool: leave horizon rows at the end so forward paths exist
+    cand_end = len(Z) - horizon
+    if cand_end < _ANALOG_WINDOW + k:
+        return []
+
+    Z_cand = Z.iloc[:cand_end]
+    diffs = Z_cand.values - today_z
+    dists = np.sqrt((diffs ** 2).sum(axis=1))
+
+    order = np.argsort(dists)
+
+    # Normalisation denominator: distance of the k*4-th candidate (generous ceiling)
+    ceil_idx = min(len(order) - 1, k * 4)
+    max_dist  = float(dists[order[ceil_idx]]) + 1e-9
+
+    # Greedy non-overlapping selection
+    selected: list[int] = []
+    blocked: set[int]   = set()
+    for idx in order:
+        if idx in blocked:
+            continue
+        selected.append(int(idx))
+        for j in range(max(0, idx - gap), min(len(Z_cand), idx + gap + 1)):
+            blocked.add(j)
+        if len(selected) >= k:
+            break
+
+    outcome_assets = _EQUITY_TARGETS + _COMMODITY_TARGETS
+    results: list[dict] = []
+
+    for rank, idx in enumerate(selected, 1):
+        date    = F.index[idx]
+        dist    = float(dists[idx])
+        sim_pct = float(max(0.0, 1.0 - dist / max_dist) * 100)
+
+        snap = {c: round(float(F.iloc[idx][c] * 100), 2) for c in avail}
+
+        # Forward cumulative returns (prepend 0 for day 0)
+        fwd: dict[str, list[float]] = {}
+        for asset in outcome_assets:
+            if asset not in returns_df.columns:
+                continue
+            fwd_r = returns_df[asset].iloc[idx + 1: idx + 1 + horizon]
+            if len(fwd_r) < 2:
+                continue
+            fwd[asset] = [0.0] + [round(float(v) * 100, 4) for v in np.cumsum(fwd_r.values)]
+
+        results.append({
+            "rank":             rank,
+            "date":             date,
+            "distance":         round(dist, 3),
+            "similarity_pct":   round(sim_pct, 1),
+            "feature_snapshot": snap,
+            "fwd_returns":      fwd,
+        })
+
+    return results
+
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
+def _find_analogs_cached(start: str, end: str) -> list[dict]:
+    combined = load_combined_returns(start, end)
+    if combined.empty:
+        return []
+    return _find_historical_analogs(combined)
 
 
 # ── Shock propagation ─────────────────────────────────────────────────────
@@ -696,6 +818,117 @@ def _shock_badge(label: str, value: str, active: bool) -> str:
         f'font-size:0.68rem;color:{color};margin:2px 3px 2px 0">'
         f'{label}: {value}</span>'
     )
+
+
+# ── Analog rendering helpers ──────────────────────────────────────────────
+
+def _analog_table(analogs: list[dict]) -> None:
+    """HTML table: rank | date | similarity | distance | market context."""
+    rank_colors = {1: "#CFB991", 2: "#c8a860", 3: "#8890a1", 4: "#666d7a", 5: "#555960"}
+    rows_html = ""
+    for a in analogs:
+        rc   = rank_colors.get(a["rank"], "#555960")
+        snap = a["feature_snapshot"]
+        ctx  = (
+            f'WTI {snap.get("WTI Crude Oil", 0):+.1f}% · '
+            f'Gold {snap.get("Gold", 0):+.1f}% · '
+            f'S&P {snap.get("S&P 500", 0):+.1f}%'
+        )
+        rows_html += (
+            f'<tr style="border-bottom:1px solid #1a1a1a">'
+            f'<td style="padding:.28rem .7rem;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.63rem;color:{rc};text-align:center;font-weight:700">#{a["rank"]}</td>'
+            f'<td style="padding:.28rem .7rem;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.69rem;color:#c8c8c8">{a["date"].strftime("%Y-%m-%d")}</td>'
+            f'<td style="padding:.28rem .7rem;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.69rem;color:{rc};text-align:right">{a["similarity_pct"]:.1f}%</td>'
+            f'<td style="padding:.28rem .7rem;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.63rem;color:#555960;text-align:right">{a["distance"]:.3f}</td>'
+            f'<td style="padding:.28rem .7rem;font-size:0.63rem;color:#8890a1">{ctx}</td>'
+            f'</tr>'
+        )
+    st.markdown(
+        f"""<div style="overflow:auto;border:1px solid #2a2a2a;border-radius:0;margin-bottom:1rem">
+        <table style="width:100%;border-collapse:collapse;background:#080808">
+        <thead><tr style="border-bottom:1px solid #2a2a2a">
+          <th style="padding:.35rem .7rem;font-size:0.55rem;letter-spacing:.12em;
+          text-transform:uppercase;color:{_MUTED};text-align:center;font-weight:600">Rank</th>
+          <th style="padding:.35rem .7rem;font-size:0.55rem;letter-spacing:.12em;
+          text-transform:uppercase;color:{_MUTED};text-align:left;font-weight:600">Analog Date</th>
+          <th style="padding:.35rem .7rem;font-size:0.55rem;letter-spacing:.12em;
+          text-transform:uppercase;color:{_MUTED};text-align:right;font-weight:600">Similarity</th>
+          <th style="padding:.35rem .7rem;font-size:0.55rem;letter-spacing:.12em;
+          text-transform:uppercase;color:{_MUTED};text-align:right;font-weight:600">Distance</th>
+          <th style="padding:.35rem .7rem;font-size:0.55rem;letter-spacing:.12em;
+          text-transform:uppercase;color:{_MUTED};font-weight:600">20-Day State</th>
+        </tr></thead>
+        <tbody>{rows_html}</tbody>
+        </table></div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _analog_spaghetti_chart(
+    analogs: list[dict],
+    asset: str,
+    horizon: int = _ANALOG_HORIZON,
+    height: int = 340,
+) -> go.Figure:
+    """
+    Forward path chart: one line per analog, no average, no forecast.
+    Colors dim by rank so closest analog (gold) stands out.
+    """
+    palette = ["#CFB991", "#e67e22", "#8890a1", "#555960", "#333840"]
+    days = list(range(horizon + 1))
+
+    fig = go.Figure()
+    for a in analogs:
+        path = a["fwd_returns"].get(asset)
+        if path is None or len(path) < 2:
+            continue
+        color = palette[a["rank"] - 1]
+        label = a["date"].strftime("%Y-%m-%d")
+        opacity = max(0.35, 0.95 - (a["rank"] - 1) * 0.14)
+        fig.add_trace(go.Scatter(
+            x=days[:len(path)],
+            y=path,
+            mode="lines",
+            name=f"#{a['rank']} {label}",
+            line=dict(color=color, width=1.8 if a["rank"] == 1 else 1.2),
+            opacity=opacity,
+            hovertemplate=f"<b>{label}</b><br>Day %{{x}}: %{{y:.2f}}%<extra></extra>",
+        ))
+
+    fig.add_hline(y=0, line=dict(color="#2a2a2a", width=1))
+    fig.update_layout(
+        template="plotly_dark",
+        height=height,
+        paper_bgcolor="#080808",
+        plot_bgcolor="#080808",
+        font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=11),
+        xaxis=dict(
+            title="Trading days after analog date",
+            showgrid=True, gridcolor="#1a1a1a",
+            tickfont=dict(color="#c8c8c8"),
+        ),
+        yaxis=dict(
+            title="Cumulative return (%)",
+            showgrid=True, gridcolor="#1a1a1a",
+            zeroline=False,
+            tickfont=dict(color="#c8c8c8"),
+        ),
+        legend=dict(
+            orientation="h", y=-0.25, x=0,
+            font=dict(size=10), bgcolor="rgba(0,0,0,0)",
+        ),
+        margin=dict(l=52, r=24, t=20, b=80),
+        title=dict(
+            text=f"{asset} — 20-day forward paths",
+            font=dict(family="JetBrains Mono, monospace", size=11, color="#8890a1"),
+            x=0, xanchor="left",
+        ),
+    )
+    return fig
 
 
 # ── Main page function ─────────────────────────────────────────────────────
@@ -1362,5 +1595,72 @@ def page_scenario_engine(
             st.info("Sector ETF data unavailable. Check internet connectivity.")
     except Exception as _sec_err:
         st.caption("Sector decomposition unavailable — see logs.")
+
+    # ── Historical Analog Mode ────────────────────────────────────────────
+    _section_label("Historical Analog — When Has This Happened Before?")
+    st.markdown(
+        f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.5rem;line-height:1.6">'
+        f'Finds the 5 historical dates whose market state most resembled today — '
+        f'measured by Euclidean distance on z-scored 20-day cumulative returns across '
+        f'WTI, Gold, S&amp;P 500, Copper, and Natural Gas. '
+        f'Ordered by distance only; outcomes are not cherry-picked. '
+        f'Conflict scores and PortWatch shipping data are live-only and are not used '
+        f'in the matching — no daily historical series exists for either. '
+        f'This is <em>not a forecast</em>: it shows what happened next in each analog episode.</p>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        with st.spinner("Finding historical analogs…"):
+            _analogs = _find_analogs_cached(start, end)
+
+        if not _analogs:
+            st.info("Insufficient history to compute analogs. Expand the date range.")
+        else:
+            _analog_table(_analogs)
+
+            # Asset selector
+            _analog_eq_opts  = [a for a in _EQUITY_TARGETS    if any(a in x["fwd_returns"] for x in _analogs)]
+            _analog_cmd_opts = [a for a in _COMMODITY_TARGETS if any(a in x["fwd_returns"] for x in _analogs)]
+            _analog_all_opts = _analog_eq_opts + _analog_cmd_opts
+
+            if _analog_all_opts:
+                _acol1, _acol2 = st.columns(2)
+                with _acol1:
+                    _default_eq  = "S&P 500" if "S&P 500" in _analog_eq_opts else (_analog_eq_opts[0] if _analog_eq_opts else None)
+                    _eq_pick = st.selectbox(
+                        "Equity — forward path",
+                        _analog_eq_opts,
+                        index=_analog_eq_opts.index(_default_eq) if _default_eq else 0,
+                        key="ha_eq_pick",
+                    ) if _analog_eq_opts else None
+                with _acol2:
+                    _default_cmd = "WTI Crude Oil" if "WTI Crude Oil" in _analog_cmd_opts else (_analog_cmd_opts[0] if _analog_cmd_opts else None)
+                    _cmd_pick = st.selectbox(
+                        "Commodity — forward path",
+                        _analog_cmd_opts,
+                        index=_analog_cmd_opts.index(_default_cmd) if _default_cmd else 0,
+                        key="ha_cmd_pick",
+                    ) if _analog_cmd_opts else None
+
+                _sc1, _sc2 = st.columns(2)
+                with _sc1:
+                    if _eq_pick:
+                        _chart(_analog_spaghetti_chart(_analogs, _eq_pick))
+                with _sc2:
+                    if _cmd_pick:
+                        _chart(_analog_spaghetti_chart(_analogs, _cmd_pick))
+
+            st.markdown(
+                f'<p style="font-size:0.60rem;color:#555960;margin:.6rem 0 1rem;line-height:1.5">'
+                f'Each path shows 20 trading-day cumulative returns starting from the analog date. '
+                f'Analogs are non-overlapping (±30-day exclusion zone). '
+                f'Feature window: 20-day rolling return. '
+                f'Similarity % is relative to the distance of the 20th-closest candidate — not absolute. '
+                f'Paths diverge quickly; treat this as context, not prediction.</p>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        st.caption("Historical analog unavailable — see logs.")
 
     _page_footer()
