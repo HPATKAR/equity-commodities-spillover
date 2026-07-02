@@ -2390,21 +2390,30 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     title="Strategy Pairwise Correlation (OOS Daily Equity-Curve Returns)",
                     aspect="auto",
                 )
-                _fig_corr.update_traces(textfont_size=11)
+                # Dark cell text (#0d0d0d) reads on the yellow/light-green cells
+                # (near-zero correlations = majority of the matrix).
+                # The 1.00 diagonal is dark-green but always 1.0 — acceptable tradeoff.
+                _fig_corr.update_traces(
+                    textfont_size=11,
+                    textfont_color="#0d0d0d",
+                )
                 _fig_corr.update_layout(
                     height=max(600, _n_names * 42),
-                    font=dict(family="JetBrains Mono", size=11),
+                    # color= needed: Plotly default (#444) is invisible on #080808
+                    font=dict(family="JetBrains Mono", size=11, color="#c8c8c8"),
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
                     title_font=dict(size=11, color="#8890a1"),
-                    coloraxis_colorbar=dict(tickfont=dict(size=10)),
+                    coloraxis_colorbar=dict(
+                        tickfont=dict(size=10, color="#c8c8c8"),
+                    ),
                     margin=dict(l=10, r=10, t=50, b=200),
                     xaxis=dict(
-                        tickfont=dict(size=10),
+                        tickfont=dict(size=10, color="#c8c8c8"),
                         tickangle=-45,
                         side="bottom",
                     ),
                     yaxis=dict(
-                        tickfont=dict(size=10),
+                        tickfont=dict(size=10, color="#c8c8c8"),
                     ),
                 )
                 st.plotly_chart(_fig_corr, use_container_width=True)
