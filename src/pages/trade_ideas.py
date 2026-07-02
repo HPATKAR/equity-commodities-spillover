@@ -867,7 +867,7 @@ _TI_STYLE = """<style>
   letter-spacing:.12em;text-transform:uppercase;min-width:56px}
 .ti-strip-val{font-family:'JetBrains Mono',monospace;font-size:0.63rem;font-weight:700}
 .ti-strip-dim{font-family:'JetBrains Mono',monospace;font-size:0.50rem;
-  color:#444c5c;margin-left:auto}
+  color:#555960;margin-left:auto}
 
 /* Why chips (pass-filter reasons) */
 .ti-why{display:flex;gap:4px;flex-wrap:wrap;padding:4px .9rem .45rem}
@@ -1034,7 +1034,8 @@ def _backtest_trade(
     assets: list[str],
     directions: list[str],
     holding_days: int = 30,
-    leg_weights: tuple[float, ...] | None = None,   # conviction-weighted allocation per leg
+    leg_weights: tuple[float, ...] | None = None,
+    _len_hint: int = 0,  # cache-buster: pass len(_all_r) so date-range changes bust cache
 ) -> dict:
     """
     Historical backtest for a single trade idea.
@@ -1145,6 +1146,7 @@ def _thesis_stage3_cached(
     horizon_days: int,
     _all_r: pd.DataFrame,
     _regimes: pd.Series | None,
+    _len_hint: int = 0,  # cache-buster: pass len(_all_r) to bust on date-range change
 ) -> dict:
     """
     Cached Stage 3 confirmation for one thesis strategy.
@@ -1573,6 +1575,7 @@ def _render_trade_card(
                     directions=trade.get("direction", []),
                     holding_days=_parse_holding_days(trade),
                     leg_weights=_leg_w_tuple,
+                    _len_hint=len(all_r_concat),
                 )
                 if "error" not in _bt and _bt.get("n_signals", 0) >= 3:
                     _bt_wr = _bt["win_rate"]
@@ -2328,7 +2331,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="min-width:0">'
             f'<span style="font-size:.50rem;color:{col};font-family:\'JetBrains Mono\','
             f'monospace;font-weight:700;letter-spacing:.06em">{cat.upper()}</span>'
-            f'<span style="font-size:.50rem;color:#444950;font-family:\'JetBrains Mono\','
+            f'<span style="font-size:.50rem;color:#555960;font-family:\'JetBrains Mono\','
             f'monospace;margin:0 4px">·</span>'
             f'<span style="font-size:.50rem;color:#555960;font-family:\'JetBrains Mono\','
             f'monospace">{legs}</span>'
@@ -2336,7 +2339,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'{hold_h}'
             f'</div>'
             # Row 3: trigger
-            f'<div style="font-size:.52rem;color:#6b7380;'
+            f'<div style="font-size:.52rem;color:#8890a1;'
             f'font-family:\'DM Sans\',sans-serif;line-height:1.3">{trig_s}</div>'
             # Row 4: target (if available)
             f'{tgt_h}'
@@ -3394,6 +3397,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         horizon_days=_WE_HORIZON,
                         _all_r=all_r_concat,
                         _regimes=regimes,
+                        _len_hint=len(all_r_concat),
                     )
                 except Exception as _e:
                     _we_s3d = {

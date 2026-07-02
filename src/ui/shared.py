@@ -411,7 +411,7 @@ def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
     """Flat inline regime label with ambient glow at crisis intensity."""
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;'
-        f'color:#666;margin-left:0.75rem;font-weight:400;font-style:italic">{sub}</span>'
+        f'color:#8890a1;margin-left:0.75rem;font-weight:400;font-style:italic">{sub}</span>'
         if sub else ""
     )
     # Ambient glow — more visible at higher severity (crisis red vs. normal gold)
@@ -900,7 +900,7 @@ div[data-testid="stPopoverBody"] {
     box-shadow: 0 -8px 28px rgba(0,0,0,0.6) !important;
 }
 div[data-testid="stPopoverBody"] [data-testid="stTextInput"] label p {
-    font-size: 0.48rem !important;
+    font-size: 0.50rem !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.12em !important;
@@ -917,7 +917,7 @@ div[data-testid="stPopoverBody"] [data-testid="stTextInput"] input {
 }
 div[data-testid="stPopoverBody"] .stButton > button {
     padding: 0.20rem 0.3rem !important;
-    font-size: 0.46rem !important;
+    font-size: 0.50rem !important;
     letter-spacing: 0.04em !important;
     min-width: 0 !important;
     border-radius: 2px !important;

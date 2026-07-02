@@ -49,6 +49,8 @@ def rolling_correlation_matrix(
 
 def correlation_matrix(returns: pd.DataFrame) -> pd.DataFrame:
     """Full-sample Pearson correlation matrix."""
+    if returns.shape[1] < 2:
+        return pd.DataFrame()
     return returns.corr()
 
 
@@ -104,7 +106,7 @@ def detect_correlation_regime(
         return _insuf
 
     # 1. Smooth with rolling median to remove single-day noise
-    smoothed = s.rolling(smooth_window, min_periods=1, center=True).median()
+    smoothed = s.rolling(smooth_window, min_periods=1, center=False).median()
 
     # 2. Compute adaptive thresholds from full-sample percentiles
     t_decorr   = float(np.percentile(smoothed, p_decorr))

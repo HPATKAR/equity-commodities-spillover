@@ -532,9 +532,9 @@ def _bk_all_bands(
     if gap > 0.5:
         # Log via trace_logger if available — never raise in production
         try:
-            from src.analysis.trace_logger import log_event
-            log_event("bk_invariant_fail",
-                      {"tc_sum": round(tc_sum, 3), "tc_full": tc_full, "gap": round(gap, 3)})
+            from src.analysis.trace_logger import log_failure
+            log_failure("bk_invariant_fail",
+                        {"tc_sum": round(tc_sum, 3), "tc_full": tc_full, "gap": round(gap, 3)})
         except Exception:
             pass
 

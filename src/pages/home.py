@@ -2331,7 +2331,7 @@ def _render_correlation_pulse(
     series = corr_series.dropna().iloc[-60:].tolist()
     cur    = series[-1]
 
-    if regimes is not None and not regimes.empty:
+    if regimes is not None and len(regimes.dropna()) > 0:
         r_val = int(regimes.dropna().iloc[-1])
         if r_val == 3:   regime_lbl, regime_c = "HIGH COUPLING", _C["danger"]
         elif r_val == 1: regime_lbl, regime_c = "DECOUPLED",     _C["safe"]
@@ -4511,7 +4511,7 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
         )
         note = (
             f'<div style="font-family:JetBrains Mono,monospace;font-size:0.50rem;'
-            f'color:#555;margin-top:3px">cell value = exposure × CIS/100 · '
+            f'color:#555960;margin-top:3px">cell value = exposure × CIS/100 · '
             f'<span style="color:{_C["danger"]}">■</span> ≥60 '
             f'<span style="color:{_C["warn"]}">■</span> 40–60 '
             f'<span style="color:{_C["warn"]}">■</span> 20–40 '
@@ -4545,7 +4545,7 @@ def _render_geo_event_timeline(conflict_results) -> None:
 
         bars = (
             f'<text x="{LABEL_W + BAR_MAX//2}" y="12" font-family="JetBrains Mono,monospace" '
-            f'font-size="7" fill="#555" text-anchor="middle">CIS ← → TPS</text>'
+            f'font-size="7" fill="#555960" text-anchor="middle">CIS ← → TPS</text>'
         )
         ROW_H = 22
         for i, c in enumerate(active):
@@ -4580,7 +4580,7 @@ def _render_geo_event_timeline(conflict_results) -> None:
 
         legend = (
             f'<div style="font-family:JetBrains Mono,monospace;font-size:0.50rem;'
-            f'color:#555;margin-top:3px">'
+            f'color:#555960;margin-top:3px">'
             f'■ bar = CIS (conflict intensity) · '
             f'<span style="color:{_GOLD}">│</span> = TPS (transmission pressure)'
             f'</div>'
