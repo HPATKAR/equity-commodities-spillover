@@ -1115,6 +1115,47 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     _, r2   = _risk_score_vs_vix(score_hist, cmd_r)
     r2_pct  = round((r2 or 0.0) * 100, 1)
 
+    # ── GRS live call logging ──────────────────────────────────────────────
+    # Compute the live 4-layer GRS score and log this week's call.
+    # Resolve any past calls whose 4-week outcome window has now closed.
+    _live_grs_score = 50.0
+    _live_grs_label = "MODERATE"
+    _live_grs_comps: dict = {}
+    try:
+        from src.analysis.risk_score import compute_risk_score as _crs
+        from src.analysis.correlations import average_cross_corr_series as _acs_log
+        _avg_c_log = _acs_log(eq_r, cmd_r, window=60)
+        _grs_raw   = _crs(_avg_c_log, cmd_r, eq_r)
+        _live_grs_score = float(_grs_raw.get("score", 50.0))
+        _live_grs_label = _grs_raw.get("label", "MODERATE")
+        _live_grs_comps = _grs_raw.get("components", {})
+    except Exception:
+        pass
+
+    try:
+        from src.analysis.grs_call_log import (
+            log_weekly_call, resolve_outcomes, compute_hit_stats,
+        )
+        log_weekly_call(
+            grs_score = _live_grs_score,
+            grs_label = _live_grs_label,
+            cis      = float(_live_grs_comps.get("cis",      {}).get("score", 0)),
+            tps      = float(_live_grs_comps.get("tps",      {}).get("score", 0)),
+            mcs      = float(_live_grs_comps.get("mcs",      {}).get("score", 0)),
+            news_gpr = float(_live_grs_comps.get("news_gpr", {}).get("score", 0)),
+        )
+        _call_log  = resolve_outcomes(eq_r, cmd_r)
+        _hit_stats = compute_hit_stats(_call_log)
+    except Exception:
+        _call_log  = []
+        _hit_stats = {
+            "n_total": 0, "n_resolved": 0, "n_pending": 0,
+            "n_hits": 0, "hit_rate": None,
+            "n_stress_calls": 0, "n_calm_calls": 0,
+            "stress_hit_rate": None, "calm_hit_rate": None,
+            "rolling_hr": [], "resolved": [], "pending": [],
+        }
+
     # Render live system health NOW - freshness registry has real data
     _render_system_reliability(
         n_eq_cols=len(eq_r.columns),
@@ -1167,11 +1208,12 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True)
 
     # ── Signal audit tabs ─────────────────────────────────────────────────
-    _tab1, _tab2, _tab3, _tab4 = st.tabs([
+    _tab1, _tab2, _tab3, _tab4, _tab5 = st.tabs([
         "Regime Detection",
         "Risk Score vs VIX",
         "Granger Hit Rate",
         "COT Contrarian",
+        "GRS Live Scorecard",
     ])
 
     # ── Panel 1: Regime Detection ──────────────────────────────────────────
@@ -1830,6 +1872,263 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                         "Any reading above the <b>55% dashed line</b> indicates the signal "
                         "has genuine forecasting power beyond random chance."
                     )
+
+    # ── Tab 5: GRS Live Scorecard ──────────────────────────────────────────
+    with _tab5:
+        _FM = "font-family:'JetBrains Mono',monospace;"
+
+        st.markdown(
+            f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">'
+            f'GRS Live Scorecard — forward accuracy log</p>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #1e1e1e;'
+            f'border-left:3px solid #CFB991;padding:.35rem .8rem;margin-bottom:.7rem">'
+            f'<span style="{_FM}font-size:0.50rem;color:#CFB991;font-weight:700">'
+            f'HOW THIS WORKS</span>'
+            f'<span style="{_F}font-size:0.62rem;color:#8890a1;margin-left:8px">'
+            f'Each week this page logs the live GRS score as a directional call '
+            f'(STRESS if ≥ 50, CALM if &lt; 50). '
+            f'Four weeks later, the call is graded: if realized equity+commodity vol '
+            f'over the following 20 trading days exceeded the rolling 252d median at '
+            f'call time → outcome was STRESSED; else CALM. '
+            f'Hit = call matched outcome. 50% = no-skill baseline.</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        hs = _hit_stats
+
+        # ── KPI row ──────────────────────────────────────────────────────
+        k1, k2, k3, k4, k5 = st.columns(5)
+        _hr_val = hs["hit_rate"]
+        _hr_col = ("#27ae60" if (_hr_val or 0) >= 60
+                   else "#e67e22" if (_hr_val or 0) >= 50
+                   else "#c0392b")
+        _hr_str = f"{_hr_val:.0f}%" if _hr_val is not None else "–"
+
+        def _kpi(col, label, val, sub, col_val="#e8e9ed"):
+            col.markdown(
+                f'<div style="border:1px solid #1e1e1e;background:#0d0d0d;padding:.5rem .7rem">'
+                f'<div style="{_FM}font-size:0.50rem;color:#555960;letter-spacing:.12em;'
+                f'text-transform:uppercase;margin-bottom:3px">{label}</div>'
+                f'<div style="{_FM}font-size:1.1rem;font-weight:700;color:{col_val};line-height:1.1">{val}</div>'
+                f'<div style="{_FM}font-size:0.50rem;color:#8890a1;margin-top:3px">{sub}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        _kpi(k1, "Hit Rate",      _hr_str,                       "vs 50% no-skill baseline", _hr_col)
+        _kpi(k2, "Resolved Calls", str(hs["n_resolved"]),        f'{hs["n_hits"]} hits · {hs["n_resolved"] - hs["n_hits"]} misses')
+        _kpi(k3, "Pending",        str(hs["n_pending"]),         "awaiting 4-week outcome")
+        _kpi(k4, "STRESS hit rate",
+             f'{hs["stress_hit_rate"]:.0f}%' if hs["stress_hit_rate"] is not None else "–",
+             f'{hs["n_stress_calls"]} calls',
+             "#e67e22" if (hs["stress_hit_rate"] or 0) >= 50 else "#c0392b")
+        _kpi(k5, "CALM hit rate",
+             f'{hs["calm_hit_rate"]:.0f}%'   if hs["calm_hit_rate"]   is not None else "–",
+             f'{hs["n_calm_calls"]} calls',
+             "#27ae60" if (hs["calm_hit_rate"] or 0) >= 50 else "#c0392b")
+
+        if hs["n_total"] == 0:
+            st.markdown(
+                f'<div style="border:1px solid #2a2a2a;padding:1.2rem;text-align:center;margin:1rem 0">'
+                f'<span style="{_FM}font-size:0.63rem;color:#555960">'
+                f'No calls logged yet. Reload this page weekly — each load logs one call. '
+                f'First results appear after 4 weeks.</span></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div style="margin:.6rem 0;border-top:1px solid #1e1e1e"></div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Charts row ────────────────────────────────────────────────
+            _cc1, _cc2 = st.columns([1.2, 1.0])
+
+            with _cc1:
+                st.markdown(
+                    f'<p style="{_FM}font-size:0.50rem;color:#8E9AAA;'
+                    f'letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">'
+                    f'Running Hit Rate (cumulative)</p>',
+                    unsafe_allow_html=True,
+                )
+                if hs["rolling_hr"]:
+                    _rhr_df = pd.DataFrame(hs["rolling_hr"])
+                    _fig_hr = go.Figure()
+                    _fig_hr.add_hrect(y0=50, y1=100, fillcolor="rgba(46,125,50,0.04)",
+                                      line_width=0)
+                    _fig_hr.add_trace(go.Scatter(
+                        x=_rhr_df["date"], y=_rhr_df["rolling_hit_rate"],
+                        mode="lines+markers",
+                        line=dict(color="#CFB991", width=2),
+                        marker=dict(size=5, color="#CFB991"),
+                        name="Cumulative hit rate",
+                        hovertemplate="Week %{x}<br>Hit rate: %{y:.0f}% (n=%{customdata})<extra></extra>",
+                        customdata=_rhr_df["n"],
+                    ))
+                    _fig_hr.add_hline(y=50, line=dict(color="#555960", width=1.2, dash="dot"),
+                                      annotation_text="50% no-skill", annotation_font_size=8,
+                                      annotation_font_color="#555960")
+                    _fig_hr.update_layout(
+                        paper_bgcolor="#000", plot_bgcolor="#080808",
+                        height=240,
+                        margin=dict(l=10, r=10, t=8, b=30),
+                        xaxis=dict(tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                                   showgrid=False, type="category"),
+                        yaxis=dict(tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                                   range=[0, 105], gridcolor="#111", ticksuffix="%"),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(_fig_hr, width="stretch", config={"displayModeBar": False})
+                else:
+                    st.caption("Accumulates as calls resolve (4-week lag).")
+
+            with _cc2:
+                st.markdown(
+                    f'<p style="{_FM}font-size:0.50rem;color:#8E9AAA;'
+                    f'letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">'
+                    f'Calibration — GRS score vs forward realized vol</p>',
+                    unsafe_allow_html=True,
+                )
+                if hs["resolved"]:
+                    _cal_x   = [e["grs_score"]   for e in hs["resolved"]]
+                    _cal_y   = [e["outcome_vol"]  for e in hs["resolved"]]
+                    _cal_hit = [e["is_hit"]        for e in hs["resolved"]]
+                    _cal_col = ["#27ae60" if h else "#c0392b" for h in _cal_hit]
+                    _fig_cal = go.Figure()
+                    _fig_cal.add_trace(go.Scatter(
+                        x=_cal_x, y=_cal_y,
+                        mode="markers",
+                        marker=dict(color=_cal_col, size=8, opacity=0.85,
+                                    line=dict(color="#1a1a1a", width=1)),
+                        hovertemplate="GRS %{x:.0f} → vol %{y:.1f}%<extra></extra>",
+                    ))
+                    if len(_cal_x) >= 3:
+                        _z = np.polyfit(_cal_x, _cal_y, 1)
+                        _xr = [min(_cal_x), max(_cal_x)]
+                        _yr = [_z[0]*v + _z[1] for v in _xr]
+                        _fig_cal.add_trace(go.Scatter(
+                            x=_xr, y=_yr, mode="lines",
+                            line=dict(color="#CFB991", width=1.2, dash="dot"),
+                            showlegend=False,
+                        ))
+                    _fig_cal.add_vline(x=50, line=dict(color="#555960", width=1, dash="dot"),
+                                       annotation_text="STRESS threshold",
+                                       annotation_font_size=7, annotation_font_color="#555960")
+                    _fig_cal.update_layout(
+                        paper_bgcolor="#000", plot_bgcolor="#080808",
+                        height=240,
+                        margin=dict(l=10, r=10, t=8, b=30),
+                        xaxis=dict(title=dict(text="GRS score at call time",
+                                              font=dict(family="JetBrains Mono", size=8, color="#555960")),
+                                   tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                                   gridcolor="#111"),
+                        yaxis=dict(title=dict(text="Forward realized vol (%)",
+                                              font=dict(family="JetBrains Mono", size=8, color="#555960")),
+                                   tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+                                   gridcolor="#111"),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(_fig_cal, width="stretch", config={"displayModeBar": False})
+                    st.markdown(
+                        f'<p style="{_FM}font-size:0.50rem;color:#555960;margin-top:-4px">'
+                        f'Green = hit · Red = miss · Dotted line = OLS trend · '
+                        f'Positive slope = score calibrated to realized stress</p>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.caption("Calibration plot populates as calls resolve.")
+
+            # ── Call log table ────────────────────────────────────────────
+            st.markdown(
+                f'<p style="{_FM}font-size:0.50rem;color:#CFB991;letter-spacing:.12em;'
+                f'text-transform:uppercase;border-bottom:1px solid #1e1e1e;padding-bottom:4px;'
+                f'margin:1rem 0 .5rem">CALL LOG — {hs["n_total"]} ENTRIES</p>',
+                unsafe_allow_html=True,
+            )
+            _th = (f"{_FM}font-size:0.50rem;font-weight:700;letter-spacing:.08em;"
+                   "text-transform:uppercase;color:#555960;padding:4px 8px;"
+                   "text-align:left;border-bottom:1px solid #1e1e1e")
+            _log_rows = ""
+            for _entry in sorted(_call_log, key=lambda e: e["call_date"], reverse=True):
+                _is_res  = _entry.get("resolved", False)
+                _is_hit  = _entry.get("is_hit")
+                _call    = _entry.get("call", "—")
+                _score   = _entry.get("grs_score", 0)
+                _label   = _entry.get("grs_label", "—")
+                _odate   = _entry.get("outcome_date", "—")
+                _fvol    = _entry.get("outcome_vol")
+                _bvol    = _entry.get("outcome_vol_base")
+                _cdate   = _entry.get("call_date", "—")
+
+                if not _is_res:
+                    _days_left = (
+                        (pd.Timestamp(_odate) - pd.Timestamp("today")).days
+                        if _odate != "—" else "—"
+                    )
+                    _result_html = (
+                        f'<span style="{_FM}font-size:0.50rem;color:#555960">'
+                        f'PENDING · {_days_left}d</span>'
+                    )
+                    _row_bg = ""
+                elif _is_hit:
+                    _result_html = (
+                        f'<span style="{_FM}font-size:0.56rem;font-weight:700;color:#27ae60">'
+                        f'✓ HIT</span>'
+                    )
+                    _row_bg = "background:#040a04;"
+                else:
+                    _result_html = (
+                        f'<span style="{_FM}font-size:0.56rem;font-weight:700;color:#c0392b">'
+                        f'✗ MISS</span>'
+                    )
+                    _row_bg = "background:#0a0404;"
+
+                _call_col  = "#c0392b" if _call == "STRESS" else "#2980b9"
+                _score_col = ("#c0392b" if _score >= 70 else
+                              "#e67e22" if _score >= 50 else "#CFB991")
+                _td = f"{_FM}font-size:0.56rem;padding:5px 8px;border-bottom:1px solid #111;{_row_bg}"
+                _fvol_str = (f'{_fvol:.1f}% (base {_bvol:.1f}%)'
+                             if _fvol is not None and _bvol is not None else "—")
+                _log_rows += (
+                    f'<tr>'
+                    f'<td style="{_td}color:#555960">{_entry.get("week","—")}</td>'
+                    f'<td style="{_td}color:#e8e9ed">{_cdate}</td>'
+                    f'<td style="{_td}color:{_score_col};font-weight:700">{_score:.0f}</td>'
+                    f'<td style="{_td}color:#8890a1">{_label}</td>'
+                    f'<td style="{_td}color:{_call_col};font-weight:700">{_call}</td>'
+                    f'<td style="{_td}color:#8890a1">{_odate}</td>'
+                    f'<td style="{_td}color:#CFB991">{_fvol_str}</td>'
+                    f'<td style="{_td}">{_result_html}</td>'
+                    f'</tr>'
+                )
+
+            st.markdown(
+                f'<table style="width:100%;border-collapse:collapse">'
+                f'<thead><tr>'
+                f'<th style="{_th}">WEEK</th>'
+                f'<th style="{_th}">CALL DATE</th>'
+                f'<th style="{_th}">GRS</th>'
+                f'<th style="{_th}">LABEL</th>'
+                f'<th style="{_th}">CALL</th>'
+                f'<th style="{_th}">OUTCOME DATE</th>'
+                f'<th style="{_th}">FWD VOL</th>'
+                f'<th style="{_th}">RESULT</th>'
+                f'</tr></thead>'
+                f'<tbody>{_log_rows}</tbody>'
+                f'</table>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<p style="{_FM}font-size:0.50rem;color:#555960;margin-top:6px">'
+                f'Hit = GRS direction (STRESS/CALM) matched realized vol outcome vs 252d rolling median · '
+                f'4-week (20 trading day) forward window · 50% = no-skill random baseline</p>',
+                unsafe_allow_html=True,
+            )
 
     # ── Page conclusion ─────────────────────────────────────────────────────
     bal_str = f"{stats['balanced_acc']:.0f}%" if stats["balanced_acc"] else "–"
