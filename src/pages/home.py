@@ -689,6 +689,8 @@ def _render_geo_risk_block(
     conflict_agg: dict,
     conflict_results: dict,
     score_history: pd.Series | None = None,
+    yday_deltas: list | None = None,
+    yday_date: str | None = None,
 ) -> None:
     """
     Full-width geopolitical risk score block.
@@ -839,32 +841,114 @@ def _render_geo_risk_block(
             unsafe_allow_html=True,
         )
     with _gauge_meta:
-        # Score decomposition inline next to gauge
+        # ── Build delta lookup {key → delta_dict} for quick access ────────
+        _dl: dict[str, dict] = {}
+        if yday_deltas:
+            for _d in yday_deltas:
+                _dl[_d["key"]] = _d
+
+        # ── Header ────────────────────────────────────────────────────────
+        _yday_label     = f"vs {yday_date}" if yday_date else ""
+        _yday_label_html = (
+            f'<span style="{_M}font-size:0.44rem;color:{_C["muted"]};'
+            f'letter-spacing:.06em">{_yday_label}</span>'
+            if _yday_label else ""
+        )
         st.markdown(
-            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:10px;'
-            f'padding-top:.5rem">Score Layers</div>',
+            f'<div style="display:flex;align-items:baseline;gap:6px;'
+            f'margin-bottom:10px;padding-top:.5rem">'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
+            f'text-transform:uppercase;color:{_C["label"]}">Score Layers</span>'
+            f'{_yday_label_html}'
+            f'</div>',
             unsafe_allow_html=True,
         )
-        for _lbl, _val, _col in [
-            ("Conflict Intensity", cis, cis_color),
-            ("Transmission Pressure", tps, tps_color),
-            ("Market Confirmation", mcs, mcs_color),
-        ]:
-            _pct = min(_val, 100)
+
+        # ── Score layer rows with inline delta ────────────────────────────
+        _layer_map = [
+            ("Conflict Intensity",    cis, cis_color, "portfolio_cis"),
+            ("Transmission Pressure", tps, tps_color, "portfolio_tps"),
+            ("Market Confirmation",   mcs, mcs_color, None),
+        ]
+        for _lbl, _val, _col, _dkey in _layer_map:
+            _pct   = min(_val, 100)
+            _dd    = _dl.get(_dkey) if _dkey else None
+            _delta = _dd["delta"] if _dd else None
+
+            if _delta is not None and abs(_delta) >= 0.3:
+                _dsign = f"▲ +{_delta:.1f}" if _delta > 0 else f"▼ {_delta:.1f}"
+                _dcol  = _C["danger"] if _delta > 0 else _C["safe"]
+                _delta_html = (
+                    f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_dcol};'
+                    f'margin-left:5px">{_dsign}</span>'
+                )
+            else:
+                _delta_html = ""
+
             st.markdown(
                 f'<div style="margin-bottom:10px">'
-                f'<div style="display:flex;justify-content:space-between;'
+                f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
                 f'{_F}font-size:0.69rem;margin-bottom:3px">'
                 f'<span style="color:{_C["text"]}">{_lbl}</span>'
+                f'<span style="display:flex;align-items:baseline;gap:0">'
                 f'<span style="{_M}font-weight:700;color:{_col}">{_val:.0f}</span>'
-                f'</div>'
+                f'{_delta_html}</span></div>'
                 f'<div style="height:4px;background:#1a1a1a;border-radius:1px">'
                 f'<div style="width:{_pct:.0f}%;height:4px;background:{_col};'
                 f'border-radius:1px"></div></div></div>',
                 unsafe_allow_html=True,
             )
-        # News GPR if available
+
+        # ── Top movers from yesterday ─────────────────────────────────────
+        _conflict_movers = [
+            d for d in (yday_deltas or [])
+            if d["category"] == "conflict" and d["key"].endswith("_cis")
+        ][:4]
+
+        if _conflict_movers:
+            _rows_html = ""
+            for _mv in _conflict_movers:
+                _ms  = _mv["delta"]
+                _mc  = _C["danger"] if _ms > 0 else _C["safe"]
+                _mi  = f"▲ +{_ms:.1f}" if _ms > 0 else f"▼ {_ms:.1f}"
+                # Strip " · CIS" suffix for compact display
+                _mlbl = _mv["label"].replace(" · CIS", "")
+                _rows_html += (
+                    f'<div style="display:flex;align-items:center;gap:6px;'
+                    f'padding:2px 0;border-bottom:1px solid #0e0e0e">'
+                    f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_mc};'
+                    f'min-width:52px;text-align:right">{_mi}</span>'
+                    f'<span style="{_F}font-size:0.60rem;color:{_C["text"]};'
+                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_mlbl}</span>'
+                    f'</div>'
+                )
+            st.markdown(
+                f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid {_C["border"]}">'
+                f'<div style="{_M}font-size:0.44rem;font-weight:700;letter-spacing:.14em;'
+                f'text-transform:uppercase;color:{_C["label"]};margin-bottom:5px">'
+                f'Conflict Movers</div>'
+                f'{_rows_html}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        elif yday_deltas is not None:
+            # Has snapshot but no conflict movers — show stable note
+            st.markdown(
+                f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid {_C["border"]}">'
+                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">— No conflict moves</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        elif yday_deltas is None:
+            # No prior snapshot at all
+            st.markdown(
+                f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid {_C["border"]}">'
+                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">No prior baseline yet</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── News GPR ──────────────────────────────────────────────────────
         if news_gpr is not None:
             st.markdown(
                 f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid {_C["border"]}">'
@@ -4595,122 +4679,6 @@ def _render_geo_event_timeline(conflict_results) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DELTA PANEL — "What Changed Since Yesterday"
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _render_delta_panel(
-    conflict_results: dict,
-    portfolio_cis: float,
-    portfolio_tps: float,
-    geo_risk_score: float,
-) -> None:
-    """
-    Full-width "what changed since yesterday" panel. Rendered before the
-    3-column layout so it answers "what do I need to know today" at first glance.
-
-    Writes/reads from logs/delta_snapshot.json. If no prior-day snapshot exists,
-    says so honestly — no fake deltas.
-    """
-    from src.analysis.daily_snapshot import update_snapshot, compute_deltas
-
-    try:
-        yesterday, today = update_snapshot(
-            conflict_results, portfolio_cis, portfolio_tps, geo_risk_score,
-        )
-    except Exception:
-        return  # silent — don't break the page if snapshot I/O fails
-
-    # ── Panel chrome ──────────────────────────────────────────────────────
-    if yesterday:
-        _baseline_date = yesterday.get("date", "unknown")
-        _baseline_time = yesterday.get("captured_at", "")
-        _date_label    = (
-            f"YESTERDAY · {_baseline_date}"
-            if _baseline_date != datetime.date.today().isoformat()
-            else f"EARLIER TODAY · {_baseline_time}"
-        )
-    else:
-        _date_label = "FIRST RUN — NO PRIOR BASELINE"
-
-    st.markdown(
-        f'<div style="background:#060606;border:1px solid {_C["border"]};'
-        f'border-left:3px solid {_GOLD};padding:.35rem .85rem .3rem;'
-        f'margin-bottom:.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">'
-        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.20em;'
-        f'text-transform:uppercase;color:{_GOLD};flex-shrink:0">'
-        f'What Changed Since {_date_label}</span>'
-        f'<div style="flex:1;height:1px;background:{_C["border"]}"></div>'
-        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">'
-        f'today · {today.get("captured_at","")}</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── No baseline case ──────────────────────────────────────────────────
-    if yesterday is None:
-        st.markdown(
-            f'<div style="background:#080808;border:1px solid {_C["border"]};'
-            f'padding:.4rem .85rem;margin-bottom:.5rem">'
-            f'<span style="{_M}font-size:0.63rem;color:{_C["muted"]}">'
-            f'No prior-day snapshot found. Baseline saved — deltas will appear on next visit.'
-            f'</span></div>',
-            unsafe_allow_html=True,
-        )
-        return
-
-    # ── Compute ranked deltas ─────────────────────────────────────────────
-    deltas = compute_deltas(yesterday, today)
-
-    if not deltas:
-        st.markdown(
-            f'<div style="background:#080808;border:1px solid {_C["border"]};'
-            f'padding:.4rem .85rem;margin-bottom:.5rem">'
-            f'<span style="{_M}font-size:0.63rem;color:{_C["muted"]}">'
-            f'No significant moves since {_date_label.lower()}. All scores stable.'
-            f'</span></div>',
-            unsafe_allow_html=True,
-        )
-        return
-
-    # ── Delta rows ────────────────────────────────────────────────────────
-    _CAT_COLORS = {
-        "composite": _GOLD,
-        "aggregate": _C["info"],
-        "conflict":  _C["warn"],
-    }
-
-    rows_html = ""
-    for d in deltas:
-        delta   = d["delta"]
-        is_up   = delta > 0
-        # For geo risk / CIS / TPS: increase = more danger (red)
-        d_color = _C["danger"] if is_up else _C["safe"]
-        d_sign  = f"▲ +{delta:.1f}" if is_up else f"▼ {delta:.1f}"
-        cat_col = _CAT_COLORS.get(d["category"], _C["muted"])
-
-        rows_html += (
-            f'<div style="display:flex;align-items:center;gap:.7rem;'
-            f'padding:.22rem .85rem;border-bottom:1px solid #0e0e0e">'
-            f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{d_color};'
-            f'min-width:80px;text-align:right">{d_sign}</span>'
-            f'<span style="{_M}font-size:0.50rem;letter-spacing:.08em;font-weight:700;'
-            f'text-transform:uppercase;color:{cat_col};min-width:70px">{d["category"]}</span>'
-            f'<span style="{_F}font-size:0.72rem;color:{_C["text"]}">{d["label"]}</span>'
-            f'<span style="{_M}font-size:0.60rem;color:{_C["muted"]};margin-left:auto">'
-            f'{d["previous"]:.1f} → {d["current"]:.1f}</span>'
-            f'</div>'
-        )
-
-    st.markdown(
-        f'<div style="background:#080808;border:1px solid {_C["border"]};'
-        f'margin-bottom:.5rem;border-top:none">'
-        f'{rows_html}'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -4851,6 +4819,23 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             "_data_date": None,
         }
 
+    # ── Daily snapshot: persist scores and compute yesterday-vs-today deltas ─
+    _yday_deltas: list | None = None
+    _yday_date:   str  | None = None
+    try:
+        from src.analysis.daily_snapshot import update_snapshot, compute_deltas
+        _snap_yday, _snap_today = update_snapshot(
+            conflict_results,
+            portfolio_cis  = conflict_agg.get("portfolio_cis", conflict_agg.get("cis",  50.0)),
+            portfolio_tps  = conflict_agg.get("portfolio_tps", conflict_agg.get("tps",  50.0)),
+            geo_risk_score = float(risk["score"]),
+        )
+        if _snap_yday is not None:
+            _yday_deltas = compute_deltas(_snap_yday, _snap_today)
+            _yday_date   = _snap_yday.get("date")
+    except Exception:
+        pass
+
     # ── Populate session-state deltas ──────────────────────────────────────
     _new_cis  = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0))
     _new_tps  = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0))
@@ -4987,17 +4972,6 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
-    # § 1.2  What changed since yesterday — delta panel before the full score layout
-    try:
-        _render_delta_panel(
-            conflict_results,
-            portfolio_cis   = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0)),
-            portfolio_tps   = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0)),
-            geo_risk_score  = float(risk["score"]),
-        )
-    except Exception:
-        pass
-
     # ── 3-col layout: intel feed | dominant gauge | market pulse cards ────────
     # Column heights are balanced by design:
     #   Left  = intelligence feed + scenario switch
@@ -5051,7 +5025,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_portfolio_pulse()
         # Geo risk block: gauge + history chart + decomposition — the CENTERPIECE
         try:
-            _render_geo_risk_block(risk, conflict_agg, conflict_results, _score_hist)
+            _render_geo_risk_block(
+                risk, conflict_agg, conflict_results, _score_hist,
+                yday_deltas=_yday_deltas,
+                yday_date=_yday_date,
+            )
         except Exception:
             _err_slot("geo risk")
         # Critical alert banner (inline, no empty space when no alerts)
