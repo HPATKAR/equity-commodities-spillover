@@ -3283,18 +3283,134 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # The worked example shows the pipeline's decision trace across windows, not a trade grade.
 
     # ── Download report ─────────────────────────────────────────────────────
+    _n_theses  = len(_TRADE_LIBRARY)
+    _n_geo     = len(GEOPOLITICAL_EVENTS) if GEOPOLITICAL_EVENTS else 0
+    _r_col_dl  = {0: "#2e7d32", 1: "#555960", 2: "#e67e22", 3: "#c0392b"}.get(current, "#555960")
+    _CAT_HEX_DL = {
+        "Crisis Hedge": "#c0392b", "Geopolitical": "#e67e22",
+        "Macro": "#2980b9",        "Growth": "#2e7d32",
+        "Dollar Cycle": "#1abc9c", "Asia Divergence": "#9b59b6",
+        "Fixed Income": "#2471a3", "India/EM": "#d35400",
+    }
+    # Build thesis list for right column
+    _thesis_rows_html = ""
+    for _tr in _TRADE_LIBRARY:
+        _cat_dl  = _tr.get("category", "Macro")
+        _col_dl  = _CAT_HEX_DL.get(_cat_dl, "#555960")
+        _nm_dl   = _tr["name"].split("(")[0].strip()
+        if len(_nm_dl) > 40: _nm_dl = _nm_dl[:38] + "…"
+        _as_dl   = " / ".join(_tr.get("assets", [])[:2])
+        _dirs_dl = _tr.get("direction", [])
+        _legs_dl = "  ".join(
+            f'{"▲" if d == "Long" else "▼"} {a}'
+            for a, d in zip(_tr.get("assets", [])[:2], _dirs_dl[:2])
+        )
+        _thesis_rows_html += (
+            f'<div style="display:flex;align-items:flex-start;gap:7px;'
+            f'padding:5px 0;border-bottom:1px solid #111">'
+            f'<span style="width:6px;height:6px;border-radius:50%;'
+            f'background:{_col_dl};flex-shrink:0;margin-top:4px"></span>'
+            f'<div style="min-width:0">'
+            f'<div style="font-size:.61rem;color:#d0d0d0;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.3;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_nm_dl}</div>'
+            f'<div style="font-size:.54rem;color:#555960;'
+            f'font-family:\'JetBrains Mono\',monospace;margin-top:1px">'
+            f'{_cat_dl} · {_legs_dl}</div>'
+            f'</div></div>'
+        )
+    # Build section list for left column
+    _dl_sections = [
+        ("01", "Regime Analysis",
+         f"Current: {r_name} · 60d rolling avg |corr|"),
+        ("02", "Cross-Asset Heatmap",
+         "Pearson matrix · 8 equity × 8 commodity"),
+        ("03", "Composite Stress Index",
+         "0–100 · vol 45% · corr 35% · vol 15%"),
+        ("04", "Commodity Performance",
+         "Indexed returns · 252 trading days"),
+        ("05", f"Trade Ideas  ({_n_theses} theses)",
+         f"{_n_theses} illustrative pairs · 4 categories"),
+        ("06", f"Geopolitical Context  ({_n_geo} events)",
+         f"{_n_geo} events · commodity transmission"),
+        ("07", "Methodology & Data Sources",
+         "DCC-GARCH · DY Spillover · Granger · FRED"),
+    ]
+    _sec_rows_html = ""
+    for _sn, _st, _ss in _dl_sections:
+        _sec_rows_html += (
+            f'<div style="display:flex;gap:9px;padding:6px 10px;'
+            f'border-bottom:1px solid #111">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
+            f'color:#CFB991;font-weight:700;flex-shrink:0;padding-top:2px">{_sn}</span>'
+            f'<div><div style="font-size:.63rem;color:#e8e9ed;font-weight:600;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.3">{_st}</div>'
+            f'<div style="font-size:.57rem;color:#555960;'
+            f'font-family:\'DM Sans\',sans-serif;margin-top:1px">{_ss}</div>'
+            f'</div></div>'
+        )
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
-        'letter-spacing:.14em;text-transform:uppercase;color:#CFB991;margin-bottom:.5rem">'
-        'Institution Report Download</p>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.70rem;'
-        'color:#8890a1;line-height:1.7;margin-bottom:.8rem">'
-        'Generate a professionally formatted A4 research report covering the current regime, '
-        'all illustrative trade ideas, geopolitical context, and methodology — suitable for '
-        'academic submission or instructor review.</p>',
+        f'<div style="border:1px solid #CFB99130;border-radius:6px;overflow:hidden;'
+        f'margin-bottom:1.2rem;background:#080808">'
+        # Gold header bar
+        f'<div style="background:#CFB991;padding:6px 14px;display:flex;'
+        f'justify-content:space-between;align-items:center">'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.57rem;'
+        f'font-weight:700;color:#1a0f00;letter-spacing:.12em">'
+        f'PURDUE · DANIELS SCHOOL OF BUSINESS</span>'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.53rem;'
+        f'color:#4a3000;letter-spacing:.08em">A4 · PDF · 7 SECTIONS</span>'
+        f'</div>'
+        # Title + regime badge
+        f'<div style="padding:13px 14px 10px;border-bottom:1px solid #1a1a1a;'
+        f'display:flex;justify-content:space-between;align-items:flex-start">'
+        f'<div>'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:.90rem;'
+        f'font-weight:700;color:#e8e9ed;letter-spacing:.03em;line-height:1.25">'
+        f'EQUITY &amp; COMMODITIES<br>SPILLOVER MONITOR</div>'
+        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.64rem;'
+        f'color:#8890a1;margin-top:5px">'
+        f'Cross-Asset Quantitative Research · Academic Submission Format</div>'
+        f'</div>'
+        f'<div style="text-align:right;flex-shrink:0;margin-left:14px">'
+        f'<div style="display:inline-block;background:{_r_col_dl}22;'
+        f'border:1px solid {_r_col_dl}55;border-radius:3px;padding:4px 10px;'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:.56rem;'
+        f'font-weight:700;color:{_r_col_dl};margin-bottom:6px">'
+        f'REGIME: {r_name.upper()}</div>'
+        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.57rem;color:#555960">'
+        f'Heramb S. Patkar<br>Jiahe Miao · Ilian Zalomai</div>'
+        f'</div>'
+        f'</div>'
+        # Two-column body
+        f'<div style="display:grid;grid-template-columns:46% 54%;'
+        f'border-bottom:1px solid #1a1a1a">'
+        # Left: sections
+        f'<div style="border-right:1px solid #1a1a1a">'
+        f'<div style="padding:5px 10px;background:#050505;border-bottom:1px solid #1a1a1a;'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
+        f'color:#555960;letter-spacing:.10em">REPORT SECTIONS</div>'
+        f'{_sec_rows_html}'
+        f'</div>'
+        # Right: theses
+        f'<div>'
+        f'<div style="padding:5px 10px;background:#050505;border-bottom:1px solid #1a1a1a;'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
+        f'color:#555960;letter-spacing:.10em">'
+        f'THESES REFERENCED — {_n_theses} ILLUSTRATIVE PAIRS</div>'
+        f'<div style="padding:6px 12px;max-height:248px;overflow-y:auto">'
+        f'{_thesis_rows_html}</div>'
+        f'</div>'
+        f'</div>'
+        # Footer bar
+        f'<div style="padding:7px 14px;background:#050505;display:flex;'
+        f'justify-content:space-between;align-items:center">'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:.57rem;color:#555960">'
+        f'Regime-triggered · Historical spillover patterns · Purdue MSF Research Terminal</span>'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;color:#CFB99170">'
+        f'EDUCATIONAL USE ONLY</span>'
+        f'</div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
