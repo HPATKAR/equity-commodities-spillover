@@ -1442,4 +1442,161 @@ def page_strait_watch(start: str, end: str) -> None:
     except Exception as _eia_err:
         st.caption("EIA data unavailable — DEMO_KEY may be rate-limited.")
 
+    # ── SHIPPING → CRUDE LEAD-LAG SIGNAL ──────────────────────────────────────
+    st.markdown(
+        f'<p style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
+        f'color:#CFB991;text-transform:uppercase;border-bottom:1px solid #1e1e1e;'
+        f'padding-bottom:5px;margin:2rem 0 .6rem">Shipping → Crude Lead-Lag Signal</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<p style="{_F}font-size:0.63rem;color:#8890a1;line-height:1.65;margin-bottom:0.8rem">'
+        f'Cross-correlation of daily ship-count changes vs WTI returns at lags −10 to +10 days. '
+        f'Positive lag = shipping leads price. Negative lag = price leads rerouting. '
+        f'95% CI: ±2/√n (white-noise null). '
+        f'<b style="color:#e67e22">PortWatch has ~7-day publication lag — lags 0–6 may reflect '
+        f'reporting delay, not true predictive lead.</b> No forward-filling applied.</p>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        from src.analysis.shipping_signal import run_all_strait_lead_lag
+
+        @st.cache_data(ttl=86400, show_spinner=False, max_entries=1)
+        def _cached_lead_lag(_wti: pd.Series, _len_hint: int) -> list[dict]:
+            return run_all_strait_lead_lag(_wti, days=400, max_lag=10)
+
+        _wti_raw = _safe_series("WTI Crude Oil") if "WTI Crude Oil" in (cmd_px.columns if not cmd_px.empty else []) else pd.Series(dtype=float)
+        if _wti_raw.empty:
+            _brent_raw = _safe_series("Brent Crude")
+            _price_for_ll = _brent_raw
+            _price_label  = "Brent"
+        else:
+            _price_for_ll = _wti_raw
+            _price_label  = "WTI"
+
+        if _price_for_ll.empty:
+            st.caption("Crude price series unavailable — cannot compute lead-lag.")
+        else:
+            with st.spinner("Computing chokepoint lead-lag correlations…"):
+                _ll_results = _cached_lead_lag(_price_for_ll, len(_price_for_ll))
+
+            # ── Summary table ──────────────────────────────────────────────────
+            _dir_color = {
+                "shipping → price":  "#27ae60",
+                "price → shipping":  "#e67e22",
+                "contemporaneous":   "#CFB991",
+                "no signal":         "#555960",
+                "insufficient data": "#555960",
+                "no data":           "#555960",
+                "error":             "#c0392b",
+            }
+            _thr  = "padding:5px 10px;border-bottom:1px solid #1a1a1a;font-size:0.50rem;font-weight:700;letter-spacing:.12em;color:#CFB991;text-transform:uppercase;background:#0d0d0d"
+            _tdc  = "padding:5px 10px;border-bottom:1px solid #141414;font-size:0.56rem;"
+            _rows = ""
+            for _res in _ll_results:
+                _dc    = _dir_color.get(_res["direction"], "#555960")
+                _sig   = "✓" if _res["significant"] else "—"
+                _sig_c = "#27ae60" if _res["significant"] else "#555960"
+                _lag_s = f"+{_res['peak_lag']}d" if (_res["peak_lag"] or 0) > 0 else (
+                    f"{_res['peak_lag']}d" if _res["peak_lag"] is not None else "—"
+                )
+                _pub_warn = (
+                    f'<span style="color:#e67e22;font-size:0.50rem"> ⚠ pub.lag</span>'
+                    if _res["peak_lag"] is not None and abs(_res["peak_lag"]) <= 6 and _res["significant"]
+                    else ""
+                )
+                _rows += (
+                    f'<tr>'
+                    f'<td style="{_tdc}color:#c8c8c8;font-weight:700">{_res["strait_label"]}</td>'
+                    f'<td style="{_tdc}color:{_dc}">{_res["direction"]}</td>'
+                    f'<td style="{_tdc}color:#c8c8c8;text-align:center">{_lag_s}{_pub_warn}</td>'
+                    f'<td style="{_tdc}color:#c8c8c8;text-align:center">{_res["r"]:.3f}</td>'
+                    f'<td style="{_tdc}color:#555960;text-align:center">{_res["ci95"]:.3f}</td>'
+                    f'<td style="{_tdc}color:{_sig_c};text-align:center;font-weight:700">{_sig}</td>'
+                    f'<td style="{_tdc}color:#555960;font-size:0.50rem">{_res["n_obs"]}</td>'
+                    f'</tr>'
+                )
+
+            st.markdown(
+                f'<table style="width:100%;border-collapse:collapse;font-family:\'JetBrains Mono\',monospace">'
+                f'<tr>'
+                f'<th style="{_thr}">Strait</th>'
+                f'<th style="{_thr}">Direction</th>'
+                f'<th style="{_thr}">Peak lag</th>'
+                f'<th style="{_thr}">r</th>'
+                f'<th style="{_thr}">CI95</th>'
+                f'<th style="{_thr}">Sig?</th>'
+                f'<th style="{_thr}">n</th>'
+                f'</tr>'
+                f'{_rows}'
+                f'</table>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<p style="{_M}font-size:0.50rem;color:#555960;margin-top:6px">'
+                f'vs {_price_label} daily returns · CCF ±2/√n significance · '
+                f'⚠ pub.lag = peak lag ≤6d, may reflect PortWatch ~7d publication delay not true predictive lead</p>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Hormuz CCF bar chart ───────────────────────────────────────────
+            _hoz = next((r for r in _ll_results if r["strait_id"] == "hormuz"), None)
+            if _hoz and _hoz["ccf"]:
+                _lags_sorted = sorted(_hoz["ccf"].keys())
+                _rs          = [_hoz["ccf"][k] for k in _lags_sorted]
+                _ci          = _hoz["ci95"]
+                _bar_colors  = [
+                    "#27ae60" if (r > _ci) else "#c0392b" if (r < -_ci) else "#2a2a2a"
+                    for r in _rs
+                ]
+                _fig_ccf = go.Figure()
+                _fig_ccf.add_bar(
+                    x=_lags_sorted, y=_rs,
+                    marker_color=_bar_colors,
+                    name="CCF",
+                )
+                _fig_ccf.add_hline(y=_ci,  line=dict(color="#555960", dash="dot", width=1))
+                _fig_ccf.add_hline(y=-_ci, line=dict(color="#555960", dash="dot", width=1))
+                _fig_ccf.add_vline(x=0,    line=dict(color="#CFB99144", dash="solid", width=1))
+                # shade the publication-lag zone
+                _fig_ccf.add_vrect(
+                    x0=-0.5, x1=6.5, fillcolor="#e67e22", opacity=0.05,
+                    layer="below", line_width=0,
+                )
+                _fig_ccf.update_layout(
+                    title=f"Hormuz ship-count Δ vs {_price_label} return — CCF by lag (days)",
+                    height=260,
+                    margin=dict(l=40, r=10, t=40, b=50),
+                    paper_bgcolor="#080808",
+                    plot_bgcolor="#080808",
+                    font=dict(family="JetBrains Mono", size=10, color="#c8c8c8"),
+                    title_font=dict(size=10, color="#8890a1"),
+                    xaxis=dict(
+                        title="Lag (days) — positive = shipping leads price",
+                        tickfont=dict(size=9, color="#c8c8c8"),
+                        gridcolor="#1a1a1a",
+                        dtick=1,
+                    ),
+                    yaxis=dict(
+                        title="Correlation",
+                        tickfont=dict(size=9, color="#c8c8c8"),
+                        gridcolor="#1a1a1a",
+                        zeroline=True, zerolinecolor="#2a2a2a",
+                    ),
+                    showlegend=False,
+                    bargap=0.15,
+                )
+                st.plotly_chart(_fig_ccf, use_container_width=True, config={"displayModeBar": False})
+                st.markdown(
+                    f'<p style="{_M}font-size:0.50rem;color:#555960;margin-top:2px">'
+                    f'Orange shading = lags 0–6 days (PortWatch ~7d publication lag zone). '
+                    f'Green/red bars = statistically significant at 95% CI (|r| > {_ci:.2f}). '
+                    f'Grey bars = within noise band.</p>',
+                    unsafe_allow_html=True,
+                )
+
+    except Exception as _ll_err:
+        st.caption("Lead-lag analysis unavailable — see logs.")
+
     _page_footer()
