@@ -484,11 +484,11 @@ def page_strait_watch(start: str, end: str) -> None:
         pct_col  = "#27ae60" if pct_chg >= 0 else "#e67e22" if pct_chg > -30 else "#c0392b"
         is_live  = s.get("_live", False)
         src_badge = (
-            f'<span style="{_F}font-size:0.40rem;font-weight:700;letter-spacing:0.08em;'
+            f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
             f'background:#0d2a0d;border:1px solid #27ae6066;color:#27ae60;'
             f'padding:1px 5px;border-radius:2px;margin-left:5px">● LIVE</span>'
             if is_live else
-            f'<span style="{_F}font-size:0.40rem;font-weight:700;letter-spacing:0.08em;'
+            f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
             f'background:#1e1a0a;border:1px solid #6b708055;color:#6b7280;'
             f'padding:1px 5px;border-radius:2px;margin-left:5px">EST.</span>'
         )
@@ -509,7 +509,7 @@ def page_strait_watch(start: str, end: str) -> None:
         else:
             chg_html = (
                 f'<span style="{_M}font-size:0.72rem;font-weight:700;color:#555960">—</span>'
-                f'<span style="{_F}font-size:0.52rem;color:#444;margin-left:4px">24h (est. only)</span>'
+                f'<span style="{_F}font-size:0.52rem;color:#555960;margin-left:4px">24h (est. only)</span>'
             )
 
         with col:
@@ -524,7 +524,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 f'<div style="display:inline-flex;align-items:center;'
                 f'background:{sc}18;border:1px solid {sc}55;border-radius:2px;'
                 f'padding:1px 5px;margin-bottom:10px">'
-                f'<span style="{_F}font-size:0.42rem;font-weight:700;letter-spacing:0.10em;color:{sc}">'
+                f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;color:{sc}">'
                 f'{sl}</span></div>'
 
                 f'<div style="{_M}font-size:2.2rem;font-weight:700;color:#e8e9ed;line-height:1">'
@@ -536,7 +536,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 f'{chg_html}'
                 f'</div>'
 
-                f'<div style="{_F}font-size:0.46rem;color:#444;margin-bottom:3px">'
+                f'<div style="{_F}font-size:0.50rem;color:#555960;margin-bottom:3px">'
                 f'vs baseline ({base}/day)</div>'
                 f'<div style="background:#1e1e1e;border-radius:2px;height:4px;margin-bottom:3px">'
                 f'<div style="width:{min(cur/base*100,100):.0f}%;background:{pct_col};'
@@ -547,7 +547,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 f'<div style="{_F}font-size:0.52rem;color:#555960;line-height:1.5">'
                 f'{s["ships_context"]}</div>'
 
-                f'<div style="{_F}font-size:0.44rem;color:#333;margin-top:8px;'
+                f'<div style="{_F}font-size:0.50rem;color:#555960;margin-top:8px;'
                 f'padding-top:6px;border-top:1px solid #1a1a1a">'
                 f'{src_line}</div>'
                 f'</div>',
@@ -586,13 +586,13 @@ def page_strait_watch(start: str, end: str) -> None:
             # Name + region
             f'<div style="{_F}font-size:0.65rem;font-weight:700;color:#e8e9ed;'
             f'line-height:1.3;margin-bottom:1px">{s["name"]}</div>'
-            f'<div style="{_F}font-size:0.50rem;color:#444;margin-bottom:7px">{s["region"]}</div>'
+            f'<div style="{_F}font-size:0.50rem;color:#555960;margin-bottom:7px">{s["region"]}</div>'
 
             # Status badge
             f'<div style="display:inline-flex;align-items:center;'
             f'background:{sc}18;border:1px solid {sc}55;border-radius:2px;'
             f'padding:1px 6px;margin-bottom:8px">'
-            f'<span style="{_F}font-size:0.44rem;font-weight:700;letter-spacing:0.10em;color:{sc}">'
+            f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;color:{sc}">'
             f'{sl}</span></div>'
 
             # Flow + change
@@ -600,17 +600,17 @@ def page_strait_watch(start: str, end: str) -> None:
             f'<div>'
             f'<div style="{_M}font-size:0.92rem;font-weight:700;color:#e8e9ed;line-height:1">'
             f'{s["oil_mbd"]:.1f}'
-            f'<span style="font-size:0.48rem;color:#555960;margin-left:2px">mb/d</span></div>'
-            f'<div style="{_F}font-size:0.46rem;color:#444;margin-top:1px">oil transit</div>'
+            f'<span style="font-size:0.50rem;color:#555960;margin-left:2px">mb/d</span></div>'
+            f'<div style="{_F}font-size:0.50rem;color:#555960;margin-top:1px">oil transit</div>'
             f'</div>'
             f'<div style="text-align:right">'
             f'<div style="{_M}font-size:0.70rem;font-weight:700;color:{fc_c}">'
             f'{fc_s}{abs(fc)}%</div>'
-            f'<div style="{_F}font-size:0.46rem;color:#444">vs 12m</div>'
+            f'<div style="{_F}font-size:0.50rem;color:#555960">vs 12m</div>'
             f'</div></div>'
 
             # Disruption score bar
-            f'<div style="{_F}font-size:0.46rem;color:#555960;margin-bottom:3px">Disruption score</div>'
+            f'<div style="{_F}font-size:0.50rem;color:#555960;margin-bottom:3px">Disruption score</div>'
             f'<div style="background:#1e1e1e;border-radius:2px;height:4px;margin-bottom:3px">'
             f'<div style="width:{ds}%;background:{sc};height:4px;border-radius:2px;'
             f'box-shadow:0 0 4px {sc}55"></div></div>'
@@ -618,12 +618,12 @@ def page_strait_watch(start: str, end: str) -> None:
             f'{ds}/100</div>'
 
             # Active risks
-            f'<div style="{_F}font-size:0.46rem;color:#444;font-weight:700;'
+            f'<div style="{_F}font-size:0.50rem;color:#555960;font-weight:700;'
             f'text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Active risks</div>'
             f'{risks_html}'
 
             # Footer meta
-            f'<div style="{_F}font-size:0.46rem;color:#333;margin-top:7px">'
+            f'<div style="{_F}font-size:0.50rem;color:#555960;margin-top:7px">'
             f'{s["global_oil_pct"]}% global oil · {s["lng_pct"]}% LNG · '
             f'{s.get("_score_source", s["as_of"])}</div>'
             f'</div>',
@@ -897,7 +897,7 @@ def page_strait_watch(start: str, end: str) -> None:
             f'border-top:2px solid {sc};border-radius:0 0 4px 4px;padding:0.6rem 0.65rem">'
             f'<div style="{_M}font-size:1.15rem;font-weight:700;color:{days_color};'
             f'line-height:1;margin-bottom:3px">{days_str}</div>'
-            f'<div style="{_F}font-size:0.48rem;color:#444;margin-bottom:6px">'
+            f'<div style="{_F}font-size:0.50rem;color:#555960;margin-bottom:6px">'
             f'{ev_date.strftime("%b %d, %Y")}</div>'
             f'<div style="{_F}font-size:0.60rem;color:#c8c8c8;line-height:1.45;font-weight:500">'
             f'{label_safe}</div>'
@@ -1251,7 +1251,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 f'<td style="background:#131313;border:1px solid #2a2a2a;padding:5px 10px">'
                 f'<div style="font-family:JetBrains Mono,monospace;font-size:0.70rem;'
                 f'font-weight:700;color:{eps_color}">{eps_label}</div>'
-                f'<div style="font-size:0.48rem;color:#444;margin-top:1px">{eps_desc}</div>'
+                f'<div style="font-size:0.50rem;color:#555960;margin-top:1px">{eps_desc}</div>'
                 f'</td>'
             )
             for dc in disruption_cols:
@@ -1271,7 +1271,7 @@ def page_strait_watch(start: str, end: str) -> None:
         st.markdown(rows_html, unsafe_allow_html=True)
 
         st.markdown(
-            f'<div style="{_F}font-size:0.54rem;color:#444;margin-top:8px;line-height:1.7">'
+            f'<div style="{_F}font-size:0.54rem;color:#555960;margin-top:8px;line-height:1.7">'
             f'<b style="color:#6b7280">Formula:</b> Price = Base × (1 + ε × (−disruption%)) · '
             f'<b style="color:#6b7280">Base:</b> Brent ${_base:.2f}/bbl (live FRED DCOILBRENTEU) · '
             f'<b style="color:#6b7280">Empirical ε:</b> OLS regression, IMF PortWatch n_tanker × 60% proxy vs FRED Brent, 2019–2026 · '
@@ -1322,7 +1322,7 @@ def page_strait_watch(start: str, end: str) -> None:
         f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
         f'border-radius:0;padding:0.6rem 1.0rem">'
         f'<div style="{_F}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.12em;color:#444;margin-bottom:5px">Data Sources & Methodology</div>'
+        f'letter-spacing:0.12em;color:#555960;margin-bottom:5px">Data Sources & Methodology</div>'
         f'<div style="{_F}font-size:0.62rem;color:#555960;line-height:1.7">'
         f'Oil flow volumes: EIA Strait of Hormuz / IEA World Energy Outlook 2024. '
         f'Disruption scores are composite research estimates drawing on incident frequency, '
@@ -1416,7 +1416,7 @@ def page_strait_watch(start: str, end: str) -> None:
                     f'margin-bottom:4px">{snap["label"]}</div>'
                     f'<div style="{_M}font-size:1.6rem;font-weight:700;color:#e8e9ed;line-height:1">'
                     f'{snap["level"]:,}'
-                    f'<span style="{_F}font-size:0.44rem;color:#555960;margin-left:3px">'
+                    f'<span style="{_F}font-size:0.50rem;color:#555960;margin-left:3px">'
                     f'{snap["units"]}</span></div>'
                     f'<div style="{_M}font-size:0.68rem;font-weight:700;color:{wow_c};margin:4px 0 2px">'
                     f'{wow_s} WoW</div>'
@@ -1424,8 +1424,8 @@ def page_strait_watch(start: str, end: str) -> None:
                     f'{p5yr_str}</div>'
                     f'<div style="display:inline-flex;padding:1px 5px;'
                     f'background:{sc}18;border:1px solid {sc}55;border-radius:2px">'
-                    f'<span style="{_F}font-size:0.42rem;font-weight:700;color:{sc}">{sl}</span></div>'
-                    f'<div style="{_F}font-size:0.44rem;color:#333;margin-top:6px">'
+                    f'<span style="{_F}font-size:0.50rem;font-weight:700;color:{sc}">{sl}</span></div>'
+                    f'<div style="{_F}font-size:0.50rem;color:#555960;margin-top:6px">'
                     f'as of {snap["as_of"]}</div>'
                     f'</div>',
                     unsafe_allow_html=True,

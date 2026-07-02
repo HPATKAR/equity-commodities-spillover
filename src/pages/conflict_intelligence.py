@@ -143,7 +143,7 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'color:{_freshness_color(r["freshness"])}">{r["freshness"].upper()}</span>'
                     f'</div>'
                     f'<div style="margin-top:2px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#383838">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">'
                     f'Last updated: {r.get("last_updated", "—")}</span>'
                     f'</div>'
                     # CIS source provenance badge

@@ -937,13 +937,13 @@ div[data-testid="stPopoverBody"] .stButton > button {
                     def _sec(label: str, sub: str = "") -> None:
                         _sh = (
                             f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                            f'font-size:0.42rem;color:#444;letter-spacing:0.08em;margin-left:6px">'
+                            f'font-size:0.50rem;color:#555960;letter-spacing:0.08em;margin-left:6px">'
                             f'{sub}</span>' if sub else ""
                         )
                         st.markdown(
                             f'<div style="display:flex;align-items:baseline;'
                             f'border-left:2px solid #CFB991;padding-left:6px;margin:0 0 7px 0">'
-                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.47rem;'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
                             f'color:#8890a1">{label}</span>'
                             f'{_sh}</div>',
@@ -976,10 +976,10 @@ div[data-testid="stPopoverBody"] .stButton > button {
                     st.markdown(
                         f'<div style="display:flex;align-items:baseline;'
                         f'border-left:2px solid #CFB991;padding-left:6px;margin:0 0 7px 0">'
-                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.47rem;'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                         f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
                         f'color:#8890a1">AI Workforce</span>'
-                        f'<span style="font-size:0.42rem;margin-left:6px;color:{_dc}">● {_al}</span>'
+                        f'<span style="font-size:0.50rem;margin-left:6px;color:{_dc}">● {_al}</span>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )

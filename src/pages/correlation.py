@@ -250,9 +250,9 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 _g_causes = _g_df["cause"].unique()[:3]
                 _g_effects = _g_df["effect"].unique()[:3]
                 _hdr = '<div style="display:grid;grid-template-columns:80px ' + ' '.join(['1fr']*len(_g_effects)) + ';gap:2px;margin-bottom:2px">'
-                _hdr += '<span style="font-size:0.48rem;color:#555960"> </span>'
+                _hdr += '<span style="font-size:0.50rem;color:#555960"> </span>'
                 for e in _g_effects:
-                    _hdr += f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.48rem;color:#8890a1;text-align:center">{e[:8]}</span>'
+                    _hdr += f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#8890a1;text-align:center">{e[:8]}</span>'
                 _hdr += '</div>'
                 _rows_g = ""
                 for c in _g_causes:

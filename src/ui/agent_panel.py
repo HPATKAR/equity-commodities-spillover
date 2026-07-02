@@ -76,28 +76,28 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
                 else "#27ae60"
             )
             fmt_lines.append(
-                f'<span style="{_M}font-size:0.48rem;font-weight:700;letter-spacing:0.10em;'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
                 f'color:{sev_color}">SEVERITY: {sev_text}</span>'
             )
         elif stripped.upper().startswith("CONFIDENCE:"):
             fmt_lines.append(
-                f'<span style="{_M}font-size:0.46rem;color:#555960">{line}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#555960">{line}</span>'
             )
         elif stripped.upper().startswith("EVIDENCE:"):
             fmt_lines.append(
-                f'<span style="{_M}font-size:0.46rem;color:#8890a1">{line}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#8890a1">{line}</span>'
             )
         elif stripped.upper().startswith("KEY UNCERTAINTY:"):
             fmt_lines.append(
-                f'<span style="{_M}font-size:0.46rem;color:#e67e22">{line}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#e67e22">{line}</span>'
             )
         elif stripped.upper().startswith("INVALIDATED IF:"):
             fmt_lines.append(
-                f'<span style="{_M}font-size:0.46rem;color:#8890a1">{line}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#8890a1">{line}</span>'
             )
         elif stripped.upper().startswith("ALT VIEW:"):
             fmt_lines.append(
-                f'<span style="{_M}font-size:0.46rem;color:#8890a1">{line}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#8890a1">{line}</span>'
             )
         else:
             fmt_lines.append(line)
@@ -107,7 +107,7 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
 
     disclaimer_html = (
         f'<div style="border-top:1px solid #1a1a1a;margin-top:0.45rem;padding-top:0.3rem">'
-        f'<span style="{_M}font-size:0.40rem;color:#383838;letter-spacing:0.05em">'
+        f'<span style="{_M}font-size:0.50rem;color:#555960;letter-spacing:0.05em">'
         f'RESEARCH ONLY · Not investment advice · Academic analysis dashboard · '
         f'Verify with primary sources before acting</span>'
         f'</div>'
@@ -127,7 +127,7 @@ def render_agent_output_block(agent_id: str, result: dict) -> None:
         f'<span style="{_F}font-size:0.52rem;color:#555960;margin-left:0.5rem">'
         f'{ag_meta.get("desc","")}</span>'
         f'</div>'
-        f'<span style="{_M}font-size:0.48rem;font-weight:700;letter-spacing:0.10em;'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
         f'text-transform:uppercase;color:{s_color}">{status_meta["label"]}</span>'
         f'{routed_html}'
         f'</div>'
@@ -180,7 +180,7 @@ def render_agent_inline_signal(agent_id: str, result: dict, page_key: str = "") 
                 "#e67e22" if sev.lower() in ("high", "medium") else "#27ae60"
             )
             extra_html = (
-                f'<span style="{_M}font-size:0.46rem;font-weight:700;letter-spacing:0.10em;'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
                 f'text-transform:uppercase;color:{sev_color};background:rgba(0,0,0,0.4);'
                 f'padding:1px 5px;margin-left:0.4rem">'
                 f'{sev.upper()} &middot; {n_flags} flag{"s" if n_flags != 1 else ""}</span>'
@@ -197,7 +197,7 @@ def render_agent_inline_signal(agent_id: str, result: dict, page_key: str = "") 
         f'<span style="{_F}font-size:0.58rem;color:#8890a1;flex:1;'
         f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
         f'{first_line}</span>'
-        f'<span style="{_M}font-size:0.46rem;color:#555960">{conf_str}</span>'
+        f'<span style="{_M}font-size:0.50rem;color:#555960">{conf_str}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -227,7 +227,7 @@ def _conf_bar(conf: float | None) -> str:
     bar_color = "#27ae60" if pct >= 70 else ("#e67e22" if pct >= 45 else "#c0392b")
     return (
         f'<div style="margin-top:4px">'
-        f'<div style="{_F}font-size:0.48rem;color:#8890a1;margin-bottom:2px">'
+        f'<div style="{_F}font-size:0.50rem;color:#8890a1;margin-bottom:2px">'
         f'Confidence {pct}%</div>'
         f'<div style="background:#2a2a2a;border-radius:2px;height:3px;width:100%">'
         f'<div style="background:{bar_color};width:{pct}%;height:3px;border-radius:2px"></div>'
@@ -276,10 +276,10 @@ def _render_workforce_content(agents_state: dict, agent_list: list,
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">'
             f'{meta["short"]}</span>'
             f'</div>'
-            f'<span style="font-size:0.40rem;font-weight:700;letter-spacing:0.06em;'
+            f'<span style="font-size:0.50rem;font-weight:700;letter-spacing:0.06em;'
             f'text-transform:uppercase;color:{status_meta["color"]}">'
             f'{status_meta["label"]}</span>'
-            f'<div style="font-size:0.40rem;color:#444;margin-top:2px">'
+            f'<div style="font-size:0.50rem;color:#555960;margin-top:2px">'
             f'{_ts(last_run) if last_run else "-"}</div>'
             + conf_html +
             f'</div>'
@@ -581,11 +581,11 @@ def render_remediation_panel(page: str) -> None:
             f'<span style="font-size:0.80rem">{icon}</span>'
             f'<span style="font-size:0.58rem;font-weight:700;color:{color};letter-spacing:0.04em">'
             f'{name}</span>'
-            f'<span style="{_M}font-size:0.48rem;font-weight:700;letter-spacing:0.10em;'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
             f'text-transform:uppercase;color:#c0392b;background:rgba(192,57,43,0.12);'
             f'padding:1px 5px">'
             f'CORRECTING {n_flags} FLAG{"S" if n_flags != 1 else ""}</span>'
-            f'<span style="{_M}font-size:0.48rem;color:#555960;margin-left:auto">{ts_str}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#555960;margin-left:auto">{ts_str}</span>'
             f'</div>'
 
             # Flags being addressed
@@ -624,7 +624,7 @@ def render_deliberation_panel(
         return
 
     st.markdown(
-        f'<p style="{_M}font-size:8px;color:#8E9AAA;letter-spacing:2px;'
+        f'<p style="{_M}font-size:0.50rem;color:#8E9AAA;letter-spacing:2px;'
         f'text-transform:uppercase;margin:0 0 6px">{title}</p>',
         unsafe_allow_html=True,
     )
@@ -640,7 +640,7 @@ def render_deliberation_panel(
 
     if not msgs:
         st.markdown(
-            f'<p style="{_F}font-size:9px;color:#555960;font-style:italic">'
+            f'<p style="{_F}font-size:0.56rem;color:#555960;font-style:italic">'
             f'No deliberation log yet.</p>',
             unsafe_allow_html=True,
         )
@@ -664,12 +664,12 @@ def render_deliberation_panel(
             f'<div style="border-left:2px solid {ag_color};padding:4px 8px;'
             f'margin:3px 0;background:rgba(0,0,0,0.15)">'
             f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
-            f'<span style="{_M}font-size:8px;color:{ag_color};font-weight:700">{ag_short}</span>'
-            f'<span style="{_M}font-size:7px;color:{msg_color};font-weight:700">[{msg_label}]</span>'
-            f'<span style="{_M}font-size:7px;color:#555960">→ {recip}</span>'
-            f'<span style="{_M}font-size:7px;color:#555960;margin-left:auto">{ts_str}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{ag_color};font-weight:700">{ag_short}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{msg_color};font-weight:700">[{msg_label}]</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#555960">→ {recip}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#555960;margin-left:auto">{ts_str}</span>'
             f'</div>'
-            f'<div style="{_F}font-size:10px;color:#a8b0c0;line-height:1.5">'
+            f'<div style="{_F}font-size:0.63rem;color:#a8b0c0;line-height:1.5">'
             f'{msg["content"]}</div>'
             f'</div>'
         )
@@ -689,9 +689,9 @@ def render_deliberation_panel(
         st.markdown(
             f'<div style="display:flex;gap:16px;margin-top:4px;padding-top:4px;'
             f'border-top:1px solid #1e1e1e">'
-            f'<span style="{_M}font-size:8px;color:{c_color}">Consensus {consensus:.0%}</span>'
-            f'<span style="{_M}font-size:8px;color:{d_color}">Disagreement {disagreement:.0%}</span>'
-            f'<span style="{_M}font-size:8px;color:#555960">'
+            f'<span style="{_M}font-size:0.50rem;color:{c_color}">Consensus {consensus:.0%}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{d_color}">Disagreement {disagreement:.0%}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#555960">'
             f'{len(shown)} messages · {n_agents} agents</span>'
             f'</div>',
             unsafe_allow_html=True,

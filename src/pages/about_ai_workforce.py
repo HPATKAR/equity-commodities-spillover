@@ -97,7 +97,7 @@ def _pipeline_diagram() -> None:
             gate = 0.50
         low_conf = (conf is not None and conf < gate)
         low_conf_badge = (
-            f'<span style="{_M}font-size:0.42rem;font-weight:700;letter-spacing:0.08em;'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
             f'text-transform:uppercase;color:#e67e22;border:1px solid rgba(230,126,34,0.4);'
             f'padding:1px 4px;margin-left:2px">⚠ LOW CONF</span>'
         ) if low_conf else ""
@@ -112,9 +112,9 @@ def _pipeline_diagram() -> None:
             f'<div style="{_F}font-size:0.54rem;color:#555960;line-height:1.4">'
             f'{meta.get("desc","")}</div>'
             f'<div style="margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-            f'<span style="{_M}font-size:0.46rem;font-weight:700;letter-spacing:0.10em;'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
             f'text-transform:uppercase;color:{s_color}">{status.replace("_"," ")}</span>'
-            f'<span style="{_M}font-size:0.46rem;color:#8890a1">{conf_str}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#8890a1">{conf_str}</span>'
             f'{low_conf_badge}'
             f'</div></div>'
         )
@@ -126,7 +126,7 @@ def _pipeline_diagram() -> None:
         return (
             f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
             f'padding:0.4rem 0.6rem;min-width:130px">'
-            f'<div style="{_M}font-size:0.44rem;font-weight:700;letter-spacing:0.14em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:#555960;margin-bottom:4px">Inputs</div>'
             f'<div style="{_F}font-size:0.53rem;color:#8890a1;line-height:1.5">{bullets}</div>'
             f'</div>'
@@ -179,7 +179,7 @@ def _pipeline_diagram() -> None:
         # Arrow between rounds (not after last)
         if i < len(_ROUNDS) - 1:
             html_parts.append(
-                f'<div style="{_F}font-size:0.48rem;color:#555960;'
+                f'<div style="{_F}font-size:0.50rem;color:#555960;'
                 f'margin:0.2rem 0 0.5rem;padding-left:0.2rem">'
                 f'&#x25BC; outputs pass to Round {rnd["n"]+1}</div>'
             )
@@ -207,7 +207,7 @@ def _conf_bar_html(conf: float | None) -> str:
     color = "#27ae60" if pct >= 70 else ("#e67e22" if pct >= 45 else "#c0392b")
     return (
         f'<div style="margin-top:5px">'
-        f'<div style="{_F}font-size:0.46rem;color:#555960;margin-bottom:2px">'
+        f'<div style="{_F}font-size:0.50rem;color:#555960;margin-bottom:2px">'
         f'Confidence - {pct}%</div>'
         f'<div style="background:#1e1e1e;height:2px;width:100%">'
         f'<div style="background:{color};width:{pct}%;height:2px"></div>'
@@ -274,7 +274,7 @@ def _render_agent_full(aid: str) -> None:
             )
         elif "CONFIDENCE:" in stripped:
             formatted.append(
-                f'<span style="{_M}font-size:0.46rem;color:#555960">{line}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#555960">{line}</span>'
             )
         elif ":" in line[:50] and not line.startswith(" "):
             head, _, rest = line.partition(":")
@@ -300,11 +300,11 @@ def _render_agent_full(aid: str) -> None:
         f'<div style="font-size:0.52rem;color:#555960;margin-top:1px">{meta.get("desc","")}</div>'
         f'</div>'
         f'<div style="text-align:right">'
-        f'<div style="{_M}font-size:0.48rem;font-weight:700;letter-spacing:0.10em;'
+        f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
         f'text-transform:uppercase;color:{s_color}">{status.replace("_"," ")}</div>'
-        f'<div style="{_M}font-size:0.46rem;color:#555960;margin-top:1px">{ts_str}</div>'
+        f'<div style="{_M}font-size:0.50rem;color:#555960;margin-top:1px">{ts_str}</div>'
         + (
-            f'<div style="{_M}font-size:0.42rem;font-weight:700;letter-spacing:0.08em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
             f'text-transform:uppercase;color:#e67e22;border:1px solid rgba(230,126,34,0.4);'
             f'padding:1px 5px;margin-top:3px">⚠ LOW CONF {int(conf*100) if conf else "?"}% '
             f'&lt; {int(_gate*100)}% gate</div>'
@@ -361,10 +361,10 @@ def _render_cqo_remediations() -> None:
                 f'<div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.4rem">'
                 f'<span style="font-size:0.78rem">{icon}</span>'
                 f'<span style="font-size:0.58rem;font-weight:700;color:{color}">{name}</span>'
-                f'<span style="{_M}font-size:0.46rem;font-weight:700;letter-spacing:0.10em;'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
                 f'text-transform:uppercase;color:#c0392b;background:rgba(192,57,43,0.10);'
                 f'padding:1px 4px">CORRECTING {len(flags)} FLAG{"S" if len(flags)!=1 else ""}</span>'
-                f'<span style="{_M}font-size:0.46rem;color:#555960;margin-left:auto">{ts_str}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:#555960;margin-left:auto">{ts_str}</span>'
                 f'</div>'
 
                 f'<div style="{_F}font-size:0.56rem;color:#555960;'
@@ -403,11 +403,11 @@ def _render_activity_feed() -> None:
         st.markdown(
             f'<div style="display:flex;align-items:baseline;gap:0.5rem;'
             f'border-bottom:1px solid #0f0f0f;padding:0.25rem 0">'
-            f'<span style="{_M}font-size:0.46rem;color:#333">{ts_str}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#555960">{ts_str}</span>'
             f'<span style="font-size:0.65rem">{icon}</span>'
             f'<span style="{_F}font-size:0.54rem;font-weight:600;color:{color}">{action}</span>'
             f'<span style="{_F}font-size:0.52rem;color:#555960;flex:1">{detail}</span>'
-            f'<span style="{_M}font-size:0.42rem;font-weight:700;letter-spacing:0.10em;'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:0.10em;'
             f'text-transform:uppercase;color:{sev_color}">{sev}</span>'
             f'</div>',
             unsafe_allow_html=True,
@@ -517,7 +517,7 @@ def _run_pipeline(force: bool = False) -> None:
         st.success(f"All {rounds_done} rounds complete - 7 agents updated. Switch to the Agent Outputs tab to review.")
     except Exception as e:
         progress.empty()
-        st.error(f"Pipeline failed after Round {rounds_done}: {e}")
+        st.error("Pipeline failed after Round {rounds_done}.")
 
 
 def page_about_ai_workforce() -> None:
@@ -551,7 +551,7 @@ def page_about_ai_workforce() -> None:
         f'text-transform:uppercase;color:{status_color}">'
         f'{"ALL AGENTS FRESH" if n_stale == 0 else f"{n_stale} AGENT{"S" if n_stale != 1 else ""} NEED REFRESH"}'
         f'</div>'
-        f'<div style="{_M}font-size:0.48rem;color:#555960">'
+        f'<div style="{_M}font-size:0.50rem;color:#555960">'
         f'{n_fresh}/{n_total} fresh &nbsp;·&nbsp; last run {last_run_str}</div>'
         f'<div style="{_F}font-size:0.52rem;color:#555960;flex:1;text-align:right">'
         f'Round 4 (CQO) runs per analysis page visit.</div>'
