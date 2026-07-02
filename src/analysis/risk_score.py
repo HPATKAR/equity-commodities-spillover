@@ -51,12 +51,22 @@ _MODEL_CONFIG: dict = {
         "chokepoint": 0.20,  # Chokepoint/Shipping Stress (PortWatch + transmission)
         "mcs":        0.10,  # Market Confirmation: oil-gold + commodity vol ONLY
     },
-    # MCS sub-signal weights (must sum to 1.0)
-    # Equity vol, rates vol, safe-haven, corr-accel removed: they fire on any
-    # market stress (rate cycles, earnings, growth scares) — not geo-specific.
-    "mcs_weights": {
+    # MCS internal blend: spot sub-score vs. implied-vol sub-score (sum to 1.0).
+    # Falls back to spot-only if all implied tickers are unavailable.
+    "mcs_blend": {
+        "spot":    0.50,   # Oil-Gold + Commodity Vol (spot)
+        "implied": 0.50,   # OVX + GVZ + VIX term-structure slope
+    },
+    # Spot sub-signal weights (within mcs_blend["spot"]) — sum to 1.0.
+    "mcs_spot_weights": {
         "oil_gold": 0.70,   # war/supply-shock signature: gold+oil dual elevation
         "cmd_vol":  0.30,   # geo-linked commodity vol: captures supply disruptions
+    },
+    # Implied sub-signal weights (within mcs_blend["implied"]) — sum to 1.0.
+    "mcs_implied_weights": {
+        "ovx":        0.40,   # CBOE Crude Oil Vol — geo/energy supply shocks
+        "gvz":        0.30,   # CBOE Gold Vol — safe-haven demand stress
+        "term_slope": 0.30,   # VIX/VIX3M backwardation — near-term fear spike
     },
     # risk_score_history() weights — MCS-proxy only (CIS/news not available historically)
     # eq_vol removed: fires on any market stress, not geo-specific.
@@ -82,6 +92,87 @@ def _fetch_tlt() -> pd.Series:
         return s if not s.empty else pd.Series(dtype=float)
     except Exception:
         return pd.Series(dtype=float)
+
+
+@st.cache_data(ttl=900, show_spinner=False, max_entries=3)
+def _fetch_implied_vol_signals() -> dict:
+    """
+    Options-implied volatility signals for the MCS implied sub-score.
+
+    Signals:
+      OVX  (^OVX)   — CBOE Crude Oil Volatility; geo/energy supply shocks
+      GVZ  (^GVZ)   — CBOE Gold Volatility; safe-haven demand stress
+      Term slope    — ^VIX / ^VIX3M; backwardation (>1) = short-term fear spike
+
+    EWM z-score (span=252) on 3-year history → sigmoid [0, 100].
+    Adaptive weights: failed tickers redistribute proportionally to survivors.
+    Source stamp: "+" joined names of available signals (e.g. "ovx+gvz+term_slope").
+    """
+    PERIOD  = "3y"
+    SPAN    = 252
+    MIN_OBS = 120
+
+    base_w = _MODEL_CONFIG["mcs_implied_weights"]
+    scores: dict[str, float] = {}
+    meta: dict = {
+        "term_slope": None, "raw_vix": None, "raw_vix3m": None,
+        "raw_ovx": None, "raw_gvz": None,
+        "ovx_score": None, "gvz_score": None, "term_slope_score": None,
+        "backwardation": False,
+    }
+
+    try:
+        s = yf.Ticker("^OVX").history(period=PERIOD)["Close"].dropna()
+        if len(s) >= MIN_OBS:
+            z = float(_ewm_zscore(s, span=SPAN).iloc[-1])
+            sc = _zscore_to_score(z, scale=14.0)
+            scores["ovx"] = sc
+            meta["raw_ovx"]   = round(float(s.iloc[-1]), 2)
+            meta["ovx_score"] = round(sc, 1)
+    except Exception:
+        pass
+
+    try:
+        s = yf.Ticker("^GVZ").history(period=PERIOD)["Close"].dropna()
+        if len(s) >= MIN_OBS:
+            z = float(_ewm_zscore(s, span=SPAN).iloc[-1])
+            sc = _zscore_to_score(z, scale=14.0)
+            scores["gvz"] = sc
+            meta["raw_gvz"]   = round(float(s.iloc[-1]), 2)
+            meta["gvz_score"] = round(sc, 1)
+    except Exception:
+        pass
+
+    try:
+        s_vix   = yf.Ticker("^VIX").history(period=PERIOD)["Close"].dropna()
+        s_vix3m = yf.Ticker("^VIX3M").history(period=PERIOD)["Close"].dropna()
+        common  = s_vix.index.intersection(s_vix3m.index)
+        if len(common) >= MIN_OBS:
+            slope  = s_vix.reindex(common) / s_vix3m.reindex(common)
+            ts_val = float(slope.iloc[-1])
+            meta["term_slope"]   = round(ts_val, 4)
+            meta["raw_vix"]      = round(float(s_vix.iloc[-1]),   2)
+            meta["raw_vix3m"]    = round(float(s_vix3m.iloc[-1]), 2)
+            meta["backwardation"] = ts_val > 1.0
+            z  = float(_ewm_zscore(slope, span=SPAN).iloc[-1])
+            sc = _zscore_to_score(z, scale=14.0)
+            scores["term_slope"]       = sc
+            meta["term_slope_score"]   = round(sc, 1)
+    except Exception:
+        pass
+
+    if not scores:
+        return {"implied_score": 50.0, "implied_source": "none", **meta}
+
+    total_w = sum(base_w[k] for k in scores)
+    implied_score = sum(v * (base_w[k] / total_w) for k, v in scores.items())
+    implied_source = "+".join(k for k in ("ovx", "gvz", "term_slope") if k in scores)
+
+    return {
+        "implied_score":  float(np.clip(implied_score, 0.0, 100.0)),
+        "implied_source": implied_source,
+        **meta,
+    }
 
 
 # ── EWM z-score helper ────────────────────────────────────────────────────────
@@ -365,30 +456,62 @@ def _market_confirmation_score(
     avg_corr: pd.Series,
     cmd_r: pd.DataFrame,
     eq_r: pd.DataFrame | None = None,
-) -> tuple[float, dict]:
+) -> tuple[float, dict, dict]:
     """
     Market Confirmation Score (MCS) — geo-specific signals ONLY.
 
-    70% Oil-Gold joint signal: supply-shock / safe-haven dual elevation,
-        the cleanest market signature of a geopolitical war/blockade.
-    30% Commodity Vol: captures geo supply disruptions via vol spike
-        (symmetric — fires on both price spike and price crash from disruption).
+    50% Spot sub-score:
+        70% Oil-Gold joint signal (war/supply-shock signature)
+        30% Commodity Vol (geo-linked supply disruptions)
+    50% Implied sub-score:
+        40% OVX — crude oil implied vol; energy supply shocks
+        30% GVZ — gold implied vol; safe-haven demand stress
+        30% VIX term slope — VIX/VIX3M backwardation; near-term fear spike
 
-    Equity vol, rates vol, safe-haven bid, and correlation velocity removed:
-    all four fire on generic market stress (rate cycles, earnings, COVID
-    demand crashes) and are not specific to geopolitical events.
+    Falls back to 100% spot if all implied tickers fail (graceful degradation).
+
+    Returns: (score, components, meta)
+      components — numeric dict for agreement scoring and display
+      meta       — source stamp, backwardation flag, raw levels
     """
     og_score, og_detail = _oil_gold_signal(cmd_r)
     cmd_vol              = _commodity_vol_score(cmd_r)
 
-    w = _MODEL_CONFIG["mcs_weights"]
-    mcs = w["oil_gold"] * og_score + w["cmd_vol"] * cmd_vol
+    sw = _MODEL_CONFIG["mcs_spot_weights"]
+    spot_score = sw["oil_gold"] * og_score + sw["cmd_vol"] * cmd_vol
 
-    components = {
-        "Oil-Gold Signal": round(og_score, 1),
-        "Commodity Vol":   round(cmd_vol,  1),
+    iv             = _fetch_implied_vol_signals()
+    implied_source = iv.get("implied_source", "none")
+
+    if implied_source != "none":
+        bw  = _MODEL_CONFIG["mcs_blend"]
+        mcs = bw["spot"] * spot_score + bw["implied"] * float(iv["implied_score"])
+        components = {
+            "Oil-Gold Signal": round(og_score, 1),
+            "Commodity Vol":   round(cmd_vol,  1),
+            "Implied Stress":  round(float(iv["implied_score"]), 1),
+        }
+    else:
+        mcs = spot_score
+        components = {
+            "Oil-Gold Signal": round(og_score, 1),
+            "Commodity Vol":   round(cmd_vol,  1),
+        }
+
+    meta = {
+        "implied_source":   implied_source,
+        "backwardation":    bool(iv.get("backwardation", False)),
+        "term_slope":       iv.get("term_slope"),
+        "raw_vix":          iv.get("raw_vix"),
+        "raw_vix3m":        iv.get("raw_vix3m"),
+        "raw_ovx":          iv.get("raw_ovx"),
+        "raw_gvz":          iv.get("raw_gvz"),
+        "ovx_score":        iv.get("ovx_score"),
+        "gvz_score":        iv.get("gvz_score"),
+        "term_slope_score": iv.get("term_slope_score"),
     }
-    return float(np.clip(mcs, 0, 100)), components
+
+    return float(np.clip(mcs, 0, 100)), components, meta
 
 
 # ── Main scorer ────────────────────────────────────────────────────────────────
@@ -474,7 +597,7 @@ def compute_risk_score(
     chokepoint = _chokepoint_stress_score()
 
     # ── Layer 4: Market Confirmation (oil-gold + commodity vol only) ──────────
-    mcs, mcs_components = _market_confirmation_score(avg_corr, cmd_r, eq_r)
+    mcs, mcs_components, mcs_meta = _market_confirmation_score(avg_corr, cmd_r, eq_r)
 
     # ── Assembly ──────────────────────────────────────────────────────────────
     _w = _MODEL_CONFIG["weights"]
@@ -491,7 +614,7 @@ def compute_risk_score(
 
     # ── Confidence overlay ────────────────────────────────────────────────────
     news_conf = 0.90 if news_live else 0.45   # live feed → high conf; fallback → lower
-    mcs_signal_agreement = float(np.std(list(mcs_components.values()))) / 50.0
+    mcs_signal_agreement = float(np.std([v for v in mcs_components.values() if isinstance(v, (int, float))])) / 50.0
     mcs_agreement_score  = float(np.clip(1.0 - mcs_signal_agreement, 0.0, 1.0))
     overall_confidence   = float(
         0.35 * conflict_conf
@@ -533,9 +656,16 @@ def compute_risk_score(
         # News GPR sub-fields
         **news_gpr_out,
         # Detail
-        "conflict_detail": conflict_agg.get("conflict_detail", {}),
-        "top_conflict":    conflict_agg.get("top_conflict"),
-        "mcs_components":  mcs_components,
+        "conflict_detail":    conflict_agg.get("conflict_detail", {}),
+        "top_conflict":       conflict_agg.get("top_conflict"),
+        "mcs_components":     mcs_components,
+        "mcs_implied_source": mcs_meta.get("implied_source", "none"),
+        "mcs_backwardation":  mcs_meta.get("backwardation", False),
+        "mcs_term_slope":     mcs_meta.get("term_slope"),
+        "mcs_raw_vix":        mcs_meta.get("raw_vix"),
+        "mcs_raw_vix3m":      mcs_meta.get("raw_vix3m"),
+        "mcs_raw_ovx":        mcs_meta.get("raw_ovx"),
+        "mcs_raw_gvz":        mcs_meta.get("raw_gvz"),
         # Legacy fields
         "weights": {
             "news_gpr":    _w["news_gpr"],
@@ -632,6 +762,75 @@ def risk_score_history(
     score = (100.0 / (1.0 + np.exp(-0.56 * z))).clip(0, 100)
 
     return score.round(1)
+
+
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=2)
+def bootstrap_risk_history_ci(
+    cmd_r: pd.DataFrame,
+    eq_r: pd.DataFrame | None,
+    n_boot: int = 200,
+) -> pd.DataFrame:
+    """
+    Moving-block bootstrap CI for risk_score_history (market-data uncertainty only).
+
+    Resamples cmd_r and eq_r together in blocks of length ~sqrt(T) to
+    preserve the cross-asset covariance structure within each block.
+    Recomputes risk_score_history for each resample.
+
+    Static analyst layers (news GPR 40%, conflict CIS 30%, chokepoint 20%)
+    require live external API calls and cannot be bootstrapped per iteration.
+    The resulting CI band therefore reflects market-data uncertainty only
+    (realized vol of equities + commodities, which jointly drive the index).
+
+    Returns
+    -------
+    pd.DataFrame with columns [p05, p50, p95] indexed by date, or empty
+    DataFrame if insufficient data.
+    """
+    pieces = [r for r in [eq_r, cmd_r] if r is not None and not r.empty]
+    if not pieces:
+        return pd.DataFrame()
+
+    all_r = pd.concat(pieces, axis=1).dropna(how="all")
+    T     = len(all_r)
+    if T < 120:
+        return pd.DataFrame()
+
+    b    = max(5, int(np.sqrt(T)))
+    rng  = np.random.default_rng(42)
+
+    eq_cols  = list(eq_r.columns)  if eq_r  is not None else []
+    cmd_cols = list(cmd_r.columns)
+
+    boot_series: list[pd.Series] = []
+    _dummy_corr = pd.Series(dtype=float)         # avg_corr not used in risk_score_history
+
+    for _ in range(n_boot):
+        n_blocks = int(np.ceil(T / b))
+        starts   = rng.integers(0, T - b + 1, n_blocks)
+        idx      = np.concatenate([np.arange(s, s + b) for s in starts])[:T]
+        # Keep original date index; shuffle return values across time
+        r_boot   = pd.DataFrame(
+            all_r.values[idx], index=all_r.index, columns=all_r.columns,
+        )
+        try:
+            eq_boot  = r_boot[eq_cols]  if eq_cols  else None
+            cmd_boot = r_boot[cmd_cols]
+            h = risk_score_history(_dummy_corr, cmd_boot, eq_boot)
+            if isinstance(h, pd.Series) and len(h) >= 20:
+                boot_series.append(h)
+        except Exception:
+            continue
+
+    if len(boot_series) < 20:
+        return pd.DataFrame()
+
+    combined = pd.concat(boot_series, axis=1)
+    return pd.DataFrame({
+        "p05": combined.quantile(0.05, axis=1),
+        "p50": combined.quantile(0.50, axis=1),
+        "p95": combined.quantile(0.95, axis=1),
+    }).dropna()
 
 
 # ── Market Fear Index ─────────────────────────────────────────────────────────

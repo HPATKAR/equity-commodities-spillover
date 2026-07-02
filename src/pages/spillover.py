@@ -15,7 +15,8 @@ from src.data.loader import load_returns, load_fixed_income_returns, load_fx_ret
 from src.data.config import PALETTE, EQUITY_REGIONS, COMMODITY_GROUPS
 from src.analysis.spillover import (
     granger_grid, transfer_entropy_matrix, net_flow_matrix, diebold_yilmaz,
-    rolling_diebold_yilmaz, regime_conditional_spillover,
+    rolling_diebold_yilmaz, rolling_frequency_connectedness,
+    bootstrap_dy_ci, regime_conditional_spillover,
 )
 from src.analysis.network import (
     build_dy_graph, build_granger_graph,
@@ -447,6 +448,111 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 "a shock anywhere in the system propagates everywhere quickly."
             )
 
+            # ── Baruník-Křehlík frequency breakdown ─────────────────────
+            _bk_bands = (dy_result.get("bk_bands", {}) if dy_result else {})
+            if _bk_bands:
+                with st.expander("Baruník-Křehlík Frequency Connectedness (2018)"):
+                    b_short  = _bk_bands.get("short",  {})
+                    b_medium = _bk_bands.get("medium", {})
+                    b_long   = _bk_bands.get("long",   {})
+                    tc_s = b_short.get("total_connectedness",  float("nan"))
+                    tc_m = b_medium.get("total_connectedness", float("nan"))
+                    tc_l = b_long.get("total_connectedness",   float("nan"))
+
+                    # KPI row: total connectedness per band
+                    _kc1, _kc2, _kc3 = st.columns(3)
+                    for _col, _label_txt, _tc, _period, _color in [
+                        (_kc1, "SHORT  (1–5d)",  tc_s, "ω ∈ [2π/5, π]",    "#c0392b"),
+                        (_kc2, "MEDIUM (5–22d)", tc_m, "ω ∈ [2π/22, 2π/5]", "#e67e22"),
+                        (_kc3, "LONG   (22d+)",  tc_l, "ω ∈ [0, 2π/22]",   "#CFB991"),
+                    ]:
+                        _col.markdown(
+                            f'<div style="background:#0d0d0d;border:1px solid #2a2a2a;'
+                            f'border-top:2px solid {_color};padding:.5rem .7rem;text-align:center">'
+                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                            f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">{_label_txt}</div>'
+                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:20px;'
+                            f'font-weight:700;color:{_color}">'
+                            f'{"—" if not isinstance(_tc, float) or np.isnan(_tc) else f"{_tc:.1f}%"}</div>'
+                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                            f'color:#555960">{_period}</div></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # Per-asset NET bar chart for each band
+                    _net_rows = []
+                    for _band_key, _band_data in [
+                        ("Short",  b_short),
+                        ("Medium", b_medium),
+                        ("Long",   b_long),
+                    ]:
+                        _net_s: pd.Series = _band_data.get("net_connectedness", pd.Series(dtype=float))
+                        if not _net_s.empty:
+                            _net_rows.append((_band_key, _net_s))
+
+                    if _net_rows:
+                        st.markdown(
+                            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                            'color:#8E9AAA;margin:.6rem 0 .2rem">NET within-band connectedness '
+                            '(TO − FROM). Green = transmitter at that horizon.</p>',
+                            unsafe_allow_html=True,
+                        )
+                        _nb_cols = st.columns(len(_net_rows))
+                        _band_colors = {"Short": "#c0392b", "Medium": "#e67e22", "Long": "#CFB991"}
+                        for _ci, (_bname, _net_s) in enumerate(_net_rows):
+                            _bc = _band_colors.get(_bname, "#CFB991")
+                            _bar_colors = ["#27ae60" if v >= 0 else "#c0392b"
+                                           for v in _net_s.values]
+                            _fig_bk_bar = go.Figure(go.Bar(
+                                y=_net_s.index.tolist(),
+                                x=_net_s.values.tolist(),
+                                orientation="h",
+                                marker_color=_bar_colors,
+                                text=[f"{v:+.1f}" for v in _net_s.values],
+                                textposition="outside",
+                                textfont=dict(size=7, color="#e8e9ed",
+                                              family="JetBrains Mono, monospace"),
+                            ))
+                            _fig_bk_bar.update_layout(
+                                title=dict(text=f"{_bname}-term", font=dict(size=9, color=_bc),
+                                           x=0.5, xanchor="center"),
+                                template="purdue", height=max(160, len(_net_s) * 22),
+                                paper_bgcolor="#080808", plot_bgcolor="#080808",
+                                font=dict(color="#e8e9ed"),
+                                xaxis=dict(tickfont=dict(size=7, color="#8890a1"),
+                                           title=dict(text="NET %", font=dict(size=7))),
+                                yaxis=dict(tickfont=dict(size=7, color="#8890a1")),
+                                margin=dict(l=90, r=40, t=28, b=30),
+                                showlegend=False,
+                            )
+                            _nb_cols[_ci].plotly_chart(_fig_bk_bar, use_container_width=True)
+
+                    # Diagnostic: band-sum invariant and D-Y comparison
+                    _diag = _bk_bands.get("_diagnostic", {})
+                    if _diag:
+                        _bk_sum = _diag.get("band_sum",      float("nan"))
+                        _bk_ful = _diag.get("full_gfevd_tc", float("nan"))
+                        _bk_gap = _diag.get("gap",           float("nan"))
+                        _dy_tc  = _diag.get("dy_cholesky_tc", float("nan"))
+                        _gap_color = "#c0392b" if _bk_gap > 0.5 else "#27ae60"
+                        st.markdown(
+                            f'<div style="font-family:\'JetBrains Mono\',monospace;'
+                            f'font-size:8px;color:#8E9AAA;margin:.5rem 0 0">'
+                            f'Invariant check — '
+                            f'Σ bands: <b style="color:#CFB991">{_bk_sum:.2f}%</b> '
+                            f'| Full-spectrum GFEVD: <b style="color:#CFB991">{_bk_ful:.2f}%</b> '
+                            f'| gap: <b style="color:{_gap_color}">{_bk_gap:.4f}%</b>'
+                            f'{"  ⚠ normalisation error" if _bk_gap > 0.5 else "  ✓"}'
+                            f'<br>D-Y Cholesky TC: <b style="color:#8890a1">{_dy_tc:.2f}%</b> '
+                            f'<span style="color:#555960">(different FEVD method — gap is expected)</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                    _panel_note(
+                        "Baruník-Křehlík (2018) spectral GFEVD. Short = high-frequency noise "
+                        "& HFT. Medium = earnings & macro cycles. Long = structural regime shifts."
+                    )
+
     # ── Panel 4: Spillover Network ─────────────────────────────────────────
     _thread(
         "The three methods above each illuminate a different facet. The network graph synthesises "
@@ -509,20 +615,52 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     lag_order=2, horizon=10,
                 )
             if not roll_dy.empty and "total_spillover" in roll_dy.columns:
+                # ── Bootstrap CI (cached 24h) ─────────────────────────────
+                with st.spinner("Computing bootstrap CI…"):
+                    _bci = bootstrap_dy_ci(
+                        all_r[dy_valid].dropna(),
+                        n_boot=300, lag_order=2, horizon=10,
+                    )
+
+                _ts   = roll_dy["total_spillover"]
+                _dates = list(roll_dy.index)
+
                 fig_roll = go.Figure()
+
+                # CI ribbon — rendered first so it sits behind the center line
+                if _bci and "total_p50" in _bci:
+                    _hw_lo = max(0.0, _bci["total_p50"] - _bci["total_p05"])
+                    _hw_hi = max(0.0, _bci["total_p95"] - _bci["total_p50"])
+                    _ci_lo = (_ts - _hw_lo).clip(lower=0.0)
+                    _ci_hi = _ts + _hw_hi
+                    # Closed polygon: upper bound → lower bound reversed
+                    fig_roll.add_trace(go.Scatter(
+                        x=_dates + _dates[::-1],
+                        y=list(_ci_hi) + list(_ci_lo)[::-1],
+                        fill="toself",
+                        fillcolor="rgba(207,185,145,0.20)",
+                        line=dict(color="rgba(207,185,145,0.35)", width=0.5),
+                        hoverinfo="skip",
+                        showlegend=True,
+                        name=f"90% CI (n={_bci.get('n_success', 0)}, block={_bci.get('block_len', '?')}d)",
+                        legendgroup="ci",
+                    ))
+
+                # Center line
                 fig_roll.add_trace(go.Scatter(
-                    x=roll_dy.index, y=roll_dy["total_spillover"],
-                    mode="lines", line=dict(color="#CFB991", width=1.5),
-                    fill="tozeroy", fillcolor="rgba(207,185,145,0.08)",
+                    x=_dates, y=list(_ts),
+                    mode="lines",
+                    line=dict(color="#CFB991", width=1.5),
                     name="Total Spillover %",
                 ))
+
                 # Threshold lines
                 fig_roll.add_hline(y=55, line_dash="dot", line_color="#c0392b",
                                    annotation_text="High (55%)", annotation_font_size=8)
                 fig_roll.add_hline(y=35, line_dash="dot", line_color="#e67e22",
                                    annotation_text="Moderate (35%)", annotation_font_size=8)
                 fig_roll.update_layout(
-                    template="purdue", height=280,
+                    template="purdue", height=295,
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
                     font=dict(color="#e8e9ed"),
                     xaxis=dict(tickfont=dict(size=8, color="#8890a1"),
@@ -530,13 +668,113 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     yaxis=dict(tickfont=dict(size=8, color="#8890a1"),
                                title=dict(text="Spillover %", font=dict(size=8))),
                     margin=dict(l=55, r=20, t=15, b=40),
-                    showlegend=False,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                                font=dict(size=8), bgcolor="rgba(0,0,0,0)"),
+                    hovermode="x unified",
                 )
                 _chart(fig_roll)
+
+                _ci_note = ""
+                if _bci and "total_p05" in _bci:
+                    _ci_note = (
+                        f" · Bootstrap CI: [{_bci['total_p05']:.1f}%, "
+                        f"{_bci['total_p95']:.1f}%] "
+                        f"(n={_bci['n_success']}, block={_bci['block_len']}d)"
+                    )
                 _panel_note(
                     "Peaks correspond to known systemic events (GFC 2008, COVID 2020, Ukraine 2022). "
                     "High spillover = shock propagates everywhere; low = markets are segmented."
+                    + _ci_note
                 )
+
+                # Per-asset NET bootstrap CI (expander)
+                if _bci and _bci.get("net_bands"):
+                    with st.expander("Per-asset NET spillover bootstrap CI"):
+                        _nb  = _bci["net_bands"]
+                        _fig_nb = go.Figure()
+                        _sorted_assets = sorted(
+                            _nb.keys(),
+                            key=lambda c: (_nb[c]["p05"] + _nb[c]["p95"]) / 2,
+                        )
+                        for _ac in _sorted_assets:
+                            _p05v = _nb[_ac]["p05"]
+                            _p95v = _nb[_ac]["p95"]
+                            _mid  = (_p05v + _p95v) / 2
+                            _col  = "#27ae60" if _mid >= 0 else "#c0392b"
+                            # Error bar trace
+                            _fig_nb.add_trace(go.Scatter(
+                                x=[_mid], y=[_ac],
+                                mode="markers",
+                                marker=dict(color=_col, size=7, symbol="circle"),
+                                error_x=dict(
+                                    type="data", symmetric=False,
+                                    array=[_p95v - _mid],
+                                    arrayminus=[_mid - _p05v],
+                                    color=_col, thickness=1.5, width=5,
+                                ),
+                                showlegend=False,
+                            ))
+                        _fig_nb.add_vline(x=0, line=dict(color="#555960", width=1, dash="dot"))
+                        _fig_nb.update_layout(
+                            template="purdue", height=max(200, len(_nb) * 26),
+                            paper_bgcolor="#080808", plot_bgcolor="#080808",
+                            font=dict(color="#e8e9ed"),
+                            xaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                                       title=dict(text="NET spillover % (TO − FROM)", font=dict(size=8))),
+                            yaxis=dict(tickfont=dict(size=8, color="#8890a1")),
+                            margin=dict(l=100, r=30, t=15, b=35),
+                        )
+                        _chart(_fig_nb)
+                        _panel_note(
+                            "Dot = median NET. Whiskers = 5th/95th bootstrap percentiles. "
+                            "Green = net transmitter across all resamples; "
+                            "red = net receiver. Wide whiskers = unstable direction."
+                        )
+
+                # Rolling BK frequency stacked area chart
+                _label("Baruník-Křehlík Frequency Decomposition (Rolling)")
+                with st.spinner("Computing rolling frequency connectedness…"):
+                    roll_bk = rolling_frequency_connectedness(
+                        all_r[dy_valid].dropna(),
+                        window=200, step=5, lag_order=2, n_freqs=60,
+                    )
+                if not roll_bk.empty and {"tc_short", "tc_medium", "tc_long"}.issubset(roll_bk.columns):
+                    _fig_bk = go.Figure()
+                    # Stack order: long at bottom, short on top (so short = most visible)
+                    for _bname, _col, _line_color, _fill_color in [
+                        ("Long (22d+)",    "tc_long",   "#CFB991", "rgba(207,185,145,0.55)"),
+                        ("Medium (5–22d)", "tc_medium", "#e67e22", "rgba(230,126,34,0.55)"),
+                        ("Short (1–5d)",   "tc_short",  "#c0392b", "rgba(192,57,43,0.65)"),
+                    ]:
+                        _fig_bk.add_trace(go.Scatter(
+                            x=roll_bk.index,
+                            y=roll_bk[_col],
+                            name=_bname,
+                            mode="lines",
+                            line=dict(color=_line_color, width=0.6),
+                            stackgroup="bk",
+                            fillcolor=_fill_color,
+                        ))
+                    _fig_bk.update_layout(
+                        template="purdue", height=250,
+                        paper_bgcolor="#080808", plot_bgcolor="#080808",
+                        font=dict(color="#e8e9ed"),
+                        xaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                                   rangeslider=dict(visible=False)),
+                        yaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                                   title=dict(text="TC %", font=dict(size=8))),
+                        margin=dict(l=55, r=20, t=15, b=40),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                                    font=dict(size=8), bgcolor="rgba(0,0,0,0)"),
+                        hovermode="x unified",
+                    )
+                    _chart(_fig_bk)
+                    _panel_note(
+                        "Stacked area = frequency decomposition of total BK connectedness. "
+                        "Rising red = short-run contagion (panic). Rising gold = structural integration."
+                    )
+                else:
+                    st.info("Insufficient data for rolling frequency decomposition.")
             else:
                 st.info("Insufficient data for rolling DY computation.")
         else:
@@ -600,6 +838,108 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 st.caption(f"Regime-conditional computation unavailable: {type(_rc_e).__name__}")
         else:
             st.info("Select ≥ 3 VAR assets.")
+
+    # ── Rolling Risk Index Fan Chart (market-data uncertainty bootstrap) ─────
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        'color:#CFB991;margin-bottom:0.1rem">Rolling Risk Index — Bootstrap Scenario Fan</h2>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
+        'Moving-block bootstrap (n=300, block≈√T) resamples equity + commodity returns jointly. '
+        'Band = 5th/95th percentile of scores under randomly re-ordered return histories '
+        '(market-data inputs only; analyst layers — news GPR, CIS, chokepoint — fixed at current values).</p>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.analysis.risk_score import risk_score_history, bootstrap_risk_history_ci
+        with st.spinner("Computing risk index history and bootstrap CI (n=150)…"):
+            _sp_score_hist = risk_score_history(pd.Series(dtype=float), cmd_r, eq_r)
+            _sp_bci_df     = bootstrap_risk_history_ci(cmd_r, eq_r, n_boot=150)
+
+        if isinstance(_sp_score_hist, pd.Series) and len(_sp_score_hist.dropna()) >= 20:
+            _fig_fan = go.Figure()
+
+            # Risk zone backgrounds
+            for _y0, _y1, _fc in [
+                (0,  25,  "rgba(46,125,50,0.07)"),
+                (25, 50,  "rgba(100,100,100,0.04)"),
+                (50, 75,  "rgba(230,126,34,0.07)"),
+                (75, 100, "rgba(192,57,43,0.10)"),
+            ]:
+                _fig_fan.add_hrect(y0=_y0, y1=_y1, fillcolor=_fc,
+                                   opacity=1.0, layer="below", line_width=0)
+
+            # Bootstrap CI ribbon
+            _sp_ci_label = ""
+            if not _sp_bci_df.empty and {"p05", "p95"}.issubset(_sp_bci_df.columns):
+                _sp_shared = _sp_score_hist.index.intersection(_sp_bci_df.index)
+                if len(_sp_shared) > 5:
+                    _sp_p05      = _sp_bci_df.loc[_sp_shared, "p05"]
+                    _sp_p95      = _sp_bci_df.loc[_sp_shared, "p95"]
+                    _sp_dates_ci = list(_sp_shared)
+                    _fig_fan.add_trace(go.Scatter(
+                        x=_sp_dates_ci + _sp_dates_ci[::-1],
+                        y=list(_sp_p95) + list(_sp_p05)[::-1],
+                        fill="toself",
+                        fillcolor="rgba(207,185,145,0.18)",
+                        line=dict(color="rgba(207,185,145,0.30)", width=0.5),
+                        hoverinfo="skip",
+                        showlegend=True,
+                        name="90% CI — market-data only",
+                    ))
+                    if "p50" in _sp_bci_df.columns:
+                        _fig_fan.add_trace(go.Scatter(
+                            x=_sp_dates_ci,
+                            y=list(_sp_bci_df.loc[_sp_shared, "p50"]),
+                            mode="lines",
+                            line=dict(color="rgba(207,185,145,0.40)", width=0.8, dash="dot"),
+                            name="Bootstrap median",
+                            showlegend=True,
+                        ))
+                    _sp_n_boot = 300
+                    _sp_ci_label = (
+                        f" Bootstrap n={_sp_n_boot}, block≈{max(5, int(len(_sp_score_hist)**0.5))}d."
+                    )
+
+            # Point estimate — realized market risk index
+            _fig_fan.add_trace(go.Scatter(
+                x=list(_sp_score_hist.index),
+                y=list(_sp_score_hist.values),
+                mode="lines",
+                line=dict(color="#CFB991", width=1.8),
+                name="Risk Index (realized)",
+            ))
+
+            _fig_fan.update_layout(
+                height=300,
+                paper_bgcolor="#080808", plot_bgcolor="#080808",
+                font=dict(color="#e8e9ed"),
+                xaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                           rangeslider=dict(visible=False)),
+                yaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                           title=dict(text="Risk Index (0–100)", font=dict(size=8)),
+                           range=[0, 100]),
+                margin=dict(l=55, r=20, t=15, b=40),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                            font=dict(size=8), bgcolor="rgba(0,0,0,0)"),
+                hovermode="x unified",
+            )
+            _chart(_fig_fan)
+            _panel_note(
+                "Gold line = realized market risk index (equity + commodity realized vol, EWM z-scored). "
+                "Band = 5th/95th percentile across 300 block-resampled return histories (block≈√T). "
+                "Interpretation: the band shows the range of scores that are compatible with randomly "
+                "re-ordered blocks of actual returns — not a confidence interval around the gold line. "
+                "Periods where the gold line sits above p95 indicate concentrated volatility episodes "
+                "that random block shuffling cannot replicate (expected; not a bias). "
+                "Analyst layers — news GPR (40%), CIS (30%), chokepoint (20%) — fixed at current values."
+                + _sp_ci_label
+            )
+        else:
+            st.caption("Insufficient data for risk index history (need ≥ 120 days of returns).")
+    except Exception as _sp_fan_err:
+        st.caption(f"Risk index fan chart unavailable: {_sp_fan_err}")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Granger Causality Network (GAP 24)
@@ -1025,6 +1365,420 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         "high-transmitter commodity is not isolated; it will propagate. Use this map to identify "
         "which equity markets to hedge when a key commodity breaks out."
     )
+
+    # ── ΔCoVaR — Adrian & Brunnermeier Systemic Risk ─────────────────────────
+    st.markdown(
+        f'<div style="margin:1.2rem 0 0.5rem;border-top:1px solid #1e1e1e;padding-top:0.9rem">'
+        f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 3px">ΔCoVaR — Systemic Risk Amplification</p>'
+        f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0;line-height:1.55">'
+        f'Adrian &amp; Brunnermeier (2016). For each asset, QuantReg of the equal-weighted system return '
+        f'on the asset at τ=5% and τ=50% gives CoVaR at distress and median states. '
+        f'<b style="color:#c8c8c8">ΔCoVaR = CoVaR(5%) − CoVaR(50%)</b> — '
+        f'more negative means the asset amplifies system losses when it is itself in distress. '
+        f'Estimation window: full sample. System = equal-weighted cross-asset index.</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from src.analysis.covar import compute_covar, rolling_covar, _MAX_ITER
+
+        _covar_input = all_r[sel_all].dropna(how="all") if sel_all else all_r.dropna(how="all")
+
+        with st.spinner("Computing ΔCoVaR (quantile regressions)…"):
+            _covar_df = compute_covar(_covar_input, min_obs=126)
+
+        if _covar_df.empty:
+            st.caption("Insufficient data for ΔCoVaR — need ≥ 126 overlapping observations per asset.")
+        else:
+            # ── Convergence audit ──────────────────────────────────────────
+            _no_conv = (
+                _covar_df.index[~_covar_df["converged"]].tolist()
+                if "converged" in _covar_df.columns
+                else []
+            )
+            if _no_conv:
+                st.warning(
+                    f"QuantReg hit max iterations ({_MAX_ITER}) for "
+                    f"{len(_no_conv)} asset(s): **{', '.join(_no_conv)}** — "
+                    "estimates retained but marked ⚠ (ranking may be unreliable for flagged assets).",
+                    icon="⚠️",
+                )
+
+            _cv_col_bar, _cv_col_roll = st.columns([1, 1.4], gap="medium")
+
+            # ── Left: ranked horizontal bar ────────────────────────────────
+            with _cv_col_bar:
+                _dc = _covar_df["delta_covar"]
+                # Non-converged bars rendered at reduced opacity
+                _converged_mask = (
+                    _covar_df["converged"].values
+                    if "converged" in _covar_df.columns
+                    else [True] * len(_covar_df)
+                )
+                # Color: most-negative = red (#c0392b) → least-negative = gold (#CFB991)
+                _norm = (_dc - _dc.min()) / (_dc.max() - _dc.min() + 1e-9)
+                _bar_colors = [
+                    f"rgba({int(192 + (207-192)*v)},{int(57 + (185-57)*v)},{int(43 + (145-43)*v)},{0.85 if ok else 0.35})"
+                    for v, ok in zip(_norm.values, _converged_mask)
+                ]
+                # Append ⚠ to y-axis labels for non-converged assets
+                _y_labels = [
+                    f"{a} ⚠" if a in _no_conv else a
+                    for a in _dc.index.tolist()
+                ]
+                _fig_bar = go.Figure(go.Bar(
+                    x=_dc.values,
+                    y=_y_labels,
+                    orientation="h",
+                    marker=dict(color=_bar_colors, line=dict(width=0)),
+                    text=[f"{v:+.2f}%" for v in _dc.values],
+                    textposition="outside",
+                    textfont=dict(family="JetBrains Mono, monospace", size=9, color="#8890a1"),
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "ΔCoVaR: %{x:.3f}%<br>"
+                        "<extra></extra>"
+                    ),
+                ))
+                _fig_bar.update_layout(
+                    height=max(240, len(_dc) * 28 + 40),
+                    margin=dict(l=0, r=60, t=28, b=28),
+                    paper_bgcolor="#000000",
+                    plot_bgcolor="#000000",
+                    font=dict(family="JetBrains Mono, monospace", color="#8890a1", size=10),
+                    title=dict(
+                        text="ΔCoVaR by Asset  (most systemic → top)",
+                        font=dict(size=11, color="#CFB991", family="JetBrains Mono, monospace"),
+                        x=0, xanchor="left", pad=dict(l=4, b=6),
+                    ),
+                    xaxis=dict(
+                        title=dict(text="ΔCoVaR (%)", font=dict(size=9, color="#555960")),
+                        tickfont=dict(size=9, color="#555960"),
+                        gridcolor="#111111", zerolinecolor="#2a2a2a",
+                        showline=False,
+                    ),
+                    yaxis=dict(
+                        tickfont=dict(size=9, color="#c8c8c8"),
+                        gridcolor="#111111",
+                        showline=False, autorange="reversed",
+                    ),
+                    showlegend=False,
+                )
+                _chart(_fig_bar)
+
+                # Compact stats table under the bar
+                _top3   = _covar_df.head(3)
+                _tbl_md = (
+                    f'<div style="margin-top:8px">'
+                    f'<table style="width:100%;border-collapse:collapse;'
+                    f'font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+                    f'<thead><tr>'
+                    f'<th style="color:#555960;text-align:left;padding:3px 6px;'
+                    f'border-bottom:1px solid #1e1e1e;letter-spacing:.08em">ASSET</th>'
+                    f'<th style="color:#555960;text-align:right;padding:3px 6px;'
+                    f'border-bottom:1px solid #1e1e1e;letter-spacing:.08em">VaR 5%</th>'
+                    f'<th style="color:#555960;text-align:right;padding:3px 6px;'
+                    f'border-bottom:1px solid #1e1e1e;letter-spacing:.08em">CoVaR 5%</th>'
+                    f'<th style="color:#555960;text-align:right;padding:3px 6px;'
+                    f'border-bottom:1px solid #1e1e1e;letter-spacing:.08em">ΔCoVaR</th>'
+                    f'<th style="color:#555960;text-align:right;padding:3px 6px;'
+                    f'border-bottom:1px solid #1e1e1e;letter-spacing:.08em">β(5%)</th>'
+                    f'</tr></thead><tbody>'
+                )
+                for _an, _row in _top3.iterrows():
+                    _dc_v    = _row["delta_covar"]
+                    _dc_col  = "#c0392b" if _dc_v < -0.3 else "#e67e22" if _dc_v < -0.1 else "#8890a1"
+                    _nc_flag = not _row.get("converged", True)
+                    _name_td = (
+                        f'{_an} <span title="QuantReg hit max_iter={_MAX_ITER}; estimate unreliable" '
+                        f'style="color:#e67e22">⚠</span>'
+                        if _nc_flag else _an
+                    )
+                    _tbl_md += (
+                        f'<tr style="border-bottom:1px solid #0d0d0d;'
+                        f'{"opacity:0.55;" if _nc_flag else ""}">'
+                        f'<td style="color:#e8e9ed;padding:3px 6px">{_name_td}</td>'
+                        f'<td style="color:#8890a1;text-align:right;padding:3px 6px">'
+                        f'{_row["var5"]:+.2f}%</td>'
+                        f'<td style="color:#8890a1;text-align:right;padding:3px 6px">'
+                        f'{_row["covar5"]:+.2f}%</td>'
+                        f'<td style="color:{_dc_col};font-weight:700;text-align:right;padding:3px 6px">'
+                        f'{_dc_v:+.2f}%</td>'
+                        f'<td style="color:#8890a1;text-align:right;padding:3px 6px">'
+                        f'{_row["beta"]:.3f}</td>'
+                        f'</tr>'
+                    )
+                _tbl_md += "</tbody></table></div>"
+                st.markdown(_tbl_md, unsafe_allow_html=True)
+
+            # ── Right: rolling ΔCoVaR for top contributors ─────────────────
+            with _cv_col_roll:
+                _roll_window = st.select_slider(
+                    "Rolling window",
+                    options=[63, 126, 252],
+                    value=126,
+                    format_func=lambda v: f"{v}d",
+                    key="sp_covar_window",
+                )
+                _top_n_roll = min(5, len(_covar_df))
+
+                with st.spinner("Rolling ΔCoVaR…"):
+                    _roll_df = rolling_covar(
+                        _covar_input,
+                        window=_roll_window,
+                        step=5,
+                        top_n=_top_n_roll,
+                        _n_rows=len(_covar_input),
+                    )
+
+                if _roll_df.empty:
+                    st.caption("Not enough history for rolling ΔCoVaR.")
+                else:
+                    _ROLL_PALETTE = [
+                        "#c0392b", "#e67e22", "#CFB991", "#2980b9", "#27ae60",
+                    ]
+                    _fig_roll = go.Figure()
+                    for _i, _col in enumerate(_roll_df.columns):
+                        _clr = _ROLL_PALETTE[_i % len(_ROLL_PALETTE)]
+                        _fig_roll.add_trace(go.Scatter(
+                            x=_roll_df.index,
+                            y=_roll_df[_col],
+                            mode="lines",
+                            name=_col,
+                            line=dict(color=_clr, width=1.5),
+                            hovertemplate=f"<b>{_col}</b><br>%{{x|%Y-%m-%d}}<br>ΔCoVaR: %{{y:.2f}}%<extra></extra>",
+                        ))
+                    # Zero reference line
+                    _fig_roll.add_hline(
+                        y=0, line=dict(color="#2a2a2a", width=1, dash="dot"),
+                    )
+                    _fig_roll.update_layout(
+                        height=max(240, len(_dc) * 28 + 40),
+                        margin=dict(l=0, r=10, t=28, b=28),
+                        paper_bgcolor="#000000",
+                        plot_bgcolor="#000000",
+                        font=dict(family="JetBrains Mono, monospace", color="#8890a1", size=10),
+                        title=dict(
+                            text=f"Rolling {_roll_window}d ΔCoVaR — Top {_top_n_roll} Systemic",
+                            font=dict(size=11, color="#CFB991", family="JetBrains Mono, monospace"),
+                            x=0, xanchor="left", pad=dict(l=4, b=6),
+                        ),
+                        xaxis=dict(
+                            tickfont=dict(size=9, color="#555960"),
+                            gridcolor="#0d0d0d", zerolinecolor="#1a1a1a",
+                            showline=False,
+                        ),
+                        yaxis=dict(
+                            title=dict(text="ΔCoVaR (%)", font=dict(size=9, color="#555960")),
+                            tickfont=dict(size=9, color="#555960"),
+                            gridcolor="#111111", zerolinecolor="#2a2a2a",
+                            showline=False,
+                        ),
+                        legend=dict(
+                            font=dict(size=9, color="#8890a1"),
+                            bgcolor="rgba(0,0,0,0)",
+                            bordercolor="#1e1e1e",
+                            borderwidth=1,
+                            orientation="h",
+                            x=0, y=-0.12, xanchor="left",
+                        ),
+                        hovermode="x unified",
+                    )
+                    _chart(_fig_roll)
+
+                    st.markdown(
+                        f'<p style="{_F}font-size:0.60rem;color:#555960;margin-top:4px;line-height:1.45">'
+                        f'QuantReg at τ=5% and τ=50% re-estimated on each {_roll_window}-day window, '
+                        f'stepped every 5 days. A deepening negative trend signals growing systemic '
+                        f'tail-risk contribution from that asset in the current regime.</p>',
+                        unsafe_allow_html=True,
+                    )
+
+    except Exception as _cov_err:
+        st.caption(f"ΔCoVaR unavailable: {_cov_err}")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SECTION: Jordà Local-Projection IRF
+    # ══════════════════════════════════════════════════════════════════════
+    st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
+        'color:#CFB991;margin-bottom:0.1rem">Conflict Shock Impulse Response (Jordà LP)</h2>'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;'
+        'margin:0 0 0.5rem;line-height:1.55">'
+        'How do asset returns respond to an unexpected escalation in conflict intensity? '
+        'Shock = AR-residual of GDELT daily news-volume for each conflict '
+        '(log-transformed, BIC lag selection, standardised to 1-σ). '
+        'At each horizon h = 0–20 trading days, '
+        'h-day cumulative return is regressed on the shock plus lag controls '
+        '(Jordà 2005). SEs: Newey-West HAC, bandwidth = max(h, 2). '
+        '90% confidence bands. IRF in % per 1-σ shock.</p>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        from src.analysis.local_projection import lp_irf_all_conflicts
+        from src.data.config import CONFLICTS as _LP_CONFLICTS
+
+        # Conflict selector ────────────────────────────────────────────────────
+        _lp_names  = {c["id"]: c["name"] for c in _LP_CONFLICTS}
+        _lp_labels = [f'{c["name"]}' for c in _LP_CONFLICTS]
+        _lp_ids    = [c["id"]   for c in _LP_CONFLICTS]
+        _lp_sel_label = st.selectbox(
+            "Conflict",
+            options=_lp_labels,
+            index=0,
+            key="lp_conflict_sel",
+            label_visibility="collapsed",
+        )
+        _lp_sel_id = _lp_ids[_lp_labels.index(_lp_sel_label)]
+
+        with st.spinner("Fetching GDELT conflict-news series and computing LP-IRFs…"):
+            _lp_results = lp_irf_all_conflicts(
+                eq_r, cmd_r,
+                _n_rows=len(eq_r),
+                max_h=20,
+            )
+
+        _lp_entry = _lp_results.get(_lp_sel_id, {})
+        _lp_irf   = _lp_entry.get("irf", pd.DataFrame())
+        _lp_err   = _lp_entry.get("error")
+        _lp_nobs  = _lp_entry.get("n_obs_shock", 0)
+        _lp_ok    = _lp_entry.get("ar_ok", False)
+
+        # Status chip ──────────────────────────────────────────────────────────
+        _F2 = "font-family:'JetBrains Mono',monospace;"
+        if _lp_ok and not _lp_irf.empty:
+            _lp_n_assets = _lp_irf["asset"].nunique()
+            st.markdown(
+                f'<span style="{_F2}font-size:7.5px;color:#27ae60;'
+                f'background:#0a1a0a;border:1px solid #27ae60;padding:2px 8px">'
+                f'SHOCK T={_lp_nobs}d · {_lp_n_assets} ASSETS · NW-HAC 90% CI</span>',
+                unsafe_allow_html=True,
+            )
+        elif _lp_err:
+            st.markdown(
+                f'<span style="{_F2}font-size:7.5px;color:#c0392b;'
+                f'background:#1a0a0a;border:1px solid #c0392b;padding:2px 8px">'
+                f'NO DATA — {_lp_err}</span>',
+                unsafe_allow_html=True,
+            )
+
+        # IRF charts ───────────────────────────────────────────────────────────
+        if not _lp_irf.empty:
+            _lp_assets = sorted(_lp_irf["asset"].unique())
+            _lp_n      = len(_lp_assets)
+            _lp_ncols  = min(3, _lp_n)
+            _lp_cols   = st.columns(_lp_ncols, gap="small")
+
+            for _ai, _asset in enumerate(_lp_assets):
+                _adf = _lp_irf[_lp_irf["asset"] == _asset].sort_values("horizon")
+                if _adf.empty:
+                    continue
+
+                _horizons = _adf["horizon"].tolist()
+                _coef     = _adf["coef"].tolist()
+                _ci_lo    = _adf["ci_lo"].tolist()
+                _ci_hi    = _adf["ci_hi"].tolist()
+                _pvals    = _adf["pval"].tolist()
+
+                # Colour: gold if max |IRF| is significant at 10%, else muted
+                _sig_any  = any(p < 0.10 for p in _pvals)
+                _line_col = "#CFB991" if _sig_any else "#5a5a6a"
+                _fill_col = "rgba(207,185,145,0.14)" if _sig_any else "rgba(90,90,106,0.12)"
+                _fill_bdr = "rgba(207,185,145,0.30)" if _sig_any else "rgba(90,90,106,0.25)"
+
+                _fig_irf = go.Figure()
+
+                # CI ribbon
+                _fig_irf.add_trace(go.Scatter(
+                    x=_horizons + _horizons[::-1],
+                    y=_ci_hi + _ci_lo[::-1],
+                    fill="toself",
+                    fillcolor=_fill_col,
+                    line=dict(color=_fill_bdr, width=0.5),
+                    hoverinfo="skip",
+                    showlegend=False,
+                ))
+
+                # Zero reference
+                _fig_irf.add_hline(y=0, line_color="#c0392b",
+                                   line_dash="dot", line_width=0.8)
+
+                # IRF line
+                _nobs_label = int(_adf["nobs"].iloc[-1]) if len(_adf) > 0 else 0
+                _fig_irf.add_trace(go.Scatter(
+                    x=_horizons, y=_coef,
+                    mode="lines+markers",
+                    line=dict(color=_line_col, width=1.6),
+                    marker=dict(
+                        size=[5 if p < 0.10 else 3 for p in _pvals],
+                        color=[_line_col if p < 0.10 else "#555" for p in _pvals],
+                        symbol="circle",
+                    ),
+                    name=_asset,
+                    hovertemplate=(
+                        "h=%{x}d<br>IRF=%{y:.3f}%<extra></extra>"
+                    ),
+                    showlegend=False,
+                ))
+
+                _fig_irf.update_layout(
+                    template="purdue",
+                    height=220,
+                    paper_bgcolor="#000000",
+                    plot_bgcolor="#080808",
+                    margin=dict(l=42, r=12, t=32, b=36),
+                    title=dict(
+                        text=(
+                            f'<span style="font-size:9px;color:#CFB991;'
+                            f'font-family:JetBrains Mono,monospace">{_asset}</span>'
+                            + (
+                                f'<span style="font-size:7px;color:#27ae60"> ●</span>'
+                                if _sig_any else ""
+                            )
+                        ),
+                        x=0.0, xanchor="left",
+                        font=dict(size=9),
+                        y=0.97,
+                    ),
+                    xaxis=dict(
+                        title=dict(text="Horizon (trading days)",
+                                   font=dict(size=7, color="#8890a1")),
+                        tickfont=dict(size=7, color="#8890a1"),
+                        gridcolor="#111",
+                        dtick=5,
+                        zeroline=False,
+                    ),
+                    yaxis=dict(
+                        title=dict(text="Cum. return (%)",
+                                   font=dict(size=7, color="#8890a1")),
+                        tickfont=dict(size=7, color="#8890a1"),
+                        gridcolor="#111",
+                        zeroline=False,
+                    ),
+                    hovermode="x unified",
+                )
+
+                with _lp_cols[_ai % _lp_ncols]:
+                    st.plotly_chart(_fig_irf, use_container_width=True,
+                                    config={"displayModeBar": False})
+
+            _panel_note(
+                "Gold dot = significant at 10% (NW-HAC). Muted = not significant. "
+                "IRF = % cumulative log-return per 1-σ unexpected escalation shock. "
+                f"Shock series: {_lp_nobs} trading-day obs, AR BIC-selected, standardised. "
+                "Positive IRF at h=0 = same-day price increase after news escalation. "
+                "CI width grows with h due to compounding uncertainty and shrinking sample."
+            )
+
+        elif _lp_ok:
+            st.caption("LP regression returned no results — insufficient overlapping history.")
+
+    except Exception as _lp_top_err:
+        st.caption(f"LP-IRF unavailable: {_lp_top_err}")
 
     # ── Conflict Layer: which active conflicts are driving the current spillover ──
     st.markdown(

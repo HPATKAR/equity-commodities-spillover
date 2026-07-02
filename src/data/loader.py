@@ -13,12 +13,45 @@ LSEG setup (Purdue account):
 
 from __future__ import annotations
 
+import logging
+import time as _time
 import numpy as np
 import pandas as pd
 import streamlit as st
 import yfinance as yf
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Optional
+
+_log = logging.getLogger(__name__)
+
+# ── Disk price cache (survives process restarts; avoids cold yfinance re-fetch) ─
+# Parquet files live in ~/.cache/spillover_monitor/. Max age 4 hours — data is
+# at most 4 h stale, which is acceptable for daily-close return series.
+_DISK_CACHE_DIR = Path.home() / ".cache" / "spillover_monitor"
+_DISK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+_DISK_CACHE_MAX_AGE = 4 * 3600   # seconds
+
+
+def _disk_path(name: str, start: str, end: str) -> Path:
+    return _DISK_CACHE_DIR / f"{name}_{start}_{end}.parquet"
+
+
+def _disk_load(path: Path) -> pd.DataFrame | None:
+    try:
+        if path.exists() and (_time.time() - path.stat().st_mtime) < _DISK_CACHE_MAX_AGE:
+            df = pd.read_parquet(path)
+            return df if not df.empty else None
+    except Exception:
+        pass
+    return None
+
+
+def _disk_save(df: pd.DataFrame, path: Path) -> None:
+    try:
+        df.to_parquet(path, index=True)
+    except Exception as exc:
+        _log.debug("disk cache write failed: %s", exc)
 
 from src.data.config import (
     EQUITY_TICKERS, COMMODITY_TICKERS, FRED_SERIES,
@@ -299,11 +332,16 @@ def load_equity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
+    _p = _disk_path("equity", start, end)
+    cached = _disk_load(_p)
+    if cached is not None:
+        return cached
     names = list(EQUITY_TICKERS.keys())
     lseg  = _fetch_lseg(names, start, end)
-    if not lseg.empty and len(lseg) > 10:
-        return _fill_gaps(lseg)
-    return _fill_gaps(_fetch_yf(EQUITY_TICKERS, start, end))
+    result = _fill_gaps(lseg) if (not lseg.empty and len(lseg) > 10) else _fill_gaps(_fetch_yf(EQUITY_TICKERS, start, end))
+    if not result.empty:
+        _disk_save(result, _p)
+    return result
 
 
 @st.cache_data(ttl=1800, show_spinner=False, max_entries=3)
@@ -311,11 +349,16 @@ def load_commodity_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
+    _p = _disk_path("commodity", start, end)
+    cached = _disk_load(_p)
+    if cached is not None:
+        return cached
     names = list(COMMODITY_TICKERS.keys())
     lseg  = _fetch_lseg(names, start, end)
-    if not lseg.empty and len(lseg) > 10:
-        return _fill_gaps(lseg)
-    return _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
+    result = _fill_gaps(lseg) if (not lseg.empty and len(lseg) > 10) else _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
+    if not result.empty:
+        _disk_save(result, _p)
+    return result
 
 
 def load_all_prices(

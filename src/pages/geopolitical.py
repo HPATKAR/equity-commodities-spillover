@@ -17,6 +17,7 @@ from src.analysis.events import (
     event_window_returns, event_normalised_prices,
     pre_post_volatility, correlation_shift,
 )
+from src.analysis.event_study import run_event_study
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _section_note,
     _definition_block, _takeaway_block, _page_conclusion, _page_header, _page_footer,
@@ -26,6 +27,22 @@ from src.ui.shared import (
 
 _M = "font-family:'JetBrains Mono',monospace;"
 _G = "#CFB991"
+
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=2)
+def _event_study_cached(_all_r: pd.DataFrame, n_rows: int = 0) -> dict:
+    """Full event study for all assets in all_r. n_rows busts cache on data refresh."""
+    return run_event_study(
+        assets=list(_all_r.columns),
+        all_returns=_all_r,
+        events=GEOPOLITICAL_EVENTS,
+        benchmark="S&P 500",
+        est_before=120,
+        est_gap=20,
+        pre=5,
+        post=20,
+        n_boot=500,
+    )
 
 
 def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
@@ -158,29 +175,54 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             )
 
     with row1_r:
-        _label("Cumulative Return by Period")
-        if not perf_df.empty:
-            fig_bar = go.Figure()
-            bar_colors = [PALETTE[5], ev["color"], PALETTE[4]]
-            for i, period in enumerate(perf_df.index):
-                fig_bar.add_trace(go.Bar(
-                    name=period, x=perf_df.columns.tolist(),
-                    y=perf_df.loc[period].values,
-                    marker_color=bar_colors[i % 3],
-                ))
-            fig_bar.update_layout(
-                template="purdue", barmode="group", height=360,
-                yaxis=dict(title="Return (%)", ticksuffix="%"),
-                xaxis=dict(tickangle=-40, tickfont=dict(size=8)),
-                margin=dict(l=40, r=10, t=20, b=80),
-                legend=dict(orientation="h", y=1.05),
-            )
-            _chart(fig_bar)
-            _insight_note(
-                "Compares total cumulative returns across three distinct phases: before, during, "
-                "and after the event. Assets with large positive post-event bars recovered quickly; "
-                "those remaining negative post-event suggest lasting structural damage from the shock."
-            )
+        _label("Cumulative Abnormal Return (CAR) — vs S&P 500 Market Model")
+        try:
+            with st.spinner(""):
+                _es = _event_study_cached(all_returns, n_rows=len(all_returns))
+            _ev_cars = _es["per_event"].get(ev["name"], {})
+            _car_assets = [a for a in selected_assets
+                           if a in _ev_cars and a != "S&P 500"]
+            if _car_assets:
+                _day_idx = list(range(-5, 21))
+                _palette_cycle = [
+                    "#CFB991","#e67e22","#27ae60","#2980b9",
+                    "#c0392b","#8e44ad","#16a085",
+                ]
+                fig_car = go.Figure()
+                for _ai, _a in enumerate(_car_assets):
+                    _car_s = _ev_cars[_a]
+                    _car_pct = _car_s.reindex(_day_idx).ffill().fillna(0) * 100
+                    _col = _palette_cycle[_ai % len(_palette_cycle)]
+                    fig_car.add_trace(go.Scatter(
+                        x=_day_idx, y=_car_pct.values, mode="lines",
+                        name=_a, line=dict(color=_col, width=1.8),
+                        hovertemplate=f"{_a}<br>Day %{{x}}: %{{y:+.2f}}%<extra></extra>",
+                    ))
+                fig_car.add_vline(
+                    x=0, line_dash="dash", line_color=ev["color"], line_width=1.5,
+                    annotation_text="Day 0", annotation_position="top right",
+                    annotation_font=dict(size=8, color=ev["color"]),
+                )
+                fig_car.add_hline(y=0, line_dash="dot", line_color="#555960", line_width=1)
+                fig_car.update_layout(
+                    template="purdue", height=360,
+                    yaxis=dict(title="CAR (%)", ticksuffix="%"),
+                    xaxis=dict(title="Event day (0 = event start)",
+                               tickvals=[-5, 0, 5, 10, 15, 20]),
+                    margin=dict(l=40, r=10, t=20, b=40),
+                    legend=dict(orientation="h", y=1.08, font=dict(size=8)),
+                )
+                _chart(_style_fig(fig_car, height=360))
+                _insight_note(
+                    "CAR = actual return minus predicted return from OLS market model "
+                    "(α + β × S&P 500) estimated over [−120, −20] trading days pre-event. "
+                    "Positive = outperformed the market-implied expected return. "
+                    "Day 0 marks event start; window is [−5, +20] trading days."
+                )
+            else:
+                st.caption("No CAR data — select non-benchmark assets or check data coverage.")
+        except Exception as _car_err:
+            st.caption(f"CAR unavailable: {_car_err}")
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
@@ -269,6 +311,106 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 f'Select both equity and commodity assets to see correlation shifts.</p>',
                 unsafe_allow_html=True,
             )
+
+    # ── CAAR Aggregation ──────────────────────────────────────────────────
+    st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
+                unsafe_allow_html=True)
+    with st.expander(
+        f"CAAR — Aggregate Across All {len(GEOPOLITICAL_EVENTS)} Events  ·  "
+        f"Market Model  ·  Window [−5, +20]",
+        expanded=False,
+    ):
+        try:
+            _es_full = _event_study_cached(all_returns, n_rows=len(all_returns))
+            _caar_data = _es_full["caar"]
+            _caar_assets = [a for a in selected_assets
+                            if a in _caar_data and a != "S&P 500"]
+            if _caar_assets:
+                _day_idx = list(range(-5, 21))
+                _palette_cycle = [
+                    "#CFB991","#e67e22","#27ae60","#2980b9",
+                    "#c0392b","#8e44ad","#16a085",
+                ]
+                fig_caar = go.Figure()
+                for _ai, _a in enumerate(_caar_assets):
+                    _cd   = _caar_data[_a]
+                    _caar_pct = _cd["caar"].reindex(_day_idx).fillna(0) * 100
+                    _lo   = _cd["lower"].reindex(_day_idx).fillna(0) * 100
+                    _hi   = _cd["upper"].reindex(_day_idx).fillna(0) * 100
+                    _ts   = _cd["tstat"]
+                    _ps   = _cd["pval_sign"]
+                    _n    = _cd["n"]
+                    _col  = _palette_cycle[_ai % len(_palette_cycle)]
+                    _star = " ★" if (not np.isnan(_ts) and abs(_ts) > 1.96) else ""
+                    _lbl  = (f"{_a}  t={_ts:.2f}{_star}  sign p={_ps:.2f}  N={_n}"
+                             if not np.isnan(_ts) else f"{_a}  N={_n}")
+
+                    # CI band (draw first so it's behind the line)
+                    _x_band = _day_idx + _day_idx[::-1]
+                    _y_band = list(_hi.values) + list(_lo.values[::-1])
+                    fig_caar.add_trace(go.Scatter(
+                        x=_x_band, y=_y_band,
+                        fill="toself",
+                        fillcolor="rgba(200,200,200,0.07)",
+                        line=dict(width=0), showlegend=False, hoverinfo="skip",
+                    ))
+                    # CAAR line
+                    fig_caar.add_trace(go.Scatter(
+                        x=_day_idx, y=_caar_pct.values, mode="lines",
+                        name=_lbl, line=dict(color=_col, width=2),
+                        hovertemplate=f"{_a}<br>Day %{{x}}: CAAR %{{y:+.2f}}%<extra></extra>",
+                    ))
+
+                fig_caar.add_vline(
+                    x=0, line_dash="dash", line_color="#CFB991", line_width=1.5,
+                    annotation_text="Day 0", annotation_position="top right",
+                    annotation_font=dict(size=8, color="#CFB991"),
+                )
+                fig_caar.add_hline(y=0, line_dash="dot", line_color="#555960", line_width=1)
+                fig_caar.update_layout(
+                    template="purdue", height=400,
+                    yaxis=dict(title="CAAR (%)", ticksuffix="%"),
+                    xaxis=dict(title="Event day (0 = event start)",
+                               tickvals=[-5, 0, 5, 10, 15, 20]),
+                    margin=dict(l=40, r=10, t=20, b=40),
+                    legend=dict(orientation="v", x=1.01, y=1.0, font=dict(size=8)),
+                )
+                _chart(_style_fig(fig_caar, height=400))
+
+                # Stats table
+                _stat_rows = []
+                for _a in _caar_assets:
+                    _cd = _caar_data[_a]
+                    _ts = _cd["tstat"]
+                    _ps = _cd["pval_sign"]
+                    _n  = _cd["n"]
+                    _caar_terminal = float(_cd["caar"].iloc[-1]) * 100 if not _cd["caar"].empty else np.nan
+                    _lo_t = float(_cd["lower"].iloc[-1]) * 100 if not _cd["lower"].empty else np.nan
+                    _hi_t = float(_cd["upper"].iloc[-1]) * 100 if not _cd["upper"].empty else np.nan
+                    _star = "★" if (not np.isnan(_ts) and abs(_ts) > 1.96) else ""
+                    _stat_rows.append({
+                        "Asset": _a,
+                        "CAAR Day+20": f"{_caar_terminal:+.2f}%" if not np.isnan(_caar_terminal) else "—",
+                        "95% CI": f"[{_lo_t:+.2f}%, {_hi_t:+.2f}%]" if not np.isnan(_lo_t) else "—",
+                        "t-stat": f"{_ts:.2f}{_star}" if not np.isnan(_ts) else "—",
+                        "Sign p": f"{_ps:.3f}" if not np.isnan(_ps) else "—",
+                        "N": str(_n),
+                    })
+                if _stat_rows:
+                    _stat_df = pd.DataFrame(_stat_rows)
+                    st.dataframe(_stat_df, hide_index=True, use_container_width=True)
+
+                _insight_note(
+                    f"CAAR = cross-event average of per-event CARs across {len(GEOPOLITICAL_EVENTS)} events. "
+                    "Shaded band = 95% bootstrap CI (500 resamples of the event cross-section). "
+                    "t-stat tests H₀: CAAR=0 at day+20; ★ = significant at 5% (|t|>1.96). "
+                    "Sign p = probability of observing ≥ this many positive-CAR events by chance (H₀: 50%). "
+                    "Bootstrap and sign test are joint robustness checks — both should reject for strong inference."
+                )
+            else:
+                st.caption("No CAAR data — select non-benchmark assets.")
+        except Exception as _caar_err:
+            st.caption(f"CAAR aggregation unavailable: {_caar_err}")
 
     # ── Conflict Scorecard Strip ──────────────────────────────────────────
     st.markdown(

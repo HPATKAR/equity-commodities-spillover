@@ -164,10 +164,14 @@ def average_cross_corr_series(
     eq_cols  = [c for c in equity_returns.columns    if c in combined.columns]
     cmd_cols = [c for c in commodity_returns.columns if c in combined.columns]
 
+    # min_periods=window//2: equity and commodity calendars differ by ~5–10 days/month;
+    # requiring ALL 60 observations non-NaN drops ~98% of rows. Half the window
+    # still gives a statistically meaningful correlation estimate.
+    min_p = max(window // 2, 20)
     corr_series = []
     for eq in eq_cols:
         for cmd in cmd_cols:
-            rc = combined[eq].rolling(window).corr(combined[cmd])
+            rc = combined[eq].rolling(window, min_periods=min_p).corr(combined[cmd])
             corr_series.append(rc.abs())
 
     if not corr_series:

@@ -427,35 +427,79 @@ def render_chat_core(start: str, end: str, show_status_bar: bool = True) -> None
                     unsafe_allow_html=True,
                 )
                 response = ""
+                _chunks: list[str] = []
+                _complete = False
+                _drop_err = ""
                 try:
                     if _provider == "anthropic":
                         import anthropic as _ant
-                        _client = _ant.Anthropic(api_key=anthropic_key)
+                        import httpx as _httpx
+                        _client = _ant.Anthropic(
+                            api_key=anthropic_key,
+                            timeout=_httpx.Timeout(90.0, connect=10.0),
+                        )
+                        def _ant_stream():
+                            nonlocal _complete, _drop_err
+                            try:
+                                for _tok in _stream.text_stream:
+                                    _chunks.append(_tok)
+                                    yield _tok
+                                _complete = True
+                            except Exception as _se:
+                                _drop_err = str(_se)
                         with _client.messages.stream(
                             model="claude-sonnet-4-6",
                             max_tokens=1024,
                             system=system_prompt,
                             messages=[m for m in api_messages if m["role"] != "system"],
                         ) as _stream:
-                            response = st.write_stream(_stream.text_stream)
+                            st.write_stream(_ant_stream())
+                        response = "".join(_chunks)
+                        if not _complete and _drop_err:
+                            st.warning(
+                                f"Response may be incomplete — connection dropped "
+                                f"({_drop_err[:120]}). Retry if needed."
+                            )
                     else:
                         from openai import OpenAI as _OpenAI
-                        _client = _OpenAI(api_key=openai_key)
-                        _stream = _client.chat.completions.create(
+                        import httpx as _httpx
+                        _client = _OpenAI(
+                            api_key=openai_key,
+                            timeout=_httpx.Timeout(90.0, connect=10.0),
+                        )
+                        _oai_stream = _client.chat.completions.create(
                             model="gpt-4o",
                             messages=api_messages,
                             max_tokens=1024,
                             temperature=0.25,
                             stream=True,
                         )
-                        response = st.write_stream(
-                            c.choices[0].delta.content
-                            for c in _stream
-                            if c.choices[0].delta.content
-                        )
+                        def _oai_gen():
+                            nonlocal _complete, _drop_err
+                            try:
+                                for _c in _oai_stream:
+                                    _t = _c.choices[0].delta.content
+                                    if _t:
+                                        _chunks.append(_t)
+                                        yield _t
+                                _complete = True
+                            except Exception as _se:
+                                _drop_err = str(_se)
+                        st.write_stream(_oai_gen())
+                        response = "".join(_chunks)
+                        if not _complete and _drop_err:
+                            st.warning(
+                                f"Response may be incomplete — connection dropped "
+                                f"({_drop_err[:120]}). Retry if needed."
+                            )
                 except Exception as e:
-                    response = f"Request failed: {e}"
-                    st.error(response)
+                    response = "".join(_chunks)
+                    _err_msg = str(e)
+                    if response:
+                        st.warning(f"Connection dropped mid-response ({_err_msg[:120]}). Response above may be partial.")
+                    else:
+                        response = f"Request failed: {_err_msg}"
+                        st.error(response)
 
             st.session_state["chat_messages"].append(
                 {"role": "assistant", "content": response}

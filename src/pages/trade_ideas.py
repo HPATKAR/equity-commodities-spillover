@@ -898,7 +898,7 @@ _TI_STYLE = """<style>
 /* Master Investor Lens */
 .ti-lens{background:#060606;border-top:1px solid #151500;padding:.5rem .9rem .4rem}
 .ti-lens-hdr{font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;
-  letter-spacing:.14em;color:#4a3a10;text-transform:uppercase;margin-bottom:6px}
+  letter-spacing:.14em;color:#CFB991;text-transform:uppercase;margin-bottom:6px}
 .ti-lens-row{display:flex;gap:10px;align-items:flex-start;
   padding:4px 0;border-bottom:1px solid #111}
 .ti-lens-mgr{font-family:'JetBrains Mono',monospace;font-size:0.50rem;
@@ -2106,13 +2106,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown(_TI_STYLE, unsafe_allow_html=True)
     _page_header("Structured Trade Ideas",
-                 "Step 6 of 7 · AI Conclusions · Regime-driven · Conflict-linked · Exposure-ranked · QC-graded")
+                 "Step 6 of 7 · Regime-driven · Conflict-linked · 5-Stage Pipeline Validation")
     _page_intro(
         "Spillover analysis is most useful when it connects to positioning hypotheses. "
         "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
-        "Conflict-driven candidates are generated from current CIS/TPS scores and exposure data. "
-        "Static library ideas fire when the current regime matches their structural trigger. "
-        "All ideas are QC-graded (A–D), scenario-payoff-projected, and debatable via agent threads."
+        "Static library theses fire when the current regime matches their structural trigger. "
+        "The five-stage pipeline (Signal → Prior Validation → Sizing → DSR gate) "
+        "is walk-forward validated — the pipeline's admit/reject decisions are the deliverable, not individual trade grades."
     )
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
@@ -2120,12 +2120,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         'letter-spacing:.12em;text-transform:uppercase;color:#8890a1">'
         'Static Library Last Reviewed</span>'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
-        'color:#CFB991">June 2025</span>'
+        'color:#CFB991">July 2026</span>'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;'
         'color:rgba(255,255,255,.2)">|</span>'
         '<span style="font-family:\'DM Sans\',sans-serif;font-size:.72rem;color:#8890a1">'
-        'Structural triggers and entry/exit levels reflect research-period market conditions. '
-        'Conflict-driven ideas are generated live from current session data.</span>'
+        'Structural triggers and entry/exit levels reflect research-period market conditions.</span>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -2154,7 +2153,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'<div class="ti-geo-bar" style="border-left:3px solid {_ti_risk_color}">'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:{_ti_risk_color};letter-spacing:.14em">'
-            f'■ GEO CONTEXT</span>'
+            f'■ {_ti_risk_lbl}</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;'
             f'color:#e67e22">CIS&nbsp;<b>{_ti_cis:.0f}</b></span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;'
@@ -2171,7 +2170,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
     except Exception as _geo_err:
-        st.caption(f"Geo context unavailable - conflict model load failed: {_geo_err}")
+        st.caption("Geo context unavailable — conflict model not loaded for this session.")
 
     from concurrent.futures import ThreadPoolExecutor
     from src.data.loader import load_fixed_income_returns, load_fx_returns
@@ -2472,6 +2471,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
 
+    st.markdown(
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:#8890a1;padding:6px 0 4px 0">'
+        'The PDF includes all 18 theses as a reference catalogue. '
+        'Active trade cards are regime-filtered through the pipeline — no active trades are pre-selected.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     if st.button("Generate PDF Report", key="gen_report", type="primary"):
         try:
             from src.reports.report_generator import generate_report
@@ -2561,19 +2567,14 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _s = _r["Status"]
             _bg = "#1a0000" if _s == "UNGRADEABLE" else "#1a0d00" if _s == "MISLABELED" else "#0d0d0d"
             _sc = "#e74c3c" if _s == "UNGRADEABLE" else "#e67e22" if _s == "MISLABELED" else "#27ae60"
-            _td = f'style="padding:5px 10px;border-bottom:1px solid #1a1a1a;font-size:.63rem"'
+            _tdb = "padding:5px 10px;border-bottom:1px solid #1a1a1a;"
             _audit_body += (
                 f'<tr style="background:{_bg}">'
-                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
-                f'font-size:.63rem;color:#c8c8c8;max-width:260px">{_r["Strategy"]}</td>'
-                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
-                f'font-size:.60rem;color:#8890a1">{_r["Declared"]}</td>'
-                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
-                f'font-size:.60rem;color:#8890a1">{_r["Present"]}</td>'
-                f'<td {_td} style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
-                f'font-size:.60rem;color:#c0392b">{_r["Dropped"] or "—"}</td>'
-                f'<td style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
-                f'font-size:.60rem;font-weight:700;color:{_sc};'
+                f'<td style="{_tdb}font-size:.63rem;color:#c8c8c8;max-width:260px">{_r["Strategy"]}</td>'
+                f'<td style="{_tdb}font-size:.60rem;color:#8890a1">{_r["Declared"]}</td>'
+                f'<td style="{_tdb}font-size:.60rem;color:#8890a1">{_r["Present"]}</td>'
+                f'<td style="{_tdb}font-size:.60rem;color:#c0392b">{_r["Dropped"] or "—"}</td>'
+                f'<td style="{_tdb}font-size:.60rem;font-weight:700;color:{_sc};'
                 f'font-family:\'JetBrains Mono\',monospace">{_s}</td>'
                 f'</tr>'
             )
@@ -2599,7 +2600,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
         if avg_corr is not None:
             _curves: dict[str, pd.Series] = {}
-            for _tr in _TRADE_LIBRARY:
+            with st.spinner(f"Building equity curves for {len(_TRADE_LIBRARY)} strategies…"):
+              for _tr in _TRADE_LIBRARY:
                 try:
                     _lw  = _compute_leg_weights(_tr, asset_exposure or {})
                     _lwt = tuple(_lw) if _lw else None
@@ -2698,7 +2700,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     font=dict(family="JetBrains Mono", size=11, color="#c8c8c8"),
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
                     title_font=dict(size=11, color="#8890a1"),
-                    margin=dict(l=10, r=10, t=50, b=210),
+                    margin=dict(l=10, r=10, t=50, b=400),
                 )
                 _fig_corr.update_xaxes(
                     tickfont=dict(size=11, color="#c8c8c8"),
@@ -2742,7 +2744,6 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     ):
         from src.analysis.backtest import (
             compute_effective_n as _compute_eff_n,
-            hlz_tstat_threshold as _hlz_threshold_fn,
             _N_LIBRARY_STRATEGIES as _STATIC_N,
         )
         _MT_M = "font-family:'JetBrains Mono',monospace;"
@@ -2760,7 +2761,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # ── Step 1: collect all walk-forward results from cache ─────────────
         _mt_results: dict[str, dict] = {}
         _avail_cols_mt = set(all_r_concat.columns)
-        for _tr in _TRADE_LIBRARY:
+        with st.spinner(f"Computing backtest results for {len(_TRADE_LIBRARY)} strategies…"):
+          for _tr in _TRADE_LIBRARY:
             _missing = [a for a in _tr.get("assets", []) if a not in _avail_cols_mt]
             if _missing:
                 continue   # ungradeable — skip for N computation
@@ -2875,11 +2877,22 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     _bg = "#0d0000"; _rc = "#c8c8c8"
                 else:
                     _bg = "#0d0d0d"; _rc = "#c8c8c8"
-                _ag_col = "#27ae60" if _ag == "✓" else "#e67e22" if _ag == "⚠ REVIEW" else "#555960"
+                _ag_col  = "#27ae60" if _ag == "✓" else "#e67e22" if _ag == "⚠ REVIEW" else "#555960"
+                _grade_colors = {"A": "#27ae60", "B": "#2980b9", "C": "#e67e22",
+                                 "D": "#e67e22", "F": "#c0392b", "MT": "#9b59b6",
+                                 "IE": "#8890a1"}
+                def _mt_cell_color(col_name):
+                    if col_name == "Grade":
+                        return _grade_colors.get(_gr, _rc)
+                    if col_name == "HLZ" and _r.get(col_name) == "FAIL":
+                        return "#e67e22"
+                    if col_name == "Agree?":
+                        return _ag_col
+                    return _rc
                 _cells = "".join(
                     f'<td style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
-                    f'font-size:.62rem;color:'
-                    f'{"#e67e22" if (_c == "HLZ" and _r.get(_c) == "FAIL") else _ag_col if _c == "Agree?" else _rc}">'
+                    f'font-size:.62rem;{"font-weight:700;" if _c == "Grade" else ""}'
+                    f'color:{_mt_cell_color(_c)}">'
                     f'{_r.get(_c, "—")}</td>'
                     for _c in _mt_cols
                 )
@@ -2967,7 +2980,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(
                     f'<div style="background:#080808;border:1px solid #1e1e1e;'
                     f'border-top:3px solid {_sc};border-radius:4px;padding:.6rem .7rem;height:100%">'
-                    f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;color:{_sc};'
+                    f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;color:{_sc};'
                     f'margin-bottom:6px">{_sh}</div>'
                     f'<div style="{_TP_S}font-size:0.60rem;color:#a8a8b8;line-height:1.55">{_st}</div>'
                     f'</div>',
@@ -2991,6 +3004,19 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
 
         _pv_key = _PV_SESSION_KEY
+
+        # Warn if effective N hasn't been computed yet (MT Report expander not opened)
+        if "_effective_n" not in st.session_state:
+            st.markdown(
+                f'<div style="{_TP_M}border:1px solid #e67e22;border-radius:4px;'
+                f'padding:8px 12px;margin-bottom:8px;background:#1a1000">'
+                f'<span style="font-size:0.56rem;color:#e67e22;font-weight:700">⚠ Open Multiple Testing Report first</span>'
+                f'<span style="font-size:0.56rem;color:#8890a1"> — Effective N for DSR correction defaults to 9 until the MT Report '
+                f'computes the true value from your backtest results. Validation run before then may apply the wrong correction.</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
         _pv_col1, _pv_col2 = st.columns([1, 4])
         with _pv_col1:
             _run_pv = st.button(
@@ -3059,7 +3085,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
   padding:.5rem .4rem; text-align:center; position:relative; overflow:hidden;
 }
 ._pv_stage_lbl {
-  font-family:'JetBrains Mono',monospace; font-size:6px; letter-spacing:.12em;
+  font-family:'JetBrains Mono',monospace; font-size:0.56rem; letter-spacing:.12em;
   color:#555960; display:block; margin-bottom:4px;
 }
 ._pv_stage_name {
@@ -3197,7 +3223,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     st.markdown(
                         f'<div style="background:#090909;border:1px solid #1e1e1e;'
                         f'border-left:3px solid {_gcol};border-radius:4px;padding:.7rem 1rem">'
-                        f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                        f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                         f'color:#8890a1;margin-bottom:5px">{_gtitle}</div>'
                         f'<div style="{_TP_M}font-size:1.3rem;font-weight:700;color:{_gcol}">'
                         f'{_gval_str}</div>'
@@ -3211,7 +3237,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
             # Bucket behavior
             st.markdown(
-                f'<p style="{_TP_M}font-size:6px;letter-spacing:.12em;color:#8890a1;'
+                f'<p style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;color:#8890a1;'
                 f'margin:1rem 0 .4rem">BUCKET BEHAVIOR — OOS MEAN RETURN (%)</p>',
                 unsafe_allow_html=True,
             )
@@ -3233,7 +3259,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     st.markdown(
                         f'<div style="background:#080808;border:1px solid #1e1e1e;'
                         f'border-top:2px solid {_bcol};border-radius:4px;padding:.55rem .7rem">'
-                        f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                        f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                         f'color:{_bcol};margin-bottom:4px">{_blabel}</div>'
                         f'<div style="{_TP_M}font-size:1.0rem;font-weight:700;color:{_bcol}">'
                         f'{_bmean_str}</div>'
@@ -3317,7 +3343,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
                 f'border-left:3px solid #CFB991;border-radius:4px;'
                 f'padding:.7rem 1rem;margin-bottom:.5rem">'
-                f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                 f'color:#CFB991;margin-bottom:6px">STAGE 1 — THESIS ✓</div>'
                 f'<div style="{_TP_S}font-size:0.68rem;color:#e8e9ed;line-height:1.6">'
                 f'<b>Shock:</b> {_WE_SHOCK}<br>'
@@ -3342,7 +3368,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
                 f'border-left:3px solid {_we_s2_color};border-radius:4px;'
                 f'padding:.6rem 1rem;margin-bottom:.5rem">'
-                f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                 f'color:{_we_s2_color};margin-bottom:5px">'
                 f'STAGE 2 — SIGNAL {"✓" if _we_s2_ok else "✗"}</div>'
                 f'<div style="{_TP_S}font-size:0.68rem;color:#c8c8c8">{_we_leg_str}</div>'
@@ -3401,7 +3427,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
                     f'border-left:3px solid {_we_s3_color};border-radius:4px;'
                     f'padding:.6rem 1rem;margin-bottom:.5rem">'
-                    f'<div style="{_TP_M}font-size:6px;letter-spacing:.12em;'
+                    f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                     f'color:{_we_s3_color};margin-bottom:5px">'
                     f'STAGE 3 — CONFIRMATION ({_we_track.upper()}) · {_we_s3_verdict}</div>'
                     + (f'<table style="{_TP_M}font-size:0.60rem;border-collapse:collapse">'

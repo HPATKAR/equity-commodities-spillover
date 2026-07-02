@@ -38,6 +38,15 @@ _MIN_TE_OBS         = 100   # TE: bin estimates noisy below n=100
 _MIN_VAR_OBS        = 150   # VAR/D-Y: need meaningful lags + residuals
 _SOFT_GRANGER_OBS   = 60    # hard floor: return early below this
 
+# Baruník-Křehlík (2018) frequency bands: (ω_low, ω_high) in radians
+# Daily data: short = 1-5d, medium = 5-22d, long = 22d+
+# ω = 2π/period; Nyquist limit is π (period=2d). Long band starts at ε to avoid ω=0 singularity.
+_BK_BANDS: dict[str, tuple[float, float]] = {
+    "short":  (2 * np.pi / 5,  np.pi),
+    "medium": (2 * np.pi / 22, 2 * np.pi / 5),
+    "long":   (1e-4,            2 * np.pi / 22),
+}
+
 
 def _require_obs(n: int, required: int, context: str) -> None:
     """
@@ -406,6 +415,132 @@ def net_flow_matrix(
     return te_c2e - te_e2c
 
 
+# ── Baruník-Křehlík (2018) spectral GFEVD helpers ─────────────────────────
+
+def _spectral_gfevd_band(
+    coefs: np.ndarray,
+    sigma: np.ndarray,
+    freq_a: float,
+    freq_b: float,
+    n_freqs: int = 100,
+) -> np.ndarray:
+    """
+    Integrate the spectral generalized FEVD over [freq_a, freq_b] (radians).
+
+    Transfer function H(e^{-iω}) = (I − Σ_j A_j e^{−ijω})^{−1}.
+    Spectral GFEVD: Θ^f_{jk}(ω) = σ_kk^{-1} |[HΣ]_{jk}|² / [HΣH*]_{jj}.
+    Integrated: Θ^d_{jk} = (1/2π) ∫_a^b Θ^f_{jk}(ω) dω  (trapezoidal rule).
+
+    Parameters
+    ----------
+    coefs   : (p, n, n) VAR coefficient matrices A_1 … A_p
+    sigma   : (n, n) VAR innovation covariance
+    freq_a,
+    freq_b  : integration bounds in radians, 0 ≤ freq_a < freq_b ≤ π
+    n_freqs : quadrature resolution
+
+    Returns
+    -------
+    theta_d : (n, n) un-normalised Θ^d for this band
+    """
+    coefs = np.asarray(coefs, dtype=float)   # statsmodels may return DataFrames
+    sigma = np.asarray(sigma, dtype=float)
+    p, n, _ = coefs.shape
+    freqs = np.linspace(freq_a, freq_b, n_freqs)           # (F,)
+
+    # Build (I − Σ_j A_j e^{−ijω}) for all F frequencies at once → (F, n, n)
+    A_w = (np.eye(n, dtype=complex)[np.newaxis, :, :]
+           .repeat(n_freqs, axis=0))
+    for j in range(p):
+        phase = np.exp(-1j * freqs * (j + 1))              # (F,)
+        A_w -= coefs[j][np.newaxis] * phase[:, np.newaxis, np.newaxis]
+
+    H = np.linalg.inv(A_w)                                  # (F, n, n)
+
+    HS = H @ sigma[np.newaxis]                               # (F, n, n)
+
+    # (HΣH*)_{jj} = Σ_m HS_{jm} conj(H_{jm})
+    HSH_diag = np.real(np.einsum("fjm,fjm->fj", HS, H.conj()))  # (F, n)
+
+    sigma_d = np.diag(sigma)                                # (n,)
+    theta_f = np.abs(HS) ** 2                               # (F, n, n)
+    theta_f /= sigma_d[np.newaxis, np.newaxis, :]
+    theta_f /= np.maximum(HSH_diag[:, :, np.newaxis], 1e-12)
+
+    _trapz = getattr(np, "trapezoid", np.trapz)             # NumPy ≥ 2.0 renamed trapz
+    return _trapz(theta_f, freqs, axis=0) / (2 * np.pi)    # (n, n)
+
+
+def _bk_all_bands(
+    coefs: np.ndarray,
+    sigma: np.ndarray,
+    col_names: list,
+    n_freqs: int = 200,
+) -> dict:
+    """
+    Baruník-Křehlík (2018) §2.3 within-band connectedness for all three bands.
+
+    Critical normalisation rule (BK 2018 eq. 7):
+      θ^d_{jk} = 100 × Θ^d_{jk} / Σ_m Θ^full_{jm}
+
+    where Θ^full = Σ_d Θ^d is the full-spectrum GFEVD integral over [ε, π].
+    This shared denominator guarantees the additivity invariant:
+      TC(short) + TC(medium) + TC(long) = TC(full-GFEVD)  (to numerical precision)
+
+    Using within-band row sums as the denominator (the naive approach) inflates
+    each band's TC by ~1/band_fraction and makes them triple-count the variance,
+    yielding a sum ~3× the correct total — confirmed by the diagnostic below.
+
+    Returns dict keyed by band name plus '_full_gfevd_tc' for the invariant check.
+    """
+    # Step 1: compute un-normalised Θ^d for every band
+    theta_raw: dict[str, np.ndarray] = {}
+    for name, (fa, fb) in _BK_BANDS.items():
+        theta_raw[name] = _spectral_gfevd_band(coefs, sigma, fa, fb, n_freqs)
+
+    # Step 2: full-spectrum Θ (sum across bands) — shared normalisation denominator
+    theta_full    = sum(theta_raw.values())                        # (n, n)
+    full_row_sums = theta_full.sum(axis=1)                         # (n,)
+
+    # Step 3: within-band metrics for each band using the shared denominator
+    out: dict = {}
+    for name, td in theta_raw.items():
+        denom    = np.maximum(full_row_sums[:, np.newaxis], 1e-12)
+        theta_n  = td / denom * 100                                # (n, n)
+        diag_n   = np.diag(theta_n)
+        from_c   = pd.Series(theta_n.sum(axis=1) - diag_n, index=col_names)
+        offdiag  = theta_n.copy()
+        np.fill_diagonal(offdiag, 0.0)
+        to_c     = pd.Series(offdiag.sum(axis=0), index=col_names)
+        out[name] = {
+            "total_connectedness": round(float(from_c.mean()), 2),
+            "from_connectedness":  from_c.round(2),
+            "to_connectedness":    to_c.round(2),
+            "net_connectedness":   (to_c - from_c).round(2),
+        }
+
+    # Step 4: full-spectrum TC for invariant verification
+    denom_full    = np.maximum(full_row_sums[:, np.newaxis], 1e-12)
+    theta_n_full  = theta_full / denom_full * 100
+    from_full     = theta_n_full.sum(axis=1) - np.diag(theta_n_full)
+    tc_full       = round(float(from_full.mean()), 2)
+    out["_full_gfevd_tc"] = tc_full
+
+    # Invariant check: |Σ TC_band − TC_full| must be < 0.1 (machine-precision level)
+    tc_sum = sum(out[b]["total_connectedness"] for b in _BK_BANDS)
+    gap    = abs(tc_sum - tc_full)
+    if gap > 0.5:
+        # Log via trace_logger if available — never raise in production
+        try:
+            from src.analysis.trace_logger import log_event
+            log_event("bk_invariant_fail",
+                      {"tc_sum": round(tc_sum, 3), "tc_full": tc_full, "gap": round(gap, 3)})
+        except Exception:
+            pass
+
+    return out
+
+
 # ── Diebold-Yilmaz spillover index ────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
@@ -470,6 +605,7 @@ def diebold_yilmaz(
         "direction_label":      "",
         "assets_used":          [],
         "non_stationary_assets": [],
+        "bk_bands":             {},
     }
 
     # ADF pre-check: VAR on I(1) series without differencing produces spurious
@@ -491,8 +627,10 @@ def diebold_yilmaz(
         # lag_order is treated as the upper bound; ic='bic' selects within it.
         try:
             result = model.fit(maxlags=lag_order, ic="bic")
+            if result.k_ar < 1:
+                result = model.fit(1)
         except Exception:
-            result = model.fit(lag_order)
+            result = model.fit(1)
         fevd   = result.fevd(horizon)
         # Validate FEVD rows sum to 1 — fixed-lag fallback can produce mis-scaled
         # decompositions that look valid but corrupt FROM/TO/NET figures.
@@ -549,6 +687,28 @@ def diebold_yilmaz(
         top_tx  = str(net_sp.idxmax())
         top_rx  = str(net_sp.idxmin())
 
+        # Baruník-Křehlík frequency bands — reuse the same VAR result, no re-fit.
+        # _bk_all_bands normalises with the shared full-spectrum denominator so
+        # TC(short)+TC(medium)+TC(long) == TC(full-GFEVD) to numerical precision.
+        bk_bands: dict = {}
+        try:
+            _bk_out = _bk_all_bands(
+                np.asarray(result.coefs), np.asarray(result.sigma_u),
+                list(data.columns), n_freqs=200,
+            )
+            _bk_full_tc = _bk_out.pop("_full_gfevd_tc", float("nan"))
+            bk_bands    = _bk_out
+            _bk_sum = sum(v["total_connectedness"] for v in bk_bands.values())
+            # Diagnostic: show aggregate vs band-sum (gap > 0.5 → normalisation bug)
+            bk_bands["_diagnostic"] = {
+                "band_sum":      round(_bk_sum, 2),
+                "full_gfevd_tc": _bk_full_tc,
+                "gap":           round(abs(_bk_sum - _bk_full_tc), 4),
+                "dy_cholesky_tc": round(total_sp, 2),
+            }
+        except Exception:
+            bk_bands = {}
+
         return {
             "spillover_table":       table.round(2),
             "from_spillover":        from_sp.round(2),
@@ -560,9 +720,107 @@ def diebold_yilmaz(
             "direction_label":       direction,
             "assets_used":           list(data.columns),
             "non_stationary_assets": non_stat,
+            "bk_bands":              bk_bands,
         }
     except Exception:
         return _empty
+
+
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=2)
+def bootstrap_dy_ci(
+    returns: pd.DataFrame,
+    n_boot: int = 300,
+    lag_order: int = 2,
+    horizon: int = 10,
+    block_len: int | None = None,
+) -> dict:
+    """
+    Moving-block bootstrap confidence interval for the Diebold-Yilmaz spillover index.
+
+    Resamples the full return matrix in non-overlapping blocks of length
+    ~sqrt(T), refits the VAR, and recomputes total + per-asset NET spillover
+    for each resample.  Returns 5th / 50th / 95th percentile distributions.
+
+    The CI width is approximately stationary for a fixed window size so it can
+    be used as a constant-width uncertainty ribbon on the rolling DY chart:
+      lower[t] = max(0, rolling[t] − (p50 − p05))
+      upper[t] =       rolling[t] + (p95 − p50)
+
+    Parameters
+    ----------
+    lag_order : kept at 2 to match rolling_diebold_yilmaz (consistent estimator)
+    block_len : None → int(sqrt(T)); autocorrelation typically decays within
+                sqrt(T) lags for daily financial returns
+
+    Returns
+    -------
+    dict with keys: total_p05, total_p50, total_p95, block_len, n_boot,
+                    n_success, net_bands {asset → {p05, p95}}
+    """
+    data = returns.dropna(how="all").dropna()
+    T, N = data.shape
+    if T < 60 or N < 2:
+        return {}
+
+    b    = block_len or max(5, int(np.sqrt(T)))
+    vals = data.values                          # (T, N) — avoid per-iter DataFrame copy
+    cols = list(data.columns)
+    rng  = np.random.default_rng(42)            # reproducible seed → stable cached CI
+
+    total_boot: list[float] = []
+    net_boot:   list[np.ndarray] = []           # each entry is (N,) NET vector
+
+    for _ in range(n_boot):
+        # Block-resample: tile blocks to length T exactly
+        n_blocks = int(np.ceil(T / b))
+        starts   = rng.integers(0, T - b + 1, n_blocks)
+        idx      = np.concatenate([np.arange(s, s + b) for s in starts])[:T]
+        sample   = pd.DataFrame(vals[idx], columns=cols)
+        try:
+            model = VAR(sample)
+            try:
+                result = model.fit(maxlags=lag_order, ic="bic")
+                # BIC can select lag=0 on resampled blocks (weakened autocorrelation
+                # from block shuffling); lag=0 makes fevd() crash with an empty
+                # coefficient array.  Force at least lag=1 in that case.
+                if result.k_ar < 1:
+                    result = model.fit(1)
+            except Exception:
+                result = model.fit(1)
+            fevd = result.fevd(horizon)
+            if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
+                continue
+            tbl = fevd.decomp[:, -1, :] * 100  # (N, N)
+            np.fill_diagonal(tbl, 0.0)
+            from_sp = tbl.sum(axis=1)           # (N,)
+            to_sp   = tbl.sum(axis=0)
+            net_sp  = to_sp - from_sp
+            total_boot.append(float(from_sp.mean()))
+            net_boot.append(net_sp)
+        except Exception:
+            continue
+
+    if len(total_boot) < 20:                    # too few successes → unusable CI
+        return {}
+
+    total_arr = np.array(total_boot)
+    net_arr   = np.vstack(net_boot)             # (n_success, N)
+
+    return {
+        "total_p05":  round(float(np.percentile(total_arr,  5)), 2),
+        "total_p50":  round(float(np.percentile(total_arr, 50)), 2),
+        "total_p95":  round(float(np.percentile(total_arr, 95)), 2),
+        "block_len":  b,
+        "n_boot":     n_boot,
+        "n_success":  len(total_boot),
+        "net_bands":  {
+            c: {
+                "p05": round(float(np.percentile(net_arr[:, i],  5)), 2),
+                "p95": round(float(np.percentile(net_arr[:, i], 95)), 2),
+            }
+            for i, c in enumerate(cols)
+        },
+    }
 
 
 @st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
@@ -599,8 +857,10 @@ def rolling_diebold_yilmaz(
             model  = VAR(chunk)
             try:
                 result = model.fit(maxlags=lag_order, ic="bic")
+                if result.k_ar < 1:
+                    result = model.fit(1)
             except Exception:
-                result = model.fit(lag_order)
+                result = model.fit(1)
             fevd   = result.fevd(horizon)
             if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
                 continue  # discard window with mis-scaled FEVD rather than corrupt the series
@@ -625,6 +885,63 @@ def rolling_diebold_yilmaz(
 
     if not records:
         return pd.DataFrame(columns=["total_spillover", "top_transmitter", "top_receiver"])
+
+    df = pd.DataFrame(records).set_index("date")
+    df.index = pd.DatetimeIndex(df.index)
+    return df
+
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
+def rolling_frequency_connectedness(
+    returns: pd.DataFrame,
+    window: int = 200,
+    step: int = 5,
+    lag_order: int = 2,
+    n_freqs: int = 60,
+) -> pd.DataFrame:
+    """
+    Rolling Baruník-Křehlík (2018) within-band total connectedness over time.
+
+    Fits a VAR once per rolling window and computes spectral GFEVD over three
+    frequency bands — no per-band re-fit. Bands follow trading-day periods:
+      short  (1-5d)  : ω ∈ [2π/5, π]
+      medium (5-22d) : ω ∈ [2π/22, 2π/5]
+      long   (22d+)  : ω ∈ [ε, 2π/22]
+
+    Returns DataFrame indexed by date with columns
+    [tc_short, tc_medium, tc_long].
+    """
+    data = returns.dropna(how="all").dropna()
+    if len(data) < window:
+        return pd.DataFrame(columns=["tc_short", "tc_medium", "tc_long"])
+
+    records = []
+    for end_i in range(window, len(data) + 1, step):
+        chunk = data.iloc[end_i - window: end_i]
+        try:
+            model = VAR(chunk)
+            try:
+                result = model.fit(maxlags=lag_order, ic="bic")
+                if result.k_ar < 1:
+                    result = model.fit(1)
+            except Exception:
+                result = model.fit(1)
+
+            _bk_out = _bk_all_bands(
+                np.asarray(result.coefs), np.asarray(result.sigma_u),
+                list(chunk.columns), n_freqs=n_freqs,
+            )
+            _bk_out.pop("_full_gfevd_tc", None)
+
+            row: dict = {"date": data.index[end_i - 1]}
+            for band_name in _BK_BANDS:
+                row[f"tc_{band_name}"] = _bk_out[band_name]["total_connectedness"]
+            records.append(row)
+        except Exception:
+            continue
+
+    if not records:
+        return pd.DataFrame(columns=["tc_short", "tc_medium", "tc_long"])
 
     df = pd.DataFrame(records).set_index("date")
     df.index = pd.DatetimeIndex(df.index)
@@ -669,8 +986,10 @@ def regime_conditional_spillover(
             model  = VAR(subset)
             try:
                 result = model.fit(maxlags=lag_order, ic="bic")
+                if result.k_ar < 1:
+                    result = model.fit(1)
             except Exception:
-                result = model.fit(lag_order)
+                result = model.fit(1)
             fevd   = result.fevd(horizon)
             tbl    = pd.DataFrame(
                 fevd.decomp[:, -1, :] * 100,

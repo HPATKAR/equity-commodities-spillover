@@ -33,6 +33,7 @@ from src.analysis.correlations import (
 )
 from src.analysis.risk_score import (
     compute_risk_score, risk_score_history, plot_risk_gauge, plot_risk_history,
+    bootstrap_risk_history_ci,
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
@@ -629,10 +630,12 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         with ThreadPoolExecutor(max_workers=4) as _ov_pool:
             _f_risk  = _ov_pool.submit(compute_risk_score, avg_corr, cmd_r)
             _f_score = _ov_pool.submit(risk_score_history, avg_corr, cmd_r, eq_r)
+            _f_bci   = _ov_pool.submit(bootstrap_risk_history_ci, cmd_r, eq_r, 200)
             _f_ews   = _ov_pool.submit(_ov_ews)
             _f_cot   = _ov_pool.submit(_ov_cot)
-        risk_result = _f_risk.result()
-        score_hist  = _f_score.result()
+        risk_result  = _f_risk.result()
+        score_hist   = _f_score.result()
+        _bci_df      = _f_bci.result() if _f_bci else pd.DataFrame()
         ews         = _f_ews.result()
         _cot_df     = _f_cot.result()
 
@@ -1004,6 +1007,87 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         f'{_narrative_val.replace(chr(10), "<br>")}</div></div>',
         unsafe_allow_html=True,
     )
+
+    # ── GRS Fan Chart (market-data uncertainty) ────────────────────────────
+    if isinstance(score_hist, pd.Series) and len(score_hist.dropna()) >= 20:
+        st.markdown(
+            '<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
+            unsafe_allow_html=True,
+        )
+        _label("Risk Index History — Market-Data Uncertainty Fan Chart")
+
+        _fig_fan = go.Figure()
+
+        # Zone bands (background)
+        for _y0, _y1, _fc in [
+            (0,  25,  "rgba(46,125,50,0.07)"),
+            (25, 50,  "rgba(100,100,100,0.04)"),
+            (50, 75,  "rgba(230,126,34,0.07)"),
+            (75, 100, "rgba(192,57,43,0.10)"),
+        ]:
+            _fig_fan.add_hrect(y0=_y0, y1=_y1, fillcolor=_fc,
+                               opacity=1.0, layer="below", line_width=0)
+
+        # Bootstrap CI ribbon (if available)
+        _ci_label = ""
+        if not _bci_df.empty and {"p05", "p95"}.issubset(_bci_df.columns):
+            _shared = score_hist.index.intersection(_bci_df.index)
+            if len(_shared) > 5:
+                _p05 = _bci_df.loc[_shared, "p05"]
+                _p95 = _bci_df.loc[_shared, "p95"]
+                _dates_ci = list(_shared)
+                _fig_fan.add_trace(go.Scatter(
+                    x=_dates_ci + _dates_ci[::-1],
+                    y=list(_p95) + list(_p05)[::-1],
+                    fill="toself",
+                    fillcolor="rgba(207,185,145,0.15)",
+                    line=dict(color="rgba(0,0,0,0)", width=0),
+                    hoverinfo="skip",
+                    showlegend=True,
+                    name="90% CI — market-data only",
+                ))
+                # p50 median line (dashed)
+                if "p50" in _bci_df.columns:
+                    _fig_fan.add_trace(go.Scatter(
+                        x=_dates_ci, y=list(_bci_df.loc[_shared, "p50"]),
+                        mode="lines",
+                        line=dict(color="rgba(207,185,145,0.45)", width=0.8, dash="dot"),
+                        name="Bootstrap median",
+                        showlegend=True,
+                    ))
+                _ci_label = " · shaded = 90% bootstrap CI (market returns only)"
+
+        # Point estimate — realized index
+        _fig_fan.add_trace(go.Scatter(
+            x=list(score_hist.index),
+            y=list(score_hist.values),
+            mode="lines",
+            line=dict(color="#CFB991", width=1.8),
+            name="Risk Index (realized)",
+        ))
+
+        _fig_fan.update_layout(
+            template="purdue", height=310,
+            paper_bgcolor="#080808", plot_bgcolor="#080808",
+            font=dict(color="#e8e9ed"),
+            xaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                       rangeslider=dict(visible=False)),
+            yaxis=dict(tickfont=dict(size=8, color="#8890a1"),
+                       title=dict(text="Risk Index (0–100)", font=dict(size=8)),
+                       range=[0, 100]),
+            margin=dict(l=55, r=20, t=15, b=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                        font=dict(size=8), bgcolor="rgba(0,0,0,0)"),
+            hovermode="x unified",
+        )
+        _chart(_fig_fan)
+        _panel_note(
+            "Gold line = realized market risk index (equity + commodity realized vol, EWM z-scored). "
+            "Shaded band = 90% moving-block bootstrap CI over market-data inputs (cmd_r + eq_r). "
+            "Static analyst layers — news GPR, conflict CIS, chokepoint — are held at point "
+            "estimates; the fan captures market-data uncertainty only."
+            + _ci_label
+        )
 
     _page_conclusion(
         "Current Market Regime",

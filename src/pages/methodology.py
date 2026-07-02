@@ -259,6 +259,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                 "Transmission Pressure Score (TPS)", "Market Confirmation Score (MCS)",
                 "Composite Risk Score", "News GPR Layer",
                 "Correlation Regime Engine", "Spillover Network",
+                "LP-IRF · Conflict Shock",
                 "Markov Regime Chain", "Portfolio Exposure Engine",
                 "Scenario Engine", "Assumptions & Limitations",
             ])
@@ -1236,9 +1237,160 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 9. MARKOV REGIME CHAIN
+    # 10. LP-IRF · CONFLICT SHOCK TRANSMISSION
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("10 · Markov Regime Chain")
+    _h2("10 · LP-IRF · Conflict Shock Transmission")
+    _prose(
+        "The Local-Projection IRF (Jordà 2005) measures how asset returns respond to an unexpected "
+        "conflict escalation shock over horizons h = 0..20 trading days. Unlike VAR-based IRFs, "
+        "local projections are robust to dynamic misspecification — each horizon is a separate "
+        "OLS regression, so mis-specifying the lag structure at one horizon does not contaminate others. "
+        "The shock is the standardised AR residual of daily GDELT news-volume, capturing <em>unexpected</em> "
+        "escalation rather than anticipated conflict intensity level."
+    )
+
+    col_lp1, col_lp2 = st.columns(2)
+    with col_lp1:
+        _h3("Step 1 · Shock Identification")
+        _prose(
+            "For each conflict, the daily GDELT article-volume series is filtered through an "
+            "AR(<em>p</em>) model with BIC lag selection (p ∈ {1..5}). "
+            "The standardised residual is the conflict-intensity shock: it is orthogonal to "
+            "the conflict's own recent history, isolating the <em>unexpected</em> escalation component."
+        )
+        _formula(
+            "GDELT volume series v_t  (daily article count)\n"
+            "s_t = log(1 + v_t)               (variance-stabilise)\n\n"
+            "AR(p*) fit, BIC lag selection p* ∈ {1..5}:\n"
+            "  s_t = μ + φ₁·s_{t-1} + … + φ_{p*}·s_{t-p*} + ε_t\n\n"
+            "Shock: shock_t = ε_t / σ̂_ε       (standardised to σ=1)",
+            "BIC search over p=1..5; min 40 obs per lag step. "
+            "shock_t ≡ 1-σ unexpected escalation event. Source: GDELT TimelineVol API, 1y timespan."
+        )
+    with col_lp2:
+        _h3("Step 2 · Local-Projection Regression")
+        _prose(
+            "At each horizon <em>h</em>, the h-day cumulative log-return is regressed on the "
+            "contemporaneous shock plus lag controls. The IRF coefficient β<sub>h</sub> gives the "
+            "expected cumulative return response to a 1-σ shock at <em>h</em> trading days ahead."
+        )
+        _formula(
+            "y_{a,t→t+h} = Σ_{k=0}^{h} r_{a,t+k} × 100  (cum. log-return, %)\n\n"
+            "y_{a,t→t+h} = α_h + β_h · shock_t\n"
+            "             + Σ_{j=1}^{4} γ_{h,j} · shock_{t-j}\n"
+            "             + Σ_{j=1}^{2} δ_{h,j} · r_{a,t-j} × 100  +  ε_{h,t}\n\n"
+            "β_h  =  IRF at horizon h  (%, per 1-σ shock)\n"
+            "Displayed: 90% confidence band",
+            "Estimated separately for each asset a and horizon h = 0..20. "
+            "Lag controls: 4 shock lags + 2 return lags. Min 80 obs required per horizon."
+        )
+
+    _h3("Step 3 · Standard Error Specification")
+    _prose(
+        "Overlapping cumulative returns introduce MA(<em>h</em>−1) serial correlation in LP residuals at horizon h. "
+        "Newey-West HAC with bandwidth = h is the canonical correction "
+        "(Jordà 2005, fn. 4; Montiel Olea &amp; Plagborg-Møller 2021, Theorem 2). "
+        "At h = 0 there is no overlap, so HC3 (heteroscedasticity-robust only) is used instead."
+    )
+
+    _se_spec_rows = [
+        ("h = 0",  "HC3",           "No overlap — cumulative return = single-period return. HC3 corrects heteroscedasticity; no autocorrelation correction needed.", "#2e7d32"),
+        ("h ≥ 1",  "NW-HAC  bw=h",  "Overlapping h+1-day sums → MA(h-1) residual structure. NW with maxlags=h is uniformly valid (MOP 2021). Bands widen monotonically.", _G),
+    ]
+    _se_html = '<div style="border:1px solid #1e1e1e;overflow:hidden;margin:.3rem 0 .6rem">'
+    for _sh, _sn, _sd, _sc in _se_spec_rows:
+        _se_html += (
+            f'<div style="display:flex;gap:0;align-items:stretch;border-bottom:1px solid #111">'
+            f'<div style="width:3px;background:{_sc};flex-shrink:0"></div>'
+            f'<div style="padding:.3rem .6rem;width:70px;flex-shrink:0;display:flex;align-items:center">'
+            f'<code style="{_M}font-size:8px;color:{_sc}">{_sh}</code></div>'
+            f'<div style="padding:.3rem .6rem;width:140px;flex-shrink:0;display:flex;align-items:center">'
+            f'<span style="{_M}font-size:8px;color:#e8e9ed">{_sn}</span></div>'
+            f'<div style="padding:.3rem .6rem;flex:1;display:flex;align-items:center">'
+            f'<span style="{_S}font-size:0.65rem;color:{_DIM}">{_sd}</span></div>'
+            f'</div>'
+        )
+    _se_html += '</div>'
+    st.markdown(_se_html, unsafe_allow_html=True)
+
+    col_lp3, col_lp4 = st.columns(2)
+    with col_lp3:
+        _h3("Data Source · GDELT TimelineVol")
+        _data_source(
+            "GDELT Project  (gdeltproject.org)",
+            "Daily article-volume series via GDELT Doc 2.0 API (TimelineVol mode). "
+            "Each conflict uses a keyword query + CAMEO theme filter. 1-year timespan (~250 trading days). "
+            "Rate-limited at 1 request per 5 seconds; 6-second inter-conflict sleep enforced. "
+            "Cached 6 hours to match GDELT update cadence.",
+            "Daily",
+            "~0 (live API)",
+        )
+        _prose(
+            "GDELT date strings include a trailing <code>Z</code> "
+            "(<code>20250702T000000Z</code>) stripped before parsing. "
+            "Two CONFLICTS registry IDs are remapped to GDELT query keys: "
+            "<code>israel_gaza → israel_hamas</code>, <code>iran_conflict → iran_regional</code>."
+        )
+    with col_lp4:
+        _h3("Conflict-to-Asset Mapping")
+        _prose(
+            "For each conflict, the <code>affected_equities</code> and "
+            "<code>affected_commodities</code> fields in the CONFLICTS registry "
+            "define the response-asset universe. Only assets present in the loaded "
+            "return data are included. The mapping is static — update the registry to "
+            "add or remove assets from a conflict's IRF panel."
+        )
+        st.markdown(
+            f'<div style="background:#040404;border:1px solid #1e1e1e;padding:.4rem .6rem;margin:.2rem 0">'
+            f'<div style="{_M}font-size:7px;color:{_MUT};margin-bottom:5px;letter-spacing:.1em">REGISTRY FIELDS USED</div>'
+            f'<div style="display:flex;flex-wrap:wrap;gap:4px">'
+            f'<code style="{_M}font-size:7.5px;color:{_G};background:#111;padding:2px 7px">affected_equities[ ]</code>'
+            f'<code style="{_M}font-size:7.5px;color:{_G};background:#111;padding:2px 7px">affected_commodities[ ]</code>'
+            f'<code style="{_M}font-size:7.5px;color:{_DIM};background:#111;padding:2px 7px">id</code>'
+            f'</div>'
+            f'<p style="{_S}font-size:0.63rem;color:{_MUT};margin:.4rem 0 0;line-height:1.4">'
+            f'6 conflicts × affected assets → separate IRF panel per conflict. '
+            f'Asset columns filtered to those available in yfinance return data.</p>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    col_lpa, col_lpb = st.columns(2)
+    with col_lpa:
+        _h3("Assumptions")
+        _assumption("GDELT article volume is a noisy but unbiased proxy for conflict news intensity at daily frequency.")
+        _assumption("AR(p) BIC-selected residuals are approximately white noise — conflict media dynamics are linear and stationary within the 1-year window.")
+        _assumption("Lag controls (4 shock lags + 2 return lags) are sufficient to condition out confounders at each horizon independently.")
+        _assumption("1-year GDELT window (~250 trading days) provides adequate statistical power for the maximum horizon h=20.")
+    with col_lpb:
+        _h3("Limitations")
+        _limitation("GDELT coverage skews toward English-language sources; regional conflicts with limited Western press are systematically under-covered.")
+        _limitation("AR residuals may retain serial structure if conflict media dynamics are non-linear or subject to abrupt regime changes in coverage.")
+        _limitation("Conflict-to-asset mapping is manually configured; assets not in the registry are excluded even if materially exposed to that conflict.")
+        _limitation("NW-HAC finite-sample performance deteriorates at long horizons (h approaching T/4); interpret h ≥ 15 confidence bands with caution.")
+
+    st.markdown(
+        f'<div style="display:flex;gap:0;margin:.5rem 0 0;border:1px solid #1e1e1e">'
+        f'<div style="flex:1;padding:.35rem .7rem;border-right:1px solid #1e1e1e;background:#040404">'
+        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.1em;margin-bottom:2px">PRIMARY REFERENCE</div>'
+        f'<span style="{_S}font-size:0.65rem;color:{_DIM}">'
+        f'Jordà, Ò. (2005). Estimation and Inference of Impulse Responses by Local Projections. '
+        f'<em>American Economic Review</em>, 95(1), 161–182.</span>'
+        f'</div>'
+        f'<div style="flex:1;padding:.35rem .7rem;background:#040404">'
+        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.1em;margin-bottom:2px">SE SPECIFICATION</div>'
+        f'<span style="{_S}font-size:0.65rem;color:{_DIM}">'
+        f'Montiel Olea, J.L. &amp; Plagborg-Møller, M. (2021). Local Projection Inference is Simpler and '
+        f'More Robust Than You Think. <em>Econometrica</em>, 89(4), 1789–1823.</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 11. MARKOV REGIME CHAIN
+    # ══════════════════════════════════════════════════════════════════════════
+    _h2("11 · Markov Regime Chain")
     _prose(
         "The four-state regime series (Decorrelated / Normal / Elevated / Crisis) is modelled "
         "as a first-order Markov chain. The empirical transition matrix P is estimated from "
@@ -1346,9 +1498,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 10. PORTFOLIO EXPOSURE ENGINE
+    # 12. PORTFOLIO EXPOSURE ENGINE
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("11 · Portfolio Exposure Engine")
+    _h2("12 · Portfolio Exposure Engine")
     _prose(
         "The exposure engine maps each asset against every active conflict across four "
         "compounding dimensions: structural linkage, CIS-weighted total exposure, "
@@ -1405,9 +1557,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 11. SCENARIO ENGINE
+    # 13. SCENARIO ENGINE
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("12 · Scenario Engine")
+    _h2("13 · Scenario Engine")
     _prose(
         "The Scenario Engine applies a named stress lens across the entire dashboard - "
         "modifying composite risk scores, asset exposure, and trade signals without "
@@ -1483,9 +1635,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 12. ASSUMPTIONS & LIMITATIONS
+    # 14. ASSUMPTIONS & LIMITATIONS
     # ══════════════════════════════════════════════════════════════════════════
-    _h2("13 · Assumptions, Limitations & Ongoing Maintenance")
+    _h2("14 · Assumptions, Limitations & Ongoing Maintenance")
 
     def _badge_html(level: str) -> str:
         _bc = {"HIGH": "#c0392b", "MED": "#e67e22", "LOW": _DIM}.get(level, _DIM)

@@ -1023,6 +1023,10 @@ if "current_page" not in st.session_state:
 from src.analysis.scenario_state import init_scenario
 init_scenario()
 
+# ── Background cache warm-up (once per process, idempotent on reruns) ─────────
+from src.warmup import start as _start_warmup
+_start_warmup()
+
 current = st.session_state["current_page"]
 
 # ── Auth gate ─────────────────────────────────────────────────────────────────
