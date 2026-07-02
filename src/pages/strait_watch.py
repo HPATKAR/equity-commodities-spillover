@@ -294,7 +294,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 _live_straits = _f_live.result()
                 _pw_loaded    = not _pw_df.empty
             except Exception as _pw_err:
-                st.caption(f"PortWatch live counts unavailable ({type(_pw_err).__name__}) — showing last-known estimates.")
+                st.caption("PortWatch live counts unavailable — showing last-known estimates.")
 
         try:
             _, cmd_px = _f_prices.result()
@@ -336,7 +336,7 @@ def page_strait_watch(start: str, end: str) -> None:
                         if not _pw_df.empty:
                             s["_live_total"] = _live_total
         except Exception as _pw_err:
-            st.caption(f"PortWatch live counts unavailable ({type(_pw_err).__name__}) — showing last-known estimates.")
+            st.caption("PortWatch live counts unavailable — showing last-known estimates.")
 
     def _safe_series(name: str) -> pd.Series:
         if not cmd_px.empty and name in cmd_px.columns:
@@ -803,7 +803,7 @@ def page_strait_watch(start: str, end: str) -> None:
         _wrcol.markdown(
             f'<div style="background:#0a0505;border:1px solid #1e1e1e;'
             f'border-top:3px solid {_wrc};border-radius:4px;padding:0.65rem 0.8rem;">'
-            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.12em;'
             f'text-transform:uppercase;color:{_wrc};margin-bottom:4px">{_wrt["tier"]}</div>'
             f'<div style="{_F}font-size:0.72rem;font-weight:700;color:#e8e9ed;'
             f'margin-bottom:2px">{_wrt["strait"]}</div>'
@@ -831,10 +831,10 @@ def page_strait_watch(start: str, end: str) -> None:
                 _tc_1d_chg = (_tc.iloc[-1] / _tc.iloc[-2] - 1) * 100
                 _tc_cols = st.columns(len(_tanker_tickers) + 1)
                 _tc_cols[0].markdown(
-                    f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.1em;'
+                    f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.1em;'
                     f'text-transform:uppercase;color:#8E9AAA;padding-top:8px">'
                     f'Tanker Stock Proxy<br>'
-                    f'<span style="color:#555960;font-size:7px">Live signal · war-risk demand</span></div>',
+                    f'<span style="color:#555960;font-size:0.50rem">Live signal · war-risk demand</span></div>',
                     unsafe_allow_html=True,
                 )
                 for _ti, (_ticker, _name) in enumerate(_tanker_tickers.items()):
@@ -846,10 +846,10 @@ def page_strait_watch(start: str, end: str) -> None:
                     _tc_cols[_ti + 1].markdown(
                         f'<div style="background:#080808;border:1px solid #1e1e1e;'
                         f'border-radius:4px;padding:6px 8px;text-align:center">'
-                        f'<div style="{_M}font-size:7px;color:#8E9AAA">{_ticker}</div>'
+                        f'<div style="{_M}font-size:0.50rem;color:#8E9AAA">{_ticker}</div>'
                         f'<div style="{_M}font-size:13px;font-weight:700;color:#c8c8c8">'
                         f'${_price:.2f}</div>'
-                        f'<div style="{_M}font-size:10px;color:{_chg_c}">'
+                        f'<div style="{_M}font-size:0.63rem;color:{_chg_c}">'
                         f'{_chg:+.2f}%</div>'
                         f'</div>',
                         unsafe_allow_html=True,
@@ -1440,6 +1440,6 @@ def page_strait_watch(start: str, end: str) -> None:
                 "low stocks + high disruption = maximum price shock risk."
             )
     except Exception as _eia_err:
-        st.caption(f"EIA data unavailable ({type(_eia_err).__name__}) — DEMO_KEY may be rate-limited.")
+        st.caption("EIA data unavailable — DEMO_KEY may be rate-limited.")
 
     _page_footer()

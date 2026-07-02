@@ -730,7 +730,7 @@ def page_scenario_engine(
         _se_col = "#c0392b" if _se_cis >= 65 else "#e67e22" if _se_cis >= 45 else "#CFB991"
         _se_conflict_tags = "".join(
             f'<span style="background:#0a0a1a;color:#8E9AAA;'
-            f'font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'padding:2px 6px;margin-right:4px;border:1px solid #2a2a2a">'
             f'{r["label"].upper()}</span>'
             for r in sorted(_se_active, key=lambda x: x["cis"], reverse=True)[:3]
@@ -739,10 +739,10 @@ def page_scenario_engine(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-left:3px solid {_se_col};padding:.4rem .9rem;'
             f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:{_se_col};white-space:nowrap">LIVE GEO INPUT</span>'
             f'{_se_conflict_tags}'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#8E9AAA;margin-left:auto">'
             f'Scenario&nbsp;<b style="color:#CFB991">{_se_scenario}</b>&nbsp;·&nbsp;'
             f'Geo×<b style="color:{_se_col}">{_se_geo_mult:.2f}</b>&nbsp;·&nbsp;'
@@ -989,8 +989,8 @@ def page_scenario_engine(
             f'<div style="background:#0a0a0a;border-left:2px solid {_beta_note_color};'
             f'border-radius:3px;padding:6px 10px;margin:4px 0;">'
             f'<span style="color:{_beta_note_color};font-family:\'JetBrains Mono\',monospace;'
-            f'font-size:10px;font-weight:700;">REGIME BETAS ACTIVE - {_regime_label.upper()}</span>'
-            f'<span style="color:#777;font-family:\'JetBrains Mono\',monospace;font-size:10px;"> · '
+            f'font-size:0.63rem;font-weight:700;">REGIME BETAS ACTIVE - {_regime_label.upper()}</span>'
+            f'<span style="color:#8890a1;font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;"> · '
             f'Betas estimated on {_regime_label} regime periods only (not full-sample OLS). '
             f'Unconditional betas are available in tail risk tab.</span></div>',
             unsafe_allow_html=True,
@@ -1000,8 +1000,8 @@ def page_scenario_engine(
             f'<div style="background:#0a0a0a;border-left:2px solid #e67e22;'
             f'border-radius:3px;padding:6px 10px;margin:4px 0;">'
             f'<span style="color:#e67e22;font-family:\'JetBrains Mono\',monospace;'
-            f'font-size:10px;font-weight:700;">UNCONDITIONAL BETAS</span>'
-            f'<span style="color:#777;font-family:\'JetBrains Mono\',monospace;font-size:10px;"> · '
+            f'font-size:0.63rem;font-weight:700;">UNCONDITIONAL BETAS</span>'
+            f'<span style="color:#8890a1;font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;"> · '
             f'Current regime is <b style="color:{_beta_note_color}">{_regime_label}</b> but '
             f'insufficient observations (&lt;30 days) for this regime in the selected date range. '
             f'Using full-sample OLS betas - shock impacts may be understated in a '
@@ -1344,9 +1344,9 @@ def page_scenario_engine(
                     st.markdown(
                         f'<div style="background:#080808;border-left:3px solid #CFB991;'
                         f'border-radius:4px;padding:8px 14px;margin:6px 0">'
-                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
                         f'font-weight:700;color:#CFB991;letter-spacing:.1em">SECTOR TRADE IMPLICATION</span><br>'
-                        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#b0b0b0">'
+                        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;color:#b0b0b0">'
                         f'Long <b style="color:#4ade80">{_top_sec[1]} ({_top_sec[0]})</b> '
                         f'({_top_sec[2]:+.2f}% est.) vs '
                         f'Short <b style="color:#f87171">{_bot_sec[1]} ({_bot_sec[0]})</b> '
@@ -1361,6 +1361,6 @@ def page_scenario_engine(
         else:
             st.info("Sector ETF data unavailable. Check internet connectivity.")
     except Exception as _sec_err:
-        st.caption(f"Sector decomposition unavailable: {type(_sec_err).__name__}")
+        st.caption("Sector decomposition unavailable — see logs.")
 
     _page_footer()

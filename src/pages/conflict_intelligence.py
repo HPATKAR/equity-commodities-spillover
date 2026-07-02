@@ -72,7 +72,7 @@ def _cis_source_badge(cis_source: str) -> str:
     label, color = _src_map.get(cis_source, ("MANUAL ASSUMPTION", "#555960"))
     return (
         f'<div style="margin-top:4px;border-top:1px solid #1a1a1a;padding-top:3px">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:6px;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:{color};letter-spacing:.08em">SRC: {label}</span>'
         f'</div>'
     )
@@ -113,37 +113,37 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'background:{bg_color};padding:.7rem .9rem;border-radius:0;">'
                     # Label + state badge
                     f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
                     f'color:{r["color"]}">{r["label"]}</span>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;font-weight:700;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
                     f'color:{state_col};border:1px solid {state_col};padding:1px 5px">{state_lbl}</span>'
                     f'</div>'
                     # Name
-                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:600;'
+                    f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;font-weight:600;'
                     f'color:#e8e9ed;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
                     f'{r["name"]}</div>'
                     # CIS / TPS scores
                     f'<div style="display:flex;gap:10px;margin-bottom:5px">'
-                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">CIS</span><br>'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">CIS</span><br>'
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;'
                     f'color:{_cis_color(r["cis"])}">{r["cis"]:.0f}</span></div>'
-                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">TPS</span><br>'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">TPS</span><br>'
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;'
                     f'color:{_tps_color(r["tps"])}">{r["tps"]:.0f}</span></div>'
                     f'<div style="margin-left:auto;text-align:right">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">CONF · analyst est.</span><br>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#CFB991">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">CONF · analyst est.</span><br>'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.75rem;color:#CFB991">'
                     f'{r["confidence"]:.0%}</span></div>'
                     f'</div>'
                     # Trend + freshness
                     f'<div style="display:flex;justify-content:space-between;margin-top:3px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
                     f'color:{trend_col}">{trend_sym} {r["trend"].upper()}</span>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:{_freshness_color(r["freshness"])}">{r["freshness"].upper()}</span>'
                     f'</div>'
                     f'<div style="margin-top:2px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:6px;color:#383838">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#383838">'
                     f'Last updated: {r.get("last_updated", "—")}</span>'
                     f'</div>'
                     # CIS source provenance badge
@@ -317,7 +317,7 @@ def _render_affected_assets(selected_id: str, selected: dict) -> None:
 
     # Render as HTML table
     header = (
-        '<table style="width:100%;border-collapse:collapse;font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+        '<table style="width:100%;border-collapse:collapse;font-family:\'JetBrains Mono\',monospace;font-size:0.56rem">'
         '<thead><tr>'
         '<th style="color:#555960;text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 6px">ASSET</th>'
         '<th style="color:#555960;text-align:right;border-bottom:1px solid #2a2a2a;padding:3px 6px">EXPOSURE</th>'
@@ -340,7 +340,7 @@ def _render_affected_assets(selected_id: str, selected: dict) -> None:
     if hedge:
         hedge_str = " · ".join(hedge[:4])
         st.markdown(
-            f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#27ae60;margin-top:6px">HEDGE: {hedge_str}</p>',
             unsafe_allow_html=True,
         )
@@ -391,13 +391,13 @@ def _render_conflict_news(selected_id: str) -> None:
             rows_html += (
                 f'<div style="border-bottom:1px solid #1a1a1a;padding:5px 0">'
                 f'<div style="display:flex;gap:6px;align-items:flex-start">'
-                f'<span style="font-size:7px;font-weight:700;color:{tc};border:1px solid {tc};'
+                f'<span style="font-size:0.50rem;font-weight:700;color:{tc};border:1px solid {tc};'
                 f'padding:1px 4px;flex-shrink:0;margin-top:1px">{tl}</span>'
                 f'<div>'
-                f'<a {url_attr} style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+                f'<a {url_attr} style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;'
                 f'font-weight:500;color:#e8e9ed;text-decoration:none;line-height:1.4;display:block">'
                 f'{title}</a>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">'
                 f'{src}</span>'
                 f'</div></div></div>'
             )
@@ -525,9 +525,9 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 '<div style="background:#050a05;border-left:3px solid #27ae60;'
                 'border-radius:4px;padding:8px 14px;margin:4px 0;">'
                 '<span style="color:#27ae60;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px;font-weight:700">● ACLED + GDELT LIVE</span>'
+                'font-size:0.63rem;font-weight:700">● ACLED + GDELT LIVE</span>'
                 '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px"> · CIS escalation_trend cross-validated by two independent '
+                'font-size:0.63rem"> · CIS escalation_trend cross-validated by two independent '
                 'live sources. ACLED: event/fatality counts (6h cache). '
                 'GDELT: media volume signals (3h cache).</span></div>',
                 unsafe_allow_html=True,
@@ -537,9 +537,9 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 '<div style="background:#050a0f;border-left:3px solid #2980b9;'
                 'border-radius:4px;padding:8px 14px;margin:4px 0;">'
                 '<span style="color:#2980b9;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px;font-weight:700">● GDELT LIVE</span>'
+                'font-size:0.63rem;font-weight:700">● GDELT LIVE</span>'
                 '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px"> · CIS escalation_trend driven by GDELT media-volume signals '
+                'font-size:0.63rem"> · CIS escalation_trend driven by GDELT media-volume signals '
                 '(no API key). Add ACLED API key for event-count corroboration.</span></div>',
                 unsafe_allow_html=True,
             )
@@ -550,9 +550,9 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 '<div style="background:#050a05;border-left:3px solid #27ae60;'
                 'border-radius:4px;padding:8px 14px;margin:4px 0;">'
                 '<span style="color:#27ae60;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px;font-weight:700">● ACLED LIVE</span>'
+                'font-size:0.63rem;font-weight:700">● ACLED LIVE</span>'
                 '<span style="color:#8E9AAA;font-family:\'JetBrains Mono\',monospace;'
-                'font-size:10px"> · CIS scores augmented with ACLED event counts '
+                'font-size:0.63rem"> · CIS scores augmented with ACLED event counts '
                 '(30-day window). GDELT media signals unavailable.</span></div>',
                 unsafe_allow_html=True,
             )
@@ -593,7 +593,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 expanded=False,
             ):
                 st.markdown(
-                    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
                     'color:#e67e22">These warnings are generated at app startup by validating '
                     'the CONFLICTS registry against schema rules and staleness thresholds. '
                     'They do not block scoring — review and update config.py if stale.</span>',
@@ -601,7 +601,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 )
                 for w in _REGISTRY_WARNINGS:
                     st.markdown(
-                        f'<code style="font-size:9px;color:#CFB991">{w}</code>',
+                        f'<code style="font-size:0.56rem;color:#CFB991">{w}</code>',
                         unsafe_allow_html=True,
                     )
     except Exception:
@@ -611,7 +611,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     try:
         results = score_all_conflicts()
     except Exception as e:
-        st.error(f"Error loading conflict scores: {e}")
+        st.error("Error loading conflict data — see logs.")
         _page_footer()
         return
 
@@ -622,7 +622,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     # ── Scorecard grid ─────────────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">CONFLICT SCORECARDS</p>',
         unsafe_allow_html=True,
     )
@@ -634,7 +634,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     # ── Heatmap ────────────────────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'TRANSMISSION PRESSURE — CONFLICTS × CHANNELS</p>',
         unsafe_allow_html=True,
@@ -649,16 +649,16 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     st.markdown(
         f'<div style="border-left:3px solid {selected["color"]};'
         f'padding:4px 12px;margin:1.2rem 0 0.3rem">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
         f'font-weight:700;color:{selected["color"]}">{selected["label"]}</span>'
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;'
         f'color:#e8e9ed;margin-left:10px">{selected["name"]}</span>'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:#8E9AAA;margin-left:12px">'
         f'CIS {selected["cis"]:.0f} · TPS {selected["tps"]:.0f} · '
         f'{selected["trend"].upper()} · {selected["state"].upper()}'
         f'</span>'
-        f'<br><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        f'<br><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:#555960;margin-left:0">'
         f'Last updated: {_lu} · CIS source: {_src_label}'
         f'</span>'
@@ -673,7 +673,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         st.markdown(
             '<div style="background:#0d0800;border:1px solid #3a2800;'
             'border-left:3px solid #e67e22;padding:.4rem .8rem;'
-            'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+            'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:0.56rem">'
             '<span style="color:#e67e22;font-weight:700">⚠ MANUAL SCENARIO ASSUMPTION</span>'
             '<span style="color:#8E9AAA;margin-left:.5rem">'
             'ACLED and GDELT are unavailable — all CIS intensity dimensions use '
@@ -688,7 +688,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         st.markdown(
             f'<div style="background:#040808;border:1px solid #0a2a1a;'
             f'border-left:3px solid #27ae60;padding:.35rem .8rem;'
-            f'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+            f'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:0.56rem">'
             f'<span style="color:#27ae60;font-weight:700">DATA PROVENANCE</span>'
             f'<span style="color:#8E9AAA;margin-left:.5rem">'
             f'Live: <span style="color:#CFB991">{_live_str}</span> · '
@@ -703,7 +703,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     with col_l:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#8E9AAA;letter-spacing:.16em">INTENSITY DIMENSIONS</p>',
             unsafe_allow_html=True,
         )
@@ -711,7 +711,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     with col_r:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#8E9AAA;letter-spacing:.16em">'
             'TRANSMISSION CHANNELS · <span style="color:#555960">manual scenario assumption</span>'
             '</p>',
@@ -724,7 +724,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     with col_a:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'TOP AFFECTED ASSETS</p>',
             unsafe_allow_html=True,
@@ -733,7 +733,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     with col_n:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'LIVE INTELLIGENCE FEED</p>',
             unsafe_allow_html=True,
@@ -742,7 +742,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
     # ── AI Analyst Deliberation ────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'AI ANALYST TEAM — CONFLICT ASSESSMENT</p>',
         unsafe_allow_html=True,
@@ -846,13 +846,13 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 )
             else:
                 st.markdown(
-                    '<p style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+                    '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;'
                     'color:#555960;font-style:italic">'
                     'Click Run Assessment to initiate analyst team deliberation '
                     'for this conflict.</p>',
                     unsafe_allow_html=True,
                 )
     except Exception as exc:
-        st.caption(f"Agent deliberation unavailable: {exc}")
+        st.caption("Agent deliberation unavailable — see logs.")
 
     _page_footer()

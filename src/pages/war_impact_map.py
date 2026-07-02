@@ -287,13 +287,13 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
   background:rgba(5,11,26,0.95);
   border:1px solid rgba(207,185,145,0.25);
   border-radius:0;padding:13px 15px;
-  font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.62;
+  font-family:'DM Sans',sans-serif;font-size:0.69rem;line-height:1.62;
   color:#dedede;transition:border-color .2s;
   pointer-events:none;
 }
 #panel.lit{border-color:rgba(207,185,145,0.60)}
-#panel .plbl{font-size:7.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#CFB991;margin-bottom:6px}
-#panel .ph{color:#525252;font-size:10px;line-height:1.5;font-style:italic}
+#panel .plbl{font-size:0.50rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#CFB991;margin-bottom:6px}
+#panel .ph{color:#525252;font-size:0.63rem;line-height:1.5;font-style:italic}
 #panel b{color:#fff}
 #panel hr{border:none;border-top:1px solid rgba(255,255,255,0.07);margin:7px 0}
 #legend{
@@ -301,10 +301,10 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
   background:rgba(5,11,26,0.90);
   border:1px solid rgba(100,140,220,0.14);
   border-radius:0;padding:9px 12px;
-  font-family:'DM Sans',sans-serif;font-size:9px;color:#aaa;
+  font-family:'DM Sans',sans-serif;font-size:0.56rem;color:#aaa;
   pointer-events:none;
 }
-.lt{font-weight:700;color:#CFB991;letter-spacing:.1em;font-size:8px;text-transform:uppercase;margin-bottom:5px}
+.lt{font-weight:700;color:#CFB991;letter-spacing:.1em;font-size:0.50rem;text-transform:uppercase;margin-bottom:5px}
 .lr{display:flex;align-items:center;gap:6px;margin:2px 0}
 .lc{width:11px;height:11px;border-radius:2px;flex-shrink:0}
 </style></head><body>
@@ -438,8 +438,8 @@ function setHover(iso, name) {
   panel.classList.add('lit');
   const h = HOVER[iso];
   panel.innerHTML = lbl + (h
-    ? '<div style="font-size:11px;line-height:1.62">'+h+'</div>'
-    : '<b>'+(name||iso)+'</b><hr><span style="color:#525252;font-size:10px">No war-impact data tracked.</span>');
+    ? '<div style="font-size:0.69rem;line-height:1.62">'+h+'</div>'
+    : '<b>'+(name||iso)+'</b><hr><span style="color:#525252;font-size:0.63rem">No war-impact data tracked.</span>');
 }
 
 function handleHover(mx, my) {
@@ -582,12 +582,12 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
             f'background:#080808;border:1px solid #1e1e1e;'
             f'padding:3px 8px;margin-right:5px;margin-bottom:3px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:#CFB991">{r["label"].upper()}</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:{("#c0392b" if r["cis"]>=65 else "#e67e22" if r["cis"]>=45 else "#8E9AAA")}">'
             f'CIS {r["cis"]:.0f}</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#555960">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">'
             f'TPS {r.get("tps",50):.0f}</span>'
             f'</div>'
             for r in _wm_active[:5]
@@ -596,12 +596,12 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<div style="background:#040404;border:1px solid #1e1e1e;'
             f'border-left:3px solid {_wm_col};padding:.5rem .9rem;margin-bottom:.7rem">'
-            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:{_wm_col};letter-spacing:.15em;margin-bottom:5px">'
             f'LIVE CONFLICT RISK SCORES — SCORING MAP BELOW</div>'
             f'<div style="display:flex;flex-wrap:wrap;align-items:center">'
             f'{_wm_conflict_cells}'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#8E9AAA;margin-left:auto">'
             f'Portfolio CIS&nbsp;<b style="color:{_wm_col}">{_wm_cis:.0f}</b>&nbsp;·&nbsp;'
             f'TPS&nbsp;<b style="color:#CFB991">{_wm_tps:.0f}</b>&nbsp;·&nbsp;'

@@ -15,7 +15,7 @@ import streamlit as st
 
 from src.data.config import PALETTE, GEOPOLITICAL_EVENTS, CATEGORY_COLORS
 from src.ui.palette import (
-    GOLD as _GOLD, BG as _BLACK,
+    GOLD as _GOLD,
     BG as _BG, BG_WARM as _BG_WARM,
     GRID as _GRID, TICK as _TICK, LEGEND as _LEGEND,
     DANGER as _DANGER, WARN as _WARN, SAFE as _SAFE, LABEL as _LABEL,
@@ -151,6 +151,8 @@ def _style_fig(fig: go.Figure, height: int = 400) -> go.Figure:
 
 def _chart(fig: go.Figure, **kwargs) -> None:
     """Render a Plotly figure with sensible Streamlit defaults."""
+    fig.update_xaxes(tickfont=dict(color="#c8c8c8"))
+    fig.update_yaxes(tickfont=dict(color="#c8c8c8"))
     st.plotly_chart(
         fig,
         width="stretch",
@@ -192,7 +194,7 @@ def _add_event_bands(
 def _h2(text: str) -> None:
     """Section heading — monospace label with gold rule. Use as primary sub-section divider."""
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;font-weight:700;'
         f'letter-spacing:.20em;color:{_GOLD};text-transform:uppercase;'
         f'border-bottom:1px solid #1e1e1e;padding-bottom:5px;margin:1.4rem 0 .6rem">{text}</p>',
         unsafe_allow_html=True,
@@ -202,7 +204,7 @@ def _h2(text: str) -> None:
 def _h3(text: str) -> None:
     """Sub-section heading — dimmed monospace label. Use for tertiary groupings."""
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
         f'letter-spacing:.12em;color:#8890a1;text-transform:uppercase;'
         f'margin:.8rem 0 .3rem">{text}</p>',
         unsafe_allow_html=True,
@@ -420,7 +422,7 @@ def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
         f'display:flex;align-items:baseline;gap:0;margin-bottom:0.9rem;'
         f'background:linear-gradient(180deg,{color}08 0%,transparent 100%)">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
-        f'letter-spacing:0.18em;text-transform:uppercase;color:#444a55;margin-right:0.65rem">'
+        f'letter-spacing:0.18em;text-transform:uppercase;color:#8890a1;margin-right:0.65rem">'
         f'REGIME</span>'
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;'
         f'font-weight:700;color:{color};letter-spacing:-0.01em">{label}</span>'
@@ -760,7 +762,7 @@ def _about_page_styles():
         line-height: 1;
     }
     .stat-label {
-        font-size: 0.46rem;
+        font-size: 0.50rem;
         text-transform: uppercase;
         letter-spacing: 0.14em;
         color: #555960;
@@ -806,7 +808,7 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         f'padding-left:12px;margin-bottom:0.75rem">'
         f'<div style="display:flex;align-items:center;margin-bottom:4px">'
         f'{_logo_img}'
-        f'<span style="{_Mh}font-size:9px;font-weight:700;letter-spacing:.20em;'
+        f'<span style="{_Mh}font-size:0.56rem;font-weight:700;letter-spacing:.20em;'
         f'text-transform:uppercase;color:#8890a1">{_eye}</span>'
         f'</div>'
         f'<h1 style="{_Fh}font-size:1.22rem;font-weight:700;'

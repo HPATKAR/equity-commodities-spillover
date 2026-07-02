@@ -590,7 +590,7 @@ def _render_system_reliability(
         ic = {"ok": "✓", "warn": "⚠", "bad": "✗", "unknown": "?"}[state]
         return (
             f'<span style="background:rgba(0,0,0,0.3);border:1px solid {c};color:{c};'
-            f'{_FM}font-size:7px;padding:2px 7px;letter-spacing:0.08em;white-space:nowrap">'
+            f'{_FM}font-size:0.50rem;padding:2px 7px;letter-spacing:0.08em;white-space:nowrap">'
             f'{ic} {label}</span>'
         )
 
@@ -732,9 +732,9 @@ def _render_system_reliability(
         f'<div style="border:1px solid {ov_color};border-left:3px solid {ov_color};'
         f'background:#0d0d0d;padding:0.5rem 0.85rem;margin-bottom:0.8rem;'
         f'display:flex;align-items:center;gap:12px">'
-        f'<span style="{_FM}font-size:8px;font-weight:700;color:{ov_color};'
+        f'<span style="{_FM}font-size:0.50rem;font-weight:700;color:{ov_color};'
         f'letter-spacing:0.15em">SYSTEM STATUS: {ov_label}</span>'
-        f'<span style="{_FM}font-size:7px;color:#555960;margin-left:auto">'
+        f'<span style="{_FM}font-size:0.50rem;color:#555960;margin-left:auto">'
         f'{n_ok} ok · {n_warn} warn · {n_bad} fail · '
         f'{n_live} sources live · {n_stale + n_unknown} stale/unknown</span>'
         f'</div>',
@@ -743,7 +743,7 @@ def _render_system_reliability(
 
     # ── Signal Reliability KPI strip ───────────────────────────────────────
     st.markdown(
-        f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+        f'<p style="{_FM}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.15em;color:#8890a1;margin:0.5rem 0 0.4rem">Signal Reliability</p>',
         unsafe_allow_html=True,
     )
@@ -751,10 +751,10 @@ def _render_system_reliability(
     def _rel_kpi(col, label, value, sub, col_val="#e8e8e8"):
         col.markdown(
             f'<div style="border:1px solid #1e1e1e;background:#0d0d0d;padding:0.5rem 0.7rem">'
-            f'<div style="{_FM}font-size:6.5px;color:#555960;letter-spacing:0.12em;'
+            f'<div style="{_FM}font-size:0.50rem;color:#555960;letter-spacing:0.12em;'
             f'text-transform:uppercase;margin-bottom:3px">{label}</div>'
             f'<div style="{_F}font-size:0.9rem;font-weight:700;color:{col_val};line-height:1.1">{value}</div>'
-            f'<div style="{_FM}font-size:6.5px;color:#8890a1;margin-top:3px">{sub}</div>'
+            f'<div style="{_FM}font-size:0.50rem;color:#8890a1;margin-top:3px">{sub}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -807,7 +807,7 @@ def _render_system_reliability(
 
     # ── Core Methodology Health ────────────────────────────────────────────
     st.markdown(
-        f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+        f'<p style="{_FM}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.15em;color:#8890a1;margin:0.8rem 0 0.4rem">Methodology Health</p>'
         + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.8rem">'
         + "".join(
@@ -821,7 +821,7 @@ def _render_system_reliability(
     # ── Data Integrity table ───────────────────────────────────────────────
     if freshness_data:
         st.markdown(
-            f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+            f'<p style="{_FM}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.15em;color:#8890a1;margin:0.2rem 0 0.35rem">Data Source Integrity</p>',
             unsafe_allow_html=True,
         )
@@ -856,28 +856,28 @@ def _render_system_reliability(
                 _note = "Approaching staleness"
             rows_html += (
                 f'<tr>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7.5px;color:{_ic_col}">{_ic}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:{_ic_col}">{_ic}</td>'
                 f'<td style="padding:3px 8px;{_F}font-size:0.68rem;color:#e8e8e8">'
                 f'{_src_display.get(src, src)}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:{_ic_col};'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:{_ic_col};'
                 f'text-transform:uppercase;letter-spacing:0.08em">{_s}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#8890a1">{fd["label"]}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#555960">{_note}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:#8890a1">{fd["label"]}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:#555960">{_note}</td>'
                 f'</tr>'
             )
         st.markdown(
             f'<table style="width:100%;border-collapse:collapse;background:#0d0d0d;'
             f'border:1px solid #1e1e1e;margin-bottom:0.8rem">'
             f'<thead><tr>'
-            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'<th style="padding:4px 8px;{_FM}font-size:0.50rem;color:#555960;text-align:left;'
             f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e"></th>'
-            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'<th style="padding:4px 8px;{_FM}font-size:0.50rem;color:#555960;text-align:left;'
             f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Source</th>'
-            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'<th style="padding:4px 8px;{_FM}font-size:0.50rem;color:#555960;text-align:left;'
             f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Status</th>'
-            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'<th style="padding:4px 8px;{_FM}font-size:0.50rem;color:#555960;text-align:left;'
             f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Last Seen</th>'
-            f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+            f'<th style="padding:4px 8px;{_FM}font-size:0.50rem;color:#555960;text-align:left;'
             f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">Note</th>'
             f'</tr></thead>'
             f'<tbody>{rows_html}</tbody></table>',
@@ -887,11 +887,11 @@ def _render_system_reliability(
     # ── Agent Reliability ──────────────────────────────────────────────────
     if _agents_raw:
         st.markdown(
-            f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+            f'<p style="{_FM}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.15em;color:#8890a1;margin:0.2rem 0 0.1rem">'
             f'Agent Reliability · {n_agents_with_output}/{len(_agents_raw)} agents active'
             f'{f" · {_pending} pending review" if _pending else ""}</p>'
-            f'<p style="{_FM}font-size:6.5px;color:#444c5c;margin:0 0 0.35rem">'
+            f'<p style="{_FM}font-size:0.50rem;color:#8890a1;margin:0 0 0.35rem">'
             f'Agents fire on their respective pages when API keys are configured in secrets.toml. '
             f'Idle = not yet triggered this session.</p>',
             unsafe_allow_html=True,
@@ -916,15 +916,15 @@ def _render_system_reliability(
             )
             _ag_rows += (
                 f'<tr style="border-bottom:1px solid #111">'
-                f'<td style="padding:3px 8px;{_FM}font-size:8px;font-weight:700;'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;font-weight:700;'
                 f'color:{ameta.get("color","#8890a1")}">{ameta.get("icon","?")}</td>'
                 f'<td style="padding:3px 8px;{_F}font-size:0.68rem;color:#e8e8e8">'
                 f'{ameta.get("short","?")}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:{_state_col}">'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:{_state_col}">'
                 f'{_out_label}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#CFB991">{_conf_str}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:#555960">{_last_str}</td>'
-                f'<td style="padding:3px 8px;{_FM}font-size:7px;color:{_status_col};'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:#CFB991">{_conf_str}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:#555960">{_last_str}</td>'
+                f'<td style="padding:3px 8px;{_FM}font-size:0.50rem;color:{_status_col};'
                 f'text-transform:uppercase;letter-spacing:0.06em">'
                 f'{"DISABLED" if not _enabled else _status}</td>'
                 f'</tr>'
@@ -935,7 +935,7 @@ def _render_system_reliability(
                 f'border:1px solid #1e1e1e;margin-bottom:0.8rem">'
                 f'<thead><tr>'
                 + "".join(
-                    f'<th style="padding:4px 8px;{_FM}font-size:6.5px;color:#555960;text-align:left;'
+                    f'<th style="padding:4px 8px;{_FM}font-size:0.50rem;color:#555960;text-align:left;'
                     f'text-transform:uppercase;letter-spacing:0.12em;border-bottom:1px solid #1e1e1e">{h}</th>'
                     for h in ["", "Agent", "Output", "Confidence", "Last Run", "Status"]
                 )
@@ -957,11 +957,11 @@ def _render_system_reliability(
     ]
     with st.expander("Known Limitations & Honest Gaps", expanded=False):
         st.markdown(
-            f'<p style="{_FM}font-size:7px;color:#e67e22;letter-spacing:0.10em;'
+            f'<p style="{_FM}font-size:0.50rem;color:#e67e22;letter-spacing:0.10em;'
             f'text-transform:uppercase;margin-bottom:6px">What this dashboard does NOT do</p>'
             + '<table style="width:100%;border-collapse:collapse">'
             + "".join(
-                f'<tr><td style="padding:3px 10px 3px 0;{_FM}font-size:7.5px;color:#CFB991;'
+                f'<tr><td style="padding:3px 10px 3px 0;{_FM}font-size:0.50rem;color:#CFB991;'
                 f'white-space:nowrap;vertical-align:top">{name}</td>'
                 f'<td style="padding:3px 0;{_F}font-size:0.68rem;color:#8890a1">{note}</td></tr>'
                 for name, note in _LIMITATIONS
@@ -1377,7 +1377,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-left:3px solid #e67e22;padding:.3rem .75rem;margin-bottom:.55rem">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#e67e22;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#e67e22;'
             f'letter-spacing:.1em;font-weight:700">SCOPE NOTE</span>'
             f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;color:#8890a1;'
             f'margin-left:8px">'
@@ -1508,7 +1508,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-left:3px solid {"#27ae60" if indep_stats["balanced_acc"]>=60 else "#e67e22"};'
             f'padding:.4rem .7rem;margin-top:.4rem">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#8E9AAA">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#8E9AAA">'
             f'Event-calendar positive rate: {_pos_rate:.0f}% of days · '
             f'Crisis events: Financial + Pandemic + systemic Geopolitical · '
             f'Source: GEOPOLITICAL_EVENTS registry (not derived from prices)</span>'
@@ -1566,9 +1566,9 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                     f'<div style="display:flex;gap:1rem;background:#0d0d0d;'
                     f'border:1px solid #1e1e1e;border-left:2px solid {_col};'
                     f'padding:.35rem .7rem;margin-bottom:.25rem;align-items:center">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:{_col};font-weight:700;min-width:120px">{_period}</span>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#8E9AAA">'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#8E9AAA">'
                     f'Bal.Acc {_met["balanced_acc"]:.0f}% &nbsp;·&nbsp; '
                     f'AUC {_met["auc"]:.0f}% &nbsp;·&nbsp; '
                     f'Recall {_met["recall"]:.0f}% &nbsp;·&nbsp; '
@@ -1888,7 +1888,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
     _FM = "font-family:'JetBrains Mono',monospace;"
     _FS = "font-family:'DM Sans',sans-serif;"
     st.markdown(
-        f'<p style="{_FM}font-size:7px;font-weight:700;text-transform:uppercase;'
+        f'<p style="{_FM}font-size:0.50rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.15em;color:#8890a1;margin:0.2rem 0 0.35rem">'
         f'Agent-Level Benchmark · Historical Snapshot Validation</p>',
         unsafe_allow_html=True,
@@ -2008,6 +2008,6 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             st.caption("VIX > 35 = Crisis ground truth · VIX > 22 = Elevated · else Normal. "
                        "CIS/TPS proxied from risk_score when conflict model can't be back-tested.")
     except Exception as _bm_err:
-        st.caption(f"Agent benchmark unavailable: {_bm_err}")
+        st.caption("Agent benchmark unavailable — see logs.")
 
     _page_footer()

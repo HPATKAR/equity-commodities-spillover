@@ -1364,7 +1364,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
                     key="insights_pdf_dl",
                 )
             except Exception as e:
-                st.error(f"PDF generation failed: {e}")
+                st.error("PDF generation failed.")
 
     # CQO runs silently - output visible in About > AI Workforce
     try:
@@ -1400,7 +1400,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Trade Idea Methodology ────────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;font-weight:700;'
         'letter-spacing:.12em;text-transform:uppercase;color:#CFB991;margin:2rem 0 .5rem">'
         'TRADE IDEA METHODOLOGY</p>',
         unsafe_allow_html=True,
@@ -1408,9 +1408,9 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
     with st.expander("Backtest & Projected P&L — Framework, Assumptions, and Limitations", expanded=False):
         st.markdown(
             """
-<div style="font-family:'DM Sans',sans-serif;font-size:12px;color:#cccccc;line-height:1.7">
+<div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#cccccc;line-height:1.7">
 
-<p style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+<p style="font-family:'JetBrains Mono',monospace;font-size:0.56rem;font-weight:700;
 letter-spacing:.12em;color:#CFB991;text-transform:uppercase;margin-bottom:4px">
 HISTORICAL BACKTEST</p>
 
@@ -1435,7 +1435,7 @@ moment a practitioner would receive the regime alert.
 **Win rate, Avg Return, Sharpe, and Max Drawdown** are derived from the distribution of
 trade-level P&Ls across all historical entry signals.
 
-<p style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+<p style="font-family:'JetBrains Mono',monospace;font-size:0.56rem;font-weight:700;
 letter-spacing:.12em;color:#CFB991;text-transform:uppercase;margin:12px 0 4px">
 PROJECTED P&L (SCENARIO MODEL)</p>
 
@@ -1459,7 +1459,7 @@ A Normal regime trade uses a more balanced distribution (Base 32%, Escalation 17
 This ensures crisis hedges are not penalised by de-escalation/recovery scenarios that have
 near-zero probability during an active stress regime.
 
-<p style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+<p style="font-family:'JetBrains Mono',monospace;font-size:0.56rem;font-weight:700;
 letter-spacing:.12em;color:#e67e22;text-transform:uppercase;margin:12px 0 4px">
 KNOWN LIMITATIONS</p>
 

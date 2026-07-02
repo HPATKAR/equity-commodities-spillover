@@ -312,7 +312,7 @@ def _render_commodity_exposure(results: dict) -> None:
         with cols[i]:
             st.markdown(
                 f'<div style="background:#0a0a0a;border:1px solid #2a2a2a;padding:.5rem .7rem">'
-                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:#555960;margin-bottom:3px">'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960;margin-bottom:3px">'
                 f'{commodity.upper()}</div>'
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:16px;font-weight:700;'
                 f'color:{color}">{norm:.0%}</div>'
@@ -336,7 +336,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
     try:
         results = score_all_conflicts()
     except Exception as e:
-        st.error(f"Error loading conflict scores: {e}")
+        st.error("Error loading conflict data — see logs.")
         _page_footer()
         return
 
@@ -347,7 +347,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
 
     # ── Section 1: Heatmap ─────────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
         'CIS-WEIGHTED CONFLICT × CHANNEL HEATMAP</p>',
         unsafe_allow_html=True,
@@ -362,7 +362,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
 
     with col_l:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'PORTFOLIO CHANNEL STRESS</p>',
             unsafe_allow_html=True,
@@ -374,7 +374,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
 
     with col_r:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             'CONFLICT → CHANNEL → ASSET FLOW</p>',
             unsafe_allow_html=True,
@@ -386,7 +386,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
 
     # ── Section 3: Commodity exposure ──────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'PORTFOLIO COMMODITY EXPOSURE  '
         '<span style="color:#555960">(CIS-weighted relevance)</span></p>',

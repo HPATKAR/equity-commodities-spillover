@@ -222,7 +222,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             else:
                 st.caption("No CAR data — select non-benchmark assets or check data coverage.")
         except Exception as _car_err:
-            st.caption(f"CAR unavailable: {_car_err}")
+            st.caption("CAR unavailable — see logs.")
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
@@ -410,7 +410,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             else:
                 st.caption("No CAAR data — select non-benchmark assets.")
         except Exception as _caar_err:
-            st.caption(f"CAAR aggregation unavailable: {_caar_err}")
+            st.caption("CAAR aggregation unavailable — see logs.")
 
     # ── Conflict Scorecard Strip ──────────────────────────────────────────
     st.markdown(
@@ -436,24 +436,24 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(
                     f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                     f'border-top:2px solid {_cc};padding:6px 8px">'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'font-weight:700;color:{_cc}">{_cr["label"]}</span>'
-                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:{_fresh_col(_cr.get("freshness","aging"))};float:right">'
                     f'{_cr.get("freshness","?").upper()}</span>'
-                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:6.5px;'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:{_src_col};margin-top:1px">SOURCE: {_src_txt}</div>'
                     f'<div style="display:flex;gap:10px;margin-top:4px">'
-                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:#555960">CIS</span>'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;'
                     f'font-weight:700;color:{_cis_col(_cr["cis"])}">{_cr["cis"]:.0f}</div></div>'
-                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:#555960">TPS</span>'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;'
                     f'font-weight:700;color:#8E9AAA">{_cr["tps"]:.0f}</div></div>'
                     f'</div>'
-                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                    f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:{_cis_col(_cr["cis"])};margin-top:2px">{_tr} {_cr["trend"].upper()}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -478,24 +478,24 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(
                     f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                     f'padding:8px 12px">'
-                    f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:#555960;letter-spacing:.16em;margin:0 0 6px">NEWS GPR</p>'
                     f'<div style="display:flex;gap:16px">'
-                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:#555960">COMPOSITE</div>'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
                     f'font-weight:700;color:#CFB991">{_ngpr["news_gpr"]:.0f}</div></div>'
-                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:#e67e22">THREAT</div>'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
                     f'font-weight:700;color:#e67e22">{_ngpr["threat_score"]:.0f}</div></div>'
-                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                    f'<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                     f'color:#c0392b">ACT</div>'
                     f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
                     f'font-weight:700;color:#c0392b">{_ngpr["act_score"]:.0f}</div></div>'
                     f'</div>'
                     f'<div style="margin-top:8px;font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:7px;color:#555960">'
+                    f'font-size:0.50rem;color:#555960">'
                     f'α={_ngpr["alpha"]:.2f} · {_ngpr["n_act"]} acts · {_ngpr["n_threat"]} threats'
                     f'</div></div>',
                     unsafe_allow_html=True,
@@ -605,7 +605,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown("---")
                 render_agent_output_block("geopolitical_analyst", _ga_result)
     except Exception as _ga_err:
-        st.caption(f"AI Geopolitical Analyst unavailable: {_ga_err}")
+        st.caption("AI Geopolitical Analyst unavailable — see logs.")
 
     # CQO runs silently - output visible in About > AI Workforce
     try:

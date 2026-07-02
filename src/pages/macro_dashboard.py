@@ -480,13 +480,13 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="background:#080808;border:1px solid #1e1e1e;'
                 f'border-left:3px solid {_mc_color};padding:.4rem .9rem;'
                 f'margin-bottom:.6rem">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'font-weight:700;color:{_mc_color}">GEO→MACRO TRANSMISSION</span>'
                 f'&nbsp;&nbsp;'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;'
                 f'color:#8E9AAA">{_driver_text}</span>'
                 f'&nbsp;&nbsp;'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#CFB991">TPS&nbsp;{_mc_tps:.0f}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -925,19 +925,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         v_l, v_r = st.columns([1.2, 1])
 
         with v_l:
-            def _pe_color(val):
-                if pd.isna(val): return ""
-                if val > 30:   return "background-color:#ffcdd2;color:#b71c1c"
-                if val > 22:   return "background-color:#fff9c4;color:#f57f17"
-                if val > 15:   return "background-color:#e8f5e9;color:#2e7d32"
-                return "background-color:#c8e6c9;color:#1b5e20"
-            def _growth_color(val):
-                if pd.isna(val): return ""
-                if val > 15:   return "color:#2e7d32;font-weight:700"
-                if val > 5:    return "color:#558b2f"
-                if val > 0:    return "color:#888"
-                return              "color:#c0392b;font-weight:700"
-
             display_df = val_df.set_index("Market") if "Market" in val_df.columns else val_df
             val_cols = list(display_df.columns)
             val_header_html = "<th>Market</th>" + "".join(f"<th>{c}</th>" for c in val_cols)
@@ -1047,13 +1034,6 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
 
         perf_df = pd.DataFrame(perf_rows).set_index("Index")
         ret_cols = [c for c in perf_df.columns if c != "Latest"]
-
-        def _color_ret(val):
-            if pd.isna(val): return ""
-            if val > 2:  return "background-color:#c8e6c9;color:#1b5e20"
-            if val > 0:  return "background-color:#e8f5e9;color:#2e7d32"
-            if val > -2: return "background-color:#ffebee;color:#b71c1c"
-            return            "background-color:#ffcdd2;color:#b71c1c"
 
         idx_l, idx_r = st.columns([1.6, 1])
         with idx_l:
@@ -1502,7 +1482,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     key="macro_pdf_dl",
                 )
             except Exception as e:
-                st.error(f"PDF generation failed: {e}")
+                st.error("PDF generation failed — see logs.")
 
     # ── AI Macro Strategist ────────────────────────────────────────────────
     try:
@@ -1588,7 +1568,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
         if _pcis >= 25:
             st.markdown(
                 '<div style="border-top:1px solid #1e1e1e;margin:1.2rem 0 0.6rem"></div>'
-                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 'font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#CFB991">'
                 'Conflict → Macro Transmission</span>',
                 unsafe_allow_html=True,

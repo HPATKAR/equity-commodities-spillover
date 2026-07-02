@@ -34,7 +34,7 @@ def _formula(latex_text: str, caption: str = "") -> None:
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid {_G};padding:.6rem 1rem;margin:.4rem 0 .3rem">'
-        f'<code style="{_M}font-size:11px;color:{_G};white-space:pre-wrap">'
+        f'<code style="{_M}font-size:0.69rem;color:{_G};white-space:pre-wrap">'
         f'{latex_text}</code>'
         + (f'<br><span style="{_S}font-size:0.62rem;color:{_MUT}">{caption}</span>' if caption else "")
         + f'</div>',
@@ -49,9 +49,9 @@ def _weight_table(rows: list[tuple[str, str, float, str]]) -> None:
     header = (
         f'<table style="width:100%;border-collapse:collapse;{_S}font-size:0.70rem">'
         f'<thead><tr>'
-        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">DIMENSION / CHANNEL</th>'
-        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:right;border-bottom:1px solid #2a2a2a;padding:3px 8px">WEIGHT</th>'
-        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">RATIONALE</th>'
+        f'<th style="{_M}font-size:0.50rem;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">DIMENSION / CHANNEL</th>'
+        f'<th style="{_M}font-size:0.50rem;color:{_MUT};text-align:right;border-bottom:1px solid #2a2a2a;padding:3px 8px">WEIGHT</th>'
+        f'<th style="{_M}font-size:0.50rem;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">RATIONALE</th>'
         f'</tr></thead><tbody>'
     )
     rows_html = ""
@@ -81,9 +81,9 @@ def _signal_card(
         f'border-top:2px solid {color};padding:.55rem .75rem;height:100%">'
         # header row
         f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:.35rem">'
-        f'<span style="{_M}font-size:9px;font-weight:700;color:#0a0a0a;'
+        f'<span style="{_M}font-size:0.56rem;font-weight:700;color:#0a0a0a;'
         f'background:{color};padding:1px 5px;flex-shrink:0">{pct}</span>'
-        f'<span style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed;'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;'
         f'letter-spacing:.08em;text-transform:uppercase">{name}</span>'
         f'</div>'
         # tagline
@@ -92,7 +92,7 @@ def _signal_card(
         # formula block
         f'<div style="background:#040404;border-left:2px solid {color};'
         f'padding:.3rem .5rem;margin:.2rem 0">'
-        f'<code style="{_M}font-size:8.5px;color:{color};white-space:pre-wrap;line-height:1.6">'
+        f'<code style="{_M}font-size:0.53rem;color:{color};white-space:pre-wrap;line-height:1.6">'
         f'{formula_lines}</code></div>'
         + (f'<p style="{_S}font-size:0.60rem;color:{_MUT};margin:.3rem 0 0;'
            f'line-height:1.4;font-style:italic">{note}</p>' if note else "")
@@ -116,10 +116,10 @@ def _arch_flow() -> None:
             f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;'
             f'border-top:3px solid {col};padding:.5rem .7rem;min-width:0">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-            f'<span style="{_M}font-size:11px;font-weight:700;color:{col}">{abbr}</span>'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{col};'
+            f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{col}">{abbr}</span>'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col};'
             f'background:rgba(255,255,255,0.04);padding:1px 5px">{pct}</span></div>'
-            f'<div style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;'
             f'letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">{full}</div>'
             f'<div style="{_S}font-size:0.62rem;color:{_MUT};line-height:1.4">{detail}</div>'
             f'</div>'
@@ -130,31 +130,31 @@ def _arch_flow() -> None:
         f'<div style="display:flex;gap:6px;margin-bottom:6px">{boxes_html}</div>'
         f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
-        f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ CIS-weighted conflict ranking · PortWatch disruption · RSS feed</div>'
+        f'<div style="padding:0 8px;{_M}font-size:0.50rem;color:{_MUT}">▼ CIS-weighted conflict ranking · PortWatch disruption · RSS feed</div>'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
         f'</div>'
         f'<div style="display:flex;gap:6px;margin-bottom:6px">'
         f'<div style="flex:2;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
-        f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">ASSEMBLY</span><br>'
-        f'<code style="{_M}font-size:9px;color:{_G}">GRS_raw = 0.40·GPR + 0.30·CIS + 0.20·CP + 0.10·MCS</code>'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;letter-spacing:.1em">ASSEMBLY</span><br>'
+        f'<code style="{_M}font-size:0.56rem;color:{_G}">GRS_raw = 0.40·GPR + 0.30·CIS + 0.20·CP + 0.10·MCS</code>'
         f'</div>'
         f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
-        f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">MARKET FRESHNESS</span><br>'
-        f'<code style="{_M}font-size:9px;color:#8E9AAA">rank by CIS × freshness ∈ [0.7, 1.5]</code>'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;letter-spacing:.1em">MARKET FRESHNESS</span><br>'
+        f'<code style="{_M}font-size:0.56rem;color:#8E9AAA">rank by CIS × freshness ∈ [0.7, 1.5]</code>'
         f'</div>'
         f'<div style="flex:1;background:{_BG};border:1px solid #2a2a2a;padding:.4rem .7rem">'
-        f'<span style="{_M}font-size:7px;font-weight:700;color:#e8e9ed;letter-spacing:.1em">SCENARIO MULT</span><br>'
-        f'<code style="{_M}font-size:9px;color:#8E9AAA">× geo_mult  (default 1.0)</code>'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;letter-spacing:.1em">SCENARIO MULT</span><br>'
+        f'<code style="{_M}font-size:0.56rem;color:#8E9AAA">× geo_mult  (default 1.0)</code>'
         f'</div>'
         f'</div>'
         f'<div style="display:flex;align-items:center;gap:0;margin-bottom:6px">'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
-        f'<div style="padding:0 8px;{_M}font-size:7px;color:{_MUT}">▼ clip(·, 0, 100)</div>'
+        f'<div style="padding:0 8px;{_M}font-size:0.50rem;color:{_MUT}">▼ clip(·, 0, 100)</div>'
         f'<div style="flex:1;height:1px;background:#2a2a2a"></div>'
         f'</div>'
         f'<div style="background:#0a0a0a;border:1px solid {_G};padding:.45rem 1rem;text-align:center">'
-        f'<span style="{_M}font-size:9px;font-weight:700;color:{_G};letter-spacing:.18em">GRS</span>'
-        f'<span style="{_M}font-size:8px;color:{_MUT};margin-left:10px">0 – 100 · Low / Moderate / Elevated / High</span>'
+        f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_G};letter-spacing:.18em">GRS</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_MUT};margin-left:10px">0 – 100 · Low / Moderate / Elevated / High</span>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -165,7 +165,7 @@ def _freshness_range() -> None:
     """Visual [0.7 … 1.0 … 1.5] range bar for the market freshness multiplier."""
     st.markdown(
         f'<div style="margin:.5rem 0 .8rem;padding:.5rem .8rem;background:#080808;border:1px solid #1e1e1e">'
-        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.12em;margin-bottom:.4rem">MARKET FRESHNESS RANGE  ∈  [0.7, 1.5]</div>'
+        f'<div style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.12em;margin-bottom:.4rem">MARKET FRESHNESS RANGE  ∈  [0.7, 1.5]</div>'
         f'<div style="position:relative;height:6px;background:#1a1a1a;margin:.3rem 0">'
         # colored gradient bar
         f'<div style="position:absolute;left:0;top:0;width:100%;height:6px;'
@@ -173,9 +173,9 @@ def _freshness_range() -> None:
         # tick marks + labels
         f'</div>'
         f'<div style="display:flex;justify-content:space-between;margin-top:.2rem">'
-        f'<span style="{_M}font-size:7.5px;color:#2e7d32">0.7× quiet market</span>'
-        f'<span style="{_M}font-size:7.5px;color:#8E9AAA">1.0× neutral</span>'
-        f'<span style="{_M}font-size:7.5px;color:#c0392b">1.5× crisis signal</span>'
+        f'<span style="{_M}font-size:0.50rem;color:#2e7d32">0.7× quiet market</span>'
+        f'<span style="{_M}font-size:0.50rem;color:#8E9AAA">1.0× neutral</span>'
+        f'<span style="{_M}font-size:0.50rem;color:#c0392b">1.5× crisis signal</span>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -187,11 +187,11 @@ def _confidence_component(label: str, weight: str, formula: str, note: str, colo
         f'<div style="display:flex;gap:10px;align-items:flex-start;'
         f'padding:.4rem .6rem;border-bottom:1px solid #111;background:#080808">'
         f'<div style="flex-shrink:0;text-align:right;width:36px">'
-        f'<span style="{_M}font-size:10px;font-weight:700;color:{color}">{weight}</span></div>'
+        f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{color}">{weight}</span></div>'
         f'<div style="flex:1">'
-        f'<div style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed;letter-spacing:.07em;'
+        f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;letter-spacing:.07em;'
         f'text-transform:uppercase;margin-bottom:2px">{label}</div>'
-        f'<code style="{_M}font-size:8.5px;color:{_DIM}">{formula}</code><br>'
+        f'<code style="{_M}font-size:0.53rem;color:{_DIM}">{formula}</code><br>'
         f'<span style="{_S}font-size:0.62rem;color:{_MUT}">{note}</span>'
         f'</div></div>',
         unsafe_allow_html=True,
@@ -201,7 +201,7 @@ def _confidence_component(label: str, weight: str, formula: str, note: str, colo
 def _assumption(text: str) -> None:
     st.markdown(
         f'<div style="display:flex;gap:8px;margin:.15rem 0">'
-        f'<span style="{_M}font-size:8px;color:#e67e22;margin-top:1px">▲</span>'
+        f'<span style="{_M}font-size:0.50rem;color:#e67e22;margin-top:1px">▲</span>'
         f'<span style="{_S}font-size:0.70rem;color:#b8b8b8">{text}</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -210,7 +210,7 @@ def _assumption(text: str) -> None:
 def _limitation(text: str) -> None:
     st.markdown(
         f'<div style="display:flex;gap:8px;margin:.15rem 0">'
-        f'<span style="{_M}font-size:8px;color:#c0392b;margin-top:1px">■</span>'
+        f'<span style="{_M}font-size:0.50rem;color:#c0392b;margin-top:1px">■</span>'
         f'<span style="{_S}font-size:0.70rem;color:#b8b8b8">{text}</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -220,8 +220,8 @@ def _data_source(name: str, what: str, freq: str, lag: str) -> None:
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;padding:.45rem .8rem;margin:.3rem 0">'
         f'<div style="display:flex;justify-content:space-between;align-items:center">'
-        f'<span style="{_M}font-size:9px;font-weight:700;color:{_G}">{name}</span>'
-        f'<span style="{_M}font-size:7px;color:{_MUT}">Freq: {freq} · Lag: {lag}</span>'
+        f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_G}">{name}</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_MUT}">Freq: {freq} · Lag: {lag}</span>'
         f'</div>'
         f'<span style="{_S}font-size:0.70rem;color:{_DIM}">{what}</span>'
         f'</div>',
@@ -249,9 +249,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ── Navigation index ───────────────────────────────────────────────────────
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;padding:.6rem 1rem;margin-bottom:1rem">'
-        f'<p style="{_M}font-size:7px;color:{_MUT};letter-spacing:.15em;margin-bottom:5px">CONTENTS</p>'
+        f'<p style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.15em;margin-bottom:5px">CONTENTS</p>'
         + "".join(
-            f'<span style="{_M}font-size:8px;color:{_DIM};margin-right:16px">'
+            f'<span style="{_M}font-size:0.50rem;color:{_DIM};margin-right:16px">'
             f'<span style="color:{_G}">{i+1}.</span> {s}</span>'
             for i, s in enumerate([
                 "Data Architecture", "Live Intelligence Layer",
@@ -309,14 +309,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                     f'<div style="background:#080808;border:1px solid #1e1e1e;'
                     f'border-top:2px solid {col};padding:.5rem .65rem;margin-bottom:6px">'
                     f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-                    f'<span style="{_M}font-size:6.5px;font-weight:700;color:{col};letter-spacing:.12em">{cat}</span>'
-                    f'<span style="{_M}font-size:6.5px;color:{_MUT};background:#111;padding:1px 4px">'
+                    f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{col};letter-spacing:.12em">{cat}</span>'
+                    f'<span style="{_M}font-size:0.50rem;color:{_MUT};background:#111;padding:1px 4px">'
                     f'TTL {ttl}</span></div>'
-                    f'<div style="{_M}font-size:8px;font-weight:700;color:#e8e9ed;margin-bottom:3px">{name}</div>'
+                    f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;margin-bottom:3px">{name}</div>'
                     f'<div style="{_S}font-size:0.64rem;color:{_DIM};line-height:1.45;margin-bottom:4px">{desc}</div>'
                     f'<div style="display:flex;gap:8px">'
-                    f'<span style="{_M}font-size:6.5px;color:{_MUT}">freq: {freq}</span>'
-                    f'<span style="{_M}font-size:6.5px;color:{_MUT}">lag: {lag}</span>'
+                    f'<span style="{_M}font-size:0.50rem;color:{_MUT}">freq: {freq}</span>'
+                    f'<span style="{_M}font-size:0.50rem;color:{_MUT}">lag: {lag}</span>'
                     f'</div></div>',
                     unsafe_allow_html=True,
                 )
@@ -328,7 +328,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         + "".join(
             f'<div style="flex:1;padding:.4rem .6rem;background:#080808;'
             f'border-right:1px solid #1e1e1e;position:relative">'
-            f'<div style="{_M}font-size:6.5px;font-weight:700;color:{c};letter-spacing:.1em;margin-bottom:2px">{step}</div>'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{c};letter-spacing:.1em;margin-bottom:2px">{step}</div>'
             f'<div style="{_S}font-size:0.62rem;color:{_MUT}">{desc}</div>'
             f'</div>'
             for step, desc, c in [
@@ -385,14 +385,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                 f'<div style="background:#080808;border:1px solid #1e1e1e;'
                 f'border-top:2px solid {col};padding:.5rem .65rem;margin-bottom:6px">'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-                f'<span style="{_M}font-size:6.5px;font-weight:700;color:{col};letter-spacing:.12em">{cat}</span>'
-                f'<span style="{_M}font-size:6.5px;color:{_MUT};background:#111;padding:1px 4px">'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{col};letter-spacing:.12em">{cat}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:{_MUT};background:#111;padding:1px 4px">'
                 f'TTL {ttl}</span></div>'
-                f'<div style="{_M}font-size:8px;font-weight:700;color:#e8e9ed;margin-bottom:3px">{name}</div>'
+                f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;margin-bottom:3px">{name}</div>'
                 f'<div style="{_S}font-size:0.64rem;color:{_DIM};line-height:1.45;margin-bottom:4px">{desc}</div>'
                 f'<div style="display:flex;gap:8px">'
-                f'<span style="{_M}font-size:6.5px;color:{_MUT}">freq: {freq}</span>'
-                f'<span style="{_M}font-size:6.5px;color:{_MUT}">lag: {lag}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:{_MUT}">freq: {freq}</span>'
+                f'<span style="{_M}font-size:0.50rem;color:{_MUT}">lag: {lag}</span>'
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
@@ -410,7 +410,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid #27ae60;padding:.5rem .9rem;margin:.3rem 0">'
-        f'<code style="{_M}font-size:9px;color:#27ae60;white-space:pre-wrap">'
+        f'<code style="{_M}font-size:0.56rem;color:#27ae60;white-space:pre-wrap">'
         f'GDELT escalation + ACLED escalation  → corroboration()\n'
         f'  both escalating     → final = "escalating"  · confidence = high\n'
         f'  one escalating      → final = "escalating"  · confidence = medium\n'
@@ -439,16 +439,16 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     header_html = (
         f'<table style="width:100%;border-collapse:collapse;{_S}font-size:0.70rem;margin:.3rem 0">'
         f'<thead><tr>'
-        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">SOURCE</th>'
-        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:center;border-bottom:1px solid #2a2a2a;padding:3px 8px">WARN AFTER</th>'
-        f'<th style="{_M}font-size:7px;color:{_MUT};text-align:center;border-bottom:1px solid #2a2a2a;padding:3px 8px">STALE AFTER</th>'
+        f'<th style="{_M}font-size:0.50rem;color:{_MUT};text-align:left;border-bottom:1px solid #2a2a2a;padding:3px 8px">SOURCE</th>'
+        f'<th style="{_M}font-size:0.50rem;color:{_MUT};text-align:center;border-bottom:1px solid #2a2a2a;padding:3px 8px">WARN AFTER</th>'
+        f'<th style="{_M}font-size:0.50rem;color:{_MUT};text-align:center;border-bottom:1px solid #2a2a2a;padding:3px 8px">STALE AFTER</th>'
         f'</tr></thead><tbody>'
     )
     rows_html = "".join(
         f'<tr style="border-bottom:1px solid #111">'
-        f'<td style="{_M}font-size:8px;color:#e8e9ed;padding:4px 8px">{src}</td>'
-        f'<td style="{_M}font-size:8px;color:#e67e22;text-align:center;padding:4px 8px">{warn}</td>'
-        f'<td style="{_M}font-size:8px;color:#c0392b;text-align:center;padding:4px 8px">{stale}</td>'
+        f'<td style="{_M}font-size:0.50rem;color:#e8e9ed;padding:4px 8px">{src}</td>'
+        f'<td style="{_M}font-size:0.50rem;color:#e67e22;text-align:center;padding:4px 8px">{warn}</td>'
+        f'<td style="{_M}font-size:0.50rem;color:#c0392b;text-align:center;padding:4px 8px">{stale}</td>'
         f'</tr>'
         for src, warn, stale in freshness_rows
     )
@@ -498,8 +498,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-left:3px solid {col};padding:.4rem .65rem;margin-bottom:5px">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-            f'<span style="{_M}font-size:7.5px;font-weight:700;color:{col}">{name}</span>'
-            f'<span style="{_M}font-size:8px;font-weight:700;color:{col}">{wt:.0%}</span>'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{col}">{name}</span>'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{col}">{wt:.0%}</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:2px;margin-bottom:4px">'
             f'<div style="background:{col};width:{bar_w}%;height:2px"></div></div>'
@@ -519,7 +519,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         + "".join(
             f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
             f'border-top:3px solid {c};padding:.5rem .7rem">'
-            f'<div style="{_M}font-size:7px;font-weight:700;color:{c};letter-spacing:.1em;margin-bottom:4px">{s}</div>'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{c};letter-spacing:.1em;margin-bottom:4px">{s}</div>'
             f'<div style="{_M}font-size:22px;font-weight:700;color:{c};margin-bottom:2px">{m}×</div>'
             f'<div style="background:#1a1a1a;height:3px;margin-bottom:5px">'
             f'<div style="background:{c};width:{int(float(m)*100)}%;height:3px"></div></div>'
@@ -583,7 +583,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         st.markdown(
             f'<div style="margin:.35rem 0 0;padding:.2rem .6rem;background:#0a0a0a;'
             f'border-left:3px solid {grp_col};border-bottom:1px solid #1e1e1e">'
-            f'<span style="{_M}font-size:6.5px;font-weight:700;color:{grp_col};letter-spacing:.15em">'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{grp_col};letter-spacing:.15em">'
             f'{grp_name}</span></div>',
             unsafe_allow_html=True,
         )
@@ -593,10 +593,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                 f'<div style="display:flex;align-items:center;gap:8px;padding:.3rem .6rem;'
                 f'background:#080808;border-bottom:1px solid #111">'
                 f'<div style="width:130px;flex-shrink:0">'
-                f'<span style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed">{ch_name}</span>'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed">{ch_name}</span>'
                 f'</div>'
                 f'<div style="width:60px;flex-shrink:0;text-align:right">'
-                f'<span style="{_M}font-size:8px;font-weight:700;color:{grp_col}">{ch_wt:.0%}</span>'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{grp_col}">{ch_wt:.0%}</span>'
                 f'</div>'
                 f'<div style="width:80px;flex-shrink:0">'
                 f'<div style="background:#1a1a1a;height:3px">'
@@ -689,8 +689,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             st.markdown(
                 f'<div style="margin:.35rem 0">'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
-                f'<span style="{_M}font-size:7px;font-weight:700;color:{col}">{abbr} · {full}</span>'
-                f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{pct}</span></div>'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{col}">{abbr} · {full}</span>'
+                f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{pct}</span></div>'
                 f'<div style="background:#1a1a1a;height:4px;position:relative">'
                 f'<div style="background:{col};width:{val*2}px;height:4px;max-width:100%"></div></div>'
                 f'<div style="{_S}font-size:0.62rem;color:{_MUT};margin-top:2px">{rationale}</div>'
@@ -700,13 +700,13 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     with col_sb:
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;padding:.5rem .7rem">'
-            f'<p style="{_M}font-size:7px;color:{_MUT};letter-spacing:.12em;margin-bottom:.4rem">SCORE BANDS</p>'
+            f'<p style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.12em;margin-bottom:.4rem">SCORE BANDS</p>'
             + "".join(
                 f'<div style="display:flex;align-items:center;gap:8px;padding:.25rem 0;'
                 f'border-bottom:1px solid #111">'
                 f'<div style="width:4px;height:24px;background:{c};flex-shrink:0"></div>'
                 f'<div>'
-                f'<span style="{_M}font-size:7px;font-weight:700;color:{c}">{band} · {lo}–{hi}</span><br>'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{c}">{band} · {lo}–{hi}</span><br>'
                 f'<span style="{_S}font-size:0.62rem;color:{_MUT}">{interp}</span>'
                 f'</div></div>'
                 for band, lo, hi, c, interp in [
@@ -754,7 +754,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'<div style="display:flex;gap:8px;margin:.4rem 0">'
         f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid #c0392b;padding:.45rem .7rem">'
-        f'<p style="{_M}font-size:7px;font-weight:700;color:#c0392b;margin:0 0 4px;letter-spacing:.08em">'
+        f'<p style="{_M}font-size:0.50rem;font-weight:700;color:#c0392b;margin:0 0 4px;letter-spacing:.08em">'
         f'EXAMPLE  ·  HORMUZ BLOCKADE  (high freshness)</p>'
         f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0;line-height:1.5">'
         f'Iran/Hormuz: oil_gas=0.97, chokepoint=0.97. Brent +4% intraday, PortWatch disruption=0.40.<br>'
@@ -763,7 +763,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'</div>'
         f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid #27ae60;padding:.45rem .7rem">'
-        f'<p style="{_M}font-size:7px;font-weight:700;color:#27ae60;margin:0 0 4px;letter-spacing:.08em">'
+        f'<p style="{_M}font-size:0.50rem;font-weight:700;color:#27ae60;margin:0 0 4px;letter-spacing:.08em">'
         f'EXAMPLE  ·  RUSSIA-UKRAINE  (quiescent day)</p>'
         f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0;line-height:1.5">'
         f'NatGas flat (+0.3%), Wheat +1%, no oil move. Both signals below 0.3 threshold → not fired.<br>'
@@ -788,8 +788,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'<div style="display:flex">'
         + "".join(
             f'<div style="flex:1;padding:.45rem .7rem;background:#080808;border-right:1px solid #111">'
-            f'<div style="{_M}font-size:7px;font-weight:700;color:{c};letter-spacing:.08em;margin-bottom:3px">{s}</div>'
-            f'<div style="{_M}font-size:8px;color:#e8e9ed;margin-bottom:2px">{threshold}</div>'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{c};letter-spacing:.08em;margin-bottom:3px">{s}</div>'
+            f'<div style="{_M}font-size:0.50rem;color:#e8e9ed;margin-bottom:2px">{threshold}</div>'
             f'<div style="{_S}font-size:0.65rem;color:{_MUT}">{effect}</div>'
             f'</div>'
             for s, c, threshold, effect in [
@@ -812,7 +812,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     st.markdown(
         f'<div style="border:1px solid #1e1e1e;margin:.4rem 0 .2rem">'
         f'<div style="background:#0a0a0a;padding:.35rem .7rem;border-bottom:1px solid #1e1e1e">'
-        f'<span style="{_M}font-size:7px;font-weight:700;color:{_G};letter-spacing:.12em">'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{_G};letter-spacing:.12em">'
         f'CONFIDENCE  =  0.35 × conflict_conf  +  0.35 × news_conf  +  0.20 × mcs_agreement  +  0.10 × data_availability</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -891,7 +891,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'<div style="display:flex;gap:8px;margin:.4rem 0">'
         f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid {_G};padding:.5rem .8rem">'
-        f'<p style="{_M}font-size:7px;font-weight:700;color:{_G};letter-spacing:.12em;margin:0 0 5px">GRS PIPELINE</p>'
+        f'<p style="{_M}font-size:0.50rem;font-weight:700;color:{_G};letter-spacing:.12em;margin:0 0 5px">GRS PIPELINE</p>'
         f'<p style="{_S}font-size:0.65rem;color:{_DIM};margin:0;line-height:1.6">'
         f'<b style="color:#e8e9ed">Source:</b> <code>conflict_model.py</code> · CONFLICTS registry (6 parametric conflicts)<br>'
         f'<b style="color:#e8e9ed">Inputs:</b> News GPR (RSS classification) + CIS (conflict events) + Chokepoint (PortWatch) + MCS (oil-gold)<br>'
@@ -899,7 +899,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'</div>'
         f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid #8E9AAA;padding:.5rem .8rem">'
-        f'<p style="{_M}font-size:7px;font-weight:700;color:#8E9AAA;letter-spacing:.12em;margin:0 0 5px">MAP PIPELINE</p>'
+        f'<p style="{_M}font-size:0.50rem;font-weight:700;color:#8E9AAA;letter-spacing:.12em;margin:0 0 5px">MAP PIPELINE</p>'
         f'<p style="{_S}font-size:0.65rem;color:{_DIM};margin:0;line-height:1.6">'
         f'<b style="color:#e8e9ed">Source:</b> <code>war_country_scores.py</code> · WAR_DATA (3 war base scores)<br>'
         f'<b style="color:#e8e9ed">Inputs:</b> Static base scores × live commodity z-score multipliers (gas/oil/gold) × per-country structural weights<br>'
@@ -907,7 +907,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'</div>'
         f'</div>'
         f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:.4rem .8rem;margin-top:4px">'
-        f'<p style="{_M}font-size:7px;font-weight:700;color:#e67e22;letter-spacing:.1em;margin:0 0 3px">LINKAGE</p>'
+        f'<p style="{_M}font-size:0.50rem;font-weight:700;color:#e67e22;letter-spacing:.1em;margin:0 0 3px">LINKAGE</p>'
         f'<p style="{_S}font-size:0.65rem;color:{_DIM};margin:0;line-height:1.5">'
         f'Map scores feed <code>proactive_alerts._check_country_exposure()</code> via <code>war_country_scores.compute_country_scores()</code>. '
         f'When any equity-indexed country\'s composite score ≥ 65, a country exposure alert fires. '
@@ -948,8 +948,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     for col, step, title, detail in pipeline_steps:
         st.markdown(
             f'<div style="flex:1;padding:.4rem .6rem;background:#080808;border-right:1px solid #1e1e1e">'
-            f'<div style="{_M}font-size:6.5px;font-weight:700;color:{col};letter-spacing:.12em;margin-bottom:3px">{step}</div>'
-            f'<div style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed;margin-bottom:2px">{title}</div>'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{col};letter-spacing:.12em;margin-bottom:3px">{step}</div>'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed;margin-bottom:2px">{title}</div>'
             f'<div style="{_S}font-size:0.62rem;color:{_MUT}">{detail}</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -972,7 +972,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             + "".join(
                 f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
                 f'border-top:2px solid {c};padding:.45rem .6rem">'
-                f'<div style="{_M}font-size:7px;font-weight:700;color:{c};letter-spacing:.1em;margin-bottom:5px">{label}</div>'
+                f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{c};letter-spacing:.1em;margin-bottom:5px">{label}</div>'
                 f'<div style="{_S}font-size:0.63rem;color:{_DIM};margin-bottom:4px">{timing}</div>'
                 f'<div style="{_S}font-size:0.61rem;color:{_MUT};font-style:italic">{kws}</div>'
                 f'</div>'
@@ -1038,8 +1038,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         st.markdown(
             f'<div style="flex:1;background:#080808;border:1px solid #1e1e1e;'
             f'border-top:none;padding:.45rem .6rem">'
-            f'<div style="{_M}font-size:7px;font-weight:700;color:{col};margin-bottom:2px">{name}</div>'
-            f'<div style="{_M}font-size:7px;color:{_MUT};margin-bottom:4px">{threshold}</div>'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{col};margin-bottom:2px">{name}</div>'
+            f'<div style="{_M}font-size:0.50rem;color:{_MUT};margin-bottom:4px">{threshold}</div>'
             f'<div style="{_S}font-size:0.63rem;color:{_DIM};line-height:1.4">{interp}</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -1107,9 +1107,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             st.markdown(
                 f'<div style="display:flex;gap:8px;padding:.3rem .5rem;'
                 f'background:#080808;border-bottom:1px solid #111;align-items:flex-start">'
-                f'<span style="{_M}font-size:7px;color:{_G};flex-shrink:0;margin-top:1px">▶</span>'
+                f'<span style="{_M}font-size:0.50rem;color:{_G};flex-shrink:0;margin-top:1px">▶</span>'
                 f'<div>'
-                f'<span style="{_M}font-size:7.5px;font-weight:700;color:#e8e9ed">{sig}</span>'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:#e8e9ed">{sig}</span>'
                 f'<span style="{_S}font-size:0.63rem;color:{_DIM};margin-left:6px">{desc}</span>'
                 f'</div></div>',
                 unsafe_allow_html=True,
@@ -1130,14 +1130,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # Method type legend
     st.markdown(
         f'<div style="display:flex;gap:8px;margin:.4rem 0 .6rem;align-items:center">'
-        f'<span style="{_M}font-size:7px;color:{_MUT};letter-spacing:.12em">METHOD TYPE ▸</span>'
-        f'<span style="{_M}font-size:7px;background:#1a1a1a;border:1px solid #c0392b;'
+        f'<span style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.12em">METHOD TYPE ▸</span>'
+        f'<span style="{_M}font-size:0.50rem;background:#1a1a1a;border:1px solid #c0392b;'
         f'color:#c0392b;padding:1px 7px">DIRECTIONAL</span>'
-        f'<span style="{_M}font-size:7px;color:{_MUT};margin:0 4px">-</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_MUT};margin:0 4px">-</span>'
         f'<span style="{_S}font-size:0.67rem;color:{_DIM}">identifies which asset leads / lags</span>'
-        f'<span style="{_M}font-size:7px;background:#1a1a1a;border:1px solid {_G};'
+        f'<span style="{_M}font-size:0.50rem;background:#1a1a1a;border:1px solid {_G};'
         f'color:{_G};padding:1px 7px;margin-left:12px">AGGREGATE</span>'
-        f'<span style="{_M}font-size:7px;color:{_MUT};margin:0 4px">-</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_MUT};margin:0 4px">-</span>'
         f'<span style="{_S}font-size:0.67rem;color:{_DIM}">portfolio-level total spillover index</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -1149,15 +1149,15 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid #c0392b;padding:.55rem .75rem;height:100%">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:#c0392b">GRANGER CAUSALITY</span>'
-            f'<span style="{_M}font-size:7px;border:1px solid #c0392b;color:#c0392b;padding:1px 5px">'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:#c0392b">GRANGER CAUSALITY</span>'
+            f'<span style="{_M}font-size:0.50rem;border:1px solid #c0392b;color:#c0392b;padding:1px 5px">'
             f'DIRECTIONAL · LINEAR</span>'
             f'</div>'
             f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0 0 .4rem;line-height:1.5">'
             f'Tests whether lagged X improves the forecast of Y beyond Y\'s own lags. '
             f'Rejects H₀ if X contains predictive information about Y.</p>'
             f'<div style="background:#040404;border-left:2px solid #c0392b;padding:.35rem .5rem;margin:.3rem 0">'
-            f'<code style="{_M}font-size:8px;color:#c0392b;white-space:pre-wrap;line-height:1.6">'
+            f'<code style="{_M}font-size:0.50rem;color:#c0392b;white-space:pre-wrap;line-height:1.6">'
             f'H₀: X does not Granger-cause Y\n'
             f'Lag p* selected by BIC over p ∈ {{1, …, 5}}\n'
             f'F-test run at BIC-optimal lag only\n'
@@ -1172,15 +1172,15 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid #e67e22;padding:.55rem .75rem;height:100%">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:#e67e22">TRANSFER ENTROPY</span>'
-            f'<span style="{_M}font-size:7px;border:1px solid #e67e22;color:#e67e22;padding:1px 5px">'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:#e67e22">TRANSFER ENTROPY</span>'
+            f'<span style="{_M}font-size:0.50rem;border:1px solid #e67e22;color:#e67e22;padding:1px 5px">'
             f'DIRECTIONAL · NONLINEAR</span>'
             f'</div>'
             f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0 0 .4rem;line-height:1.5">'
             f'Model-free directed information flow from X to Y. Captures nonlinear dependencies '
             f'Granger cannot detect. Net TE isolates the dominant transmission direction.</p>'
             f'<div style="background:#040404;border-left:2px solid #e67e22;padding:.35rem .5rem;margin:.3rem 0">'
-            f'<code style="{_M}font-size:8px;color:#e67e22;white-space:pre-wrap;line-height:1.6">'
+            f'<code style="{_M}font-size:0.50rem;color:#e67e22;white-space:pre-wrap;line-height:1.6">'
             f'TE(X→Y) = Σ p(y_t+1, y_t, x_t)\n'
             f'          · log[ p(y_t+1 | y_t, x_t)\n'
             f'               / p(y_t+1 | y_t) ]\n'
@@ -1195,15 +1195,15 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid {_G};padding:.55rem .75rem;height:100%">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{_G}">DIEBOLD-YILMAZ (2012)</span>'
-            f'<span style="{_M}font-size:7px;border:1px solid {_G};color:{_G};padding:1px 5px">'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_G}">DIEBOLD-YILMAZ (2012)</span>'
+            f'<span style="{_M}font-size:0.50rem;border:1px solid {_G};color:{_G};padding:1px 5px">'
             f'AGGREGATE · VARIANCE DECOMP</span>'
             f'</div>'
             f'<p style="{_S}font-size:0.67rem;color:{_DIM};margin:0 0 .4rem;line-height:1.5">'
             f'Cholesky-orthogonalized forecast error variance decomposition of a VAR. '
             f'θᵢⱼ(H) = fraction of asset i\'s H-step forecast variance explained by shocks to j.</p>'
             f'<div style="background:#040404;border-left:2px solid {_G};padding:.35rem .5rem;margin:.3rem 0">'
-            f'<code style="{_M}font-size:8px;color:{_G};white-space:pre-wrap;line-height:1.6">'
+            f'<code style="{_M}font-size:0.50rem;color:{_G};white-space:pre-wrap;line-height:1.6">'
             f'θᵢⱼ(H) = Cholesky-orthogonalized FEVD\n'
             f'  (statsmodels VAR.fevd(), Cholesky P)\n'
             f'Total SI = (Σᵢ≠ⱼ θᵢⱼ) / N × 100</code></div>'
@@ -1219,7 +1219,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     st.markdown(
         f'<div style="display:flex;gap:0;margin:.6rem 0 0;border:1px solid #1e1e1e">'
         f'<div style="flex:1;padding:.4rem .7rem;border-right:1px solid #1e1e1e;background:#080808">'
-        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.1em;margin-bottom:3px">'
+        f'<div style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.1em;margin-bottom:3px">'
         f'INTERPRETATION HIERARCHY</div>'
         f'<span style="{_S}font-size:0.67rem;color:{_DIM}">'
         f'Granger → establishes statistical lead/lag.  '
@@ -1227,7 +1227,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         f'DY → sizes total spillover exposure.</span>'
         f'</div>'
         f'<div style="flex:0 0 auto;padding:.4rem .7rem;background:#080808">'
-        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.1em;margin-bottom:3px">'
+        f'<div style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.1em;margin-bottom:3px">'
         f'CONSENSUS RULE</div>'
         f'<span style="{_S}font-size:0.67rem;color:{_DIM}">'
         f'Flag spillover only when ≥ 2 of 3 methods agree on direction and significance.</span>'
@@ -1303,9 +1303,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="display:flex;gap:0;align-items:stretch;border-bottom:1px solid #111">'
             f'<div style="width:3px;background:{_sc};flex-shrink:0"></div>'
             f'<div style="padding:.3rem .6rem;width:70px;flex-shrink:0;display:flex;align-items:center">'
-            f'<code style="{_M}font-size:8px;color:{_sc}">{_sh}</code></div>'
+            f'<code style="{_M}font-size:0.50rem;color:{_sc}">{_sh}</code></div>'
             f'<div style="padding:.3rem .6rem;width:140px;flex-shrink:0;display:flex;align-items:center">'
-            f'<span style="{_M}font-size:8px;color:#e8e9ed">{_sn}</span></div>'
+            f'<span style="{_M}font-size:0.50rem;color:#e8e9ed">{_sn}</span></div>'
             f'<div style="padding:.3rem .6rem;flex:1;display:flex;align-items:center">'
             f'<span style="{_S}font-size:0.65rem;color:{_DIM}">{_sd}</span></div>'
             f'</div>'
@@ -1342,11 +1342,11 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         )
         st.markdown(
             f'<div style="background:#040404;border:1px solid #1e1e1e;padding:.4rem .6rem;margin:.2rem 0">'
-            f'<div style="{_M}font-size:7px;color:{_MUT};margin-bottom:5px;letter-spacing:.1em">REGISTRY FIELDS USED</div>'
+            f'<div style="{_M}font-size:0.50rem;color:{_MUT};margin-bottom:5px;letter-spacing:.1em">REGISTRY FIELDS USED</div>'
             f'<div style="display:flex;flex-wrap:wrap;gap:4px">'
-            f'<code style="{_M}font-size:7.5px;color:{_G};background:#111;padding:2px 7px">affected_equities[ ]</code>'
-            f'<code style="{_M}font-size:7.5px;color:{_G};background:#111;padding:2px 7px">affected_commodities[ ]</code>'
-            f'<code style="{_M}font-size:7.5px;color:{_DIM};background:#111;padding:2px 7px">id</code>'
+            f'<code style="{_M}font-size:0.50rem;color:{_G};background:#111;padding:2px 7px">affected_equities[ ]</code>'
+            f'<code style="{_M}font-size:0.50rem;color:{_G};background:#111;padding:2px 7px">affected_commodities[ ]</code>'
+            f'<code style="{_M}font-size:0.50rem;color:{_DIM};background:#111;padding:2px 7px">id</code>'
             f'</div>'
             f'<p style="{_S}font-size:0.63rem;color:{_MUT};margin:.4rem 0 0;line-height:1.4">'
             f'6 conflicts × affected assets → separate IRF panel per conflict. '
@@ -1372,13 +1372,13 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     st.markdown(
         f'<div style="display:flex;gap:0;margin:.5rem 0 0;border:1px solid #1e1e1e">'
         f'<div style="flex:1;padding:.35rem .7rem;border-right:1px solid #1e1e1e;background:#040404">'
-        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.1em;margin-bottom:2px">PRIMARY REFERENCE</div>'
+        f'<div style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.1em;margin-bottom:2px">PRIMARY REFERENCE</div>'
         f'<span style="{_S}font-size:0.65rem;color:{_DIM}">'
         f'Jordà, Ò. (2005). Estimation and Inference of Impulse Responses by Local Projections. '
         f'<em>American Economic Review</em>, 95(1), 161–182.</span>'
         f'</div>'
         f'<div style="flex:1;padding:.35rem .7rem;background:#040404">'
-        f'<div style="{_M}font-size:7px;color:{_MUT};letter-spacing:.1em;margin-bottom:2px">SE SPECIFICATION</div>'
+        f'<div style="{_M}font-size:0.50rem;color:{_MUT};letter-spacing:.1em;margin-bottom:2px">SE SPECIFICATION</div>'
         f'<span style="{_S}font-size:0.65rem;color:{_DIM}">'
         f'Montiel Olea, J.L. &amp; Plagborg-Møller, M. (2021). Local Projection Inference is Simpler and '
         f'More Robust Than You Think. <em>Econometrica</em>, 89(4), 1789–1823.</span>'
@@ -1412,7 +1412,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="flex:1;background:#080808;{_sep}'
             f'border-top:3px solid {_col};padding:.4rem .5rem;text-align:center;min-width:0">'
             f'<div style="{_M}font-size:20px;font-weight:700;color:{_col};line-height:1">{_num}</div>'
-            f'<div style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.1em;color:#e8e9ed;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.1em;color:#e8e9ed;'
             f'text-transform:uppercase;margin-top:3px">{_lbl}</div>'
             f'</div>'
         )
@@ -1428,10 +1428,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid {_G};padding:.55rem .75rem;margin-bottom:.5rem">'
-            f'<div style="{_M}font-size:8px;font-weight:700;color:{_G};letter-spacing:.1em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{_G};letter-spacing:.1em;'
             f'text-transform:uppercase;margin-bottom:.4rem">TRANSITION MATRIX</div>'
             f'<div style="background:#040404;border-left:2px solid {_G};padding:.35rem .5rem;margin:.3rem 0">'
-            f'<code style="{_M}font-size:8.5px;color:{_G};white-space:pre-wrap;line-height:1.6">'
+            f'<code style="{_M}font-size:0.53rem;color:{_G};white-space:pre-wrap;line-height:1.6">'
             f'P[i,j] = count(r_t=i, r_t+1=j)\n'
             f'          / count(r_t=i)\n'
             f'Shape: 4×4  ·  row-stochastic</code></div>'
@@ -1444,10 +1444,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid {_DIM};padding:.55rem .75rem">'
-            f'<div style="{_M}font-size:8px;font-weight:700;color:{_DIM};letter-spacing:.1em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:{_DIM};letter-spacing:.1em;'
             f'text-transform:uppercase;margin-bottom:.4rem">STEADY-STATE DISTRIBUTION</div>'
             f'<div style="background:#040404;border-left:2px solid {_DIM};padding:.35rem .5rem;margin:.3rem 0">'
-            f'<code style="{_M}font-size:8.5px;color:{_DIM};white-space:pre-wrap;line-height:1.6">'
+            f'<code style="{_M}font-size:0.53rem;color:{_DIM};white-space:pre-wrap;line-height:1.6">'
             f'π = π · P   s.t.  Σπᵢ = 1\n'
             f'Left eigenvector of P for λ = 1</code></div>'
             f'<p style="{_S}font-size:0.65rem;color:{_DIM};margin:.3rem 0 0;line-height:1.5">'
@@ -1460,10 +1460,10 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid #e67e22;padding:.55rem .75rem;margin-bottom:.5rem">'
-            f'<div style="{_M}font-size:8px;font-weight:700;color:#e67e22;letter-spacing:.1em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#e67e22;letter-spacing:.1em;'
             f'text-transform:uppercase;margin-bottom:.4rem">MEAN FIRST PASSAGE TIME</div>'
             f'<div style="background:#040404;border-left:2px solid #e67e22;padding:.35rem .5rem;margin:.3rem 0">'
-            f'<code style="{_M}font-size:8.5px;color:#e67e22;white-space:pre-wrap;line-height:1.6">'
+            f'<code style="{_M}font-size:0.53rem;color:#e67e22;white-space:pre-wrap;line-height:1.6">'
             f'm[i,j] = 1 + Σ_{{k≠j}}  P[i,k] · m[k,j]\n'
             f'Solved as linear system\n'
             f'(fundamental matrix method)</code></div>'
@@ -1477,7 +1477,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="display:flex;justify-content:space-between;align-items:center;'
             f'padding:.25rem .4rem;background:#040404;border-left:2px solid {_rc};'
             f'margin-bottom:2px">'
-            f'<span style="{_M}font-size:7.5px;color:{_rc};text-transform:uppercase">{_rl}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{_rc};text-transform:uppercase">{_rl}</span>'
             f'<span style="{_S}font-size:0.62rem;color:{_DIM}">mean run · P75 · longest</span>'
             f'</div>'
             for _rl, _rc in [
@@ -1488,7 +1488,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         st.markdown(
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-top:2px solid #c0392b;padding:.55rem .75rem">'
-            f'<div style="{_M}font-size:8px;font-weight:700;color:#c0392b;letter-spacing:.1em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;color:#c0392b;letter-spacing:.1em;'
             f'text-transform:uppercase;margin-bottom:.4rem">RUN STATISTICS</div>'
             + _run_rows +
             f'<p style="{_S}font-size:0.62rem;color:{_MUT};margin:.35rem 0 0;line-height:1.4;font-style:italic">'
@@ -1522,15 +1522,15 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'{"border-right:1px solid #1e1e1e;" if _pi < 3 else ""}'
             f'padding:.5rem .6rem;min-width:0;text-align:center">'
             f'<div style="{_M}font-size:16px;font-weight:700;color:{_pc};line-height:1">{_pa}</div>'
-            f'<div style="{_M}font-size:6.5px;font-weight:700;letter-spacing:.09em;color:#e8e9ed;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.09em;color:#e8e9ed;'
             f'text-transform:uppercase;margin:.3rem 0 .25rem">{_pb}</div>'
-            f'<code style="{_M}font-size:7.5px;color:{_MUT};white-space:pre-wrap;line-height:1.4">{_pd}</code>'
+            f'<code style="{_M}font-size:0.50rem;color:{_MUT};white-space:pre-wrap;line-height:1.4">{_pd}</code>'
             f'</div>'
         )
         if _pi < 3:
             _pe_flow += (
                 f'<div style="display:flex;align-items:center;padding:0 4px;background:#050505">'
-                f'<span style="{_M}font-size:12px;color:{_MUT}">→</span>'
+                f'<span style="{_M}font-size:0.75rem;color:{_MUT}">→</span>'
                 f'</div>'
             )
     _pe_flow += '</div>'
@@ -1581,13 +1581,13 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="display:flex;gap:0;align-items:stretch;background:{_sbg};border-bottom:1px solid #111">'
             f'<div style="width:3px;background:{_sc};flex-shrink:0"></div>'
             f'<div style="padding:.35rem .6rem;width:105px;flex-shrink:0;display:flex;align-items:center">'
-            f'<code style="{_M}font-size:8px;color:{_sc}">{_sk}</code></div>'
+            f'<code style="{_M}font-size:0.50rem;color:{_sc}">{_sk}</code></div>'
             f'<div style="padding:.35rem .6rem;width:160px;flex-shrink:0;display:flex;align-items:center">'
             f'<span style="{_S}font-size:0.69rem;color:#e8e9ed">{_sn}</span></div>'
             f'<div style="padding:.35rem .6rem;flex:1;display:flex;align-items:center">'
             f'<span style="{_S}font-size:0.67rem;color:{_DIM}">{_sd}</span></div>'
             f'<div style="padding:.35rem .6rem;width:110px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end">'
-            f'<span style="{_M}font-size:7px;color:{_MUT}">{_sv}</span></div>'
+            f'<span style="{_M}font-size:0.50rem;color:{_MUT}">{_sv}</span></div>'
             f'</div>'
         )
     _se_html += '</div>'
@@ -1623,13 +1623,13 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'border:1px solid #1e1e1e;overflow:hidden">'
             f'<div style="flex:2;background:#1a2a1a;display:flex;align-items:center;'
             f'justify-content:center;border-right:1px solid #2a2a2a">'
-            f'<span style="{_M}font-size:7px;color:#2e7d32">−30d PRE</span></div>'
+            f'<span style="{_M}font-size:0.50rem;color:#2e7d32">−30d PRE</span></div>'
             f'<div style="flex:3;background:#2a1a0a;display:flex;align-items:center;'
             f'justify-content:center;border-right:1px solid #2a2a2a">'
-            f'<span style="{_M}font-size:7px;color:#e67e22">← EVENT →</span></div>'
+            f'<span style="{_M}font-size:0.50rem;color:#e67e22">← EVENT →</span></div>'
             f'<div style="flex:4;background:#0a0a1a;display:flex;align-items:center;'
             f'justify-content:center">'
-            f'<span style="{_M}font-size:7px;color:{_DIM}">+60d POST</span></div>'
+            f'<span style="{_M}font-size:0.50rem;color:{_DIM}">+60d POST</span></div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -1642,14 +1642,14 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     def _badge_html(level: str) -> str:
         _bc = {"HIGH": "#c0392b", "MED": "#e67e22", "LOW": _DIM}.get(level, _DIM)
         return (
-            f'<span style="{_M}font-size:6.5px;border:1px solid {_bc};color:{_bc};'
+            f'<span style="{_M}font-size:0.50rem;border:1px solid {_bc};color:{_bc};'
             f'padding:0 4px;flex-shrink:0;align-self:flex-start;margin-top:2px">{level}</span>'
         )
 
     def _assumption_b(text: str, level: str = "MED") -> None:
         st.markdown(
             f'<div style="display:flex;gap:7px;margin:.2rem 0;align-items:flex-start">'
-            f'<span style="{_M}font-size:8px;color:#e67e22;flex-shrink:0;margin-top:2px">▲</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#e67e22;flex-shrink:0;margin-top:2px">▲</span>'
             f'<span style="{_S}font-size:0.69rem;color:#b8b8b8;flex:1;line-height:1.5">{text}</span>'
             + _badge_html(level) +
             f'</div>',
@@ -1659,7 +1659,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     def _limitation_b(text: str, level: str = "MED") -> None:
         st.markdown(
             f'<div style="display:flex;gap:7px;margin:.2rem 0;align-items:flex-start">'
-            f'<span style="{_M}font-size:8px;color:#c0392b;flex-shrink:0;margin-top:2px">■</span>'
+            f'<span style="{_M}font-size:0.50rem;color:#c0392b;flex-shrink:0;margin-top:2px">■</span>'
             f'<span style="{_S}font-size:0.69rem;color:#b8b8b8;flex:1;line-height:1.5">{text}</span>'
             + _badge_html(level) +
             f'</div>',
@@ -1702,7 +1702,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'<div style="width:3px;background:{_mc};flex-shrink:0"></div>'
             f'<div style="padding:.35rem .7rem;width:90px;flex-shrink:0;display:flex;'
             f'align-items:center;background:#040404">'
-            f'<span style="{_M}font-size:7.5px;font-weight:700;color:{_mc}">{_ml}</span></div>'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{_mc}">{_ml}</span></div>'
             f'<div style="padding:.35rem .7rem;flex:1;background:#080808">'
             f'<span style="{_S}font-size:0.68rem;color:{_DIM}">{_md}</span></div>'
             f'</div>'

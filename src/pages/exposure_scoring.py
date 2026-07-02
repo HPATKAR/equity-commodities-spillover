@@ -66,7 +66,7 @@ def _render_kpi_row(stats: dict, scenario: dict) -> None:
             st.markdown(
                 f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                 f'padding:8px 10px">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#555960;letter-spacing:.16em;text-transform:uppercase;'
                 f'display:block">{label}</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
@@ -80,7 +80,7 @@ def _render_kpi_row(stats: dict, scenario: dict) -> None:
 
 def _render_exposure_table(items: list[dict], title: str = "RANKED EXPOSURE") -> None:
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">{title}</p>',
         unsafe_allow_html=True,
     )
@@ -105,12 +105,12 @@ def _render_exposure_table(items: list[dict], title: str = "RANKED EXPOSURE") ->
             f'<div style="display:flex;align-items:center;gap:8px;'
             f'padding:4px 0;border-bottom:1px solid #141414">'
             # Asset name
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;'
             f'color:#c8cdd8;width:150px;flex-shrink:0;'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
             f'{a["asset"]}</span>'
             # Direction badge
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:{dir_col};border:1px solid {dir_col};padding:1px 4px;'
             f'flex-shrink:0;width:72px;text-align:center">{dir_text}</span>'
             # SAS bar
@@ -118,11 +118,11 @@ def _render_exposure_table(items: list[dict], title: str = "RANKED EXPOSURE") ->
             f'<div style="width:{bar_w}%;height:100%;background:{sas_col}"></div>'
             f'</div>'
             # SAS value
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
             f'color:{sas_col};width:30px;text-align:right;flex-shrink:0">'
             f'{sas:.0f}</span>'
             # Top conflict
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#555960;width:80px;flex-shrink:0;'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
             f'{top_c_label}</span>'
@@ -163,15 +163,15 @@ def _render_beta_chart(asset_data: dict) -> None:
     fig.update_layout(
         height=200,
         margin=dict(l=10, r=10, t=10, b=50),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="#080808",
+        plot_bgcolor="#080808",
         xaxis=dict(
-            tickfont=dict(size=8, family="JetBrains Mono, monospace"),
+            tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#c8c8c8"),
             tickangle=-20,
         ),
         yaxis=dict(
             range=[0, max(vals) * 1.35 if vals else 30],
-            tickfont=dict(size=7, family="JetBrains Mono, monospace"),
+            tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#c8c8c8"),
             showgrid=True, gridcolor="#1a1a1a",
             title=dict(text="Beta ×100", font=dict(size=8)),
         ),
@@ -215,14 +215,14 @@ def _render_conflict_affected_chart(conflict_id: str, conflict_color: str) -> No
     fig.update_layout(
         height=230,
         margin=dict(l=10, r=10, t=10, b=70),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="#080808",
+        plot_bgcolor="#080808",
         xaxis=dict(
-            tickfont=dict(size=7.5, family="JetBrains Mono, monospace"),
+            tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#c8c8c8"),
             tickangle=-35,
         ),
         yaxis=dict(
-            tickfont=dict(size=7, family="JetBrains Mono, monospace"),
+            tickfont=dict(size=8, family="JetBrains Mono, monospace", color="#c8c8c8"),
             showgrid=True, gridcolor="#1a1a1a",
         ),
         bargap=0.22,
@@ -244,12 +244,12 @@ def _render_hedge_panel() -> None:
         rows_html += (
             f'<div style="display:flex;align-items:center;gap:8px;'
             f'padding:4px 0;border-bottom:1px solid #141414">'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;'
             f'color:#c8cdd8;width:170px;flex-shrink:0">{a["asset"]}</span>'
             f'<div style="flex:1;height:5px;background:#1a1a1a">'
             f'<div style="width:{bar}%;height:100%;background:#27ae60"></div>'
             f'</div>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
             f'color:#27ae60;width:30px;text-align:right">{hs:.0f}</span>'
             f'</div>'
         )
@@ -320,11 +320,11 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     st.markdown(
         f'<div style="background:#0d0d0d;border-left:3px solid {mult_color};'
         f'padding:6px 12px;margin-bottom:12px">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:{mult_color};font-weight:700">{scenario.get("label","Base").upper()} SCENARIO</span>'
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA;'
+        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#8E9AAA;'
         f'margin-left:10px">{scenario.get("desc","")}</span>'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:{mult_color};margin-left:12px">geo_mult ×{geo_mult:.2f}</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -334,7 +334,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     try:
         all_assets       = score_all_assets()
     except Exception as e:
-        st.error(f"Exposure model error: {e}")
+        st.error("Exposure model error — see logs.")
         return
 
     stats = exposure_summary_stats(all_assets)
@@ -358,7 +358,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
 
     with col_side:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">TOP HEDGES</p>',
             unsafe_allow_html=True,
         )
@@ -366,7 +366,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
 
     # ── Asset drill-down ───────────────────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'ASSET CONFLICT BETA DECOMPOSITION</p>',
         unsafe_allow_html=True,
@@ -387,13 +387,13 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
         st.markdown(
             f'<div style="border-left:3px solid {_sas_color(a["sas"])};'
             f'padding:4px 12px;margin-bottom:8px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
             f'font-weight:700;color:{_sas_color(a["sas"])}">{selected_asset}</span>'
             f'<span style="margin-left:10px;font-family:\'JetBrains Mono\',monospace;'
-            f'font-size:7px;color:{dir_col};border:1px solid {dir_col};'
+            f'font-size:0.50rem;color:{dir_col};border:1px solid {dir_col};'
             f'padding:1px 4px">{dir_text}</span>'
             f'<span style="margin-left:10px;font-family:\'JetBrains Mono\',monospace;'
-            f'font-size:8px;color:#8E9AAA">'
+            f'font-size:0.50rem;color:#8E9AAA">'
             f'SES {a["ses"]:.2f} · TAE {a["tae"]:.2f} · SAS {a["sas"]:.0f}'
             + (f' (raw {a["sas_raw"]:.0f} - capped at 100 by scenario mult)' if a.get("sas_capped") else "")
             + f'</span>'
@@ -404,7 +404,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
 
     # ── Conflict-specific affected universe ────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'CONFLICT AFFECTED UNIVERSE</p>',
         unsafe_allow_html=True,
@@ -422,7 +422,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     if conflict_id_sel:
         conf = conflict_options[conflict_id_sel]
         st.markdown(
-            f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin-bottom:8px">'
             f'ASSETS EXPOSED TO {conf["name"].upper()}</p>',
             unsafe_allow_html=True,
@@ -442,9 +442,9 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     st.markdown(
         '<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
         'padding:10px 14px;margin-top:16px">'
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#555960;letter-spacing:.16em;margin:0 0 4px">METHODOLOGY</p>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;'
         'color:#8E9AAA;line-height:1.6;margin:0">'
         'SES (Structural Exposure Score): CIS-weighted average of per-conflict structural '
         'exposure values from SECURITY_EXPOSURE registry. '

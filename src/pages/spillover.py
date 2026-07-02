@@ -72,7 +72,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             _sp_color = "#c0392b" if _sp_tps >= 65 else "#e67e22" if _sp_tps >= 45 else "#CFB991"
             _ch_tags  = "".join(
                 f'<span style="background:#0a1a0a;color:#27ae60;'
-                f'font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'padding:2px 6px;margin-right:5px;border:1px solid #27ae60;opacity:.8">'
                 f'{ch.replace("_"," ").upper()}</span>'
                 for ch, _ in _top_channels
@@ -81,10 +81,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="background:#080808;border:1px solid #1e1e1e;'
                 f'border-left:3px solid {_sp_color};padding:.4rem .9rem;'
                 f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'font-weight:700;color:{_sp_color};white-space:nowrap">ACTIVE TRANSMISSION CHANNELS</span>'
                 f'{_ch_tags}'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#8E9AAA;margin-left:auto">'
                 f'TPS&nbsp;<b style="color:{_sp_color}">{_sp_tps:.0f}</b>&nbsp;·&nbsp;'
                 f'CIS&nbsp;<b style="color:#e67e22">{_sp_cis:.0f}</b>&nbsp;·&nbsp;'
@@ -329,7 +329,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<div style="background:#1a1000;border:1px solid #5a3e00;'
             f'border-left:3px solid #e67e22;padding:.45rem .85rem;'
-            f'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:10px">'
+            f'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:0.63rem">'
             f'<span style="color:#e67e22;font-weight:700">⚠ STATIONARITY WARNING</span>'
             f'<span style="color:#8E9AAA;margin-left:.6rem">'
             f'ADF test did not reject unit root for: '
@@ -349,38 +349,38 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             f'border-left:4px solid {_sp_color};padding:.55rem 1rem;margin-bottom:.6rem;'
             f'display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">'
             f'<div>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#8E9AAA">'
             f'TOTAL SPILLOVER INDEX</span><br>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
             f'font-weight:700;color:{_sp_color};line-height:1.1">{total_sp:.1f}%</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
             f'font-weight:700;color:{_sp_color};margin-left:6px">{_sp_level}</span>'
             f'</div>'
             f'<div style="border-left:1px solid #2a2a2a;padding-left:1.2rem">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">DIRECTION</span><br>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.69rem;'
             f'font-weight:700;color:#CFB991">{_dir_icon} {dy_dir}</span>'
             f'</div>'
             f'<div style="border-left:1px solid #2a2a2a;padding-left:1.2rem">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">TOP TRANSMITTER</span><br>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.69rem;'
             f'font-weight:700;color:#27ae60">{dy_top_tx} '
-            f'<span style="font-size:9px;color:#8E9AAA">'
+            f'<span style="font-size:0.56rem;color:#8E9AAA">'
             f'(+{dy_net.get(dy_top_tx, 0):.1f}%)</span></span>'
             f'</div>'
             f'<div style="border-left:1px solid #2a2a2a;padding-left:1.2rem">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">TOP RECEIVER</span><br>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.69rem;'
             f'font-weight:700;color:#c0392b">{dy_top_rx} '
-            f'<span style="font-size:9px;color:#8E9AAA">'
+            f'<span style="font-size:0.56rem;color:#8E9AAA">'
             f'({dy_net.get(dy_top_rx, 0):.1f}%)</span></span>'
             f'</div>'
             f'<div style="margin-left:auto;font-family:\'DM Sans\',sans-serif;'
-            f'font-size:9px;color:#555960;text-align:right">'
+            f'font-size:0.56rem;color:#555960;text-align:right">'
             f'Diebold-Yilmaz (2012) FEVD<br>VAR({4}) · H={10} · {len(dy_valid)} assets</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -469,12 +469,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         _col.markdown(
                             f'<div style="background:#0d0d0d;border:1px solid #2a2a2a;'
                             f'border-top:2px solid {_color};padding:.5rem .7rem;text-align:center">'
-                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">{_label_txt}</div>'
                             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:20px;'
                             f'font-weight:700;color:{_color}">'
                             f'{"—" if not isinstance(_tc, float) or np.isnan(_tc) else f"{_tc:.1f}%"}</div>'
-                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             f'color:#555960">{_period}</div></div>',
                             unsafe_allow_html=True,
                         )
@@ -492,7 +492,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
                     if _net_rows:
                         st.markdown(
-                            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             'color:#8E9AAA;margin:.6rem 0 .2rem">NET within-band connectedness '
                             '(TO − FROM). Green = transmitter at that horizon.</p>',
                             unsafe_allow_html=True,
@@ -537,7 +537,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         _gap_color = "#c0392b" if _bk_gap > 0.5 else "#27ae60"
                         st.markdown(
                             f'<div style="font-family:\'JetBrains Mono\',monospace;'
-                            f'font-size:8px;color:#8E9AAA;margin:.5rem 0 0">'
+                            f'font-size:0.50rem;color:#8E9AAA;margin:.5rem 0 0">'
                             f'Invariant check — '
                             f'Σ bands: <b style="color:#CFB991">{_bk_sum:.2f}%</b> '
                             f'| Full-spectrum GFEVD: <b style="color:#CFB991">{_bk_ful:.2f}%</b> '
@@ -816,14 +816,14 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         st.markdown(
                             f'<div style="background:{_bg};{_border};'
                             f'padding:.4rem .7rem;margin-bottom:.3rem">'
-                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             f'font-weight:700;letter-spacing:.14em;text-transform:uppercase;'
                             f'color:{_rcolor}">{_RNAMES[_rid]}{_label_sfx}</span>'
                             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
                             f'font-weight:700;color:{_rcolor if _is_cur else "#c8c8c8"};'
                             f'display:block;line-height:1.2">'
                             f'{"—" if not np.isfinite(_rsp) else f"{_rsp:.1f}%"}</span>'
-                            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+                            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;'
                             f'color:#8E9AAA">top tx: {_rtx} · {_rn} obs</span>'
                             f'</div>',
                             unsafe_allow_html=True,
@@ -835,7 +835,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 else:
                     st.info("Need equity + commodity assets selected for regime detection.")
             except Exception as _rc_e:
-                st.caption(f"Regime-conditional computation unavailable: {type(_rc_e).__name__}")
+                st.caption("Regime-conditional computation unavailable — see logs.")
         else:
             st.info("Select ≥ 3 VAR assets.")
 
@@ -939,7 +939,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         else:
             st.caption("Insufficient data for risk index history (need ≥ 120 days of returns).")
     except Exception as _sp_fan_err:
-        st.caption(f"Risk index fan chart unavailable: {_sp_fan_err}")
+        st.caption("Risk index fan chart unavailable — see logs.")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Granger Causality Network (GAP 24)
@@ -977,26 +977,26 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="background:#080808;border-left:3px solid #CFB991;'
                 f'border-radius:4px;padding:8px 14px;margin:6px 0;display:flex;gap:40px;">'
-                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;text-transform:uppercase">'
                 f'Hub Commodity</span><br>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:16px;'
                 f'font-weight:700;color:#CFB991">{_hub_cmd}</span>'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#8E9AAA">'
                 f' → {_hub_n} equity markets</span></div>'
-                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;text-transform:uppercase">'
                 f'Hub Equity</span><br>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:16px;'
                 f'font-weight:700;color:#e67e22">{_hub_eq}</span>'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#8E9AAA">'
                 f' → {_hub_eq_n} commodities</span></div>'
-                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;text-transform:uppercase">'
                 f'Significant Links</span><br>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:16px;'
                 f'font-weight:700;color:#c8c8c8">{_n_sig}</span>'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#8E9AAA">'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#8E9AAA">'
                 f' · cmd→eq {_n_cmd_to_eq} · eq→cmd {_n_eq_to_cmd}</span></div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -1019,7 +1019,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         "Node size ∝ number of significant outgoing links (hub = large node)."
                     )
             except Exception as _gr_err:
-                st.caption(f"Network render unavailable: {type(_gr_err).__name__}")
+                st.caption("Network render unavailable — see logs.")
 
         with _col_gr_hub:
             _label("Top Granger Transmitters")
@@ -1244,10 +1244,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="background:#080808;border-left:3px solid {_corr_color};'
                 f'border-radius:4px;padding:10px 14px;margin:6px 0;">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.69rem;'
                 f'font-weight:700;color:{_corr_color};letter-spacing:.08em;">'
                 f'MARKET STRUCTURE: {_corr["overall_signal"].upper()} · GRS={_grs_val:.0f}</span><br>'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#b0b0b0;">'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;color:#b0b0b0;">'
                 f'{_corr["detail"]}</span></div>',
                 unsafe_allow_html=True,
             )
@@ -1266,12 +1266,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     st.markdown(
                         f'<div style="background:#080808;border:1px solid #1e1e1e;'
                         f'border-top:2px solid {_sc};border-radius:4px;padding:10px 12px;">'
-                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                         f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;'
                         f'text-transform:uppercase">{_crow["name"]}</span><br>'
                         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
                         f'font-weight:700;color:{_sc}">{_struct}</span><br>'
-                        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+                        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;'
                         f'color:#8E9AAA">Basis {_arrow} {abs(_bp):.2f}%'
                         f'<br>Front: {_crow["front_price"]} {_crow["unit"]}'
                         f'<br>6M: {_crow["deferred_price"]} {_crow["unit"]}</span>'
@@ -1293,12 +1293,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         st.markdown(
                             f'<div style="background:#080808;border:1px solid #1e1e1e;'
                             f'border-top:2px solid {_sc};border-radius:4px;padding:10px 12px;">'
-                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             f'font-weight:700;letter-spacing:.1em;color:#8E9AAA;'
                             f'text-transform:uppercase">{_crow["name"]}</span><br>'
                             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
                             f'font-weight:700;color:{_sc}">{_struct}</span><br>'
-                            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+                            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;'
                             f'color:#8E9AAA">Basis {_arrow} {abs(_bp):.2f}%'
                             f'<br>Front: {_crow["front_price"]} {_crow["unit"]}'
                             f'<br>6M: {_crow["deferred_price"]} {_crow["unit"]}</span>'
@@ -1356,7 +1356,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         f"(deferred contract ticker may not be liquid on this date)."
                     )
     except Exception as _fc_err:
-        st.caption(f"Futures curve section unavailable: {type(_fc_err).__name__}: {_fc_err}")
+        st.caption("Futures curve section unavailable — see logs.")
 
     _page_conclusion(
         "Transmission Map",
@@ -1472,7 +1472,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 _tbl_md = (
                     f'<div style="margin-top:8px">'
                     f'<table style="width:100%;border-collapse:collapse;'
-                    f'font-family:\'JetBrains Mono\',monospace;font-size:9px">'
+                    f'font-family:\'JetBrains Mono\',monospace;font-size:0.56rem">'
                     f'<thead><tr>'
                     f'<th style="color:#555960;text-align:left;padding:3px 6px;'
                     f'border-bottom:1px solid #1e1e1e;letter-spacing:.08em">ASSET</th>'
@@ -1596,7 +1596,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     )
 
     except Exception as _cov_err:
-        st.caption(f"ΔCoVaR unavailable: {_cov_err}")
+        st.caption("ΔCoVaR unavailable — see logs.")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Jordà Local-Projection IRF
@@ -1653,14 +1653,14 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         if _lp_ok and not _lp_irf.empty:
             _lp_n_assets = _lp_irf["asset"].nunique()
             st.markdown(
-                f'<span style="{_F2}font-size:7.5px;color:#27ae60;'
+                f'<span style="{_F2}font-size:0.50rem;color:#27ae60;'
                 f'background:#0a1a0a;border:1px solid #27ae60;padding:2px 8px">'
                 f'SHOCK T={_lp_nobs}d · {_lp_n_assets} ASSETS · NW-HAC 90% CI</span>',
                 unsafe_allow_html=True,
             )
         elif _lp_err:
             st.markdown(
-                f'<span style="{_F2}font-size:7.5px;color:#c0392b;'
+                f'<span style="{_F2}font-size:0.50rem;color:#c0392b;'
                 f'background:#1a0a0a;border:1px solid #c0392b;padding:2px 8px">'
                 f'NO DATA — {_lp_err}</span>',
                 unsafe_allow_html=True,
@@ -1733,10 +1733,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     margin=dict(l=42, r=12, t=32, b=36),
                     title=dict(
                         text=(
-                            f'<span style="font-size:9px;color:#CFB991;'
+                            f'<span style="font-size:0.56rem;color:#CFB991;'
                             f'font-family:JetBrains Mono,monospace">{_asset}</span>'
                             + (
-                                f'<span style="font-size:7px;color:#27ae60"> ●</span>'
+                                f'<span style="font-size:0.50rem;color:#27ae60"> ●</span>'
                                 if _sig_any else ""
                             )
                         ),
@@ -1778,7 +1778,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             st.caption("LP regression returned no results — insufficient overlapping history.")
 
     except Exception as _lp_top_err:
-        st.caption(f"LP-IRF unavailable: {_lp_top_err}")
+        st.caption("LP-IRF unavailable — see logs.")
 
     # ── Conflict Layer: which active conflicts are driving the current spillover ──
     st.markdown(
@@ -1807,12 +1807,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     st.markdown(
                         f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                         f'border-left:2px solid {_cc2};padding:6px 8px;margin-bottom:4px">'
-                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+                        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                         f'font-weight:700;color:{_cc2}">{_cr2.get("label","?")}</span>'
-                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.69rem;'
                         f'font-weight:700;color:#CFB991;margin-top:2px">'
                         f'CIS×TPS {_trans_score:.0f}</div>'
-                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                         f'color:#555960">CIS {_cis2:.0f} · TPS {_tps2:.0f}</div>'
                         f'</div>',
                         unsafe_allow_html=True,

@@ -16,9 +16,8 @@ Page hierarchy:
 from __future__ import annotations
 
 import datetime
-import itertools
 import math
-from collections import Counter, OrderedDict
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -70,7 +69,7 @@ def _ph(title: str, accent: str = "") -> str:
     """Render a standardised panel header label."""
     color = accent if accent else _C["label"]
     return (
-        f'<div style="{_M}font-size:9.5px;font-weight:700;letter-spacing:.12em;'
+        f'<div style="{_M}font-size:0.60rem;font-weight:700;letter-spacing:.12em;'
         f'text-transform:uppercase;color:{color};margin-bottom:8px;'
         f'padding-bottom:5px;border-bottom:1px solid {_C["border"]}">'
         f'{title}</div>'
@@ -94,7 +93,7 @@ def _card(title: str, body: str, accent: str = "") -> None:
 # Status badge — one shape everywhere.
 def _badge(label: str, color: str) -> str:
     return (
-        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.1em;'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.1em;'
         f'text-transform:uppercase;color:{color};background:{color}18;'
         f'border:1px solid {color}44;border-radius:2px;padding:2px 7px">'
         f'{label}</span>'
@@ -110,7 +109,7 @@ _STYLE = """<style>
 html,body,[data-testid="stAppViewContainer"]{background:#000!important}
 [data-testid="stAppViewContainer"] p,
 [data-testid="stAppViewContainer"] li{
-  font-family:'DM Sans',sans-serif!important;font-size:12px;
+  font-family:'DM Sans',sans-serif!important;font-size:0.75rem;
   color:#e8e9ed!important;line-height:1.6}
 /* hide Streamlit top decoration & footer */
 #MainMenu,footer,[data-testid="stDecoration"]{display:none!important}
@@ -119,21 +118,21 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 .block-container{padding-top:.6rem!important;padding-bottom:1.5rem!important}
 [data-testid="stVerticalBlock"]{gap:.85rem!important}
 /* ── Typography classes ── */
-.hm-label{font-family:'JetBrains Mono',monospace!important;font-size:9.5px!important;
+.hm-label{font-family:'JetBrains Mono',monospace!important;font-size:0.60rem!important;
   font-weight:700!important;text-transform:uppercase;letter-spacing:.12em;
   color:#8890a1!important;display:block}
-.hm-sub{font-family:'DM Sans',sans-serif!important;font-size:12px!important;
+.hm-sub{font-family:'DM Sans',sans-serif!important;font-size:0.75rem!important;
   color:#e8e9ed!important;display:block;line-height:1.6}
-.hm-up{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
+.hm-up{font-family:'JetBrains Mono',monospace!important;font-size:0.69rem!important;
   font-weight:700!important;color:#c0392b!important}
-.hm-dn{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
+.hm-dn{font-family:'JetBrains Mono',monospace!important;font-size:0.69rem!important;
   font-weight:700!important;color:#27ae60!important}
-.hm-fl{font-family:'JetBrains Mono',monospace!important;font-size:11px!important;
+.hm-fl{font-family:'JetBrains Mono',monospace!important;font-size:0.69rem!important;
   font-weight:700!important;color:#e8e9ed!important}
 /* ── Panel card ── */
 .hm-card{background:#141414;border:1px solid #1e1e1e;border-left:2px solid rgba(207,185,145,0.22);
   padding:.75rem .8rem .65rem;margin-bottom:0}
-.hm-card-title{font-family:'JetBrains Mono',monospace!important;font-size:9.5px;
+.hm-card-title{font-family:'JetBrains Mono',monospace!important;font-size:0.60rem;
   font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#8890a1;
   padding-bottom:5px;border-bottom:1px solid #1e1e1e;margin-bottom:8px;display:block}
 /* ── Section rule ── */
@@ -141,7 +140,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 /* ── Section-level top spacer — applied to first element of each render block ── */
 .hm-section-top{margin-top:.6rem!important}
 /* ── Status badge ── */
-.hm-badge{font-family:'JetBrains Mono',monospace!important;font-size:8px!important;
+.hm-badge{font-family:'JetBrains Mono',monospace!important;font-size:0.50rem!important;
   font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   border-radius:2px;padding:2px 6px;display:inline-block}
 /* ── Conflict table rows ── */
@@ -159,7 +158,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 .hm-nav:hover .hm-sc{border-color:#CFB991!important;color:#CFB991!important}
 /* ── Use-case tags ── */
 .hm-tag{display:inline-block;font-family:'JetBrains Mono',monospace!important;
-  font-size:9px!important;font-weight:700;letter-spacing:.1em;
+  font-size:0.56rem!important;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;padding:1px 4px;border-radius:2px;margin-left:3px;
   vertical-align:middle}
 .hm-tag-daily{background:#0a1020;color:#2980b9!important}
@@ -167,7 +166,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 .hm-tag-deep {background:#0a1808;color:#27ae60!important}
 /* ── Shortcut hint ── */
 .hm-sc{display:inline-block;font-family:'JetBrains Mono',monospace!important;
-  font-size:9px!important;font-weight:700;color:#e8e9ed!important;
+  font-size:0.56rem!important;font-weight:700;color:#e8e9ed!important;
   border:1px solid #2a2a2a;border-radius:2px;padding:0 3px;
   margin-left:3px;vertical-align:middle;line-height:1.6}
 /* ── Recommendation row ── */
@@ -181,7 +180,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 /* ── Terminal buttons ── */
 [data-testid="stButton"]>button{
   font-family:'JetBrains Mono',monospace!important;
-  font-size:9px!important;font-weight:700!important;
+  font-size:0.56rem!important;font-weight:700!important;
   letter-spacing:.06em!important;text-transform:uppercase!important;
   border-radius:2px!important;padding:3px 6px!important;
   height:auto!important;min-height:0!important;line-height:1.5!important;
@@ -197,7 +196,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 [data-testid="stExpander"]{border:1px solid #1e1e1e!important;border-radius:3px!important;
   background:#0d0d0d!important}
 [data-testid="stExpander"] summary{font-family:'JetBrains Mono',monospace!important;
-  font-size:10px!important;font-weight:700!important;letter-spacing:.08em!important;
+  font-size:0.63rem!important;font-weight:700!important;letter-spacing:.08em!important;
   text-transform:uppercase!important;color:#8890a1!important}
 [data-testid="stHorizontalBlock"]{gap:.6rem!important}
 /* ── ANIMATIONS ───────────────────────────────────────────────────── */
@@ -322,7 +321,7 @@ def _home_logo_b64() -> str:
 def _err_slot(label: str) -> None:
     """One-liner placeholder when a render section fails — muted, non-alarming."""
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:{_C["muted"]};margin:2px 0 10px;letter-spacing:.06em">'
         f'{label} · unavailable</p>',
         unsafe_allow_html=True,
@@ -374,22 +373,22 @@ def _render_masthead(conflict_agg: dict) -> None:
         f'padding:.4rem 1rem;display:flex;align-items:center;gap:16px;'
         f'flex-wrap:wrap;margin-bottom:.75rem">'
         f'<span class="nx-live-dot"></span>'
-        f'<span style="{_M}font-size:11px;color:{_C["text"]};letter-spacing:.02em">'
+        f'<span style="{_M}font-size:0.69rem;color:{_C["text"]};letter-spacing:.02em">'
         f'{now.strftime("%a %d %b %Y")}&nbsp;'
         f'<span style="color:{_C["border2"]}">│</span>&nbsp;'
         f'{now.strftime("%H:%M")} LOCAL'
         f'</span>'
         f'<span class="hm-badge-pop" style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
         f'border:1px solid rgba({_sit_rgb},0.35);'
-        f'{_M}font-size:9px;font-weight:700;padding:2px 9px;letter-spacing:.14em;border-radius:1px">'
+        f'{_M}font-size:0.56rem;font-weight:700;padding:2px 9px;letter-spacing:.14em;border-radius:1px">'
         f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE'
         f'</span>'
-        f'<span style="{_M}font-size:10px;color:{_C["label"]}">{sc_note}</span>'
-        f'<span style="{_M}font-size:10px;color:{_C["label"]}">'
+        f'<span style="{_M}font-size:0.63rem;color:{_C["label"]}">{sc_note}</span>'
+        f'<span style="{_M}font-size:0.63rem;color:{_C["label"]}">'
         f'CIS&nbsp;<b class="hm-num-pop" style="color:{sit_color}">{cis:.0f}</b>'
         f'</span>'
         f'<span class="hm-badge-pop" style="margin-left:auto;background:{sit_color};color:#000;'
-        f'{_M}font-size:9px;font-weight:700;padding:3px 11px;letter-spacing:.16em">'
+        f'{_M}font-size:0.56rem;font-weight:700;padding:3px 11px;letter-spacing:.16em">'
         f'{sit_label}</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -430,7 +429,7 @@ def _sparkline_svg(
         f'stroke-linecap="round" stroke-linejoin="round"/>'
         f'<circle class="hm-dot-live" cx="{lx}" cy="{ly}" r="2.5" fill="{line_color}"/>'
         f'</svg>'
-        f'<span style="{_M}font-size:11px;color:{v_col};margin-left:5px;'
+        f'<span style="{_M}font-size:0.69rem;color:{v_col};margin-left:5px;'
         f'vertical-align:middle;font-weight:700">{v_lbl}</span>'
     )
 
@@ -442,15 +441,15 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
     return (
         f'<div style="display:flex;align-items:center;gap:7px;padding:5px 0;'
         f'border-bottom:1px solid {_C["border"]}">'
-        f'<span style="{_M}font-size:10px;color:{_C["text"]};min-width:95px;white-space:nowrap">'
+        f'<span style="{_M}font-size:0.63rem;color:{_C["text"]};min-width:95px;white-space:nowrap">'
         f'{label}</span>'
         f'<div style="flex:1;background:{_C["card2"]};height:5px;border-radius:1px">'
         f'<div class="hm-bar-grow" style="width:{pct:.0f}%;height:5px;background:{color};border-radius:1px"></div></div>'
-        f'<span style="{_M}font-size:12px;font-weight:700;color:{color};'
+        f'<span style="{_M}font-size:0.75rem;font-weight:700;color:{color};'
         f'min-width:26px;text-align:right">{value:.0f}</span>'
-        f'<span style="{_M}font-size:10px;color:{_C["label"]};min-width:52px">'
+        f'<span style="{_M}font-size:0.63rem;color:{_C["label"]};min-width:52px">'
         f'×{weight:.0%}={weighted_contribution:.0f}</span>'
-        f'<span style="{_F}font-size:12px;color:{_C["text"]}">{note}</span>'
+        f'<span style="{_F}font-size:0.75rem;color:{_C["text"]}">{note}</span>'
         f'</div>'
     )
 
@@ -733,7 +732,7 @@ def _render_geo_risk_block(
         freshness_text  = f"{'LIVE' if rs_status['status']=='live' else rs_status['label']} · {computed_at[11:16] if computed_at else '-'}"
 
     freshness = (
-        f'<span style="{_M}font-size:9px;color:{freshness_color};letter-spacing:.06em">'
+        f'<span style="{_M}font-size:0.56rem;color:{freshness_color};letter-spacing:.06em">'
         f'{freshness_text}</span>'
     )
 
@@ -785,11 +784,11 @@ def _render_geo_risk_block(
             f'<div style="display:flex;align-items:center;gap:10px;'
             f'border-top:3px solid {color};border-bottom:1px solid {_C["border"]};'
             f'background:{_C["card"]};padding:.45rem .9rem;margin-bottom:.4rem">'
-            f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'<span style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["text"]}">Geopolitical Risk Score</span>'
-            f'<span style="background:{color};color:#000;{_M}font-size:11px;font-weight:700;'
+            f'<span style="background:{color};color:#000;{_M}font-size:0.69rem;font-weight:700;'
             f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.1f}</span>'
-            f'<span style="{_M}font-size:10px;color:{_C["text"]};margin-left:4px">'
+            f'<span style="{_M}font-size:0.63rem;color:{_C["text"]};margin-left:4px">'
             f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
             f'&nbsp;·&nbsp;{spark_html}</span>'
             f'<span style="margin-left:auto">{freshness}</span>'
@@ -808,7 +807,7 @@ def _render_geo_risk_block(
     if is_fallback:
         st.markdown(
             f'<div style="background:#1a0a00;border:1px solid {_C["warn"]};border-left:3px solid {_C["warn"]};'
-            f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:{_C["warn"]}">'
+            f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:0.63rem;color:{_C["warn"]}">'
             f'⚠ MARKET DATA UNAVAILABLE - score is Conflict Model estimate only '
             f'(40% CIS + 35% TPS). MCS layer set to neutral 50. '
             f'Hit ↻ to retry.</div>',
@@ -817,7 +816,7 @@ def _render_geo_risk_block(
     elif is_eod:
         st.markdown(
             f'<div style="background:#0d0d08;border:1px solid {_GOLD};border-left:3px solid {_GOLD};'
-            f'padding:.2rem .8rem;margin-bottom:.4rem;{_M}font-size:10px;color:{_GOLD}">'
+            f'padding:.2rem .8rem;margin-bottom:.4rem;{_M}font-size:0.63rem;color:{_GOLD}">'
             f'Latest market close: {data_date} · Market Confirmation layer uses prior-day prices.</div>',
             unsafe_allow_html=True,
         )
@@ -835,14 +834,14 @@ def _render_geo_risk_block(
         )
         st.markdown(svg_gauge, unsafe_allow_html=True)
         st.markdown(
-            f'<p style="{_M}font-size:9px;color:{_C["label"]};margin:.2rem 0 0;'
+            f'<p style="{_M}font-size:0.56rem;color:{_C["label"]};margin:.2rem 0 0;'
             f'padding:0 2px">40% CIS&nbsp;·&nbsp;35% TPS&nbsp;·&nbsp;25% MCS</p>',
             unsafe_allow_html=True,
         )
     with _gauge_meta:
         # Score decomposition inline next to gauge
         st.markdown(
-            f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:10px;'
             f'padding-top:.5rem">Score Layers</div>',
             unsafe_allow_html=True,
@@ -856,7 +855,7 @@ def _render_geo_risk_block(
             st.markdown(
                 f'<div style="margin-bottom:10px">'
                 f'<div style="display:flex;justify-content:space-between;'
-                f'{_F}font-size:11px;margin-bottom:3px">'
+                f'{_F}font-size:0.69rem;margin-bottom:3px">'
                 f'<span style="color:{_C["text"]}">{_lbl}</span>'
                 f'<span style="{_M}font-weight:700;color:{_col}">{_val:.0f}</span>'
                 f'</div>'
@@ -869,10 +868,10 @@ def _render_geo_risk_block(
         if news_gpr is not None:
             st.markdown(
                 f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid {_C["border"]}">'
-                f'<div style="{_M}font-size:8px;color:{_C["label"]};letter-spacing:.12em;margin-bottom:3px">NEWS GPR</div>'
+                f'<div style="{_M}font-size:0.50rem;color:{_C["label"]};letter-spacing:.12em;margin-bottom:3px">NEWS GPR</div>'
                 f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD}">'
                 f'{news_gpr:.0f}</div>'
-                f'<div style="{_M}font-size:9px;color:{_C["muted"]}">'
+                f'<div style="{_M}font-size:0.56rem;color:{_C["muted"]}">'
                 f'{"▲" if n_threat else ""}{n_threat} threat &nbsp;·&nbsp; '
                 f'{"▲" if n_act_hl else ""}{n_act_hl} act</div>'
                 f'</div>',
@@ -883,9 +882,9 @@ def _render_geo_risk_block(
         f'<div style="margin:.8rem 0 .4rem;padding:.35rem .6rem;'
         f'background:{_C["card"]};border-top:1px solid {_C["border"]};'
         f'border-bottom:1px solid {_C["border"]}">'
-        f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
+        f'<span style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.16em;'
         f'text-transform:uppercase;color:{_C["label"]}">Market Fear Index</span>'
-        f'<span style="{_M}font-weight:400;font-size:9px;color:{_C["muted"]};margin-left:8px">'
+        f'<span style="{_M}font-weight:400;font-size:0.56rem;color:{_C["muted"]};margin-left:8px">'
         f'70% VIX · 20% OVX · 10% GVZ · implied vol composite</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -893,8 +892,8 @@ def _render_geo_risk_block(
     if score_history is not None and not score_history.empty:
         fig_hist = plot_risk_history(score_history, height=260)
         fig_hist.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="#080808",
+            plot_bgcolor="#080808",
             font={"color": _C["text"], "family": "JetBrains Mono, monospace", "size": 11},
             title_text="",
             margin=dict(l=52, r=24, t=18, b=64),
@@ -938,7 +937,7 @@ def _render_geo_risk_block(
         st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
     else:
         st.markdown(
-            f'<div style="{_F}font-size:12px;color:{_C["label"]};padding:2rem 0;'
+            f'<div style="{_F}font-size:0.75rem;color:{_C["label"]};padding:2rem 0;'
             f'text-align:center;border:1px solid {_C["border"]};margin-top:4px">'
             f'No market data available - check connection or date range.</div>',
             unsafe_allow_html=True,
@@ -961,7 +960,7 @@ def _render_geo_risk_block(
                 f'<div style="display:flex;justify-content:space-between;'
                 f'{_F}font-size:{"11" if indent else "12"}px;margin-bottom:2px">'
                 f'<span style="color:{_C["label"] if indent else _C["text"]}">{name.strip()}</span>'
-                f'<span style="{_M}font-size:12px;font-weight:700;color:{c_col}">{val:.0f}</span>'
+                f'<span style="{_M}font-size:0.75rem;font-weight:700;color:{c_col}">{val:.0f}</span>'
                 f'</div>'
                 f'<div style="height:4px;background:#1a1a1a;border-radius:1px;margin-bottom:5px">'
                 f'<div style="width:{pct:.0f}%;height:4px;'
@@ -969,7 +968,7 @@ def _render_geo_risk_block(
             )
         st.markdown(
             f'<div style="border-top:1px solid {_C["border"]};margin-top:.2rem;padding:.25rem .4rem .1rem">'
-            f'<p style="{_M}font-size:9px;font-weight:700;letter-spacing:.16em;'
+            f'<p style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:{_C["label"]};margin:0 0 .35rem">Sub-Components</p>'
             f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">{bars_html}</div>'
             f'</div>',
@@ -978,14 +977,14 @@ def _render_geo_risk_block(
 
     if dw:
         wt_items = "".join(
-            f'<span style="{_M}font-size:10px;color:{_C["text"]}">'
+            f'<span style="{_M}font-size:0.63rem;color:{_C["text"]}">'
             f'{k.replace("_", " ")}&nbsp;<b style="color:{_GOLD}">{v*100:.0f}%</b></span>'
             for k, v in dw.items()
         )
         st.markdown(
             f'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;'
             f'padding:.3rem .5rem;border-top:1px solid {_C["border"]};margin-top:.35rem">'
-            f'<span style="{_M}font-size:9px;letter-spacing:.14em;text-transform:uppercase;'
+            f'<span style="{_M}font-size:0.56rem;letter-spacing:.14em;text-transform:uppercase;'
             f'color:{_C["muted"]}">Dynamic Weights</span>'
             f'{wt_items}</div>',
             unsafe_allow_html=True,
@@ -1015,10 +1014,10 @@ def _render_geo_risk_block(
             f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};border-left:3px solid rgba(207,185,145,.35);'
             f'padding:.45rem .8rem .4rem;margin:.55rem 0 0">'
             f'<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">'
-            f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.18em;'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:rgba(207,185,145,.65);flex-shrink:0">'
             f'SCORING NOTE</span>'
-            f'<span style="{_F}font-size:11px;color:{_C["muted"]};line-height:1.58">'
+            f'<span style="{_F}font-size:0.69rem;color:{_C["muted"]};line-height:1.58">'
             f'GRS is <b style="color:{_C["label"]}">{score:.0f}</b> vs. '
             f'{_lead_name}\'s CIS of <b style="color:{_C["label"]}">{_lead_cis:.0f}</b> '
             f'({_gap:.0f}-pt gap) because the score is market-corroborated: '
@@ -1050,10 +1049,10 @@ def _render_geo_risk_block(
         return (
             f'<div style="padding:.5rem .75rem;background:{_C["card"]};'
             f'border:1px solid {_C["border"]};border-top:3px solid {vc}">'
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:3px">{lbl}</div>'
             f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{vc};line-height:1.1">{val}</div>'
-            + (f'<div style="{_M}font-size:11px;color:{_C["text"]};margin-top:2px">{sub}</div>' if sub else "")
+            + (f'<div style="{_M}font-size:0.69rem;color:{_C["text"]};margin-top:2px">{sub}</div>' if sub else "")
             + f'</div>'
         )
 
@@ -1162,7 +1161,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
     st.markdown(
         f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
         f'border-left:3px solid {_C["muted"]};padding:.4rem .9rem;margin-bottom:.4rem">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+        f'<span style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["text"]};display:block;margin-bottom:6px">'
         f'Current Situation</span>'
         f'<p style="{_F}font-size:13px;color:{_C["text"]};line-height:1.65;margin:0 0 4px">'
@@ -1193,7 +1192,7 @@ def _render_intelligence_feed(
     st.markdown(
         f'<div style="display:flex;align-items:center;justify-content:space-between;'
         f'padding-bottom:.4rem;border-bottom:1px solid {_C["border"]};margin-bottom:.55rem">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+        f'<span style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["text"]}">Intelligence Feed</span>'
         f'<span class="nx-badge nx-badge-live">LIVE</span>'
         f'</div>',
@@ -1207,13 +1206,13 @@ def _render_intelligence_feed(
     st.markdown(
         f'<div style="background:{sc_bg};border:1px solid {_C["border"]};'
         f'border-left:3px solid {color};padding:.55rem .7rem;margin-bottom:.6rem">'
-        f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{color};margin-bottom:3px">SYSTEMIC MONITOR</div>'
         f'<div style="{_M}font-size:1.5rem;font-weight:700;color:{color};line-height:1">'
         f'{score:.1f}'
         f'<span style="font-size:.55rem;color:{_C["label"]};margin-left:4px">/100 · {label.upper()}</span>'
         f'</div>'
-        f'<div style="{_M}font-size:8px;font-weight:700;background:{color};color:#000;'
+        f'<div style="{_M}font-size:0.50rem;font-weight:700;background:{color};color:#000;'
         f'display:inline-block;padding:1px 6px;margin-top:4px;letter-spacing:.12em">{sc_badge}</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -1244,13 +1243,13 @@ def _render_intelligence_feed(
             f'border-bottom:1px solid {_C["border"]};padding:.55rem .65rem;margin-bottom:.5rem">'
             f'<div style="display:flex;justify-content:space-between;'
             f'align-items:center;margin-bottom:4px">'
-            f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
             f'background:{badge_bg};color:{badge_c};padding:2px 6px">{badge_lbl}</span>'
-            f'<span style="{_M}font-size:9px;color:{_C["muted"]}">{ts_str}</span>'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{ts_str}</span>'
             f'</div>'
-            f'<div style="{_M}font-size:11px;font-weight:700;color:{_C["text"]};'
+            f'<div style="{_M}font-size:0.69rem;font-weight:700;color:{_C["text"]};'
             f'line-height:1.3;margin-bottom:3px">{title}</div>'
-            + (f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.45">{detail}</div>' if detail else "")
+            + (f'<div style="{_F}font-size:0.69rem;color:{_C["label"]};line-height:1.45">{detail}</div>' if detail else "")
             + f'</div>',
             unsafe_allow_html=True,
         )
@@ -1259,8 +1258,8 @@ def _render_intelligence_feed(
         st.markdown(
             f'<div style="border-left:2px solid {_C["label"]};background:{_C["card"]};'
             f'border:1px solid {_C["border"]};padding:.4rem .55rem;margin-bottom:.3rem">'
-            f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["label"]};letter-spacing:.14em">NOMINAL</span>'
-            f'<div style="{_F}font-size:11px;color:{_C["label"]};margin-top:3px">No active alerts</div>'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{_C["label"]};letter-spacing:.14em">NOMINAL</span>'
+            f'<div style="{_F}font-size:0.69rem;color:{_C["label"]};margin-top:3px">No active alerts</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -1272,7 +1271,7 @@ def _render_intelligence_feed(
     )[:4]
     if active:
         st.markdown(
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.10em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
             f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
             f'margin-top:.7rem;border-top:1px solid {_C["border"]}">Active Conflicts</div>',
             unsafe_allow_html=True,
@@ -1285,11 +1284,11 @@ def _render_intelligence_feed(
                 f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:6px .6rem;'
                 f'border-left:2px solid {bar_c};background:{_C["card"]};'
                 f'border-bottom:1px solid {_C["border"]};margin-bottom:4px;animation-delay:{r_delay}">'
-                f'<span style="{_M}font-size:10px;font-weight:700;color:{r["color"]};'
+                f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{r["color"]};'
                 f'min-width:52px;white-space:nowrap">{r["label"][:10]}</span>'
                 f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
                 f'<div class="hm-bar-grow" style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c};animation-delay:{r_delay}"></div></div>'
-                f'<span style="{_M}font-size:10px;font-weight:700;color:{bar_c};'
+                f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{bar_c};'
                 f'min-width:22px;text-align:right">{cv:.0f}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -1299,7 +1298,7 @@ def _render_intelligence_feed(
     feed = st.session_state.get("agent_activity", [])[:3]
     if feed:
         st.markdown(
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.10em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
             f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
             f'margin-top:.4rem;border-top:1px solid {_C["border"]}">AI Analyst</div>',
             unsafe_allow_html=True,
@@ -1311,11 +1310,11 @@ def _render_intelligence_feed(
             st.markdown(
                 f'<div style="display:flex;gap:6px;align-items:flex-start;'
                 f'padding:4px 0;border-bottom:1px solid #111">'
-                f'<span style="{_M}font-size:9px;color:{ag_col};font-weight:700;min-width:28px">'
+                f'<span style="{_M}font-size:0.56rem;color:{ag_col};font-weight:700;min-width:28px">'
                 f'{ag.get("short","?")}</span>'
-                f'<span style="{_F}font-size:10px;color:#b8b8b8;flex:1;line-height:1.45">'
+                f'<span style="{_F}font-size:0.63rem;color:#b8b8b8;flex:1;line-height:1.45">'
                 f'{entry.get("action","")}: {entry.get("detail","")[:52]}</span>'
-                f'<span style="{_M}font-size:9px;color:{_C["label"]};white-space:nowrap">{ts_str}</span>'
+                f'<span style="{_M}font-size:0.56rem;color:{_C["label"]};white-space:nowrap">{ts_str}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1324,7 +1323,7 @@ def _render_intelligence_feed(
     scenario = get_scenario()
     tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
     st.markdown(
-        f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.10em;'
+        f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
         f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
         f'margin-top:.8rem;border-top:1px solid {_C["border"]}">Chokepoint Watch</div>',
         unsafe_allow_html=True,
@@ -1345,13 +1344,13 @@ def _render_intelligence_feed(
             f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:4px 0;'
             f'border-bottom:1px solid {_C["border"]};animation-delay:{s_delay}">'
             f'{pulse_dot}'
-            f'<span style="{_M}font-size:10px;font-weight:700;color:{tc};min-width:66px;'
+            f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{tc};min-width:66px;'
             f'white-space:nowrap">{s["name"][:16]}</span>'
             f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
             f'<div class="hm-bar-grow" style="width:{s_risk}%;height:4px;background:{tc};border-radius:1px;animation-delay:{s_delay}"></div></div>'
-            f'<span style="{_M}font-size:10px;color:{tc};font-weight:700;min-width:20px;'
+            f'<span style="{_M}font-size:0.63rem;color:{tc};font-weight:700;min-width:20px;'
             f'text-align:right">{s_risk}</span>'
-            f'<span style="background:{tc};color:#000;{_M}font-size:8px;font-weight:700;'
+            f'<span style="background:{tc};color:#000;{_M}font-size:0.50rem;font-weight:700;'
             f'padding:1px 4px;letter-spacing:.06em;min-width:32px;text-align:center">{tier}</span>'
             f'</div>'
         )
@@ -1368,17 +1367,17 @@ def _render_intelligence_feed(
     if any(v is not None for v in [_dg, _dc, _dt]):
         def _dchip(label, delta):
             if delta is None:
-                return f'<span style="{_M}font-size:9px;color:{_C["muted"]}">{label}&nbsp;—</span>'
+                return f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;—</span>'
             col  = _C["danger"] if delta > 0.3 else _C["safe"] if delta < -0.3 else _C["muted"]
             sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else "— flat"
             return (
-                f'<span style="{_M}font-size:9px;color:{_C["muted"]}">{label}&nbsp;</span>'
-                f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}</span>'
+                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;</span>'
+                f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{sign}</span>'
             )
         st.markdown(
             f'<div style="margin-top:.65rem;padding:.4rem .55rem;background:{_C["card"]};'
             f'border:1px solid {_C["border"]};display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-            f'<span style="{_M}font-size:9px;letter-spacing:.10em;text-transform:uppercase;'
+            f'<span style="{_M}font-size:0.56rem;letter-spacing:.10em;text-transform:uppercase;'
             f'color:{_C["label"]}">Δ vs last load</span>'
             f'{_dchip("GRS", _dg)}'
             f'{_dchip("CIS", _dc)}'
@@ -1388,7 +1387,7 @@ def _render_intelligence_feed(
         )
 
     st.markdown(
-        f'<div style="{_M}font-size:9px;color:{_C["label"]};padding-top:.5rem;'
+        f'<div style="{_M}font-size:0.56rem;color:{_C["label"]};padding-top:.5rem;'
         f'border-top:1px solid {_C["border"]};margin-top:.4rem">'
         f'Updated {datetime.datetime.now().strftime("%H:%M:%S")} UTC</div>',
         unsafe_allow_html=True,
@@ -1447,7 +1446,7 @@ def _render_market_pulse_cards() -> None:
             lo_fmt = f'{lo:.2f}' if lo < 10000 else f'{lo:,.0f}'
             hi_fmt = f'{hi:.2f}' if hi < 10000 else f'{hi:,.0f}'
             rng_html = (
-                f'<div style="{_M}font-size:9px;color:{_C["muted"]};margin-top:3px">'
+                f'<div style="{_M}font-size:0.56rem;color:{_C["muted"]};margin-top:3px">'
                 f'5d&nbsp;&nbsp;L&nbsp;<b style="color:{_C["label"]}">{lo_fmt}</b>'
                 f'&nbsp;·&nbsp;H&nbsp;<b style="color:{_C["label"]}">{hi_fmt}</b></div>'
             )
@@ -1456,9 +1455,9 @@ def _render_market_pulse_cards() -> None:
             f'<div style="border-left:3px solid {c};padding:.5rem .6rem;margin-bottom:.4rem;'
             f'background:{_C["card2"]};border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};border-bottom:1px solid {_C["border"]}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center">'
-            f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.14em;'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.14em;'
             f'text-transform:uppercase;color:{_C["label"]}">{d["label"]}</span>'
-            f'<span style="{_M}font-size:10px;font-weight:700;color:{c}">{chg_fmt}</span>'
+            f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{c}">{chg_fmt}</span>'
             f'</div>'
             f'<div style="display:flex;justify-content:space-between;align-items:flex-end">'
             f'<div>'
@@ -1497,7 +1496,7 @@ def _render_intel_panel(conflict_results: dict) -> None:
         _TREND_I = {"rising": "▲", "stable": "-", "falling": "▼"}
         _TREND_C = {"rising": _C["danger"], "stable": _C["label"], "falling": _C["safe"]}
 
-        _TH = f'{_M}font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:{_C["label"]}'
+        _TH = f'{_M}font-size:0.63rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:{_C["label"]}'
         col_header = (
             f'<div style="display:flex;gap:8px;padding:0 0 4px;'
             f'border-bottom:1px solid {_C["border"]};margin-bottom:3px">'
@@ -1520,28 +1519,28 @@ def _render_intel_panel(conflict_results: dict) -> None:
             tps_col = _C["danger"] if tps_val >= 65 else _C["warn"] if tps_val >= 45 else _C["label"]
             rows += (
                 f'<div class="hm-crow">'
-                f'<span style="{_M}font-size:11px;font-weight:700;color:{r["color"]};'
+                f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{r["color"]};'
                 f'min-width:70px">{r["label"]}</span>'
                 f'<div style="flex:1;background:{_C["border"]};height:4px;border-radius:1px">'
                 f'<div style="width:{r["cis"]:.0f}%;height:4px;background:{cis_col};'
                 f'border-radius:1px"></div></div>'
-                f'<span style="{_M}font-size:12px;color:{cis_col};font-weight:700;'
+                f'<span style="{_M}font-size:0.75rem;color:{cis_col};font-weight:700;'
                 f'min-width:26px;text-align:right">{r["cis"]:.0f}</span>'
-                f'<span style="{_M}font-size:12px;color:{t_color};min-width:16px">{t_icon}</span>'
-                f'<span style="{_M}font-size:11px;color:{tps_col};min-width:34px">'
+                f'<span style="{_M}font-size:0.75rem;color:{t_color};min-width:16px">{t_icon}</span>'
+                f'<span style="{_M}font-size:0.69rem;color:{tps_col};min-width:34px">'
                 f'TPS {tps_val:.0f}</span>'
-                f'<span style="{_F}font-size:12px;color:{_C["text"]}">'
+                f'<span style="{_F}font-size:0.75rem;color:{_C["text"]}">'
                 f'{top_ch.replace("_", " ")}</span>'
                 f'</div>'
             )
         st.markdown(
             f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};padding:.5rem .8rem">'
-            f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'<p style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
             f'Active Conflict Monitor &nbsp;·&nbsp; CIS / TPS / Top Channel</p>'
             + col_header + rows
             + f'<div style="border-top:1px solid #1a1a1a;margin-top:4px;padding-top:3px">'
-            f'<span style="{_M}font-size:9px;color:{_C["muted"]}">'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">'
             f'CIS scores: manual scenario assumptions unless ACLED/GDELT source shown on scorecard. '
             f'Transmission channel weights: always manual scenario assumptions.</span>'
             f'</div>'
@@ -1568,18 +1567,18 @@ def _render_intel_panel(conflict_results: dict) -> None:
                 rows_ch += (
                     f'<div style="display:flex;align-items:center;gap:7px;padding:3px 0;'
                     f'border-bottom:1px solid #111">'
-                    f'<span style="{_M}font-size:10px;color:{_C["text"]};min-width:90px;'
+                    f'<span style="{_M}font-size:0.63rem;color:{_C["text"]};min-width:90px;'
                     f'white-space:nowrap">{ch.replace("_", " ").upper()}</span>'
                     f'<div style="flex:1;background:{_C["border"]};height:4px;border-radius:1px">'
                     f'<div style="width:{pct:.0f}%;height:4px;background:{ch_col};'
                     f'border-radius:1px"></div></div>'
-                    f'<span style="{_M}font-size:11px;color:{ch_col};min-width:28px;'
+                    f'<span style="{_M}font-size:0.69rem;color:{ch_col};min-width:28px;'
                     f'text-align:right">{val:.2f}</span>'
                     f'</div>'
                 )
             st.markdown(
                 f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};padding:.5rem .8rem">'
-                f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+                f'<p style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
                 f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
                 f'{rows_ch}</div>',
@@ -1588,10 +1587,10 @@ def _render_intel_panel(conflict_results: dict) -> None:
         else:
             st.markdown(
                 f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};padding:.5rem .8rem">'
-                f'<p style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+                f'<p style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
                 f'text-transform:uppercase;color:{_C["text"]};margin:0 0 .35rem">'
                 f'Top Transmission Channels</p>'
-                f'<span style="{_F}font-size:12px;color:{_C["label"]}">'
+                f'<span style="{_F}font-size:0.75rem;color:{_C["label"]}">'
                 f'No active transmission data.</span></div>',
                 unsafe_allow_html=True,
             )
@@ -1621,7 +1620,7 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     impact      = (_IMPACT.get(current_sid, "") if not is_compound
                    else f"geo ×{current_def.get('geo_mult', 1):.2f} · vol ×{current_def.get('vol_mult', 1):.2f}")
     _compound_badge = (
-        f'<span style="{_M}font-size:8px;color:{_C["danger"]};letter-spacing:.1em">COMPOUND</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["danger"]};letter-spacing:.1em">COMPOUND</span>'
         if is_compound else ""
     )
 
@@ -1629,14 +1628,14 @@ def _render_scenario_switch(narrow: bool = False) -> None:
         f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
         f'padding:.25rem .7rem;margin:.2rem 0">'
         f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
-        f'<span style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+        f'<span style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["text"]}">Scenario Lens</span>'
         f'<span style="background:{current_def["color"]};color:#000;'
-        f'{_M}font-size:10px;font-weight:700;padding:1px 6px;letter-spacing:.10em">'
+        f'{_M}font-size:0.63rem;font-weight:700;padding:1px 6px;letter-spacing:.10em">'
         f'{current_def["label"].upper()}</span>'
         f'{_compound_badge}'
-        f'<span style="{_F}font-size:12px;color:{_C["text"]}">{current_def["desc"]}</span>'
-        f'<span style="{_M}font-size:11px;color:{_C["text"]};margin-left:auto">{impact}</span>'
+        f'<span style="{_F}font-size:0.75rem;color:{_C["text"]}">{current_def["desc"]}</span>'
+        f'<span style="{_M}font-size:0.69rem;color:{_C["text"]};margin-left:auto">{impact}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1685,7 +1684,7 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     # Scenario assumption disclosure
     _calib = current_def.get("calibration_note", "")
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
         f'color:{_C["muted"]};margin:.3rem 0 0;line-height:1.55">'
         f'⚠ Scenario multipliers are <b>manual scenario assumptions</b> — '
         f'not statistically calibrated against historical episodes. '
@@ -1764,7 +1763,7 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
     recs = recs[:3]
 
     st.markdown(
-        f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+        f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["text"]};margin:.2rem 0 .3rem">'
         f'Suggested Next Step</div>',
         unsafe_allow_html=True,
@@ -1778,23 +1777,23 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
                 f'border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};'
                 f'border-bottom:1px solid {_C["border"]};padding:.4rem .55rem;margin-bottom:.3rem">'
                 f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
-                f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.12em;'
                 f'color:{r["color"]}">{r["tag"]}</span>'
                 f'</div>'
-                f'<div style="{_M}font-size:11px;font-weight:700;color:{_C["text"]};margin-bottom:3px">'
+                f'<div style="{_M}font-size:0.69rem;font-weight:700;color:{_C["text"]};margin-bottom:3px">'
                 f'{r["label"]}</div>'
-                f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.4">{r["text"]}</div>'
+                f'<div style="{_F}font-size:0.69rem;color:{_C["label"]};line-height:1.4">{r["text"]}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
                 f'<div class="hm-rec" style="border-color:{r["color"]}">'
-                f'<span style="{_M}font-size:11px;font-weight:700;color:{r["color"]};'
+                f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{r["color"]};'
                 f'white-space:nowrap">{r["tag"]}</span>'
-                f'<span style="{_M}font-size:11px;font-weight:700;color:{_C["text"]};'
+                f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{_C["text"]};'
                 f'white-space:nowrap;min-width:130px">{r["label"]}</span>'
-                f'<span style="{_F}font-size:12px;color:{_C["text"]};flex:1">{r["text"]}</span>'
+                f'<span style="{_F}font-size:0.75rem;color:{_C["text"]};flex:1">{r["text"]}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1867,7 +1866,7 @@ def _render_quickjump() -> None:
             f'<span style="display:flex;align-items:center;gap:5px">'
             f'<span style="width:8px;height:8px;border-radius:50%;background:{g["color"]};'
             f'flex-shrink:0;display:inline-block"></span>'
-            f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.12em;'
             f'text-transform:uppercase;color:{g["color"]}">{g["group"]}</span>'
             f'</span>'
             for g in _JUMP_GROUPS
@@ -1888,10 +1887,10 @@ def _render_quickjump() -> None:
             st.markdown(
                 f'<div class="hm-nav" style="border-top:2px solid {g_color};min-height:58px">'
                 f'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'
-                f'<span style="{_M}font-size:11px;font-weight:700;color:{g_color}">{label}</span>'
-                f'<span class="hm-tag {tag_cls}" style="font-size:8px!important">{tag_label}</span>'
+                f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{g_color}">{label}</span>'
+                f'<span class="hm-tag {tag_cls}" style="font-size:0.50rem!important">{tag_label}</span>'
                 f'</div>'
-                f'<div style="{_F}font-size:11px;color:{_C["label"]};line-height:1.35">{desc}</div>'
+                f'<div style="{_F}font-size:0.69rem;color:{_C["label"]};line-height:1.35">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1915,7 +1914,7 @@ _STRAITS = [
 
 def _delta_html(delta, unit: str = "") -> str:
     if delta is None:
-        return f'<span style="{_M}font-size:11px;color:{_C["label"]}">- first run</span>'
+        return f'<span style="{_M}font-size:0.69rem;color:{_C["label"]}">- first run</span>'
     if abs(delta) < 0.3:
         return f'<span class="hm-fl">- flat</span>'
     if delta > 0:
@@ -1993,18 +1992,18 @@ def _render_market_pulse() -> None:
             f'<div class="hm-card-anim" style="flex:1;min-width:90px;padding:.65rem .85rem;background:{_C["card"]};'
             f'border:1px solid {_C["border"]};border-top:3px solid {c};'
             f'transition:background .12s ease">'
-            f'<div style="{_M}font-size:9px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:5px">{d["label"]}</div>'
             f'<div style="{_M}font-size:16px;font-weight:700;color:{_C["text"]};line-height:1.1">'
-            f'{val_fmt}<span style="font-size:10px;color:{_C["label"]}">{d["suffix"]}</span></div>'
-            f'<div style="{_M}font-size:10px;color:{c};font-weight:700;margin-top:4px">{chg_fmt}</div>'
+            f'{val_fmt}<span style="font-size:0.63rem;color:{_C["label"]}">{d["suffix"]}</span></div>'
+            f'<div style="{_M}font-size:0.63rem;color:{c};font-weight:700;margin-top:4px">{chg_fmt}</div>'
             f'</div>'
         )
 
     tiles_html = "".join(_tile(d) for d in data)
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-        f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.20em;'
+        f'<span style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.20em;'
         f'text-transform:uppercase;color:{_C["label"]}">Market Pulse</span>'
         f'<span class="nx-badge nx-badge-live">LIVE</span>'
         f'</div>'
@@ -2090,17 +2089,17 @@ def _render_portfolio_pulse() -> None:
         return (
             f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;'
             f'padding:3px 0;border-bottom:1px solid {_C["border"]};animation-delay:{mv_delay}">'
-            f'<span style="{_M}font-size:11px;font-weight:700;color:{col};min-width:52px">'
+            f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{col};min-width:52px">'
             f'{p["ticker"]}</span>'
-            f'<span style="{_M}font-size:10px;color:{_C["text"]};flex:1">'
+            f'<span style="{_M}font-size:0.63rem;color:{_C["text"]};flex:1">'
             f'wt {w_pct:.1f}%</span>'
-            f'<span style="{_M}font-size:11px;color:{col};font-weight:700">'
+            f'<span style="{_M}font-size:0.69rem;color:{col};font-weight:700">'
             f'{arrow} {abs(ret):.2f}%</span>'
             f'</div>'
         )
 
     movers_html = "".join(_mover_html(p, r, i) for i, (p, r) in enumerate(movers)) if movers else (
-        f'<span style="{_M}font-size:11px;color:{_C["label"]}">Returns pending…</span>'
+        f'<span style="{_M}font-size:0.69rem;color:{_C["label"]}">Returns pending…</span>'
     )
 
     col_nav, col_movers = st.columns([1, 1], gap="small")
@@ -2109,18 +2108,18 @@ def _render_portfolio_pulse() -> None:
         st.markdown(
             f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
             f'border-top:2px solid {_GOLD};padding:.4rem .65rem">'
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:4px">Portfolio NAV</div>'
             f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD};line-height:1.1">'
             f'${total_usd:,.0f}</div>'
-            f'<div style="{_M}font-size:10px;color:{_C["text"]};margin-top:2px">'
+            f'<div style="{_M}font-size:0.63rem;color:{_C["text"]};margin-top:2px">'
             f'{n} positions &nbsp;·&nbsp; as of {loaded_at}</div>'
             f'<div style="margin-top:.4rem;padding-top:.35rem;border-top:1px solid #1a1a1a">'
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.16em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.16em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:2px">Est. 1-Day P&amp;L</div>'
             f'<div class="hm-num-pop" style="{_M}font-size:0.95rem;font-weight:700;color:{pl_color}">'
             f'{pl_arrow} {pl_sign}${dollar_pl:,.0f}'
-            f'<span style="font-size:11px;margin-left:5px">{pl_sign}{port_ret:.2f}%</span>'
+            f'<span style="font-size:0.69rem;margin-left:5px">{pl_sign}{port_ret:.2f}%</span>'
             f'</div></div></div>',
             unsafe_allow_html=True,
         )
@@ -2129,7 +2128,7 @@ def _render_portfolio_pulse() -> None:
         st.markdown(
             f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
             f'border-top:2px solid {_GOLD};padding:.4rem .65rem">'
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["label"]};margin-bottom:5px">Top Movers</div>'
             f'{movers_html}</div>',
             unsafe_allow_html=True,
@@ -2142,10 +2141,10 @@ def _render_live_signals() -> None:
     # ── Strait snapshot ────────────────────────────────────────────────────
     with col_straits:
         st.markdown(
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["text"]};margin-bottom:2px">'
             f'Chokepoint Watch</div>'
-            f'<div style="{_F}font-size:12px;color:{_C["text"]};margin-bottom:3px">'
+            f'<div style="{_F}font-size:0.75rem;color:{_C["text"]};margin-bottom:3px">'
             f'Strait disruption raises energy and food costs within 2–6 weeks. '
             f'Score: conflict intensity × routing dependence.</div>',
             unsafe_allow_html=True,
@@ -2171,16 +2170,16 @@ def _render_live_signals() -> None:
                 f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:4px 0;'
                 f'border-bottom:1px solid {_C["card"]};animation-delay:{ls_delay}">'
                 + pulse
-                + f'<span style="{_M}font-size:11px;font-weight:700;color:{tc};'
+                + f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{tc};'
                 f'min-width:75px;white-space:nowrap">{s["name"][:18]}</span>'
                 f'<div style="flex:1;background:{_C["border"]};height:4px;border-radius:1px">'
                 f'<div class="hm-bar-grow" style="width:{risk}%;height:4px;background:{tc};border-radius:1px;animation-delay:{ls_delay}"></div></div>'
-                f'<span style="{_M}font-size:12px;color:{tc};font-weight:700;min-width:22px;'
+                f'<span style="{_M}font-size:0.75rem;color:{tc};font-weight:700;min-width:22px;'
                 f'text-align:right">{risk}</span>'
-                f'<span style="background:{tc};color:#000;{_M}font-size:11px;'
+                f'<span style="background:{tc};color:#000;{_M}font-size:0.69rem;'
                 f'font-weight:700;padding:1px 4px;letter-spacing:.08em;min-width:46px;'
                 f'text-align:center">{tier}</span>'
-                f'<span style="{_F}font-size:10px;color:{_C["text"]}">{s["flow"]}</span>'
+                f'<span style="{_F}font-size:0.63rem;color:{_C["text"]}">{s["flow"]}</span>'
                 f'</div>'
             )
 
@@ -2193,10 +2192,10 @@ def _render_live_signals() -> None:
     # ── What changed ───────────────────────────────────────────────────────
     with col_delta:
         st.markdown(
-            f'<div style="{_M}font-size:10px;font-weight:700;letter-spacing:.18em;'
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_C["text"]};margin-bottom:2px">'
             f'Δ vs Last Load</div>'
-            f'<div style="{_F}font-size:12px;color:{_C["text"]};margin-bottom:3px">'
+            f'<div style="{_F}font-size:0.75rem;color:{_C["text"]};margin-bottom:3px">'
             f'Delta vs previous page load. First load shows baseline.</div>',
             unsafe_allow_html=True,
         )
@@ -2209,7 +2208,7 @@ def _render_live_signals() -> None:
         if first_run:
             st.markdown(
                 f'<div style="background:#0a0a0a;border:1px solid {_C["border"]};'
-                f'padding:.5rem .7rem;{_F}font-size:12px;color:{_C["text"]}">'
+                f'padding:.5rem .7rem;{_F}font-size:0.75rem;color:{_C["text"]}">'
                 f'Establishing baseline - deltas appear from the second visit onward.</div>',
                 unsafe_allow_html=True,
             )
@@ -2232,7 +2231,7 @@ def _render_live_signals() -> None:
                 port_rows += (
                     f'<div style="display:flex;align-items:baseline;gap:6px;'
                     f'padding:3px 0;border-bottom:1px solid #111">'
-                    f'<span style="{_F}font-size:12px;color:{_C["text"]};min-width:120px">'
+                    f'<span style="{_F}font-size:0.75rem;color:{_C["text"]};min-width:120px">'
                     f'{lbl}</span>'
                     f'{_delta_html(delta, unit)}</div>'
                 )
@@ -2248,15 +2247,15 @@ def _render_live_signals() -> None:
                 conf_rows += (
                     f'<div style="display:flex;align-items:baseline;gap:6px;'
                     f'padding:2px 0 2px 8px;border-left:2px solid {_C["border"]};margin-bottom:2px">'
-                    f'<span style="{_M}font-size:10px;color:{_GOLD};min-width:75px">'
+                    f'<span style="{_M}font-size:0.63rem;color:{_GOLD};min-width:75px">'
                     f'{display}</span>'
-                    f'<span style="{_M}font-size:10px;color:{_C["text"]}">'
+                    f'<span style="{_M}font-size:0.63rem;color:{_C["text"]}">'
                     f'CIS {prev:.0f}</span>'
                     f'{_delta_html(d, "")}</div>'
                 )
 
             conf_section = (
-                f'<div style="{_M}font-size:11px;text-transform:uppercase;letter-spacing:.14em;'
+                f'<div style="{_M}font-size:0.69rem;text-transform:uppercase;letter-spacing:.14em;'
                 f'color:{_C["label"]};margin:5px 0 3px">Per-Conflict CIS</div>'
                 + conf_rows
                 if any_c else ""
@@ -2286,7 +2285,7 @@ def _render_agent_strip() -> None:
         f'<span class="nx-badge nx-badge-warning">{n_pending} PENDING</span>'
         if n_pending else
         f'<span class="nx-live-dot"></span><span style="font-family:\'JetBrains Mono\',monospace;'
-        f'font-size:9px;color:{_C["safe"]};letter-spacing:0.10em">ALL PROCESSED</span>'
+        f'font-size:0.56rem;color:{_C["safe"]};letter-spacing:0.10em">ALL PROCESSED</span>'
     )
 
     rows_html = ""
@@ -2398,15 +2397,15 @@ def _render_correlation_pulse(
         f'<div>'
         f'<span class="{_corr_num_cls}" style="{_M}font-size:1.05rem;font-weight:700;color:{cur_c};line-height:1">'
         f'{cur_sign}{cur:.3f}</span>'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]};margin-left:5px">eq↔cmd 60d</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-left:5px">eq↔cmd 60d</span>'
         f'</div>'
         f'<span style="background:{regime_c}1a;border:1px solid {regime_c}44;'
-        f'{_M}font-size:8px;font-weight:700;letter-spacing:.08em;color:{regime_c};'
+        f'{_M}font-size:0.50rem;font-weight:700;letter-spacing:.08em;color:{regime_c};'
         f'padding:2px 6px;text-transform:uppercase">{regime_lbl}</span>'
         f'</div>'
         f'<div style="padding-bottom:2px">{svg}</div>'
         f'</div>'
-        f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:.4rem">'
+        f'<div style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-top:.4rem">'
         f'<span style="color:{_C["danger"]}55;border-bottom:1px dashed {_C["danger"]}55">·</span>'
         f'&nbsp;0.35 coupling threshold'
         f'</div>',
@@ -2458,21 +2457,21 @@ def _render_risk_arc(risk: dict) -> None:
             f'<div style="display:flex;justify-content:space-between;'
             f'align-items:center;margin-bottom:6px">'
             f'<div style="display:flex;align-items:center;gap:6px">'
-            f'<span style="{_M}font-size:9px;font-weight:700;letter-spacing:.12em;'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.12em;'
             f'text-transform:uppercase;color:{_C["label"]}">{label}</span>'
             f'<span style="background:#1a1a1a;border:1px solid #222;'
-            f'{_M}font-size:7.5px;color:{_C["muted"]};padding:1px 5px;letter-spacing:.04em">'
+            f'{_M}font-size:0.50rem;color:{_C["muted"]};padding:1px 5px;letter-spacing:.04em">'
             f'wt {wpct}%</span>'
             f'</div>'
             f'<div style="display:flex;align-items:center;gap:6px">'
             f'<span class="hm-num-pop" style="{_M}font-size:1.0rem;font-weight:700;color:{c};line-height:1">'
             f'{val:.0f}</span>'
             f'<span style="background:{c}22;border:1px solid {c}44;'
-            f'{_M}font-size:8px;font-weight:700;color:{c};padding:2px 6px">{lbl}</span>'
+            f'{_M}font-size:0.50rem;font-weight:700;color:{c};padding:2px 6px">{lbl}</span>'
             f'</div>'
             f'</div>'
             f'{bar_svg}'
-            f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:5px">'
+            f'<div style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-top:5px">'
             f'adds <b style="color:{c}">{contrib:.1f} pts</b> to composite</div>'
             f'</div>'
         )
@@ -2482,7 +2481,7 @@ def _render_risk_arc(risk: dict) -> None:
         _meter("CIS", int(w_cis * 100), cis, cis * w_cis)
         + _meter("TPS", int(w_tps * 100), tps, tps * w_tps)
         + _meter("MCS", int(w_mcs * 100), mcs, mcs * w_mcs)
-        + f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:.45rem">'
+        + f'<div style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-top:.45rem">'
         f'CIS=Conflict Intensity · TPS=Transmission · MCS=Market</div>'
     )
     _card(
@@ -2534,21 +2533,21 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
             f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:7px .65rem;'
             f'border-bottom:1px solid #111;background:{_C["card"]};animation-delay:{esc_delay}">'
             # trend arrow
-            f'<span class="{arrow_cls}" style="{_M}font-size:11px;font-weight:700;color:{t_col};'
+            f'<span class="{arrow_cls}" style="{_M}font-size:0.69rem;font-weight:700;color:{t_col};'
             f'min-width:12px;flex-shrink:0">{t_icon}</span>'
             # name
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{col};'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col};'
             f'min-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
             f'{lbl[:14]}</span>'
             # bar
             f'<div style="flex:1;background:#1a1a1a;height:4px;border-radius:2px;min-width:20px">'
             f'<div class="hm-bar-grow" style="width:{bar_w}%;height:4px;background:{col};border-radius:2px;opacity:.8;animation-delay:{esc_delay}"></div></div>'
             # CIS value
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{col};min-width:22px;text-align:right">'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col};min-width:22px;text-align:right">'
             f'{cis_v:.0f}</span>'
             # escalation badge
             f'<span style="background:{esc_bg};border:1px solid {esc_c}44;'
-            f'{_M}font-size:8px;font-weight:700;color:{esc_c};padding:2px 6px;'
+            f'{_M}font-size:0.50rem;font-weight:700;color:{esc_c};padding:2px 6px;'
             f'letter-spacing:.06em;flex-shrink:0">{esc_txt}</span>'
             f'</div>'
         )
@@ -2597,10 +2596,10 @@ def _render_top_commodities(conflict_results: dict) -> None:
         rows += (
             f'<div class="hm-row-in" style="padding:.4rem .65rem;border-bottom:1px solid #111;animation-delay:{tc_delay}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{_C["text"]};'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_C["text"]};'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">'
             f'{com}</span>'
-            f'<span style="{_M}font-size:8px;color:{bar_c}">'
+            f'<span style="{_M}font-size:0.50rem;color:{bar_c}">'
             f'{n_c} conflict{"s" if n_c > 1 else ""}</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:4px;border-radius:2px">'
@@ -2716,12 +2715,12 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
     n_mon = len(mon_items)
     body = (
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">CIS × TPS · all tracked</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">CIS × TPS · all tracked</span>'
         f'<div style="display:flex;gap:4px">'
         f'<span style="background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.28);'
-        f'{_M}font-size:8px;color:#e05241;padding:2px 6px">{n_act} ACTIVE</span>'
+        f'{_M}font-size:0.50rem;color:#e05241;padding:2px 6px">{n_act} ACTIVE</span>'
         f'<span style="background:#111;border:1px solid {_C["border"]};'
-        f'{_M}font-size:8px;color:{_C["muted"]};padding:2px 6px">{n_mon} MON</span>'
+        f'{_M}font-size:0.50rem;color:{_C["muted"]};padding:2px 6px">{n_mon} MON</span>'
         f'</div>'
         f'</div>'
         f'{svg}'
@@ -2841,13 +2840,13 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     severity_lbl = "HIGH" if score >= 65 else "ELEVATED" if score >= 45 else "NOMINAL"
     _card("RISK COMPASS",
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">5-dimension risk profile</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">5-dimension risk profile</span>'
         f'<span style="background:{fill_c}1a;border:1px solid {fill_c}44;'
-        f'{_M}font-size:8px;font-weight:700;letter-spacing:.10em;color:{fill_c};'
+        f'{_M}font-size:0.50rem;font-weight:700;letter-spacing:.10em;color:{fill_c};'
         f'padding:2px 7px">{severity_lbl}</span>'
         f'</div>'
         f'{svg}'
-        f'<div style="{_M}font-size:8px;color:{_C["muted"]};margin-top:6px">'
+        f'<div style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-top:6px">'
         f'VOL=VIX stress · COUP=eq↔cmd coupling · MCS=market conditions</div>',
     )
 
@@ -2904,13 +2903,13 @@ def _render_returns_heatmap() -> None:
 
     # Header row
     hdr_cells = "".join(
-        f'<th style="{_M}font-size:8px;font-weight:700;letter-spacing:.06em;'
+        f'<th style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.06em;'
         f'color:{_C["label"]};text-align:center;padding:3px 4px;border-right:1px solid #111">'
         f'{lbl}</th>'
         for lbl in day_labels
     )
     header = (
-        f'<tr><th style="{_M}font-size:8px;color:{_C["label"]};padding:3px 6px;'
+        f'<tr><th style="{_M}font-size:0.50rem;color:{_C["label"]};padding:3px 6px;'
         f'text-align:left;border-right:1px solid {_C["border"]};min-width:52px">ASSET</th>'
         + hdr_cells + f'</tr>'
     )
@@ -2929,14 +2928,14 @@ def _render_returns_heatmap() -> None:
                 bg  = _cell_bg(pct, is_vix)
                 txt = _cell_txt(pct)
                 cells += (
-                    f'<td style="background:{bg};{_M}font-size:7.5px;font-weight:700;'
+                    f'<td style="background:{bg};{_M}font-size:0.50rem;font-weight:700;'
                     f'color:{_C["text"]};text-align:center;padding:4px 3px;'
                     f'border-right:1px solid #111;white-space:nowrap;'
                     f'animation:hm-cell-in .3s {delay} both">{txt}</td>'
                 )
         tbody += (
             f'<tr style="border-bottom:1px solid #111">'
-            f'<td style="{_M}font-size:8px;font-weight:700;color:{_C["label"]};'
+            f'<td style="{_M}font-size:0.50rem;font-weight:700;color:{_C["label"]};'
             f'padding:4px 6px;border-right:1px solid {_C["border"]};white-space:nowrap">'
             f'{label}</td>'
             + cells + f'</tr>'
@@ -2947,7 +2946,7 @@ def _render_returns_heatmap() -> None:
         f'<thead style="background:#0a0a0a;border-bottom:1px solid {_C["border"]}">{header}</thead>'
         f'<tbody>{tbody}</tbody>'
         f'</table>'
-        f'<div style="{_M}font-size:8px;color:{_C["muted"]};padding:4px 6px">'
+        f'<div style="{_M}font-size:0.50rem;color:{_C["muted"]};padding:4px 6px">'
         f'day-over-day % · VIX inverted (↑ VIX = red)</div>',
     )
 
@@ -3009,8 +3008,8 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
         rows += (
             f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-            f'<span style="{_M}font-size:8.5px;font-weight:700;color:{_C["label"]}">{group}</span>'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{bc}">{score:.0f}</span>'
+            f'<span style="{_M}font-size:0.53rem;font-weight:700;color:{_C["label"]}">{group}</span>'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{bc}">{score:.0f}</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:5px;border-radius:2px">'
             f'<div class="hm-bar-grow" style="width:{bw}%;height:5px;background:{bc};border-radius:2px;opacity:.85"></div>'
@@ -3121,7 +3120,7 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.45rem">'
         f'<svg viewBox="0 0 216 14" style="width:100%;height:auto;display:block">{legend}</svg>'
         f'</div>'
-        f'<div style="margin-top:.4rem;{_M}font-size:8.5px;font-weight:700;color:{cur_col}">'
+        f'<div style="margin-top:.4rem;{_M}font-size:0.53rem;font-weight:700;color:{cur_col}">'
         f'NOW: {cur_lbl}</div>',
     )
 
@@ -3151,9 +3150,9 @@ def _render_alert_summary(alerts: list) -> None:
         badges += (
             f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;margin-bottom:.4rem;animation-delay:{al_delay}">'
             f'<span class="hm-badge-pop" style="background:{c}22;border:1px solid {c}66;'
-            f'{_M}font-size:8px;font-weight:700;color:{c};padding:2px 8px;'
+            f'{_M}font-size:0.50rem;font-weight:700;color:{c};padding:2px 8px;'
             f'border-radius:2px;letter-spacing:.08em;min-width:22px;text-align:center;animation-delay:{al_delay}">{n}</span>'
-            f'<span style="{_M}font-size:9px;color:{_C["label"]};text-transform:uppercase;'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["label"]};text-transform:uppercase;'
             f'letter-spacing:.08em">{sev}</span>'
             f'</div>'
         )
@@ -3166,8 +3165,8 @@ def _render_alert_summary(alerts: list) -> None:
     _card(f"ACTIVE ALERTS · {len(alerts)}",
         f'{badges}'
         f'<div style="border-top:1px solid #1a1a1a;margin-top:.4rem;padding-top:.4rem">'
-        f'<span style="{_M}font-size:8.5px;color:{rc};font-weight:600">LATEST:</span>'
-        f'<span style="{_M}font-size:8.5px;color:{_C["label"]};margin-left:5px">{msg}</span>'
+        f'<span style="{_M}font-size:0.53rem;color:{rc};font-weight:600">LATEST:</span>'
+        f'<span style="{_M}font-size:0.53rem;color:{_C["label"]};margin-left:5px">{msg}</span>'
         f'</div>',
     )
 
@@ -3245,9 +3244,9 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
     _card("RISK SCORE TREND · 60D",
         f'{svg}'
         f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.45rem">'
-        f'<span style="{_M}font-size:8.5px;color:{_C["muted"]}">GRS NOW</span>'
-        f'<span style="{_M}font-size:11px;font-weight:700;color:{s_col}">{cur:.1f}</span>'
-        f'<span style="{_M}font-size:8.5px;color:{d_col}">{d_sym} {abs(delta):.1f} vs 30d</span>'
+        f'<span style="{_M}font-size:0.53rem;color:{_C["muted"]}">GRS NOW</span>'
+        f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{s_col}">{cur:.1f}</span>'
+        f'<span style="{_M}font-size:0.53rem;color:{d_col}">{d_sym} {abs(delta):.1f} vs 30d</span>'
         f'</div>',
     )
 
@@ -3327,13 +3326,13 @@ def _render_macro_snapshot() -> None:
             cols_html += (
                 f'<div class="hm-card-anim" style="flex:1;background:{_C["card2"]};border:1px solid {_C["border2"]};'
                 f'padding:.5rem .6rem;border-radius:2px;min-width:0;animation-delay:{ms_delay}">'
-                f'<div style="{_M}font-size:8px;font-weight:700;letter-spacing:.12em;'
+                f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.12em;'
                 f'color:{_C["muted"]};text-transform:uppercase;margin-bottom:3px">{label}</div>'
                 f'<div class="hm-num-pop" style="{_M}font-size:1.0rem;font-weight:700;color:{_C["text"]};line-height:1;animation-delay:{ms_delay}">{vstr}</div>'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">'
-                f'<span style="{_M}font-size:8px;font-weight:700;color:{rc};'
+                f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{rc};'
                 f'letter-spacing:.08em">{reg}</span>'
-                f'<span style="{_M}font-size:9px;font-weight:700;color:{ac}">{arr}</span>'
+                f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{ac}">{arr}</span>'
                 f'</div>'
                 f'</div>'
             )
@@ -3386,8 +3385,8 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
         rows_html += (
             f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-            f'<span style="{_M}font-size:8.5px;font-weight:700;color:{gc}">{abbr}</span>'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{col}">{sign}{avg:.2f}%</span>'
+            f'<span style="{_M}font-size:0.53rem;font-weight:700;color:{gc}">{abbr}</span>'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{sign}{avg:.2f}%</span>'
             f'</div>'
             f'<div style="background:#1a1a1a;height:5px;border-radius:2px;overflow:hidden">'
             f'<div class="hm-bar-grow" style="float:{bar_dir};width:{bar_w:.0f}%;height:5px;'
@@ -3485,8 +3484,8 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
     _card("CMD→EQ LEAD-LAG · 60D",
         f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block;overflow:visible">{bars_svg}</svg>'
         f'<div style="display:flex;justify-content:space-between;margin-top:.4rem">'
-        f'<span style="{_M}font-size:8px;color:{_C["label"]}">{lead_msg}</span>'
-        f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["safe"] if peak_cor>=0 else _C["danger"]}">'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["label"]}">{lead_msg}</span>'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{_C["safe"] if peak_cor>=0 else _C["danger"]}">'
         f'ρ={peak_cor:.2f}</span>'
         f'</div>',
     )
@@ -3563,8 +3562,8 @@ def _render_yield_curve_snap() -> None:
     _card("YIELD CURVE",
         f'{svg}'
         f'<div style="display:flex;justify-content:space-between;margin-top:.45rem">'
-        f'<span style="{_M}font-size:8.5px;font-weight:700;color:{line_col}">{shape_lbl}</span>'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">'
+        f'<span style="{_M}font-size:0.53rem;font-weight:700;color:{line_col}">{shape_lbl}</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">'
         f'spread {slope:+.2f}% (3M→30Y)</span>'
         f'</div>',
     )
@@ -3612,12 +3611,12 @@ def _render_vol_trio() -> None:
             f'<div class="hm-row-in" style="padding:.42rem .65rem;border-bottom:1px solid #111;animation-delay:{vt_delay}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<div>'
-            f'<span style="{_M}font-size:9px;font-weight:700;color:{_C["text"]}">{key}</span>'
-            f'<span style="{_M}font-size:8px;color:{_C["muted"]};margin-left:6px">{sub_lbl}</span>'
+            f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_C["text"]}">{key}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-left:6px">{sub_lbl}</span>'
             f'</div>'
             f'<div style="text-align:right">'
-            f'<span class="{val_cls}" style="{_M}font-size:10px;font-weight:700;color:{rc};animation-delay:{vt_delay}">{d["cur"]:.1f}</span>'
-            f'<span style="{_M}font-size:8px;font-weight:700;color:{rc};'
+            f'<span class="{val_cls}" style="{_M}font-size:0.63rem;font-weight:700;color:{rc};animation-delay:{vt_delay}">{d["cur"]:.1f}</span>'
+            f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{rc};'
             f'margin-left:6px;letter-spacing:.06em">{reg}</span>'
             f'</div>'
             f'</div>'
@@ -3628,9 +3627,9 @@ def _render_vol_trio() -> None:
             f'</div>'
             # range labels
             f'<div style="display:flex;justify-content:space-between;margin-top:4px">'
-            f'<span style="{_M}font-size:7.5px;color:{_C["muted"]}">{lo_str}</span>'
-            f'<span style="{_M}font-size:7.5px;color:{_C["muted"]}">1y range</span>'
-            f'<span style="{_M}font-size:7.5px;color:{_C["muted"]}">{hi_str}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">{lo_str}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">1y range</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">{hi_str}</span>'
             f'</div>'
             f'</div>'
         )
@@ -3730,7 +3729,7 @@ def _render_hot_stocks() -> None:
     data = _load_hot_stocks()
     if not data:
         st.markdown(
-            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:{_C["muted"]};padding:6px 0">No stock news available · retries in 30 min</div>',
             unsafe_allow_html=True,
         )
@@ -3768,17 +3767,17 @@ def _render_hot_stocks() -> None:
             f'min-width:52px;background:#1a1500;border:1px solid #3a2f00;padding:4px 6px;flex-shrink:0">'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:800;'
             f'color:{_GOLD};letter-spacing:.04em;line-height:1">{ticker}</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:600;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:600;'
             f'color:{ret_col};margin-top:3px">{ret_str}</span>'
             f'</div>'
             # Right: meta + headline
             f'<div style="flex:1;min-width:0">'
-            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["muted"]};margin-bottom:3px">'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:{_C["muted"]};margin-bottom:3px">'
             f'{n} article{"s" if n!=1 else ""} · {age_str}</div>'
             f'{link_open}'
-            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;color:#dde0e8;line-height:1.4">{hl}</div>'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#dde0e8;line-height:1.4">{hl}</div>'
             f'{link_close}'
-            f'<div style="margin-top:2px;font-family:\'JetBrains Mono\',monospace;font-size:7px;color:{_C["label"]}">{source}</div>'
+            f'<div style="margin-top:2px;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:{_C["label"]}">{source}</div>'
             f'</div>'
             f'</div>'
         )
@@ -3940,8 +3939,8 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     legend = (
         f'<div style="display:flex;justify-content:center;gap:14px;'
         f'margin-top:.3rem;padding-top:.25rem;border-top:1px solid {_C["border"]}">'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">radius = CIS intensity</span>'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">angle = TPS pressure</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">radius = CIS intensity</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">angle = TPS pressure</span>'
         f'</div>'
     )
 
@@ -4058,7 +4057,7 @@ def _render_risk_convergence(
             f'<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px">'
             f'<svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" '
             f'stroke="{col}" stroke-width="2"/></svg>'
-            f'<span style="{_M}font-size:8px;color:{col}">{name}</span>'
+            f'<span style="{_M}font-size:0.50rem;color:{col}">{name}</span>'
             f'</span>'
         )
 
@@ -4289,7 +4288,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         legend = (
             '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">'
             + "".join(
-                f'<span style="font-family:JetBrains Mono,monospace;font-size:8px;'
+                f'<span style="font-family:JetBrains Mono,monospace;font-size:0.50rem;'
                 f'color:{_C["label"]}"><span style="display:inline-block;width:8px;height:8px;'
                 f'background:{c};border-radius:1px;margin-right:2px;vertical-align:middle">'
                 f'</span>{lbl}</span>'
@@ -4311,7 +4310,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         _card("ASSET CORRELATION MATRIX · 60D", svg + legend)
     except Exception:
         _card("ASSET CORRELATION MATRIX · 60D",
-              f'<span style="{_M}font-size:9px;color:{_C["muted"]}">Insufficient data</span>')
+              f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">Insufficient data</span>')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4511,7 +4510,7 @@ def _render_conflict_commodity_matrix(conflict_results) -> None:
             f'{cells}</svg>'
         )
         note = (
-            f'<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:0.50rem;'
             f'color:#555;margin-top:3px">cell value = exposure × CIS/100 · '
             f'<span style="color:{_C["danger"]}">■</span> ≥60 '
             f'<span style="color:{_C["warn"]}">■</span> 40–60 '
@@ -4580,7 +4579,7 @@ def _render_geo_event_timeline(conflict_results) -> None:
             )
 
         legend = (
-            f'<div style="font-family:JetBrains Mono,monospace;font-size:8px;'
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:0.50rem;'
             f'color:#555;margin-top:3px">'
             f'■ bar = CIS (conflict intensity) · '
             f'<span style="color:{_GOLD}">│</span> = TPS (transmission pressure)'
@@ -4620,9 +4619,9 @@ def _live_heartbeat() -> None:
         f'border:1px solid {_C["border"]};background:#060606;width:fit-content">'
         f'<span class="hm-live-blink" style="display:inline-block;width:6px;height:6px;'
         f'border-radius:50%;background:{_C["safe"]}"></span>'
-        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.14em;'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
         f'color:{_C["safe"]}">LIVE</span>'
-        f'<span style="{_M}font-size:8px;color:{_C["muted"]}">· refreshed {ts} · auto 60s</span>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">· refreshed {ts} · auto 60s</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -4660,7 +4659,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 f'border-left:3px solid {_GOLD};padding:.35rem 1rem;display:flex;'
                 f'align-items:center;gap:12px;margin-bottom:.75rem">'
                 f'<span class="nx-live-dot"></span>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
                 f'color:{_C["label"]};letter-spacing:.12em">FETCHING LIVE DATA</span>'
                 f'<div style="flex:1;height:1px;background:{_C["border"]};overflow:hidden;position:relative">'
                 f'<div class="hm-load-sweep"></div></div></div>',
@@ -4845,15 +4844,15 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _step_items = "".join(
         f'<div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">'
         f'<div style="display:flex;align-items:center;gap:4px">'
-        f'<span style="{_M}font-size:8px;font-weight:700;color:{c};background:{c}18;'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{c};background:{c}18;'
         f'border:1px solid {c}33;border-radius:50%;width:14px;height:14px;'
         f'display:flex;align-items:center;justify-content:center;flex-shrink:0">{n}</span>'
-        f'<span style="{_M}font-size:8px;font-weight:700;color:{_C["text"]};'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;color:{_C["text"]};'
         f'letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{title}</span>'
         f'</div>'
-        f'<span style="{_F}font-size:9px;color:{_C["muted"]};line-height:1.3">{q}</span>'
+        f'<span style="{_F}font-size:0.56rem;color:{_C["muted"]};line-height:1.3">{q}</span>'
         f'</div>'
-        + (f'<span style="color:{_C["border2"]};font-size:12px;flex-shrink:0;padding:0 2px">›</span>'
+        + (f'<span style="color:{_C["border2"]};font-size:0.75rem;flex-shrink:0;padding:0 2px">›</span>'
            if i < len(_steps) - 1 else "")
         for i, (n, title, q, c) in enumerate(_steps)
     )
@@ -4861,9 +4860,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         f'<div style="background:#060606;border:1px solid {_C["border"]};'
         f'border-left:2px solid rgba(207,185,145,0.25);padding:.4rem .7rem .35rem;margin-bottom:.4rem">'
         f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:.3rem">'
-        f'<span style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["muted"]}">Analytical Reading Guide</span>'
-        f'<span style="{_F}font-size:9px;color:{_C["muted"]};font-style:italic">'
+        f'<span style="{_F}font-size:0.56rem;color:{_C["muted"]};font-style:italic">'
         f'· follow this sequence for a first-time review</span>'
         f'</div>'
         f'<div style="display:flex;gap:4px;align-items:flex-start;flex-wrap:nowrap;overflow-x:auto">'
@@ -4951,9 +4950,9 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(
                     f'<div style="background:#0d0c04;border-left:3px solid {_lc};'
                     f'border:1px solid {_lc}33;padding:8px 14px;margin:6px 0">'
-                    f'<span style="color:{_lc};{_M}font-size:11px;font-weight:700;'
+                    f'<span style="color:{_lc};{_M}font-size:0.69rem;font-weight:700;'
                     f'letter-spacing:.08em">{_li} TRANSMISSION LAG · {_lag["lag_signal"].upper()}</span><br>'
-                    f'<span style="color:#b0b0b0;{_M}font-size:11px">{_lag["detail"]}</span></div>',
+                    f'<span style="color:#b0b0b0;{_M}font-size:0.69rem">{_lag["detail"]}</span></div>',
                     unsafe_allow_html=True,
                 )
         except Exception:

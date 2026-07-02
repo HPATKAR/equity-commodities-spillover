@@ -903,7 +903,7 @@ _TI_STYLE = """<style>
   padding:4px 0;border-bottom:1px solid #111}
 .ti-lens-mgr{font-family:'JetBrains Mono',monospace;font-size:0.50rem;
   font-weight:700;color:#CFB991}
-.ti-lens-arch{font-family:'JetBrains Mono',monospace;font-size:0.44rem;
+.ti-lens-arch{font-family:'JetBrains Mono',monospace;font-size:0.50rem;
   color:#555960;letter-spacing:.07em}
 .ti-lens-quote{font-family:'DM Sans',sans-serif;font-size:0.63rem;
   color:#888;line-height:1.55}
@@ -1745,7 +1745,7 @@ def _render_trade_card(
                     st.dataframe(pt_df, width="stretch", hide_index=True)
 
                 except Exception as exc:
-                    st.caption(f"Payoff projection unavailable: {exc}")
+                    st.caption("Payoff projection unavailable — see logs.")
 
         # ── Walk-forward backtest expander ────────────────────────────────
         try:
@@ -1974,8 +1974,8 @@ def _render_trade_card(
                                     template="plotly_dark",
                                     height=160,
                                     margin=dict(l=40, r=10, t=10, b=30),
-                                    yaxis=dict(title="Equity (base 100)", tickfont=dict(size=9)),
-                                    xaxis=dict(tickfont=dict(size=9)),
+                                    yaxis=dict(title="Equity (base 100)", tickfont=dict(size=9, color="#c8c8c8")),
+                                    xaxis=dict(tickfont=dict(size=9, color="#c8c8c8")),
                                     plot_bgcolor="#0d0d0d",
                                     paper_bgcolor="#0d0d0d",
                                 )
@@ -2035,7 +2035,7 @@ def _render_trade_card(
                                     st.session_state[_stored_key] = _new_tid
                                     st.rerun()
                                 except Exception as exc:
-                                    st.caption(f"Debate unavailable: {exc}")
+                                    st.caption("Debate unavailable — see logs.")
 
                     if msgs:
                         _render_tid = st.session_state.get(_stored_key) or msgs[0]["thread_id"]
@@ -2047,7 +2047,7 @@ def _render_trade_card(
                             show_consensus=True,
                         )
                 except Exception as exc:
-                    st.caption(f"Debate panel unavailable: {exc}")
+                    st.caption("Debate panel unavailable — see logs.")
 
         # ── Mini correlation chart ────────────────────────────────────────
         if len(trade["assets"]) >= 2:
@@ -2513,7 +2513,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 "Run: `pip install reportlab>=4.2.0`"
             )
         except Exception as exc:
-            st.error(f"Report generation failed: {exc}")
+            st.error("Report generation failed.")
 
     # ── Data Integrity Audit ────────────────────────────────────────────────
     with st.expander("Data Integrity Audit — Leg Coverage & Strategy Correlation", expanded=False):
@@ -3075,7 +3075,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
   padding:1.2rem 1.4rem; margin:.6rem 0; position:relative; overflow:hidden;
 }
 ._pv_title {
-  font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:.18em;
+  font-family:'JetBrains Mono',monospace; font-size:0.50rem; letter-spacing:.18em;
   color:#CFB991; margin-bottom:1rem;
   animation: _pv_pulse 2s ease-in-out infinite;
 }
@@ -3174,7 +3174,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 except Exception:
                     pass
             except Exception as _pv_exc:
-                st.error(f"Validation error: {_pv_exc}")
+                st.error("Validation error.")
                 _pv = None
             finally:
                 _anim.empty()
@@ -3297,6 +3297,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     title_font=dict(size=9, color="#8890a1"),
                     showlegend=False,
                 )
+                _fig_rdist.update_xaxes(tickfont=dict(color="#c8c8c8"))
+                _fig_rdist.update_yaxes(tickfont=dict(color="#c8c8c8"))
                 st.plotly_chart(_fig_rdist, use_container_width=True)
 
         st.markdown("---")
@@ -3493,6 +3495,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         yaxis=dict(title="Coef", color="#555960", gridcolor="#1e1e1e"),
                         title_font=dict(size=9, color="#8890a1"),
                     )
+                    _fig_we.update_xaxes(tickfont=dict(color="#c8c8c8"))
+                    _fig_we.update_yaxes(tickfont=dict(color="#c8c8c8"))
                     st.plotly_chart(_fig_we, use_container_width=True)
                 elif _we_s3d.get("per_leg"):
                     _we_bar_a = list(_we_s3d["per_leg"].keys())
@@ -3515,6 +3519,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         yaxis=dict(title="Mean return (%)", color="#555960", gridcolor="#1e1e1e"),
                         title_font=dict(size=9, color="#8890a1"),
                     )
+                    _fig_we.update_xaxes(tickfont=dict(color="#c8c8c8"))
+                    _fig_we.update_yaxes(tickfont=dict(color="#c8c8c8"))
                     st.plotly_chart(_fig_we, use_container_width=True)
 
             # Decision trace — pipeline's classification of this thesis at each window
@@ -3558,11 +3564,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
                     font=dict(family="JetBrains Mono", size=8),
                     xaxis=dict(title="Test window end", color="#555960", gridcolor="#1e1e1e",
-                               tickangle=-45, tickfont=dict(size=7)),
+                               tickangle=-45, tickfont=dict(size=7, color="#c8c8c8")),
                     yaxis=dict(title="OOS return (%)", color="#555960", gridcolor="#1e1e1e"),
                     title_font=dict(size=9, color="#8890a1"),
                     showlegend=False,
                 )
+                _fig_trace.update_xaxes(tickfont=dict(color="#c8c8c8"))
+                _fig_trace.update_yaxes(tickfont=dict(color="#c8c8c8"))
                 st.plotly_chart(_fig_trace, use_container_width=True)
 
                 # Summary of decision-conditional means

@@ -190,7 +190,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:0;'
             f'padding:0.4rem 0.6rem;margin-bottom:0.4rem;text-align:center">'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.50rem;font-weight:700;'
-            f'letter-spacing:0.14em;text-transform:uppercase;color:#3a3a3a;margin-bottom:2px">LAST UPDATED</div>'
+            f'letter-spacing:0.14em;text-transform:uppercase;color:#8890a1;margin-bottom:2px">LAST UPDATED</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:{_stale_color}">'
             f'{_age_label}</div></div>',
             unsafe_allow_html=True,
@@ -393,12 +393,12 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             _ti = _trend_icon.get(_row["trend"], "-")
             _tcolor = _trend_col.get(_row["trend"], "#555960")
             _conf_rows_html += (
-                f'<span style="{_M_ov}font-size:9px;color:{_row["color"]};font-weight:700">'
+                f'<span style="{_M_ov}font-size:0.56rem;color:{_row["color"]};font-weight:700">'
                 f'{_row["label"]}</span>'
-                f'<span style="{_M_ov}font-size:9px;color:{_tc};margin:0 4px 0 3px">'
+                f'<span style="{_M_ov}font-size:0.56rem;color:{_tc};margin:0 4px 0 3px">'
                 f'CIS&nbsp;{_row["cis"]:.0f}</span>'
-                f'<span style="{_M_ov}font-size:8px;color:{_tcolor}">{_ti}</span>'
-                f'<span style="{_M_ov}font-size:9px;color:#8E9AAA;margin:0 12px 0 4px">'
+                f'<span style="{_M_ov}font-size:0.50rem;color:{_tcolor}">{_ti}</span>'
+                f'<span style="{_M_ov}font-size:0.56rem;color:#8E9AAA;margin:0 12px 0 4px">'
                 f'ch:{_row["top_ch"].replace("_"," ")}</span>'
             )
 
@@ -408,27 +408,27 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
 
             # Section label
-            f'<span style="{_M_ov}font-size:8px;font-weight:700;letter-spacing:.18em;'
+            f'<span style="{_M_ov}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
             f'text-transform:uppercase;color:{_cis_col}">■ GEO RISK</span>'
 
             # Score pill
-            f'<span style="{_M_ov}font-size:9px;color:{_cis_col};font-weight:700">'
+            f'<span style="{_M_ov}font-size:0.56rem;color:{_cis_col};font-weight:700">'
             f'{_geo_lbl}</span>'
 
             # CIS / TPS
-            f'<span style="{_M_ov}font-size:9px;color:{_cis_col}">CIS&nbsp;<b>{_geo_cis:.0f}</b></span>'
-            f'<span style="{_M_ov}font-size:9px;color:{_tps_col}">TPS&nbsp;<b>{_geo_tps:.0f}</b></span>'
+            f'<span style="{_M_ov}font-size:0.56rem;color:{_cis_col}">CIS&nbsp;<b>{_geo_cis:.0f}</b></span>'
+            f'<span style="{_M_ov}font-size:0.56rem;color:{_tps_col}">TPS&nbsp;<b>{_geo_tps:.0f}</b></span>'
 
             # Lead conflict
-            f'<span style="{_F_ov}font-size:9px;color:#8E9AAA">'
+            f'<span style="{_F_ov}font-size:0.56rem;color:#8E9AAA">'
             f'Lead:&nbsp;<b style="color:{_cis_col}">{_geo_top}</b></span>'
 
             # Active count
-            f'<span style="{_M_ov}font-size:9px;color:#A8B8C8">'
+            f'<span style="{_M_ov}font-size:0.56rem;color:#A8B8C8">'
             f'{_geo_n_active}&nbsp;active</span>'
 
             # Scenario
-            f'<span style="background:{_geo_sc_color};color:#000;{_M_ov}font-size:8px;'
+            f'<span style="background:{_geo_sc_color};color:#000;{_M_ov}font-size:0.50rem;'
             f'font-weight:700;padding:1px 5px;letter-spacing:.08em">{_geo_sc_label.upper()}</span>'
 
             # Divider + per-conflict breakdown

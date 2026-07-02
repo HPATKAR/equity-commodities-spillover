@@ -69,7 +69,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             _cc_color = "#c0392b" if _corr_cis >= 70 else "#e67e22" if _corr_cis >= 50 else "#CFB991"
             _badges = "".join(
                 f'<span style="background:#1a0a00;color:{_cc_color};'
-                f'font-family:\'JetBrains Mono\',monospace;font-size:7px;font-weight:700;'
+                f'font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
                 f'padding:2px 6px;margin-right:6px;border:1px solid {_cc_color};'
                 f'opacity:{0.9 if i==0 else 0.6}">'
                 f'{r["label"]}·CIS {r["cis"]:.0f}</span>'
@@ -79,11 +79,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="background:#080808;border:1px solid #1e1e1e;'
                 f'border-left:3px solid {_cc_color};padding:.4rem .9rem;'
                 f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'font-weight:700;color:{_cc_color};white-space:nowrap">'
                 f'CONFLICT CONTEXT</span>'
                 f'{_badges}'
-                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:8.5px;'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.53rem;'
                 f'color:#555960;margin-left:auto">'
                 f'CIS&nbsp;<b style="color:{_cc_color}">{_corr_cis:.0f}</b>&nbsp;·&nbsp;'
                 f'TPS&nbsp;<b style="color:#CFB991">{_corr_tps:.0f}</b>&nbsp;·&nbsp;'

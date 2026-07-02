@@ -36,7 +36,7 @@ _DIM = "#8E9AAA"
 def _sh(txt: str) -> None:
     """Styled terminal section header - replaces st.subheader()."""
     st.markdown(
-        f'<p style="{_M}font-size:8px;font-weight:700;letter-spacing:.18em;'
+        f'<p style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
         f'color:{_G};text-transform:uppercase;border-bottom:1px solid #1e1e1e;'
         f'padding-bottom:5px;margin:1.4rem 0 .6rem">{txt}</p>',
         unsafe_allow_html=True,
@@ -148,7 +148,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
         )
         _st_tags = "".join(
             f'<span style="background:#0a0a1a;color:#8E9AAA;'
-            f'font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'padding:2px 6px;margin-right:4px;border:1px solid #2a2a2a">'
             f'{r["label"].upper()}&nbsp;CIS&nbsp;{r["cis"]:.0f}</span>'
             for r in sorted(_st_active, key=lambda x: x["cis"], reverse=True)[:3]
@@ -157,10 +157,10 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             f'<div style="background:#080808;border:1px solid #1e1e1e;'
             f'border-left:3px solid {_st_col};padding:.4rem .9rem;'
             f'margin-bottom:.6rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:{_st_col};white-space:nowrap">GEO STRESS CONTEXT</span>'
             f'{_st_tags}'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#8E9AAA;margin-left:auto">'
             f'CIS&nbsp;<b style="color:{_st_col}">{_st_cis:.0f}</b>&nbsp;·&nbsp;'
             f'TPS&nbsp;<b style="color:#CFB991">{_st_tps:.0f}</b>&nbsp;·&nbsp;'
@@ -232,10 +232,10 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                         st.warning(w)
                     for e in _pf.get("errors", [])[:5]:
                         st.caption(e)
-                except ValueError as e:
-                    st.error(f"Could not parse file: {e}")
-                except Exception as e:
-                    st.error(f"Unexpected error: {e}")
+                except ValueError:
+                    st.error("Could not parse file — check format.")
+                except Exception:
+                    st.error("Unexpected error loading portfolio.")
 
         # ── Show current portfolio summary ─────────────────────────────────
         if _existing_portfolio:
@@ -247,13 +247,13 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="display:flex;gap:16px;flex-wrap:wrap;'
                 f'margin:.6rem 0 .3rem;border-top:1px solid #1e1e1e;padding-top:.5rem">'
-                f'<div><span style="{_M}font-size:7px;color:#555960">POSITIONS</span><br>'
+                f'<div><span style="{_M}font-size:0.50rem;color:#555960">POSITIONS</span><br>'
                 f'<span style="{_M}font-size:16px;font-weight:700;color:#e8e9ed">{_pf["n"]}</span></div>'
-                f'<div><span style="{_M}font-size:7px;color:#555960">TOTAL NAV (USD)</span><br>'
+                f'<div><span style="{_M}font-size:0.50rem;color:#555960">TOTAL NAV (USD)</span><br>'
                 f'<span style="{_M}font-size:16px;font-weight:700;color:#CFB991">'
                 f'${_pf["total_usd"]:,.0f}</span></div>'
-                f'<div><span style="{_M}font-size:7px;color:#555960">LOADED</span><br>'
-                f'<span style="{_M}font-size:11px;color:#8E9AAA">{_pf["loaded_at"][:16]}</span></div>'
+                f'<div><span style="{_M}font-size:0.50rem;color:#555960">LOADED</span><br>'
+                f'<span style="{_M}font-size:0.69rem;color:#8E9AAA">{_pf["loaded_at"][:16]}</span></div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -261,16 +261,16 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             # Mini holdings table
             rows_html = "".join(
                 f'<tr style="border-bottom:1px solid #1a1a1a">'
-                f'<td style="{_M}font-size:9px;color:#CFB991;padding:3px 8px">{p["ticker"]}</td>'
-                f'<td style="{_M}font-size:9px;color:#8E9AAA;padding:3px 8px">'
+                f'<td style="{_M}font-size:0.56rem;color:#CFB991;padding:3px 8px">{p["ticker"]}</td>'
+                f'<td style="{_M}font-size:0.56rem;color:#8E9AAA;padding:3px 8px">'
                 f'{p["name"][:28] if p["name"] else "-"}</td>'
-                f'<td style="{_M}font-size:9px;color:#e8e9ed;padding:3px 8px">'
+                f'<td style="{_M}font-size:0.56rem;color:#e8e9ed;padding:3px 8px">'
                 f'{p["sector"][:18] if p["sector"] else "-"}</td>'
-                f'<td style="{_M}font-size:9px;color:#e8e9ed;text-align:right;padding:3px 8px">'
+                f'<td style="{_M}font-size:0.56rem;color:#e8e9ed;text-align:right;padding:3px 8px">'
                 f'${p["dollar_amount_usd"]:,.0f}</td>'
-                f'<td style="{_M}font-size:9px;color:#e8e9ed;text-align:right;padding:3px 8px">'
+                f'<td style="{_M}font-size:0.56rem;color:#e8e9ed;text-align:right;padding:3px 8px">'
                 f'{p["weight"]:.1%}</td>'
-                f'<td style="{_M}font-size:9px;color:#555960;text-align:right;padding:3px 8px">'
+                f'<td style="{_M}font-size:0.56rem;color:#555960;text-align:right;padding:3px 8px">'
                 f'{p["currency"]}</td>'
                 f'</tr>'
                 for p in top_pos[:10]
@@ -278,17 +278,17 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<table style="width:100%;border-collapse:collapse">'
                 f'<thead><tr>'
-                f'<th style="{_M}font-size:7px;color:#555960;text-align:left;'
+                f'<th style="{_M}font-size:0.50rem;color:#555960;text-align:left;'
                 f'padding:3px 8px;border-bottom:1px solid #2a2a2a">TICKER</th>'
-                f'<th style="{_M}font-size:7px;color:#555960;text-align:left;'
+                f'<th style="{_M}font-size:0.50rem;color:#555960;text-align:left;'
                 f'padding:3px 8px;border-bottom:1px solid #2a2a2a">NAME</th>'
-                f'<th style="{_M}font-size:7px;color:#555960;text-align:left;'
+                f'<th style="{_M}font-size:0.50rem;color:#555960;text-align:left;'
                 f'padding:3px 8px;border-bottom:1px solid #2a2a2a">SECTOR</th>'
-                f'<th style="{_M}font-size:7px;color:#555960;text-align:right;'
+                f'<th style="{_M}font-size:0.50rem;color:#555960;text-align:right;'
                 f'padding:3px 8px;border-bottom:1px solid #2a2a2a">MKT VALUE (USD)</th>'
-                f'<th style="{_M}font-size:7px;color:#555960;text-align:right;'
+                f'<th style="{_M}font-size:0.50rem;color:#555960;text-align:right;'
                 f'padding:3px 8px;border-bottom:1px solid #2a2a2a">WEIGHT</th>'
-                f'<th style="{_M}font-size:7px;color:#555960;text-align:right;'
+                f'<th style="{_M}font-size:0.50rem;color:#555960;text-align:right;'
                 f'padding:3px 8px;border-bottom:1px solid #2a2a2a">CCY</th>'
                 f'</tr></thead><tbody>{rows_html}</tbody></table>',
                 unsafe_allow_html=True,
@@ -397,7 +397,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     ]
     if all_selected_a:
         st.markdown(
-            f'<p style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.14em;'
+            f'<p style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
             f'color:{_DIM};text-transform:uppercase;margin:.6rem 0 .3rem">Weights (%)</p>',
             unsafe_allow_html=True,
         )
@@ -437,7 +437,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
     weights_c: dict[str, float] = {}
     if _fi_selected and not fi_prices.empty:
         st.markdown(
-            f'<p style="{_M}font-size:7.5px;font-weight:700;letter-spacing:.14em;'
+            f'<p style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
             f'color:{_DIM};text-transform:uppercase;margin:.6rem 0 .3rem">Fixed Income Weights (%)</p>',
             unsafe_allow_html=True,
         )
@@ -523,7 +523,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 else:
                     st.warning("CSV must have 'ticker' and 'weight' columns.")
             except Exception as e:
-                st.warning(f"Could not parse CSV: {e}")
+                st.warning("Could not parse CSV — check column format.")
 
         # Build editable weights DataFrame
         stock_rows = []

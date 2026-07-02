@@ -676,7 +676,7 @@ def page_ai_chat(start: str, end: str) -> None:
     # Suggested questions (first visit only) - sets _sq_input; consumed by render_chat_core
     if not st.session_state["chat_messages"]:
         st.markdown(
-            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;font-weight:700;'
+            '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
             'letter-spacing:.16em;text-transform:uppercase;color:#CFB991;'
             'border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:.8rem 0 .4rem">Suggested Questions</p>',
             unsafe_allow_html=True,

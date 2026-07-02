@@ -48,8 +48,8 @@ def _mini_gauge(value: float, label: str, color: str, height: int = 160) -> go.F
     fig.update_layout(
         height=height,
         margin=dict(l=20, r=20, t=30, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="#080808",
+        plot_bgcolor="#080808",
     )
     return fig
 
@@ -92,8 +92,8 @@ def _render_conflict_news_gpr(per_conflict: dict) -> None:
         barmode="group",
         height=210,
         margin=dict(l=10, r=10, t=10, b=60),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="#080808",
+        plot_bgcolor="#080808",
         legend=dict(
             orientation="h", x=0, y=1.08,
             font=dict(size=8, family="JetBrains Mono, monospace"),
@@ -123,11 +123,11 @@ def _render_alpha_display(alpha: float) -> None:
     st.markdown(
         f'<div style="text-align:center;padding:12px 8px;'
         f'background:#0d0d0d;border:1px solid #2a2a2a">'
-        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:#555960;letter-spacing:.16em;text-transform:uppercase">α (Act Weight)</span>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:28px;'
         f'font-weight:700;color:{color};margin:4px 0">{alpha_pct:.0f}%</div>'
-        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:{color}">{label}</div>'
         f'<div style="margin-top:8px;height:4px;background:#1a1a1a">'
         f'<div style="width:{alpha_pct:.0f}%;height:100%;background:{color}"></div>'
@@ -143,9 +143,9 @@ def _render_methodology() -> None:
     st.markdown(
         '<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
         'padding:10px 14px;margin-top:8px">'
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#555960;letter-spacing:.16em;margin:0 0 4px">METHODOLOGY</p>'
-        '<p style="font-family:\'DM Sans\',sans-serif;font-size:9px;'
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;'
         'color:#8E9AAA;line-height:1.6;margin:0">'
         'News GPR = α · Act Score + (1−α) · Threat Score. '
         'α rises dynamically when realized act headlines dominate '
@@ -174,7 +174,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
         from src.analysis.gpr_news import get_news_gpr_layer, render_threat_act_feed
         result = get_news_gpr_layer()
     except Exception as e:
-        st.error(f"News GPR layer unavailable: {e}")
+        st.error("News GPR layer unavailable — see logs.")
         _render_methodology()
         return
 
@@ -204,9 +204,9 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
         st.markdown(
             f'<div style="background:#111;border:1px solid #e67e22;'
             f'padding:10px 16px;margin-bottom:12px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:#e67e22">■ NO CLASSIFIED HEADLINES</span><br>'
-            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+            f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;'
             f'color:#8E9AAA">'
             f'{n_raw} headlines fetched · 0 matched Threat/Act taxonomy. '
             f'This is a <b style="color:#e67e22">no-signal</b> reading — '
@@ -227,11 +227,11 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
                 f'<div style="background:#0d0d0d;border:1px solid #2a2a2a;'
                 f'height:160px;display:flex;flex-direction:column;'
                 f'align-items:center;justify-content:center;gap:4px">'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#555960;letter-spacing:.16em;text-transform:uppercase">{_lbl}</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
                 f'font-weight:700;color:{_col};opacity:.4">— —</span>'
-                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#555960">NO SIGNAL · {n_raw} raw headlines</span>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -240,11 +240,11 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
             f'<div style="background:#0d0d0d;border:1px solid #2a2a2a;'
             f'height:160px;display:flex;flex-direction:column;'
             f'align-items:center;justify-content:center;gap:4px;margin-top:10px">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#555960;letter-spacing:.16em">α (ACT WEIGHT)</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
             f'font-weight:700;color:#555960;opacity:.4">—</span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#555960">AWAITING SIGNAL</span>'
             f'</div>',
             unsafe_allow_html=True,
@@ -308,7 +308,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
 
     # ── Row 4: per-conflict breakdown ──────────────────────────────────────
     st.markdown(
-        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:8px;'
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
         'PER-CONFLICT NEWS GPR</p>',
         unsafe_allow_html=True,

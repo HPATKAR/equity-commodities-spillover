@@ -139,7 +139,7 @@ _ABOUT_STYLE = """<style>
 }
 .abt-slbl{
   font-family:'JetBrains Mono',monospace!important;
-  font-size:0.44rem!important;text-transform:uppercase;
+  font-size:0.50rem!important;text-transform:uppercase;
   letter-spacing:.14em;color:#8890a1!important;display:block;margin-top:4px;
 }
 
