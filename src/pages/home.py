@@ -4595,6 +4595,122 @@ def _render_geo_event_timeline(conflict_results) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DELTA PANEL — "What Changed Since Yesterday"
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_delta_panel(
+    conflict_results: dict,
+    portfolio_cis: float,
+    portfolio_tps: float,
+    geo_risk_score: float,
+) -> None:
+    """
+    Full-width "what changed since yesterday" panel. Rendered before the
+    3-column layout so it answers "what do I need to know today" at first glance.
+
+    Writes/reads from logs/delta_snapshot.json. If no prior-day snapshot exists,
+    says so honestly — no fake deltas.
+    """
+    from src.analysis.daily_snapshot import update_snapshot, compute_deltas
+
+    try:
+        yesterday, today = update_snapshot(
+            conflict_results, portfolio_cis, portfolio_tps, geo_risk_score,
+        )
+    except Exception:
+        return  # silent — don't break the page if snapshot I/O fails
+
+    # ── Panel chrome ──────────────────────────────────────────────────────
+    if yesterday:
+        _baseline_date = yesterday.get("date", "unknown")
+        _baseline_time = yesterday.get("captured_at", "")
+        _date_label    = (
+            f"YESTERDAY · {_baseline_date}"
+            if _baseline_date != datetime.date.today().isoformat()
+            else f"EARLIER TODAY · {_baseline_time}"
+        )
+    else:
+        _date_label = "FIRST RUN — NO PRIOR BASELINE"
+
+    st.markdown(
+        f'<div style="background:#060606;border:1px solid {_C["border"]};'
+        f'border-left:3px solid {_GOLD};padding:.35rem .85rem .3rem;'
+        f'margin-bottom:.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:{_GOLD};flex-shrink:0">'
+        f'What Changed Since {_date_label}</span>'
+        f'<div style="flex:1;height:1px;background:{_C["border"]}"></div>'
+        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">'
+        f'today · {today.get("captured_at","")}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── No baseline case ──────────────────────────────────────────────────
+    if yesterday is None:
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid {_C["border"]};'
+            f'padding:.4rem .85rem;margin-bottom:.5rem">'
+            f'<span style="{_M}font-size:0.63rem;color:{_C["muted"]}">'
+            f'No prior-day snapshot found. Baseline saved — deltas will appear on next visit.'
+            f'</span></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # ── Compute ranked deltas ─────────────────────────────────────────────
+    deltas = compute_deltas(yesterday, today)
+
+    if not deltas:
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid {_C["border"]};'
+            f'padding:.4rem .85rem;margin-bottom:.5rem">'
+            f'<span style="{_M}font-size:0.63rem;color:{_C["muted"]}">'
+            f'No significant moves since {_date_label.lower()}. All scores stable.'
+            f'</span></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # ── Delta rows ────────────────────────────────────────────────────────
+    _CAT_COLORS = {
+        "composite": _GOLD,
+        "aggregate": _C["info"],
+        "conflict":  _C["warn"],
+    }
+
+    rows_html = ""
+    for d in deltas:
+        delta   = d["delta"]
+        is_up   = delta > 0
+        # For geo risk / CIS / TPS: increase = more danger (red)
+        d_color = _C["danger"] if is_up else _C["safe"]
+        d_sign  = f"▲ +{delta:.1f}" if is_up else f"▼ {delta:.1f}"
+        cat_col = _CAT_COLORS.get(d["category"], _C["muted"])
+
+        rows_html += (
+            f'<div style="display:flex;align-items:center;gap:.7rem;'
+            f'padding:.22rem .85rem;border-bottom:1px solid #0e0e0e">'
+            f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{d_color};'
+            f'min-width:80px;text-align:right">{d_sign}</span>'
+            f'<span style="{_M}font-size:0.50rem;letter-spacing:.08em;font-weight:700;'
+            f'text-transform:uppercase;color:{cat_col};min-width:70px">{d["category"]}</span>'
+            f'<span style="{_F}font-size:0.72rem;color:{_C["text"]}">{d["label"]}</span>'
+            f'<span style="{_M}font-size:0.60rem;color:{_C["muted"]};margin-left:auto">'
+            f'{d["previous"]:.1f} → {d["current"]:.1f}</span>'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid {_C["border"]};'
+        f'margin-bottom:.5rem;border-top:none">'
+        f'{rows_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -4870,6 +4986,17 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         f'</div></div>',
         unsafe_allow_html=True,
     )
+
+    # § 1.2  What changed since yesterday — delta panel before the full score layout
+    try:
+        _render_delta_panel(
+            conflict_results,
+            portfolio_cis   = conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 50.0)),
+            portfolio_tps   = conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 50.0)),
+            geo_risk_score  = float(risk["score"]),
+        )
+    except Exception:
+        pass
 
     # ── 3-col layout: intel feed | dominant gauge | market pulse cards ────────
     # Column heights are balanced by design:
