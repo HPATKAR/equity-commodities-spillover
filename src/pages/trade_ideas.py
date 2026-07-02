@@ -2245,31 +2245,105 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "Fixed Income": "#2471a3", "India/EM": "#d35400",
     }
 
+    _REGIME_RC = {0: "#2e7d32", 1: "#6b7280", 2: "#e67e22", 3: "#c0392b"}
+    _REGIME_RL = {0: "D", 1: "N", 2: "E", 3: "C"}
+    _REGIME_RN = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+
     def _thesis_item_html(tr: dict) -> str:
-        cat  = tr.get("category", "Macro")
-        col  = _CAT_HEX_DL.get(cat, "#555960")
-        nm   = tr["name"].split("(")[0].strip()
-        dirs = tr.get("direction", [])
+        cat     = tr.get("category", "Macro")
+        col     = _CAT_HEX_DL.get(cat, "#555960")
+        nm      = tr["name"].split("(")[0].strip()
+        dirs    = tr.get("direction", [])
+        assets  = tr.get("assets", [])
+
+        # Leg directions — all legs, asset name stripped of parentheticals
         legs = "  ".join(
-            f'{"▲" if d == "Long" else "▼"} {a}'
-            for a, d in zip(tr.get("assets", [])[:2], dirs[:2])
+            f'{"▲" if d == "Long" else "▼"} {a.split("(")[0].strip()}'
+            for a, d in zip(assets, dirs)
         )
-        return (
-            f'<div style="display:flex;align-items:flex-start;gap:6px;'
-            f'padding:6px 8px;border-bottom:1px solid #151515">'
-            f'<span style="width:6px;height:6px;border-radius:50%;'
-            f'background:{col};flex-shrink:0;margin-top:3px"></span>'
-            f'<div style="min-width:0">'
-            f'<div style="font-size:.62rem;color:#d8d8d8;'
-            f'font-family:\'DM Sans\',sans-serif;line-height:1.4;'
-            f'word-break:break-word">{nm}</div>'
-            f'<div style="font-size:.54rem;color:{col};opacity:.85;'
+
+        # Regime badges: colored mini-squares D / N / E / C
+        reg_html = ""
+        for r in sorted(tr.get("regime", [])):
+            rc = _REGIME_RC.get(r, "#555960")
+            rl = _REGIME_RL.get(r, "?")
+            rn = _REGIME_RN.get(r, "")
+            reg_html += (
+                f'<span title="{rn}" style="display:inline-flex;align-items:center;'
+                f'justify-content:center;width:14px;height:14px;'
+                f'background:{rc}20;border:1px solid {rc}55;border-radius:2px;'
+                f'font-family:\'JetBrains Mono\',monospace;font-size:.46rem;'
+                f'font-weight:700;color:{rc};flex-shrink:0">{rl}</span>'
+            )
+
+        # Holding period badge
+        hold    = tr.get("holding_period", "")
+        hold_h  = (
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.47rem;'
+            f'color:#CFB991;background:#CFB99112;border:1px solid #CFB99128;'
+            f'border-radius:2px;padding:1px 4px;white-space:nowrap;flex-shrink:0">'
+            f'⏱ {hold}</span>'
+        ) if hold else ""
+
+        # Target (optional — newer theses)
+        tgt     = tr.get("target", "")
+        tgt_h   = ""
+        if tgt:
+            tgt_short = tgt[:55] + "…" if len(tgt) > 55 else tgt
+            tgt_h = (
+                f'<div style="font-size:.50rem;color:#27ae6090;'
+                f'font-family:\'DM Sans\',sans-serif;margin-top:2px;line-height:1.3">'
+                f'▸ {tgt_short}</div>'
+            )
+
+        # Trigger (1 line, truncated)
+        trig    = tr.get("trigger", "")
+        trig_s  = trig[:62] + "…" if len(trig) > 62 else trig
+
+        # Investor lens (optional — newer theses)
+        lens    = tr.get("investor_lens", [])
+        lens_h  = (
+            f'<div style="font-size:.49rem;color:#CFB99175;'
             f'font-family:\'JetBrains Mono\',monospace;margin-top:2px;'
-            f'word-break:break-word">{cat}</div>'
-            f'<div style="font-size:.54rem;color:#555960;'
-            f'font-family:\'JetBrains Mono\',monospace;margin-top:1px;'
-            f'word-break:break-word">{legs}</div>'
-            f'</div></div>'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+            f'{" · ".join(lens[:3])}</div>'
+        ) if lens else ""
+
+        return (
+            f'<div style="padding:7px 8px 6px;border-bottom:1px solid #151515">'
+            # Row 1: color dot + name + regime badges
+            f'<div style="display:flex;align-items:flex-start;'
+            f'justify-content:space-between;gap:5px;margin-bottom:3px">'
+            f'<div style="display:flex;align-items:flex-start;gap:5px;min-width:0">'
+            f'<span style="width:6px;height:6px;border-radius:50%;background:{col};'
+            f'flex-shrink:0;margin-top:4px"></span>'
+            f'<div style="font-size:.62rem;color:#dcdcdc;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.35;'
+            f'word-break:break-word;font-weight:600">{nm}</div>'
+            f'</div>'
+            f'<div style="display:flex;gap:2px;flex-shrink:0;margin-top:1px">{reg_html}</div>'
+            f'</div>'
+            # Row 2: category tag + legs + hold period
+            f'<div style="display:flex;align-items:center;'
+            f'justify-content:space-between;gap:4px;margin-bottom:3px">'
+            f'<div style="min-width:0">'
+            f'<span style="font-size:.50rem;color:{col};font-family:\'JetBrains Mono\','
+            f'monospace;font-weight:700;letter-spacing:.06em">{cat.upper()}</span>'
+            f'<span style="font-size:.50rem;color:#444950;font-family:\'JetBrains Mono\','
+            f'monospace;margin:0 4px">·</span>'
+            f'<span style="font-size:.50rem;color:#555960;font-family:\'JetBrains Mono\','
+            f'monospace">{legs}</span>'
+            f'</div>'
+            f'{hold_h}'
+            f'</div>'
+            # Row 3: trigger
+            f'<div style="font-size:.52rem;color:#6b7380;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.3">{trig_s}</div>'
+            # Row 4: target (if available)
+            f'{tgt_h}'
+            # Row 5: investor lens (if available)
+            f'{lens_h}'
+            f'</div>'
         )
 
     # Split 18 theses evenly across two columns
@@ -2277,27 +2351,53 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _col1_html = "".join(_thesis_item_html(t) for t in _TRADE_LIBRARY[:_half])
     _col2_html = "".join(_thesis_item_html(t) for t in _TRADE_LIBRARY[_half:])
 
-    # Build section list for left column
+    # Count regimes across all theses for the section summary
+    _cat_counts: dict = {}
+    for _tr in _TRADE_LIBRARY:
+        _cat_counts[_tr.get("category", "Macro")] = _cat_counts.get(_tr.get("category", "Macro"), 0) + 1
+    _cat_summary = " · ".join(f"{v} {k}" for k, v in sorted(_cat_counts.items(), key=lambda x: -x[1])[:4])
+
+    # Avg holding: count theses with holding_period
+    _n_with_hold = sum(1 for t in _TRADE_LIBRARY if t.get("holding_period"))
+
+    # Build section list for left column — each with 2 detail lines
     _dl_sections = [
-        ("01", "Regime Analysis",       f"Current: {r_name} · 60d rolling avg |corr|"),
-        ("02", "Cross-Asset Heatmap",   "Pearson matrix · 8 equity × 8 commodity"),
-        ("03", "Composite Stress Index","0–100 · vol 45% · corr 35% · vol 15%"),
-        ("04", "Commodity Performance", "Indexed returns · 252 trading days"),
-        ("05", f"Trade Ideas ({_n_theses} theses)",         f"{_n_theses} pairs · 4 categories"),
-        ("06", f"Geopolitical ({_n_geo} events)",           f"{_n_geo} events · commodity transmission"),
-        ("07", "Methodology & Sources", "DCC-GARCH · DY Spillover · Granger · FRED"),
+        ("01", "Regime Analysis",
+         f"Current regime: {r_name}",
+         "60d avg |corr| · percentile bands · 10d persistence gate"),
+        ("02", "Cross-Asset Heatmap",
+         "8 equity indices × 8 commodity futures",
+         "Full-sample Pearson · spillover magnitude ranking"),
+        ("03", "Composite Stress Index",
+         "0–100 blended signal",
+         "Vol 45% · Corr 35% · Commodity vol 15% · Accel 5%"),
+        ("04", "Commodity Performance",
+         "7 key futures · indexed to base 100",
+         "Last 252 trading days (~1 year) · outperformers flagged"),
+        ("05", f"Trade Ideas  ·  {_n_theses} theses",
+         _cat_summary,
+         f"{_n_with_hold} with holding periods · regime-triggered entries"),
+        ("06", f"Geopolitical Context  ·  {_n_geo} events",
+         "Active + recently resolved macro events",
+         "Commodity price transmission · risk premium embedding"),
+        ("07", "Methodology & Data",
+         "DCC-GARCH · Diebold-Yilmaz Spillover Index",
+         "Granger causality · Transfer entropy · FRED · Yahoo Finance"),
     ]
     _sec_rows_html = ""
-    for _sn, _st_lbl, _ss in _dl_sections:
+    for _sn, _st_lbl, _sd1, _sd2 in _dl_sections:
         _sec_rows_html += (
-            f'<div style="display:flex;gap:9px;padding:7px 10px;'
+            f'<div style="display:flex;gap:8px;padding:7px 10px;'
             f'border-bottom:1px solid #151515">'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
             f'color:#CFB991;font-weight:700;flex-shrink:0;padding-top:2px">{_sn}</span>'
-            f'<div><div style="font-size:.63rem;color:#e8e9ed;font-weight:600;'
-            f'font-family:\'DM Sans\',sans-serif;line-height:1.3">{_st_lbl}</div>'
-            f'<div style="font-size:.57rem;color:#555960;'
-            f'font-family:\'DM Sans\',sans-serif;margin-top:2px">{_ss}</div>'
+            f'<div>'
+            f'<div style="font-size:.62rem;color:#e8e9ed;font-weight:600;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.3;margin-bottom:2px">{_st_lbl}</div>'
+            f'<div style="font-size:.55rem;color:#9299a3;'
+            f'font-family:\'DM Sans\',sans-serif;line-height:1.35">{_sd1}</div>'
+            f'<div style="font-size:.52rem;color:#555960;'
+            f'font-family:\'JetBrains Mono\',monospace;margin-top:2px;line-height:1.3">{_sd2}</div>'
             f'</div></div>'
         )
 
