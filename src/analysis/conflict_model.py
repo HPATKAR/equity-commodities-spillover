@@ -395,6 +395,83 @@ def compute_cis(conflict: dict) -> tuple[float, str]:
     return cis, cis_source
 
 
+def compute_cis_sensitivity(conflict_raw: dict) -> list[dict]:
+    """
+    For each of the 7 CIS dimensions, compute how much the score would shift
+    if that dimension moved to its floor (0.0) or ceiling (1.0).
+
+    Uses static registry values only — no ACLED/GDELT calls — so this is
+    always instant and consistent with the baseline shown in the intensity breakdown.
+
+    Returns list sorted by max |delta| descending:
+      {key, label, weight, current, delta_up, delta_dn, max_abs}
+      delta_up = CIS gain if dim → 1.0 (escalation risk)
+      delta_dn = CIS drop if dim → 0.0 (de-escalation room, ≤ 0)
+    """
+    _DIM_LABELS = {
+        "deadliness":           "Deadliness",
+        "civilian_danger":      "Civilian Danger",
+        "geographic_diffusion": "Geo Diffusion",
+        "fragmentation":        "Fragmentation",
+        "escalation_trend":     "Escalation Trend",
+        "recency":              "Recency",
+        "source_coverage":      "Source Coverage",
+    }
+
+    state_mult    = _STATE_MULT.get(conflict_raw.get("state", "active"), 1.0)
+    _, is_cap     = _check_conflict_freshness(conflict_raw)
+    staleness_cap = _CM_CONFIG["staleness_cis_cap"]
+
+    dims = {
+        "deadliness":           float(conflict_raw.get("deadliness",           0.5)),
+        "civilian_danger":      float(conflict_raw.get("civilian_danger",      0.5)),
+        "geographic_diffusion": float(conflict_raw.get("geographic_diffusion", 0.3)),
+        "fragmentation":        float(conflict_raw.get("fragmentation",        0.2)),
+        "escalation_trend":     _ESCALATION_MAP.get(
+                                    conflict_raw.get("escalation_trend", "stable"), 0.5),
+        "recency":              _recency_score(conflict_raw),
+        "source_coverage":      float(conflict_raw.get("source_coverage",      0.7)),
+    }
+
+    raw_base = sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS)
+    cis_base = float(np.clip(raw_base * state_mult * 100, 0, 100))
+    if is_cap:
+        cis_base = min(cis_base, staleness_cap)
+
+    out = []
+    for key in _CIS_WEIGHTS:
+        cur = dims[key]
+
+        dims_up = {**dims, key: 1.0}
+        raw_up  = sum(_CIS_WEIGHTS[k] * dims_up[k] for k in _CIS_WEIGHTS)
+        cis_up  = float(np.clip(raw_up * state_mult * 100, 0, 100))
+        if is_cap:
+            cis_up = min(cis_up, staleness_cap)
+
+        dims_dn = {**dims, key: 0.0}
+        raw_dn  = sum(_CIS_WEIGHTS[k] * dims_dn[k] for k in _CIS_WEIGHTS)
+        cis_dn  = float(np.clip(raw_dn * state_mult * 100, 0, 100))
+        if is_cap:
+            cis_dn = min(cis_dn, staleness_cap)
+
+        delta_up = round(cis_up - cis_base, 1)
+        delta_dn = round(cis_dn - cis_base, 1)
+        max_abs  = round(max(abs(delta_up), abs(delta_dn)), 1)
+
+        out.append({
+            "key":      key,
+            "label":    _DIM_LABELS[key],
+            "weight":   _CIS_WEIGHTS[key],
+            "current":  round(cur, 3),
+            "delta_up": delta_up,
+            "delta_dn": delta_dn,
+            "max_abs":  max_abs,
+        })
+
+    out.sort(key=lambda r: r["max_abs"], reverse=True)
+    return out
+
+
 def compute_tps(conflict: dict) -> float:
     """
     Transmission Pressure Score for a single conflict.

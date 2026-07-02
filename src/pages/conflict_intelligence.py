@@ -25,6 +25,7 @@ from src.analysis.conflict_model import (
     score_all_conflicts,
     aggregate_portfolio_scores,
     top_affected_assets,
+    compute_cis_sensitivity,
 )
 from src.data.config import CONFLICTS, PALETTE
 
@@ -417,6 +418,176 @@ def _render_conflict_news(selected_id: str) -> None:
             st.caption("Intelligence feed unavailable.")
 
 
+# ── CIS Sensitivity: cross-conflict scan ─────────────────────────────────────
+
+def _render_sensitivity_summary(results: dict) -> None:
+    """
+    One-row-per-conflict table showing the single dimension that would move
+    each conflict's CIS the most if it changed. Ranked by delta_up descending.
+    """
+    from src.data.config import CONFLICTS as _CONF_REG
+
+    rows = []
+    for cid, r in results.items():
+        conflict_raw = next((c for c in _CONF_REG if c["id"] == cid), None)
+        if conflict_raw is None:
+            continue
+        sens = compute_cis_sensitivity(conflict_raw)
+        if not sens:
+            continue
+        top = sens[0]
+        rows.append({
+            "label":     r["label"],
+            "cis":       r["cis"],
+            "top_dim":   top["label"],
+            "current":   top["current"],
+            "delta_up":  top["delta_up"],
+            "delta_dn":  top["delta_dn"],
+            "color":     r["color"],
+        })
+
+    if not rows:
+        return
+
+    max_up = max(r["delta_up"] for r in rows) or 1e-9
+
+    rows_html = ""
+    for row in rows:
+        bar_w   = max(2, int(row["delta_up"] / max_up * 72))
+        up_col  = "#c0392b" if row["delta_up"] >= max_up * 0.65 else "#e67e22"
+        dn_str  = f'{row["delta_dn"]:.1f}' if row["delta_dn"] < -0.05 else "—"
+        rows_html += (
+            f'<tr style="border-bottom:1px solid #111">'
+            f'<td style="padding:5px 8px">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            f'font-weight:700;color:{row["color"]}">{row["label"]}</span>'
+            f'</td>'
+            f'<td style="padding:5px 8px;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.63rem;font-weight:700;color:{_cis_color(row["cis"])}">'
+            f'{row["cis"]:.0f}</td>'
+            f'<td style="padding:5px 8px;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.56rem;color:#8E9AAA">{row["top_dim"]}</td>'
+            f'<td style="padding:5px 8px;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.56rem;color:#555960">{row["current"]:.2f}</td>'
+            f'<td style="padding:5px 8px">'
+            f'<div style="display:flex;align-items:center;gap:5px">'
+            f'<div style="width:{bar_w}px;height:5px;background:{up_col};flex-shrink:0"></div>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
+            f'font-weight:700;color:{up_col}">▲ +{row["delta_up"]:.1f}</span>'
+            f'</div>'
+            f'</td>'
+            f'<td style="padding:5px 8px;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:0.56rem;color:#27ae60">{dn_str if dn_str == "—" else f"▼ {dn_str}"}</td>'
+            f'</tr>'
+        )
+
+    st.markdown(
+        f'<table style="width:100%;border-collapse:collapse;font-family:\'DM Sans\',sans-serif">'
+        f'<thead><tr style="border-bottom:1px solid #2a2a2a">'
+        f'<th style="color:#555960;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'letter-spacing:.08em;text-align:left;padding:4px 8px">CONFLICT</th>'
+        f'<th style="color:#555960;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'letter-spacing:.08em;text-align:left;padding:4px 8px">CIS</th>'
+        f'<th style="color:#555960;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'letter-spacing:.08em;text-align:left;padding:4px 8px">TOP DRIVER</th>'
+        f'<th style="color:#555960;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'letter-spacing:.08em;text-align:left;padding:4px 8px">NOW</th>'
+        f'<th style="color:#555960;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'letter-spacing:.08em;text-align:left;padding:4px 8px">IF → MAX</th>'
+        f'<th style="color:#555960;font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'letter-spacing:.08em;text-align:left;padding:4px 8px">IF → MIN</th>'
+        f'</tr></thead>'
+        f'<tbody>{rows_html}</tbody>'
+        f'</table>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960;margin-top:4px">'
+        'TOP DRIVER = dimension whose max-ceiling perturbation produces the largest CIS gain, '
+        'holding all others fixed · uses static registry values</p>',
+        unsafe_allow_html=True,
+    )
+
+
+# ── CIS Sensitivity: per-conflict full breakdown ──────────────────────────────
+
+def _render_sensitivity_panel(selected_id: str) -> None:
+    """
+    Diverging bar chart for selected conflict: all 7 dims ranked by max |Δ CIS|.
+    Red bars right = CIS gain if dim → 1.0 (escalation risk).
+    Green bars left = CIS drop if dim → 0.0 (de-escalation room).
+    """
+    from src.data.config import CONFLICTS as _CONF_REG
+
+    conflict_raw = next((c for c in _CONF_REG if c["id"] == selected_id), None)
+    if conflict_raw is None:
+        return
+
+    sens = compute_cis_sensitivity(conflict_raw)
+    if not sens:
+        return
+
+    # Reversed so highest-impact dim appears at top of Plotly horizontal chart
+    rev = list(reversed(sens))
+    labels  = [f'{s["label"]}  [{s["current"]:.2f}]' for s in rev]
+    up_vals = [s["delta_up"] for s in rev]
+    dn_vals = [s["delta_dn"] for s in rev]
+
+    max_up = max(up_vals) if up_vals else 1e-9
+    bar_colors_up = [
+        "#c0392b" if v >= max_up * 0.70 else "#e67e22" if v >= max_up * 0.35 else "#555960"
+        for v in up_vals
+    ]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        y=labels, x=up_vals, orientation="h",
+        name="→ max  (escalation risk)",
+        marker_color=bar_colors_up,
+        text=[f"+{v:.1f}" if v > 0.05 else "" for v in up_vals],
+        textposition="outside",
+        textfont=dict(family="JetBrains Mono, monospace", size=8, color="#e67e22"),
+        hovertemplate="%{y}<br>If → max: CIS +%{x:.1f}<extra></extra>",
+    ))
+    fig.add_trace(go.Bar(
+        y=labels, x=dn_vals, orientation="h",
+        name="→ min  (de-escalation room)",
+        marker_color="#27ae60",
+        text=[f"{v:.1f}" if v < -0.05 else "" for v in dn_vals],
+        textposition="outside",
+        textfont=dict(family="JetBrains Mono, monospace", size=8, color="#27ae60"),
+        hovertemplate="%{y}<br>If → min: CIS %{x:.1f}<extra></extra>",
+    ))
+
+    all_abs  = [abs(v) for v in up_vals + dn_vals]
+    x_range  = (max(all_abs) if all_abs else 15) * 1.4
+
+    fig.update_layout(
+        paper_bgcolor="#000", plot_bgcolor="#080808",
+        barmode="overlay",
+        margin=dict(l=10, r=55, t=10, b=30),
+        height=240,
+        xaxis=dict(
+            title=dict(text="Δ CIS points", font=dict(family="JetBrains Mono", size=8, color="#555960")),
+            range=[-x_range, x_range],
+            tickfont=dict(family="JetBrains Mono", size=8, color="#555960"),
+            gridcolor="#1e1e1e", showgrid=True,
+            zeroline=True, zerolinecolor="#333", zerolinewidth=1.5,
+        ),
+        yaxis=dict(
+            tickfont=dict(family="JetBrains Mono", size=8, color="#8E9AAA"),
+            showgrid=False,
+        ),
+        showlegend=True,
+        legend=dict(
+            orientation="h", y=-0.14, x=0,
+            font=dict(family="JetBrains Mono", size=8, color="#555960"),
+            bgcolor="rgba(0,0,0,0)",
+        ),
+    )
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+
+
 # ── Transmission heatmap ──────────────────────────────────────────────────────
 
 def _render_transmission_heatmap(results: dict) -> None:
@@ -641,6 +812,15 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     )
     _render_transmission_heatmap(results)
 
+    # ── Sensitivity scan: cross-conflict top driver ────────────────────────
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
+        'CIS SENSITIVITY SCAN — TOP DRIVER PER CONFLICT</p>',
+        unsafe_allow_html=True,
+    )
+    _render_sensitivity_summary(results)
+
     # ── Conflict detail header ─────────────────────────────────────────────
     _lu = selected.get("last_updated", "")
     _src = selected.get("cis_source", "static")
@@ -718,6 +898,16 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
             unsafe_allow_html=True,
         )
         _render_tps_channels(selected_id)
+
+    # ── Sensitivity panel: full breakdown for selected conflict ────────────
+    st.markdown(
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+        f'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;'
+        f'padding-bottom:4px;margin:1.2rem 0 .4rem">'
+        f'CIS SENSITIVITY — {selected["label"].upper()} · WHAT TO WATCH</p>',
+        unsafe_allow_html=True,
+    )
+    _render_sensitivity_panel(selected_id)
 
     # ── Bottom row: affected assets + news ─────────────────────────────────
     col_a, col_n = st.columns([1, 1])
