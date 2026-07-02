@@ -21,6 +21,7 @@ from src.analysis.correlations import (
     average_cross_corr_series, detect_correlation_regime,
     regime_transition_matrix, regime_steady_state,
     regime_mean_first_passage, regime_run_statistics,
+    correlation_alarm_scan,
 )
 from src.ui.shared import (
     _style_fig, _chart, _page_intro, _thread, _section_note,
@@ -129,6 +130,17 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     avg_corr = average_cross_corr_series(eq_r, cmd_r, window=60)
     regimes  = detect_correlation_regime(avg_corr)
 
+    # ── Alarm scan on full burn-in data (before slicing) ──────────────────
+    # Needs the full history so the 252d rolling reference distribution is valid.
+    _scan_frames = [eq_r, cmd_r]
+    if not fi_r.empty:
+        _scan_frames.append(fi_r)
+    if not fx_r.empty:
+        _scan_frames.append(fx_r)
+    _all_r_scan = pd.concat(_scan_frames, axis=1)
+    _alarms     = correlation_alarm_scan(_all_r_scan)
+    _fired      = [a for a in _alarms if a["severity"] != "NONE"]
+
     # Slice to the user-selected display window after rolling computation
     eq_r   = eq_r.loc[_start_dt:]
     cmd_r  = cmd_r.loc[_start_dt:]
@@ -151,6 +163,129 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     fx_options  = list(fx_r.columns) if not fx_r.empty else []
 
     current_r = int(regimes.dropna().iloc[-1]) if not regimes.empty else 1
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ALARM PANEL: per-pair correlation breakdown detector
+    # ══════════════════════════════════════════════════════════════════════
+    _n_scanned = len(_alarms)
+    _n_fired   = len(_fired)
+
+    if _fired:
+        _sev_color = "#c0392b" if any(a["severity"] == "HIGH" for a in _fired) else "#e67e22"
+        _alarm_rows = ""
+        for _a in _fired[:6]:
+            _icon = "⬆" if _a["alarm_type"] == "LOCKING" else "⬇"
+            _sev_c = "#c0392b" if _a["severity"] == "HIGH" else "#e67e22"
+            _dir_c = "#c0392b" if _a["alarm_type"] == "LOCKING" else "#2980b9"
+            _alarm_rows += (
+                f'<div style="display:flex;align-items:center;gap:10px;padding:4px 0;'
+                f'border-bottom:1px solid #1a1a1a">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
+                f'font-weight:700;color:{_sev_c};width:52px;flex-shrink:0">'
+                f'{_a["severity"]}</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
+                f'color:{_dir_c};width:82px;flex-shrink:0">'
+                f'{_icon} {_a["alarm_type"]}</span>'
+                f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;'
+                f'color:#e8e9ed;flex:1">{_a["pair"]}</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;'
+                f'font-weight:700;color:{_sev_c};width:52px;text-align:right;flex-shrink:0">'
+                f'{_a["z_score"]:+.1f}σ</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
+                f'color:#8E9AAA;width:90px;text-align:right;flex-shrink:0">'
+                f'now {_a["current_corr"]:+.2f} · μ {_a["hist_mean"]:+.2f}</span>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div style="background:#080808;border:1px solid #2a2a2a;'
+            f'border-left:3px solid {_sev_color};padding:.5rem .9rem;margin-bottom:.6rem">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
+            f'font-weight:700;color:{_sev_color};letter-spacing:.10em">'
+            f'⚡ {_n_fired} CORRELATION BREAK{"S" if _n_fired > 1 else ""} DETECTED</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            f'color:#555960">{_n_scanned} pairs scanned · |z| ≥ 2σ from own 252d norm</span>'
+            f'</div>'
+            f'{_alarm_rows}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div style="background:#040a04;border-left:3px solid #27ae60;'
+            f'padding:.35rem .9rem;margin-bottom:.5rem">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            f'color:#27ae60;font-weight:700">● NO BREAKS</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+            f'color:#555960"> — all {_n_scanned} pairs within ±2σ of their own 252d rolling norm</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    with st.expander(
+        f"Correlation breakdown scan — all {_n_scanned} pairs · 63d corr vs. 252d norm",
+        expanded=bool(_fired),
+    ):
+        if not _alarms:
+            st.caption("Insufficient history — extend date range to at least 6 months.")
+        else:
+            _th = (
+                "font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;"
+                "letter-spacing:.08em;text-transform:uppercase;color:#555960;"
+                "padding:4px 8px;text-align:left;border-bottom:1px solid #1e1e1e"
+            )
+            _scan_rows = ""
+            for _a in _alarms:
+                _is_alarm = _a["severity"] != "NONE"
+                _row_bg   = "background:#0d0608;" if _a["severity"] == "HIGH" else (
+                            "background:#0d0a05;" if _a["severity"] == "MODERATE" else "")
+                _z_c      = ("#c0392b" if _a["severity"] == "HIGH"
+                             else "#e67e22" if _a["severity"] == "MODERATE"
+                             else "#555960")
+                _type_c   = "#c0392b" if _a["alarm_type"] == "LOCKING" else (
+                            "#2980b9" if _a["alarm_type"] == "DECOUPLING" else "#555960")
+                _bar_fill = min(100, int(_a["abs_z"] / 4.0 * 100))
+                _bar_col  = _z_c
+                _td = f"font-family:'JetBrains Mono',monospace;font-size:0.56rem;padding:5px 8px;border-bottom:1px solid #111;{_row_bg}"
+                _scan_rows += (
+                    f'<tr>'
+                    f'<td style="{_td}color:#e8e9ed">{_a["pair"]}</td>'
+                    f'<td style="{_td}color:#CFB991;text-align:right">{_a["current_corr"]:+.3f}</td>'
+                    f'<td style="{_td}color:#8E9AAA;text-align:right">{_a["hist_mean"]:+.3f}</td>'
+                    f'<td style="{_td}color:#555960;text-align:right">{_a["hist_std"]:.3f}</td>'
+                    f'<td style="{_td}text-align:right">'
+                    f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">'
+                    f'<div style="width:{_bar_fill}px;height:4px;background:{_bar_col};flex-shrink:0;opacity:0.7"></div>'
+                    f'<span style="color:{_z_c};font-weight:700">{_a["z_score"]:+.2f}σ</span>'
+                    f'</div></td>'
+                    f'<td style="{_td}color:{_type_c};font-weight:{"700" if _is_alarm else "400"}">'
+                    f'{"⬆ " if _a["alarm_type"]=="LOCKING" else "⬇ " if _a["alarm_type"]=="DECOUPLING" else ""}'
+                    f'{_a["alarm_type"]}</td>'
+                    f'</tr>'
+                )
+            st.markdown(
+                f'<table style="width:100%;border-collapse:collapse">'
+                f'<thead><tr>'
+                f'<th style="{_th}">PAIR</th>'
+                f'<th style="{_th};text-align:right">CORR 63d</th>'
+                f'<th style="{_th};text-align:right">HIST μ 252d</th>'
+                f'<th style="{_th};text-align:right">HIST σ</th>'
+                f'<th style="{_th};text-align:right">Z-SCORE</th>'
+                f'<th style="{_th}">STATUS</th>'
+                f'</tr></thead>'
+                f'<tbody>{_scan_rows}</tbody>'
+                f'</table>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+                'color:#555960;margin-top:5px">'
+                'Z-score = (current 63d corr − 252d rolling mean) / 252d rolling σ · '
+                '⬆ LOCKING = corr rose above own norm · '
+                '⬇ DECOUPLING = corr dropped below own norm · '
+                'HIGH ≥ 3σ · MODERATE ≥ 2σ</p>',
+                unsafe_allow_html=True,
+            )
 
     # ══════════════════════════════════════════════════════════════════════
     # ROW 1: DCC-GARCH (wide) | Granger Summary + Rolling Correlation controls
@@ -201,6 +336,60 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 f"<b>{asset_a} / {asset_b}</b> · {window}d corr = <b>{latest_corr:.3f}</b> · "
                 f"{pctile:.0f}th historical percentile"
             )
+
+            # ── Z-score sub-chart: this pair vs. its own history ──────────
+            _mu_rc  = rc.rolling(252, min_periods=63).mean()
+            _sd_rc  = rc.rolling(252, min_periods=63).std()
+            _z_rc   = (rc - _mu_rc) / _sd_rc.replace(0, np.nan)
+            _z_now  = float(_z_rc.dropna().iloc[-1]) if not _z_rc.dropna().empty else None
+
+            if _z_now is not None and not _z_rc.dropna().empty:
+                _z_col = (
+                    "#c0392b" if abs(_z_now) >= 3.0 else
+                    "#e67e22" if abs(_z_now) >= 2.0 else
+                    "#CFB991"
+                )
+                _z_label = (
+                    f"⬆ LOCKING {_z_now:+.1f}σ" if _z_now >= 2.0 else
+                    f"⬇ DECOUPLING {_z_now:+.1f}σ" if _z_now <= -2.0 else
+                    f"within norm · {_z_now:+.1f}σ"
+                )
+                _fig_z = go.Figure()
+                # Shade alarm zones before drawing line (so line is on top)
+                _fig_z.add_hrect(y0=3, y1=6,   fillcolor="rgba(192,57,43,0.10)", line_width=0)
+                _fig_z.add_hrect(y0=-6, y1=-3, fillcolor="rgba(192,57,43,0.10)", line_width=0)
+                _fig_z.add_hrect(y0=2, y1=3,   fillcolor="rgba(230,126,34,0.08)", line_width=0)
+                _fig_z.add_hrect(y0=-3, y1=-2, fillcolor="rgba(230,126,34,0.08)", line_width=0)
+                _fig_z.add_trace(go.Scatter(
+                    x=_z_rc.index, y=_z_rc.values,
+                    name="z-score",
+                    line=dict(color=_z_col, width=1.4),
+                    fill="tozeroy", fillcolor=f"rgba({int(_z_col[1:3],16)},{int(_z_col[3:5],16)},{int(_z_col[5:],16)},0.06)",
+                ))
+                for _lv, _lc, _la in [(2, "#e67e22", "2σ"), (-2, "#e67e22", "−2σ"),
+                                       (3, "#c0392b", "3σ"), (-3, "#c0392b", "−3σ")]:
+                    _fig_z.add_hline(y=_lv, line=dict(color=_lc, width=0.7, dash="dot"),
+                                     annotation_text=_la, annotation_font_size=7,
+                                     annotation_font_color=_lc)
+                _fig_z.add_hline(y=0, line=dict(color="#444", width=1))
+                _fig_z.update_layout(
+                    paper_bgcolor="#000", plot_bgcolor="#080808",
+                    margin=dict(l=0, r=10, t=6, b=6),
+                    height=130,
+                    showlegend=False,
+                    xaxis=dict(tickfont=dict(family="JetBrains Mono", size=7, color="#555960"),
+                               showgrid=False, zeroline=False),
+                    yaxis=dict(tickfont=dict(family="JetBrains Mono", size=7, color="#555960"),
+                               showgrid=True, gridcolor="#111",
+                               range=[-5, 5], zeroline=False),
+                )
+                st.plotly_chart(_fig_z, width="stretch", config={"displayModeBar": False})
+                st.markdown(
+                    f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
+                    f'color:{_z_col};margin:-4px 0 6px">'
+                    f'{_z_label} · vs. own 252d rolling norm</p>',
+                    unsafe_allow_html=True,
+                )
 
         # Multi-pair overlay in expander
         with st.expander("Multi-pair overlay (4 key pairs · 63d)"):

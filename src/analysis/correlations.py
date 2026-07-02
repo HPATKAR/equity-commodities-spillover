@@ -539,6 +539,102 @@ def regime_run_statistics(regimes: pd.Series) -> pd.DataFrame:
     return stats
 
 
+# ── Correlation Breakdown Alarm ───────────────────────────────────────────
+
+_ALARM_PAIRS: list[tuple[str, str]] = [
+    ("S&P 500",      "WTI Crude Oil"),
+    ("S&P 500",      "Gold"),
+    ("S&P 500",      "Copper"),
+    ("S&P 500",      "Natural Gas"),
+    ("Nikkei 225",   "WTI Crude Oil"),
+    ("Nikkei 225",   "Copper"),
+    ("Nikkei 225",   "Gold"),
+    ("Eurostoxx 50", "WTI Crude Oil"),
+    ("Eurostoxx 50", "Natural Gas"),
+    ("Eurostoxx 50", "Gold"),
+    ("DAX",          "WTI Crude Oil"),
+    ("S&P 500",      "Silver"),
+]
+
+
+def correlation_alarm_scan(
+    all_r: pd.DataFrame,
+    pairs: list[tuple[str, str]] | None = None,
+    fast_window: int = 63,
+    slow_window: int = 252,
+    z_thresh: float = 2.0,
+    min_history: int = 126,
+) -> list[dict]:
+    """
+    Per-pair correlation breakdown alarm.
+
+    For each pair, computes the fast_window-day rolling correlation and scores
+    it against the pair's own slow_window-day rolling distribution (mean + std).
+    Flags when the current value is ≥ z_thresh standard deviations from the
+    pair's historical norm — before the aggregate regime label catches up.
+
+    alarm_type : "DECOUPLING" — historically positive pair losing correlation
+                 "LOCKING"    — historically uncorrelated pair gaining correlation
+                 "NORMAL"     — within ±z_thresh sigma
+    severity   : "HIGH" (|z| ≥ 3.0) | "MODERATE" (|z| ≥ z_thresh) | "NONE"
+
+    Returns list sorted by abs_z descending.
+    Each row includes corr_series and z_series for charting.
+    """
+    if pairs is None:
+        pairs = _ALARM_PAIRS
+
+    results = []
+
+    for a, b in pairs:
+        if a not in all_r.columns or b not in all_r.columns:
+            continue
+
+        corr_s = rolling_correlation(all_r[a], all_r[b], fast_window).dropna()
+        if len(corr_s) < min_history:
+            continue
+
+        mu    = corr_s.rolling(slow_window, min_periods=min_history // 2).mean()
+        sigma = corr_s.rolling(slow_window, min_periods=min_history // 2).std()
+        z_s   = (corr_s - mu) / sigma.replace(0, np.nan)
+
+        z_valid  = z_s.dropna()
+        mu_valid = mu.dropna()
+        if z_valid.empty or mu_valid.empty:
+            continue
+
+        current_corr = float(corr_s.iloc[-1])
+        current_z    = float(z_valid.iloc[-1])
+        hist_mean    = float(mu_valid.iloc[-1])
+        hist_std     = float(sigma.dropna().iloc[-1]) if not sigma.dropna().empty else 0.0
+        abs_z        = abs(current_z)
+
+        if abs_z >= z_thresh:
+            alarm_type = "DECOUPLING" if current_corr < hist_mean else "LOCKING"
+        else:
+            alarm_type = "NORMAL"
+
+        severity = "HIGH" if abs_z >= 3.0 else ("MODERATE" if abs_z >= z_thresh else "NONE")
+
+        results.append({
+            "pair":         f"{a} / {b}",
+            "asset_a":      a,
+            "asset_b":      b,
+            "current_corr": round(current_corr, 3),
+            "hist_mean":    round(hist_mean, 3),
+            "hist_std":     round(hist_std, 3),
+            "z_score":      round(current_z, 2),
+            "abs_z":        round(abs_z, 2),
+            "alarm_type":   alarm_type,
+            "severity":     severity,
+            "corr_series":  corr_s,
+            "z_series":     z_s,
+        })
+
+    results.sort(key=lambda r: r["abs_z"], reverse=True)
+    return results
+
+
 # ── Early Warning System ───────────────────────────────────────────────────
 
 def early_warning_signals(
