@@ -2382,39 +2382,57 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         unsafe_allow_html=True,
                     )
 
-                _fig_corr = px.imshow(
-                    _corr_m,
-                    color_continuous_scale="RdYlGn",
+                import plotly.graph_objects as _go_c
+                _z_arr   = _corr_m.values
+                _names_x = list(_corr_m.columns)
+                _names_y = list(_corr_m.index)
+
+                # go.Heatmap (not px.imshow) so we can add per-cell annotations
+                # with correct contrast: white on dark cells, near-black on light cells.
+                _fig_corr = _go_c.Figure(data=_go_c.Heatmap(
+                    z=_z_arr.tolist(),
+                    x=_names_x,
+                    y=_names_y,
+                    colorscale="RdYlGn",
                     zmin=-1, zmax=1,
-                    text_auto=".2f",
-                    title="Strategy Pairwise Correlation (OOS Daily Equity-Curve Returns)",
-                    aspect="auto",
-                )
-                # Dark cell text (#0d0d0d) reads on the yellow/light-green cells
-                # (near-zero correlations = majority of the matrix).
-                # The 1.00 diagonal is dark-green but always 1.0 — acceptable tradeoff.
-                _fig_corr.update_traces(
-                    textfont_size=11,
-                    textfont_color="#0d0d0d",
-                )
+                    showscale=True,
+                    colorbar=dict(
+                        tickfont=dict(size=11, color="#c8c8c8"),
+                        tickcolor="#c8c8c8",
+                        outlinecolor="#080808",
+                    ),
+                ))
+
+                # Per-cell text annotations — the only way to get correct contrast
+                # on both dark-green (|r|>0.45 → white) and light-yellow (→ dark)
+                for _ri, _rn in enumerate(_names_y):
+                    for _ci, _cn in enumerate(_names_x):
+                        _v   = float(_z_arr[_ri, _ci])
+                        _tc  = "#ffffff" if abs(_v) > 0.45 else "#0a0a0a"
+                        _fig_corr.add_annotation(
+                            x=_cn, y=_rn,
+                            text=f"{_v:.2f}",
+                            showarrow=False,
+                            font=dict(size=11, color=_tc),
+                            xref="x", yref="y",
+                        )
+
                 _fig_corr.update_layout(
+                    title="Strategy Pairwise Correlation (OOS Daily Equity-Curve Returns)",
                     height=max(600, _n_names * 42),
-                    # color= needed: Plotly default (#444) is invisible on #080808
                     font=dict(family="JetBrains Mono", size=11, color="#c8c8c8"),
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
                     title_font=dict(size=11, color="#8890a1"),
-                    coloraxis_colorbar=dict(
-                        tickfont=dict(size=10, color="#c8c8c8"),
-                    ),
-                    margin=dict(l=10, r=10, t=50, b=200),
-                    xaxis=dict(
-                        tickfont=dict(size=10, color="#c8c8c8"),
-                        tickangle=-45,
-                        side="bottom",
-                    ),
-                    yaxis=dict(
-                        tickfont=dict(size=10, color="#c8c8c8"),
-                    ),
+                    margin=dict(l=10, r=10, t=50, b=210),
+                )
+                _fig_corr.update_xaxes(
+                    tickfont=dict(size=11, color="#c8c8c8"),
+                    tickangle=-45,
+                    side="bottom",
+                )
+                _fig_corr.update_yaxes(
+                    tickfont=dict(size=11, color="#c8c8c8"),
+                    autorange="reversed",
                 )
                 st.plotly_chart(_fig_corr, use_container_width=True)
 
