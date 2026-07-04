@@ -1010,21 +1010,21 @@ def plot_risk_history(
         else:
             # Entire series is proxy — add a single corner label
             fig.add_annotation(
-                x=0.01, y=0.97, xref="paper", yref="paper",
+                x=0.01, y=0.03, xref="paper", yref="paper",
                 text="Historical: MCS proxy only (market signals — conflict layer excluded)",
                 showarrow=False,
                 font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
-                xanchor="left", yanchor="top",
+                xanchor="left", yanchor="bottom",
                 bgcolor="rgba(10,12,20,0.65)", borderpad=2,
             )
     else:
         # No boundary provided — label the whole chart as a proxy
         fig.add_annotation(
-            x=0.01, y=0.97, xref="paper", yref="paper",
+            x=0.01, y=0.03, xref="paper", yref="paper",
             text="Historical: MCS proxy only (market signals — conflict layer excluded)",
             showarrow=False,
             font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
-            xanchor="left", yanchor="top",
+            xanchor="left", yanchor="bottom",
             bgcolor="rgba(10,12,20,0.65)", borderpad=2,
         )
 

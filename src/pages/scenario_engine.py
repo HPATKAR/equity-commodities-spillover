@@ -931,6 +931,408 @@ def _analog_spaghetti_chart(
     return fig
 
 
+# ── Forward Scenario Tree ───────────────────────────────────────────────────
+# Branching conditional 30-day forecast for a chosen conflict. All pricing
+# reuses _propagate_shock / _apply_fixed_sensitivity with regime-conditional
+# betas; probabilities seed from the live ACLED+GDELT escalation signal and
+# are fully perturbable. See src/analysis/scenario_tree.py for assumptions.
+
+from src.analysis.scenario_tree import (
+    BRANCHES as _TREE_BRANCHES,
+    BRANCH_LABELS as _TREE_LABELS,
+    BRANCH_PRIORS as _TREE_PRIORS,
+    STEP_DAYS as _TREE_STEP_DAYS,
+    HORIZON_DAYS as _TREE_HORIZON,
+    PLAUSIBILITY_FLOOR as _TREE_FLOOR,
+    TREE_ASSETS as _TREE_ASSETS,
+    build_tree as _tree_build,
+    conditional_priors as _tree_cond_priors,
+    collapse_distribution as _tree_collapse,
+    terminal_samples as _tree_samples,
+    sigma_daily_from_var as _tree_sigma,
+    worst_plausible_path as _tree_worst,
+    early_signals as _tree_signals,
+)
+
+_TREE_COLORS = {"escalate": "#c0392b", "hold": "#CFB991", "deescalate": "#27ae60"}
+_TREE_REGIMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
+
+
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=8)
+def _tree_live_signal(conflict_id: str) -> tuple[str, str]:
+    """Fused ACLED+GDELT escalation signal, cached so slider reruns don't refetch."""
+    from src.data.config import CONFLICTS
+    from src.analysis.scenario_tree import live_escalation_signal
+    for c in CONFLICTS:
+        if c["id"] == conflict_id:
+            return live_escalation_signal(c)
+    return "stable", "static"
+
+
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=2)
+def _tree_curve_reading() -> str:
+    """Live WTI/Brent curve structure for the early-warning block."""
+    try:
+        from src.analysis.futures_curve import fetch_curve_snapshot
+        df = fetch_curve_snapshot()
+        if df is None or df.empty or "name" not in df.columns:
+            return ""
+        energy = df[df["name"].isin(["WTI Crude Oil", "Brent Crude"])]
+        return " · ".join(
+            f"{r['name']}: {r['structure']} ({r['basis_pct']:+.1f}%)"
+            for _, r in energy.iterrows()
+        )
+    except Exception:
+        return ""
+
+
+def _tree_figure(step1: list[dict], leaves: list[dict], current_regime: int) -> go.Figure:
+    """Tree diagram: edge width ∝ branch probability, node size ∝ path probability."""
+    y1 = {"escalate": 2.4, "hold": 0.0, "deescalate": -2.4}
+    off = {"escalate": 0.75, "hold": 0.0, "deescalate": -0.75}
+
+    def _hover(n: dict) -> str:
+        path = " → ".join(_TREE_LABELS[b] for b in n["path"])
+        imp = "<br>".join(
+            f"{a}: {n['cum'].get(a, 0.0) * 100:+.2f}%" for a in _TREE_ASSETS
+        )
+        return (f"<b>{path}</b><br>Path prob: {n['path_prob'] * 100:.1f}%<br>"
+                f"Regime: {_TREE_REGIMES[n['regime']]}<br>{imp}")
+
+    fig = go.Figure()
+    for n in step1:
+        yy = y1[n["branch"]]
+        fig.add_trace(go.Scatter(
+            x=[0, 1], y=[0, yy], mode="lines",
+            line=dict(color=_TREE_COLORS[n["branch"]], width=1.5 + 8 * n["prob"]),
+            opacity=0.8, hoverinfo="skip", showlegend=False,
+        ))
+    for n in leaves:
+        b1, b2 = n["path"]
+        fig.add_trace(go.Scatter(
+            x=[1, 2], y=[y1[b1], y1[b1] + off[b2]], mode="lines",
+            line=dict(color=_TREE_COLORS[b2], width=1.5 + 8 * n["prob"]),
+            opacity=0.8, hoverinfo="skip", showlegend=False,
+        ))
+    # Root
+    fig.add_trace(go.Scatter(
+        x=[0], y=[0], mode="markers+text",
+        marker=dict(size=16, color="#CFB991", line=dict(color="#000", width=1)),
+        text=["TODAY"], textposition="middle left",
+        textfont=dict(family="JetBrains Mono, monospace", size=9, color="#CFB991"),
+        hovertext=[f"Today · Regime: {_TREE_REGIMES.get(current_regime, 'Normal')}"],
+        hoverinfo="text", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=[1] * 3, y=[y1[n["branch"]] for n in step1], mode="markers+text",
+        marker=dict(
+            size=[10 + 26 * n["path_prob"] for n in step1],
+            color=[_TREE_COLORS[n["branch"]] for n in step1],
+            line=dict(color="#000", width=1),
+        ),
+        text=[f"{_TREE_LABELS[n['branch']].upper()} {n['prob'] * 100:.0f}%" for n in step1],
+        textposition="top center",
+        textfont=dict(family="JetBrains Mono, monospace", size=9, color="#c8c8c8"),
+        hovertext=[_hover(n) for n in step1], hoverinfo="text", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=[2] * 9, y=[y1[n["path"][0]] + off[n["path"][1]] for n in leaves],
+        mode="markers+text",
+        marker=dict(
+            size=[8 + 30 * n["path_prob"] for n in leaves],
+            color=[_TREE_COLORS[n["branch"]] for n in leaves],
+            line=dict(color="#000", width=1),
+        ),
+        text=[f"{n['path_prob'] * 100:.0f}%" for n in leaves],
+        textposition="middle right",
+        textfont=dict(family="JetBrains Mono, monospace", size=8, color="#8890a1"),
+        hovertext=[_hover(n) for n in leaves], hoverinfo="text", showlegend=False,
+    ))
+    fig.update_layout(
+        template="plotly_dark", height=380,
+        paper_bgcolor="#000", plot_bgcolor="#080808",
+        font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=11),
+        xaxis=dict(
+            tickvals=[0, 1, 2],
+            ticktext=["Today", f"Day {_TREE_STEP_DAYS}", f"Day {_TREE_HORIZON}"],
+            showgrid=False, zeroline=False, range=[-0.35, 2.45],
+        ),
+        yaxis=dict(visible=False, range=[-3.8, 3.8]),
+        margin=dict(l=24, r=24, t=16, b=36),
+    )
+    return fig
+
+
+def _tree_fan_chart(
+    asset: str,
+    dist15: dict, dist30: dict,
+    worst_cum: float | None = None,
+) -> go.Figure:
+    """Fan chart: P5–P95 and P25–P75 bands at day 0 / 15 / 30 — widening with depth."""
+    x = [0, _TREE_STEP_DAYS, _TREE_HORIZON]
+    d15, d30 = dist15[asset], dist30[asset]
+
+    def band(key: str) -> list[float]:
+        return [0.0, d15[key] * 100, d30[key] * 100]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=x, y=band("p95"), mode="lines",
+                             line=dict(width=0), hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=x, y=band("p5"), mode="lines", line=dict(width=0),
+                             fill="tonexty", fillcolor="rgba(207,185,145,0.14)",
+                             name="P5–P95", hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=x, y=band("p75"), mode="lines",
+                             line=dict(width=0), hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=x, y=band("p25"), mode="lines", line=dict(width=0),
+                             fill="tonexty", fillcolor="rgba(207,185,145,0.30)",
+                             name="P25–P75", hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(
+        x=x, y=band("p50"), mode="lines+markers",
+        line=dict(color="#CFB991", width=2), marker=dict(size=5),
+        name="Median",
+        hovertemplate="Day %{x}: %{y:+.2f}% (median)<extra></extra>",
+        showlegend=False,
+    ))
+    if worst_cum is not None:
+        fig.add_trace(go.Scatter(
+            x=[_TREE_HORIZON], y=[worst_cum * 100], mode="markers",
+            marker=dict(symbol="x", size=10, color="#e74c3c"),
+            hovertemplate=f"Worst plausible path: {worst_cum * 100:+.2f}%<extra></extra>",
+            showlegend=False,
+        ))
+    fig.update_layout(
+        template="plotly_dark", height=250,
+        paper_bgcolor="#000", plot_bgcolor="#080808",
+        font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
+        title=dict(text=asset, x=0, xanchor="left",
+                   font=dict(family="JetBrains Mono, monospace", size=11, color="#8890a1")),
+        xaxis=dict(tickvals=x, showgrid=False, title=None),
+        yaxis=dict(title="Cum. return (%)", showgrid=True, gridcolor="#1a1a1a",
+                   zeroline=True, zerolinecolor="#2a2a2a"),
+        margin=dict(l=48, r=12, t=32, b=28),
+    )
+    return fig
+
+
+def _tree_terminal_chart(samples, dist: dict, worst_cum: float | None) -> go.Figure:
+    """Terminal 30-day mixture distribution with P5 / median / P95 markers."""
+    fig = go.Figure(go.Histogram(
+        x=samples * 100, nbinsx=80, marker_color="rgba(207,185,145,0.45)",
+        hovertemplate="%{x:.1f}%: %{y}<extra></extra>",
+    ))
+    for key, color, label in (("p5", "#c0392b", "P5"), ("p50", "#CFB991", "Med"),
+                              ("p95", "#27ae60", "P95")):
+        fig.add_vline(x=dist[key] * 100, line_color=color, line_width=1,
+                      line_dash="dot",
+                      annotation_text=f"{label} {dist[key] * 100:+.1f}%",
+                      annotation_font=dict(size=8, color=color,
+                                           family="JetBrains Mono, monospace"))
+    if worst_cum is not None:
+        fig.add_vline(x=worst_cum * 100, line_color="#e74c3c", line_width=1.5,
+                      annotation_text="worst path",
+                      annotation_position="bottom left",
+                      annotation_font=dict(size=8, color="#e74c3c",
+                                           family="JetBrains Mono, monospace"))
+    fig.update_layout(
+        template="plotly_dark", height=210,
+        paper_bgcolor="#000", plot_bgcolor="#080808",
+        font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
+        xaxis=dict(title="30-day return (%)", showgrid=False,
+                   zeroline=True, zerolinecolor="#2a2a2a"),
+        yaxis=dict(visible=False),
+        margin=dict(l=12, r=12, t=26, b=32),
+        bargap=0.02,
+    )
+    return fig
+
+
+def _render_scenario_tree(
+    betas: dict,
+    regime_betas: dict,
+    var_es: dict,
+    current_regime: int,
+) -> None:
+    """Forward Scenario Tree section — see module docstring in scenario_tree.py."""
+    _section_label("Forward Scenario Tree — Conditional 30-Day Forecast")
+    st.markdown(
+        f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.6rem;line-height:1.6">'
+        f'From today\'s state, the chosen conflict branches into '
+        f'<b style="color:#c0392b">escalate</b> / <b style="color:#CFB991">hold</b> / '
+        f'<b style="color:#27ae60">de-escalate</b> over two {_TREE_STEP_DAYS}-trading-day steps '
+        f'(9 terminal paths). Branch probabilities seed from the live ACLED+GDELT escalation '
+        f'signal; every node is priced with the same regime-conditional OLS betas used above. '
+        f'All paths collapse, probability-weighted, into a <em>distribution</em> of 30-day '
+        f'outcomes. This is a forecast of branches under stated, perturbable assumptions — '
+        f'<b>not a point prediction</b>. The bands widen with depth; that is the feature.</p>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Conflict selection ────────────────────────────────────────────────
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, conflict_commodity_matrix
+        scores = score_all_conflicts()
+        matrix = conflict_commodity_matrix()
+    except Exception:
+        st.info("Conflict registry unavailable — scenario tree cannot run.")
+        return
+    active = sorted(
+        [s for s in scores.values() if s.get("state") == "active"],
+        key=lambda s: s["cis"], reverse=True,
+    )
+    if not active:
+        st.info("No active conflicts in the registry.")
+        return
+
+    pick = st.selectbox(
+        "Conflict theater",
+        [s["id"] for s in active],
+        format_func=lambda cid: f"{scores[cid]['label']}  ·  CIS {scores[cid]['cis']:.0f} · TPS {scores[cid]['tps']:.0f}",
+        key="tree_conflict",
+    )
+    conflict = scores[pick]
+    matrix_row = matrix.get(pick, {})
+    tps = float(conflict["tps"])
+
+    with st.spinner("Fetching live escalation signal (ACLED + GDELT)…"):
+        signal, source = _tree_live_signal(pick)
+    base_priors = _TREE_PRIORS.get(signal, _TREE_PRIORS["stable"])
+
+    _sig_col = {"escalating": "#c0392b", "stable": "#CFB991",
+                "de-escalating": "#27ae60"}.get(signal, "#CFB991")
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;border-left:3px solid {_sig_col};'
+        f'padding:.4rem .9rem;margin-bottom:.6rem;font-family:\'JetBrains Mono\',monospace;'
+        f'font-size:0.60rem;color:#8890a1">'
+        f'LIVE SIGNAL&nbsp;·&nbsp;<b style="color:{_sig_col}">{signal.upper()}</b>'
+        f'&nbsp;·&nbsp;source: {source}&nbsp;·&nbsp;'
+        f'prior seeded: P(esc)={base_priors["escalate"]:.2f} '
+        f'P(hold)={base_priors["hold"]:.2f} P(de-esc)={base_priors["deescalate"]:.2f}'
+        f'&nbsp;·&nbsp;regime today: {_TREE_REGIMES.get(current_regime, "Normal")}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Perturbation controls ─────────────────────────────────────────────
+    kb = f"{pick}_{signal}"
+    tc1, tc2, tc3 = st.columns(3)
+    p_esc = tc1.slider("P(escalate) — step 1", 0.0, 1.0,
+                       float(base_priors["escalate"]), 0.05, key=f"tr_pe_{kb}")
+    p_de = tc2.slider("P(de-escalate) — step 1", 0.0, 1.0,
+                      float(base_priors["deescalate"]), 0.05, key=f"tr_pd_{kb}")
+    persistence = tc3.slider("Persistence tilt (step 2)", 0.0, 1.0, 0.5, 0.05,
+                             key=f"tr_ps_{kb}",
+                             help="0 = steps independent; 1 = full tilt — escalation "
+                                  "begets escalation, de-escalation begets de-escalation.")
+    if p_esc + p_de > 0.95:
+        scale = 0.95 / (p_esc + p_de)
+        p_esc, p_de = p_esc * scale, p_de * scale
+        st.caption("Step-1 probabilities rescaled to leave P(hold) ≥ 5%.")
+    priors = {"escalate": p_esc, "hold": 1.0 - p_esc - p_de, "deescalate": p_de}
+
+    cond_overrides: dict[str, dict[str, float]] = {}
+    with st.expander("Advanced — per-branch step-2 probabilities"):
+        st.caption("Defaults are the persistence-tilted priors. P(hold | parent) is the remainder.")
+        for parent in _TREE_BRANCHES:
+            dflt = _tree_cond_priors(priors, parent, persistence)
+            e1, e2 = st.columns(2)
+            ce = e1.slider(f"P(escalate | {_TREE_LABELS[parent]})", 0.0, 1.0,
+                           round(dflt["escalate"], 2), 0.05,
+                           key=f"tr_c_e_{parent}_{kb}_{persistence:.2f}_{p_esc:.2f}_{p_de:.2f}")
+            cd = e2.slider(f"P(de-escalate | {_TREE_LABELS[parent]})", 0.0, 1.0,
+                           round(dflt["deescalate"], 2), 0.05,
+                           key=f"tr_c_d_{parent}_{kb}_{persistence:.2f}_{p_esc:.2f}_{p_de:.2f}")
+            if ce + cd > 0.95:
+                s = 0.95 / (ce + cd)
+                ce, cd = ce * s, cd * s
+            cond_overrides[parent] = {"escalate": ce, "hold": 1.0 - ce - cd, "deescalate": cd}
+
+    # ── Build + price the tree (existing machinery only) ──────────────────
+    def _price_step(proxy_shocks: dict, fixed_shocks: dict, regime: int) -> dict:
+        b = regime_betas.get(regime) or betas
+        imp = _propagate_shock(b, proxy_shocks)
+        return _apply_fixed_sensitivity(imp, fixed_shocks)
+
+    tree = _tree_build(priors, persistence, _price_step, current_regime,
+                       matrix_row, tps, cond_overrides=cond_overrides)
+    sigma_d = _tree_sigma(var_es)
+    dist15 = _tree_collapse(tree["step1"], sigma_d, _TREE_STEP_DAYS)
+    dist30 = _tree_collapse(tree["leaves"], sigma_d, _TREE_HORIZON)
+    worst = _tree_worst(tree["leaves"])
+
+    _chart(_tree_figure(tree["step1"], tree["leaves"], current_regime))
+
+    # ── Collapsed distribution: fan charts + terminal mixtures ────────────
+    _fan_assets = ["WTI Crude Oil", "Gold", "S&P 500"]
+    fcols = st.columns(3)
+    for col, a in zip(fcols, _fan_assets):
+        with col:
+            _chart(_tree_fan_chart(a, dist15, dist30, worst["cum"].get(a)))
+    hcols = st.columns(3)
+    for col, a in zip(hcols, _fan_assets):
+        with col:
+            _chart(_tree_terminal_chart(
+                _tree_samples(tree["leaves"], sigma_d, a),
+                dist30[a], worst["cum"].get(a),
+            ))
+
+    # ── Worst plausible path + early warning ──────────────────────────────
+    path_txt = " → ".join(_TREE_LABELS[b].upper() for b in worst["path"])
+    impacts_txt = " · ".join(
+        f'{a} <b style="color:{"#c0392b" if worst["cum"].get(a, 0) < 0 else "#27ae60"}">'
+        f'{worst["cum"].get(a, 0.0) * 100:+.1f}%</b>'
+        for a in _TREE_ASSETS
+    )
+    signals = _tree_signals(worst["path"], signal, source)
+    curve_now = _tree_curve_reading()
+    if curve_now:
+        signals[-1]["current"] = curve_now
+    sig_rows = "".join(
+        f'<div style="padding:.35rem 0;border-top:1px solid #161616">'
+        f'<span style="color:#CFB991;font-family:\'JetBrains Mono\',monospace;'
+        f'font-size:0.62rem;font-weight:600">{s["signal"]}</span>'
+        f'<span style="color:#c8c8c8;font-size:0.66rem"> — {s["watch"]}</span>'
+        + (f'<br><span style="color:#8890a1;font-family:\'JetBrains Mono\',monospace;'
+           f'font-size:0.58rem">now: {s["current"]}</span>' if s["current"] else "")
+        + "</div>"
+        for s in signals
+    )
+    st.markdown(
+        f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-left:3px solid #e74c3c;'
+        f'padding:0.8rem 1rem;margin:0.6rem 0 1rem">'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;font-weight:700;'
+        f'letter-spacing:0.14em;text-transform:uppercase;color:#e74c3c;margin-bottom:4px">'
+        f'Worst plausible path&nbsp;·&nbsp;prob {worst["path_prob"] * 100:.1f}%'
+        f'&nbsp;·&nbsp;floor ≥ {_TREE_FLOOR * 100:.0f}%</div>'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.80rem;font-weight:700;'
+        f'color:#e8e9ed;margin-bottom:4px">{path_txt}</div>'
+        f'<div style="font-size:0.68rem;color:#c8c8c8;margin-bottom:6px">'
+        f'30-day terminal: {impacts_txt} · ends in '
+        f'<b>{_TREE_REGIMES[worst["regime"]]}</b> regime</div>'
+        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;font-weight:700;'
+        f'letter-spacing:0.14em;text-transform:uppercase;color:#8890a1;margin:8px 0 2px">'
+        f'You are on this path if you see</div>{sig_rows}</div>',
+        unsafe_allow_html=True,
+    )
+
+    _definition_block(
+        "Scenario Tree — Stated Assumptions",
+        f"(1) Branch priors map the fused ACLED+GDELT escalation signal to step-1 "
+        f"probabilities (escalating → 50/35/15; stable → 25/50/25; mirrored) — a stated prior, "
+        f"not an estimate, and perturbable above. "
+        f"(2) Step-2 probabilities are persistence-tilted priors (escalation begets escalation); "
+        f"the tilt strength is the slider, per-branch overrides in the expander. "
+        f"(3) Per-step shocks are scaled preset magnitudes (escalate: oil +18% × channel relevance, "
+        f"gold +6%, gas +14%, +45 bps credit, geo ∝ TPS; de-escalation relief = 0.6 × shock — "
+        f"unwinds run smaller than shocks). "
+        f"(4) Nodes are priced with the page's regime-conditional OLS betas; escalation paths "
+        f"shift toward Elevated/Crisis betas, de-escalation toward Normal/Decorrelated. "
+        f"(5) Node dispersion = historical VaR95-implied daily σ × √horizon; the collapsed "
+        f"distribution is the probability-weighted mixture across all 9 paths. "
+        f"(6) Worst plausible path = largest equity loss (S&P 500 + DAX mean) among paths with "
+        f"probability ≥ {_TREE_FLOOR * 100:.0f}%. Linear beta chaining ignores intra-step "
+        f"path dependence; two steps cannot capture reversals inside a step."
+    )
+
+
 # ── Main page function ─────────────────────────────────────────────────────
 
 def page_scenario_engine(
@@ -1200,6 +1602,11 @@ def page_scenario_engine(
         with tab_cmd:
             _var_table(var_es, _COMMODITY_TARGETS)
             _chart(_tail_risk_chart(var_es, _COMMODITY_TARGETS, height=360))
+        try:
+            _render_scenario_tree(betas, regime_betas, var_es, _current_regime)
+        except Exception:
+            st.caption("Scenario tree unavailable — see logs.")
+        _page_footer()
         return
 
     # ── Run propagation ───────────────────────────────────────────────────
@@ -1662,5 +2069,11 @@ def page_scenario_engine(
             )
     except Exception:
         st.caption("Historical analog unavailable — see logs.")
+
+    # ── Forward Scenario Tree ─────────────────────────────────────────────
+    try:
+        _render_scenario_tree(betas, regime_betas, var_es, _current_regime)
+    except Exception:
+        st.caption("Scenario tree unavailable — see logs.")
 
     _page_footer()

@@ -368,6 +368,99 @@ def _passes_country_perspective(trade: dict, perspective: str) -> bool:
     return any(a in relevant for a in assets)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 1 — ELIGIBILITY GATE (allocation step 1 of 4)
+#
+# A trade is ELIGIBLE only if (a) every leg exists in the loaded return data
+# AND (b) its thesis passed Stage-3 confirmation. Phantom-leg trades (the
+# missing-leg problem) and unconfirmed theses are NON-ALLOCATABLE: they still
+# render, clearly marked, but carry a hard zero-weight lock.
+#
+# CONTRACT FOR STEPS 2–4 (allocation / ranking, not yet built): every weight
+# assigned to a trade MUST pass through enforce_weight() below. It is the
+# single choke point — an ineligible trade returns 0.0 regardless of the
+# proposed value. Bypassing it is a bug; tests/test_trade_eligibility.py
+# pins this behaviour.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def annotate_eligibility(
+    trades: list[dict],
+    available_cols,
+    thesis_results: dict[str, dict] | None = None,
+    loadable_universe=None,
+) -> list[dict]:
+    """
+    Stamp every trade with the Step-1 eligibility verdict (mutates in place).
+
+    Sets on each trade:
+      is_eligible         : bool
+      eligibility_reason  : "eligible" | specific failure(s), comma-joined
+      max_weight          : 1.0 when eligible, 0.0 when locked
+      structurally_dead   : True only when a leg has NO data source at all
+                            (not merely missing from today's frame) — these
+                            can never become tradeable and should be counted
+                            separately from live non-allocatable trades
+
+    Parameters
+    ----------
+    trades          : trade dicts carrying "assets" (leg display names)
+    available_cols  : column names of the loaded returns frame — the same
+                      frame the backtest runs on (no other source counts)
+    thesis_results  : {trade_name: stage-3 result dict with "stage_passed"
+                      and optional "rejection_reason"}. A missing entry means
+                      the thesis was never confirmed → NON-ALLOCATABLE.
+    loadable_universe : optional set of every leg display name that has ANY
+                      loader mapping (loaded or not). None disables the
+                      structurally-dead distinction (legacy behaviour).
+    """
+    cols = set(available_cols) if available_cols is not None else set()
+    universe = set(loadable_universe) if loadable_universe is not None else None
+    thesis_results = thesis_results or {}
+
+    for t in trades:
+        reasons: list[str] = []
+        dead_legs: list[str] = []
+
+        missing = [a for a in (t.get("assets") or []) if a not in cols]
+        if universe is not None:
+            dead_legs = [a for a in missing if a not in universe]
+        if not t.get("assets"):
+            reasons.append("no legs defined")
+        elif dead_legs:
+            reasons.append(
+                "structurally dead — no data source for: " + ", ".join(dead_legs))
+            live_missing = [a for a in missing if a not in dead_legs]
+            if live_missing:
+                reasons.append("missing legs: " + ", ".join(live_missing))
+        elif missing:
+            reasons.append("missing legs: " + ", ".join(missing))
+
+        th = thesis_results.get(t.get("name", ""))
+        if th is None:
+            reasons.append("thesis unconfirmed: no Stage-3 result")
+        elif not th.get("stage_passed", False):
+            rej = th.get("rejection_reason") or "confirmation failed"
+            reasons.append(f"thesis unconfirmed: {rej}")
+
+        eligible = not reasons
+        t["is_eligible"] = eligible
+        t["eligibility_reason"] = "eligible" if eligible else "; ".join(reasons)
+        t["max_weight"] = 1.0 if eligible else 0.0
+        t["structurally_dead"] = bool(dead_legs)
+    return trades
+
+
+def enforce_weight(trade: dict, proposed_weight: float) -> float:
+    """
+    THE hard zero-weight lock. All downstream allocation must route weights
+    through this function. An ineligible (or un-annotated) trade gets 0.0
+    no matter what weight is proposed — positive, negative, or otherwise.
+    """
+    if not trade.get("is_eligible", False):
+        return 0.0
+    return float(proposed_weight)
+
+
 def apply_filters(
     candidates: list[dict],
     filters: Optional[dict] = None,

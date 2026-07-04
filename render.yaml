@@ -19,3 +19,15 @@ services:
       # Optional data sources
       - key: FRED_API_KEY
         sync: false
+      # ── Optional: persist the daily "what changed" baseline across deploys ──
+      # The Home delta panel works out of the box via an intraday baseline.
+      # It resets on each redeploy/restart because Render's filesystem is
+      # ephemeral. To keep TRUE day-over-day deltas across deploys, uncomment
+      # the disk below and this env var (adds a small monthly disk cost; a
+      # disk pins the service to a single instance — already the case here).
+      # - key: SPILLOVER_SNAPSHOT_DIR
+      #   value: /var/data
+    # disk:
+    #   name: snapshot-store
+    #   mountPath: /var/data
+    #   sizeGB: 1

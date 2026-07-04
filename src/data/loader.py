@@ -37,11 +37,16 @@ def _disk_path(name: str, start: str, end: str) -> Path:
     return _DISK_CACHE_DIR / f"{name}_{start}_{end}.parquet"
 
 
-def _disk_load(path: Path) -> pd.DataFrame | None:
+def _disk_load(path: Path, min_rows: int = 50, min_cols: int = 5) -> pd.DataFrame | None:
     try:
         if path.exists() and (_time.time() - path.stat().st_mtime) < _DISK_CACHE_MAX_AGE:
             df = pd.read_parquet(path)
-            return df if not df.empty else None
+            # Partial fetches saved during an outage poison the cache: a
+            # 4-row × 2-ticker frame is "non-empty" but breaks every consumer
+            # downstream. Refuse implausibly small frames.
+            if df.empty or len(df) < min_rows or df.shape[1] < min_cols:
+                return None
+            return df
     except Exception:
         pass
     return None
@@ -52,6 +57,47 @@ def _disk_save(df: pd.DataFrame, path: Path) -> None:
         df.to_parquet(path, index=True)
     except Exception as exc:
         _log.debug("disk cache write failed: %s", exc)
+
+
+def _disk_stale_fallback(name: str, start: str, end: str) -> pd.DataFrame | None:
+    """
+    Last-resort disk fallback when the live fetch returns EMPTY and there is
+    no exact-key cache hit — typical at the daily key rollover (every key
+    embeds end=today, so all keys go stale at midnight) combined with a
+    yfinance rate-limit. Serving a slightly stale frame beats rendering a
+    page of silent gaps (the GAP-16 failure class).
+
+    Picks the newest parquet for `name` whose window covers the requested
+    start, slices to [start, end], and records a freshness failure so the
+    data-health banner reports the staleness honestly.
+    """
+    try:
+        cands = []
+        for f in _DISK_CACHE_DIR.glob(f"{name}_*.parquet"):
+            try:
+                _, f_start, f_end = f.stem.split("_", 2)
+            except ValueError:
+                continue
+            if f_start <= start:
+                cands.append((f.stat().st_mtime, f_end, f))
+        if not cands:
+            return None
+        cands.sort(reverse=True)                     # newest write first
+        _, f_end, best = cands[0]
+        df = pd.read_parquet(best)
+        if df.empty or df.shape[1] < 5:
+            return None
+        df = df.loc[(df.index >= start) & (df.index <= end)]
+        if df.empty or len(df) < 30:
+            return None
+        # Deliberately NOT recorded as a freshness failure: the fallback fires
+        # routinely at the daily cache-key rollover and would put a permanent
+        # "DATA DEGRADED" banner on the Command Center for data that is at
+        # most hours stale. The server log keeps the trace.
+        _log.warning("%s: live fetch empty; stale disk fallback %s", name, best.name)
+        return df
+    except Exception:
+        return None
 
 from src.data.config import (
     EQUITY_TICKERS, COMMODITY_TICKERS, FRED_SERIES,
@@ -339,8 +385,13 @@ def load_equity_prices(
     names = list(EQUITY_TICKERS.keys())
     lseg  = _fetch_lseg(names, start, end)
     result = _fill_gaps(lseg) if (not lseg.empty and len(lseg) > 10) else _fill_gaps(_fetch_yf(EQUITY_TICKERS, start, end))
-    if not result.empty:
-        _disk_save(result, _p)
+    _complete = len(result) >= 50 and result.shape[1] >= 0.6 * len(EQUITY_TICKERS)
+    if not _complete:
+        stale = _disk_stale_fallback("equity", start, end)
+        if stale is not None and (result.empty or len(stale.columns) > result.shape[1]):
+            return stale
+    if _complete:
+        _disk_save(result, _p)     # partial fetches are served but never persisted
     return result
 
 
@@ -356,8 +407,13 @@ def load_commodity_prices(
     names = list(COMMODITY_TICKERS.keys())
     lseg  = _fetch_lseg(names, start, end)
     result = _fill_gaps(lseg) if (not lseg.empty and len(lseg) > 10) else _fill_gaps(_fetch_yf(COMMODITY_TICKERS, start, end))
-    if not result.empty:
-        _disk_save(result, _p)
+    _complete = len(result) >= 50 and result.shape[1] >= 0.6 * len(COMMODITY_TICKERS)
+    if not _complete:
+        stale = _disk_stale_fallback("commodity", start, end)
+        if stale is not None and (result.empty or len(stale.columns) > result.shape[1]):
+            return stale
+    if _complete:
+        _disk_save(result, _p)     # partial fetches are served but never persisted
     return result
 
 
@@ -762,6 +818,16 @@ def load_fixed_income_returns(
     """Daily log returns for fixed income ETF proxies. Not cached — delegates to cached leaf loader."""
     result = _log_returns(load_fixed_income_prices(start, end))
     return _validate_returns(result, "fixed_income_returns")
+
+
+def load_private_credit_returns(
+    start: str = str(DEFAULT_START),
+    end:   str = str(DEFAULT_END),
+) -> pd.DataFrame:
+    """Daily log returns for BDC / private credit proxies, short PC_PROXY_TICKERS
+    names. Not cached — delegates to the cached price leaf loader."""
+    result = _log_returns(load_private_credit_proxies(start, end))
+    return _validate_returns(result, "private_credit_returns")
 
 
 @st.cache_data(ttl=3600, show_spinner=False, max_entries=3)

@@ -7,6 +7,8 @@ filter sidebar, and agent debate threads.
 
 from __future__ import annotations
 
+import datetime
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -1190,6 +1192,39 @@ def _thesis_stage3_cached(
     }
 
 
+def _library_stage3_results(_all_r: pd.DataFrame, _regimes) -> dict[str, dict]:
+    """
+    Stage-3 confirmation for every library thesis whose legs all exist in the
+    loaded returns frame. Predicted signs derive mechanically from the legs
+    (Long → +1, Short → −1). Phantom-leg entries are skipped — Stage 3 cannot
+    run without data, and the leg check in annotate_eligibility() locks them
+    with the specific missing legs named.
+
+    Not cached itself: each _thesis_stage3_cached call below carries its own
+    daily cache (nesting cached calls trips Streamlit's cache guard).
+    """
+    out: dict[str, dict] = {}
+    for tr in _TRADE_LIBRARY:
+        assets = tr.get("assets") or []
+        dirs = tr.get("direction") or []
+        if not assets or any(a not in _all_r.columns for a in assets):
+            continue
+        pred = tuple(sorted(
+            (a, 1 if d == "Long" else -1) for a, d in zip(assets, dirs)
+        ))
+        hold = _parse_holding_days(tr, default=20)
+        try:
+            out[tr["name"]] = _thesis_stage3_cached(
+                tr["name"], tr.get("conflict_id"), tuple(tr.get("regime", [])),
+                tuple(assets), tuple(dirs), pred, hold,
+                _all_r, _regimes, _len_hint=len(_all_r),
+            )
+        except Exception as _e:
+            out[tr["name"]] = {"stage_passed": False,
+                               "rejection_reason": f"Stage 3 error: {type(_e).__name__}"}
+    return out
+
+
 @st.cache_data(show_spinner=False, ttl=86400, max_entries=1)
 def _run_pipeline_validator_cached(
     _all_r: pd.DataFrame,
@@ -2090,6 +2125,26 @@ def _render_trade_card(
                     )
 
 
+# Deploy bar of Step 2's dsr_factor — single owner: trade_allocator.py.
+from src.analysis.trade_allocator import DSR_DEPLOY_BAR as _DSR_DEPLOY_BAR
+
+
+def _weight_earn_condition(alloc_detail: dict) -> str:
+    """One-line, trade-specific statement of what must improve for a
+    zero-weight eligible trade to earn allocation under Step 2's factors."""
+    from src.analysis.trade_allocator import MIN_TRADES_FOR_DSR
+    n = int(alloc_detail.get("n_trades", 0))
+    dsr = float(alloc_detail.get("dsr", 0.0))
+    conv = float(alloc_detail.get("conviction", 0.0))
+    if n < MIN_TRADES_FOR_DSR:
+        return f"needs ≥{MIN_TRADES_FOR_DSR} live signals (has {n})"
+    if dsr <= _DSR_DEPLOY_BAR:
+        return f"DSR +{_DSR_DEPLOY_BAR - dsr:.2f} to clear {_DSR_DEPLOY_BAR:.2f} bar"
+    if conv <= 0:
+        return "needs Stage-3 conviction > 0"
+    return "sizes on next reload"
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -2224,17 +2279,192 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     active_trades: list[dict] = []
     asset_exposure: dict = {}   # was populated by score_all_assets(); empty without trade cards
 
-    # Extend returns to include Fixed Income + FX (used by Integrity Audit and Multiple Testing)
+    # Extend returns to include Fixed Income + FX + Private Credit legs.
+    # This frame is the SINGLE tradeable universe: the eligibility gate, the
+    # Stage-3 runs, the allocator backtests, the constraint clusters, the
+    # Integrity Audit and Multiple Testing all read the same columns.
+    _PC_LEG_MAP = {"ARCC": "Ares Capital (ARCC)", "OBDC": "Blue Owl (OBDC)"}
+    try:
+        from src.data.loader import load_private_credit_returns
+        _pc_r = (load_private_credit_returns(start, end)
+                 .reindex(columns=list(_PC_LEG_MAP)).rename(columns=_PC_LEG_MAP))
+    except Exception:
+        _pc_r = pd.DataFrame()
     _extra_frames: list[pd.DataFrame] = []
     if not _fi_r.empty:
         _extra_frames.append(_fi_r)
     if not _fx_r.empty:
         _extra_frames.append(_fx_r)
+    if not _pc_r.empty:
+        _extra_frames.append(_pc_r)
     all_r_concat = pd.concat([eq_r, cmd_r] + _extra_frames, axis=1)
 
     # Effective N for DSR and HLZ multiple-testing gates
     _RAW_N = 18
     _effective_n: int = st.session_state.get("_effective_n", 9)
+
+    # ── STEP 1 OF 4 — ELIGIBILITY GATE ─────────────────────────────────────
+    # Eligible ⟺ every leg exists in the loaded returns frame AND the thesis
+    # passed Stage-3 confirmation. Everything else is NON-ALLOCATABLE: still
+    # rendered, clearly marked, hard-locked to zero weight (enforce_weight in
+    # trade_filter.py is the choke point steps 2–4 must route through).
+    from src.analysis.trade_filter import annotate_eligibility
+    _all_r_gate = all_r_concat   # full tradeable universe — eq/cmd/FI/FX/PC
+    # Loadable universe: every leg display name with ANY loader mapping,
+    # loaded or not. A missing leg outside this set is STRUCTURALLY DEAD
+    # (can never trade); inside it, it is merely missing from today's fetch.
+    from src.data.config import FIXED_INCOME_TICKERS, FX_TICKERS
+    _loadable = (set(all_r_concat.columns) | set(FIXED_INCOME_TICKERS)
+                 | set(FX_TICKERS) | set(_PC_LEG_MAP.values()))
+    try:
+        with st.spinner("Running eligibility gate — leg check + Stage-3 confirmation…"):
+            _s3_results = _library_stage3_results(_all_r_gate, regimes)
+    except Exception:
+        _s3_results = {}
+    annotate_eligibility(_TRADE_LIBRARY, _all_r_gate.columns, _s3_results,
+                         loadable_universe=_loadable)
+    # ── STEP 2 OF 4 — WEIGHT ALLOCATOR (silent: stamps alloc_weight +
+    # alloc_detail; ranking and display are steps 3–4) ──────────────────────
+    try:
+        from src.analysis.trade_allocator import (
+            build_allocation_inputs, allocate_weights,
+        )
+        _alloc_metrics = build_allocation_inputs(
+            _TRADE_LIBRARY, _all_r_gate, regimes, _s3_results,
+        )
+        allocate_weights(_TRADE_LIBRARY, _alloc_metrics)
+        # ── STEP 3 OF 4 — PORTFOLIO CONSTRAINTS (silent) ────────────────────
+        # Conflict cap 40% / correlation-cluster cap 45% of gross, iterative
+        # re-normalization; runtime-asserted, stamps constraint_detail.
+        from src.analysis.trade_allocator import apply_portfolio_constraints
+        apply_portfolio_constraints(_TRADE_LIBRARY, _all_r_gate)
+    except Exception:
+        for _t in _TRADE_LIBRARY:
+            _t.setdefault("alloc_weight", 0.0)
+    # ── STEP 4 OF 4 — RANKED BOOK · LIVE ────────────────────────────────────
+    # Regenerated from current regime / Stage-3 / backtest state on every
+    # load. Attractiveness = 0.50·DSR + 0.35·conviction + 0.15·constraint
+    # room — raw Sharpe is displayed for transparency, never ranked on.
+    _ranked_book: list[dict] = []
+    try:
+        from src.analysis.trade_allocator import rank_trades
+        _ranked_book = rank_trades(_TRADE_LIBRARY)
+    except Exception:
+        for _t in _TRADE_LIBRARY:           # allocator failure ⇒ nothing sized
+            _t.setdefault("alloc_weight", 0.0)
+    _n_elig = sum(1 for _t in _TRADE_LIBRARY if _t.get("is_eligible"))
+    _n_dead = sum(1 for _t in _TRADE_LIBRARY if _t.get("structurally_dead"))
+    _n_lock = len(_TRADE_LIBRARY) - _n_elig - _n_dead
+    _dead_note = (f' · <b style="color:#555960">{_n_dead} STRUCTURALLY DEAD</b> '
+                  f'(no data source — excluded from the live count)'
+                  if _n_dead else '')
+    st.markdown(
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid {"#27ae60" if _n_elig else "#c0392b"};'
+        f'padding:.4rem .9rem;margin:.4rem 0 .6rem;'
+        f'font-family:\'JetBrains Mono\',monospace;font-size:.6rem;color:#8890a1">'
+        f'ELIGIBILITY GATE · <b style="color:#27ae60">{_n_elig} ELIGIBLE</b> · '
+        f'<b style="color:#c0392b">{_n_lock} NON-ALLOCATABLE</b> (zero-weight locked)'
+        f'{_dead_note} · '
+        f'eligible ⟺ all legs in return data AND thesis Stage-3 confirmed · '
+        f'locked trades render below with their reason</div>',
+        unsafe_allow_html=True,
+    )
+
+    if _ranked_book:
+        _gross_bk = sum(t.get("alloc_weight", 0.0) for t in _ranked_book)
+        # Cash is a position, not an absence: when no eligible thesis clears
+        # the DSR deploy bar the book is 100% cash BY DECISION — headline it,
+        # and demote the ranked table to a watchlist with per-trade gaps.
+        _is_cash_book = _gross_bk <= 1e-9
+        if _is_cash_book:
+            _best_dsr = max(
+                float((t.get("alloc_detail") or {}).get("dsr", 0.0))
+                for t in _ranked_book
+            )
+            st.markdown(
+                f'<div style="border:1px solid #CFB991;background:#0d0b06;'
+                f'padding:.65rem 1rem;margin:.2rem 0 .6rem">'
+                f'<div style="display:flex;justify-content:space-between;'
+                f'align-items:baseline;flex-wrap:wrap">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
+                f'color:#CFB991">DESK CALL — 0% DEPLOYED · 100% CASH</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.52rem;color:#8890a1">cash is a position — held, '
+                f'not defaulted</span></div>'
+                f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
+                f'color:#8890a1;margin-top:4px">'
+                f'All {len(_ranked_book)} eligible theses sit below the '
+                f'DSR {_DSR_DEPLOY_BAR:.2f} deploy threshold (best '
+                f'{_best_dsr:.2f}) — no confirmed edge clears the '
+                f'deflated-Sharpe luck benchmark, so nothing earns weight. '
+                f'Ranked ideas below are a watchlist, not an allocation.</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        _bk_rows = ""
+        for _t in _ranked_book:
+            _ad = _t.get("attr_detail") or {}
+            _dd = _t.get("alloc_detail") or {}
+            _cdt = _t.get("constraint_detail") or {}
+            _inval = (_t.get("invalidation") or _t.get("exit")
+                      or _t.get("risk") or "—")
+            _bk_rows += (
+                f'<tr style="border-bottom:1px solid #141414">'
+                f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.62rem;font-weight:700;color:#CFB991">#{_t["rank"]}</td>'
+                f'<td style="padding:3px 8px;font-size:.64rem;color:#e8e9ed">'
+                f'{_t["name"][:52]}</td>'
+                f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.64rem;font-weight:700;text-align:right;'
+                f'color:{"#27ae60" if _t.get("alloc_weight",0)>0 else "#8890a1"}">'
+                f'{_t.get("alloc_weight",0)*100:5.1f}%</td>'
+                f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.64rem;font-weight:700;text-align:right;color:#e8e9ed">'
+                f'{_t.get("attractiveness",0):.3f}</td>'
+                f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.56rem;text-align:right;color:#8890a1">'
+                f'{_ad.get("dsr",0):.2f} / {_ad.get("conviction",0):.2f} / '
+                f'{_ad.get("room",0):.2f}</td>'
+                f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.56rem;text-align:right;color:'
+                f'{"#CFB991" if _is_cash_book else ("#e67e22" if _cdt.get("clipped") else "#8890a1")}">'
+                f'{_weight_earn_condition(_dd) if _is_cash_book else ("CLIPPED" if _cdt.get("clipped") else "—")}</td>'
+                f'<td style="padding:3px 8px;font-size:.54rem;color:#8890a1;'
+                f'max-width:260px;white-space:nowrap;overflow:hidden;'
+                f'text-overflow:ellipsis">{_inval[:90]}</td>'
+                f'</tr>'
+            )
+        _hdr_cells = "".join(
+            f'<th style="padding:4px 8px;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:.5rem;letter-spacing:.1em;color:#8890a1;text-align:{_a}">{_h}</th>'
+            for _h, _a in [("RANK","left"),("TRADE","left"),("WEIGHT","right"),
+                           ("ATTR","right"),("DSR/CONV/ROOM","right"),
+                           ("TO EARN WEIGHT" if _is_cash_book else "CAPS","right"),
+                           ("INVALIDATED IF","left")]
+        )
+        st.markdown(
+            f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;margin-bottom:.7rem">'
+            f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+            f'padding:.4rem .8rem;border-bottom:1px solid #1e1e1e">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.6rem;'
+            f'font-weight:700;letter-spacing:.14em;color:#e8e9ed">'
+            f'{"WATCHLIST · RANKED — NOT YET ALLOCATABLE" if _is_cash_book else "RANKED BOOK · LIVE"}</span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
+            f'color:#8890a1">regenerated {datetime.datetime.now().strftime("%H:%M:%S")} · '
+            f'regime {r_name.upper()} · {len(_ranked_book)} eligible · '
+            f'gross {_gross_bk*100:.1f}% · cash {(1-_gross_bk)*100:.1f}%</span></div>'
+            f'<table style="width:100%;border-collapse:collapse">'
+            f'<thead><tr style="border-bottom:1px solid #1e1e1e">{_hdr_cells}</tr></thead>'
+            f'<tbody>{_bk_rows}</tbody></table>'
+            f'<div style="padding:.3rem .8rem;font-family:\'JetBrains Mono\',monospace;'
+            f'font-size:.5rem;color:#555960">attractiveness = 0.50·DSR + 0.35·conviction '
+            f'+ 0.15·constraint room · raw Sharpe never ranks · zero weights = no thesis '
+            f'clears the deflated-edge bar (honest cash book)</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     # ── Download report ─────────────────────────────────────────────────────
     _n_theses  = len(_TRADE_LIBRARY)
@@ -2311,8 +2541,33 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'{" · ".join(lens[:3])}</div>'
         ) if lens else ""
 
+        # STEP-1 eligibility verdict — every card states it; locked cards name why
+        _elig = tr.get("is_eligible", False)
+        _elig_reason = tr.get("eligibility_reason", "gate not run")
+        if _elig:
+            elig_badge = (
+                f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.44rem;font-weight:700;letter-spacing:.1em;'
+                f'color:#27ae60;background:#27ae6014;border:1px solid #27ae6035;'
+                f'padding:1px 5px;flex-shrink:0">ELIGIBLE</span>'
+            )
+            elig_reason_h = ""
+        else:
+            elig_badge = (
+                f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.44rem;font-weight:700;letter-spacing:.1em;'
+                f'color:#e05241;background:#c0392b18;border:1px solid #c0392b40;'
+                f'padding:1px 5px;flex-shrink:0">NON-ALLOCATABLE · 0 WT</span>'
+            )
+            elig_reason_h = (
+                f'<div style="font-size:.48rem;color:#e0524190;'
+                f'font-family:\'JetBrains Mono\',monospace;margin-top:2px;'
+                f'line-height:1.3">⊘ {_elig_reason}</div>'
+            )
+
         return (
-            f'<div style="padding:7px 8px 6px;border-bottom:1px solid #151515">'
+            f'<div style="padding:7px 8px 6px;border-bottom:1px solid #151515;'
+            f'{"opacity:.62" if not _elig else ""}">'
             # Row 1: color dot + name + regime badges
             f'<div style="display:flex;align-items:flex-start;'
             f'justify-content:space-between;gap:5px;margin-bottom:3px">'
@@ -2323,7 +2578,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'font-family:\'DM Sans\',sans-serif;line-height:1.35;'
             f'word-break:break-word;font-weight:600">{nm}</div>'
             f'</div>'
-            f'<div style="display:flex;gap:2px;flex-shrink:0;margin-top:1px">{reg_html}</div>'
+            f'<div style="display:flex;gap:4px;flex-shrink:0;margin-top:1px;'
+            f'align-items:center">{elig_badge}{reg_html}</div>'
             f'</div>'
             # Row 2: category tag + legs + hold period
             f'<div style="display:flex;align-items:center;'
@@ -2344,7 +2600,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             # Row 4: target (if available)
             f'{tgt_h}'
             # Row 5: investor lens (if available)
-            f'{lens_h}'
+            f'{lens_h}{elig_reason_h}'
             f'</div>'
         )
 
@@ -2481,18 +2737,20 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         '</div>',
         unsafe_allow_html=True,
     )
-    if st.button("Generate PDF Report", key="gen_report", type="primary"):
+    if st.button("Generate Desk Report (PDF) — current ranked book",
+                 key="gen_report", type="primary"):
         try:
             from src.reports.report_generator import generate_report
             with st.spinner("Building report - generating charts…"):
                 stress = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
+                from src.analysis.trade_allocator import desk_report_feed
                 pdf_bytes = generate_report(
                     start=start,
                     end=end,
                     avg_corr_series=avg_corr,
                     current_regime=current,
                     regimes=regimes,
-                    active_trades=active_trades,
+                    active_trades=desk_report_feed(_ranked_book),
                     all_trades=_TRADE_LIBRARY,
                     eq_r=eq_r,
                     cmd_r=cmd_r,
@@ -2500,8 +2758,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     geopolitical_events=GEOPOLITICAL_EVENTS,
                 )
             filename = (
-                f"purdue_spillover_report_"
-                f"{start.replace('-','')}_to_{end.replace('-','')}.pdf"
+                f"desk_report_{datetime.date.today().isoformat()}_"
+                f"regime_{r_name.lower()}.pdf"
             )
             st.download_button(
                 label="Download PDF",

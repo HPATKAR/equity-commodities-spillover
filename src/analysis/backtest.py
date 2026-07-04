@@ -213,10 +213,25 @@ def compute_effective_n(
     ec_df  = pd.DataFrame(curves).dropna(how="all")
     corr_m = ec_df.corr()
 
+    roots, cluster_pairs = _uf_clusters(corr_m, corr_threshold)
+    distinct_roots = len(set(roots.values()))
+    return distinct_roots, cluster_pairs
+
+
+def _uf_clusters(
+    corr_m: pd.DataFrame,
+    corr_threshold: float,
+) -> tuple[dict[str, int], list[tuple[str, str, float]]]:
+    """
+    Union-find over a correlation matrix: names with pairwise r > threshold
+    collapse into one cluster. THE cluster logic — shared by
+    compute_effective_n (effective bet count) and the Step-3 portfolio
+    cluster caps so both always agree on what counts as one bet.
+
+    Returns ({name: cluster_root_index}, [(a, b, r) pairs above threshold]).
+    """
     names = list(corr_m.columns)
     n = len(names)
-
-    # Union-find: collapse strategies with r > threshold into the same cluster
     parent = list(range(n))
 
     def _find(x: int) -> int:
@@ -235,8 +250,28 @@ def compute_effective_n(
                 if pi != pj:
                     parent[pi] = pj
 
-    distinct_roots = len({_find(i) for i in range(n)})
-    return distinct_roots, cluster_pairs
+    roots = {names[i]: _find(i) for i in range(n)}
+    return roots, cluster_pairs
+
+
+def correlation_clusters(
+    series_map: dict[str, "pd.Series"],
+    corr_threshold: float = 0.90,
+) -> dict[str, int]:
+    """
+    Cluster arbitrary named return series with the SAME union-find used by
+    compute_effective_n. Series with < 20 overlapping observations become
+    singletons (no evidence of duplication ≠ duplication).
+    """
+    usable = {k: v.dropna() for k, v in series_map.items()
+              if v is not None and len(v.dropna()) > 20}
+    singletons = {k: -(i + 1) for i, k in enumerate(series_map)
+                  if k not in usable}
+    if len(usable) < 2:
+        return {**{k: i for i, k in enumerate(usable)}, **singletons}
+    df = pd.DataFrame(usable).dropna(how="all")
+    roots, _ = _uf_clusters(df.corr(), corr_threshold)
+    return {**roots, **singletons}
 
 
 # ── CSCV Probability of Backtest Overfitting ─────────────────────────────────

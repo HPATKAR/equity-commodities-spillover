@@ -242,6 +242,92 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
 /* Loading sweep bar */
 @keyframes hm-load-sweep{0%{left:-45%;width:45%}100%{left:110%;width:45%}}
 .hm-load-sweep{position:absolute;top:0;height:100%;background:linear-gradient(90deg,transparent,#CFB991,transparent);animation:hm-load-sweep 1.4s ease-in-out infinite}
+
+/* ── LAYOUT PASS: one strict grid ─────────────────────────────────────────
+   All gutters identical (12px), no rounded corners, no shadows, and every
+   numeral rendered tabular so decimals align down every column. The app-wide
+   column divider (border-left + 1rem padding on adjacent columns) makes
+   gutters unequal, so it is disabled on this page. */
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"]{gap:12px!important}
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] + [data-testid="stColumn"]{
+    border-left:none!important;padding-left:0!important}
+section[data-testid="stMain"] *{border-radius:0!important;box-shadow:none!important;
+    font-variant-numeric:tabular-nums}
+/* Hero band — CSS grid, 12 columns, 12px gap everywhere */
+.cc-hero{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin:0 0 12px}
+.cc-cell{background:#0a0a0a;border:1px solid #1e1e1e;padding:.4rem .65rem;min-width:0}
+.cc-thin{display:flex;align-items:baseline;padding:.3rem .65rem;overflow:hidden}
+.cc-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;color:#8890a1;margin-bottom:4px}
+.cc-num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;
+    text-align:right;white-space:pre}
+.cc-row{display:flex;align-items:baseline;justify-content:space-between;
+    padding:0;line-height:1.55;border-bottom:1px solid #141414}
+.cc-row:last-child{border-bottom:none}
+
+/* ── FINALIZATION: static terminal discipline ─────────────────────────────
+   Data doesn't dance. All entrance/attention animations, glows, and text
+   shadows are disabled; the only motion left is the live heartbeat dot and
+   the loading sweep — both functional, not decorative. Buttons drop the
+   app-wide gold border: gold is reserved for the GRS accent and primary
+   actions only. */
+section[data-testid="stMain"] *{animation:none!important;transition:none!important;
+    text-shadow:none!important}
+/* Liveness exceptions — motion that signals LIVE DATA, never decoration:
+   heartbeat dots, current-value markers, GRS breathe, top-conflict radar
+   rings, and state pulses on critical/escalating readings. */
+section[data-testid="stMain"] .nx-live-dot{animation:nx-pulse 1.8s ease-out infinite!important}
+section[data-testid="stMain"] .hm-load-sweep{animation:hm-load-sweep 1.4s ease-in-out infinite!important}
+section[data-testid="stMain"] .hm-dot-live{animation:hm-dot-live 2.8s ease-in-out infinite!important}
+section[data-testid="stMain"] .hm-score-breathe{animation:hm-score-breathe 3.5s ease-in-out infinite!important}
+section[data-testid="stMain"] .hm-dot{animation:hm-pulse 1.8s ease-in-out infinite!important}
+section[data-testid="stMain"] .hm-live-blink{animation:hm-live-blink 1.2s step-end infinite!important}
+section[data-testid="stMain"] .rp1{animation:rp1 2.6s ease-in-out infinite!important}
+section[data-testid="stMain"] .rp2{animation:rp2 2.6s ease-in-out .4s infinite!important}
+@keyframes cc-state-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+section[data-testid="stMain"] .cc-state-pulse{animation:cc-state-pulse 2.2s ease-in-out infinite!important}
+.hm-shimmer{background:none!important}
+section[data-testid="stMain"] .stButton > button{
+    border-color:#2a2a2a!important;color:#b8b8b8!important;background:#0d0d0d!important}
+section[data-testid="stMain"] .stButton > button:hover{
+    background:#1a1a1a!important;color:#e8e9ed!important;border-color:#3a3a3a!important}
+section[data-testid="stMain"] .stButton > button[kind="primary"],
+section[data-testid="stMain"] button[data-testid="baseButton-primary"]{
+    background:#CFB991!important;color:#000!important;border-color:#CFB991!important}
+
+/* ── DENSITY: Streamlit defaults to ~1rem between every element — on a
+   terminal that is dead air. Compress inter-element gaps page-wide and
+   trim panel padding; density carries MORE info, not smaller info. */
+section[data-testid="stMain"] [data-testid="stVerticalBlock"]{gap:.35rem!important}
+/* Streamlit pins explicit pixel heights on markdown wrappers measured
+   BEFORE the JetBrains Mono/DM Sans font swap; once real glyph metrics land,
+   content outgrows the pinned box and paints over the next element (clipped
+   headers). Force natural flow height — but ONLY for markdown: element
+   containers hosting components.html iframes are collapsed on purpose
+   (navbar/JS helpers) and blanket height:auto re-inflates them to the 150px
+   iframe default, leaving a black band at the top of the page. */
+section[data-testid="stMain"] [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]),
+section[data-testid="stMain"] [data-testid="stMarkdown"],
+section[data-testid="stMain"] [data-testid="stMarkdown"] > div{
+    height:auto!important;max-height:none!important}
+section[data-testid="stMain"] [data-testid="stElementContainer"]{margin-bottom:0!important}
+section[data-testid="stMain"] .nx-intel-row{padding:.3rem 0!important}
+section[data-testid="stMain"] [data-testid="stExpander"] summary{padding:.4rem .8rem!important}
+.cc-tape{display:flex;align-items:baseline;gap:0;border:1px solid #1e1e1e;
+    background:#0a0a0a;grid-column:span 12;padding:0}
+.cc-tape > span{flex:1;display:flex;align-items:baseline;min-width:0;
+    padding:.4rem .7rem;border-right:1px solid #141414;white-space:nowrap;overflow:hidden}
+.cc-tape > span > *{flex-shrink:0}
+.cc-tape .cc-clip{flex-shrink:1;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cc-tape > span:last-child{border-right:none}
+/* Hero interior grids — pack cells with columns, not padding */
+.cc-grs{display:grid;grid-template-columns:270px 1fr;gap:0 20px;align-items:start}
+.cc-mv2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.cc-mv-it{display:flex;align-items:center;justify-content:space-between;gap:5px;
+    padding:1px 0;border-bottom:1px solid #141414;min-width:0}
+.cc-comp2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.cc-grs2{display:grid;grid-template-columns:auto 1fr;gap:0 22px;align-items:center;
+    border-bottom:1px solid #141414;padding-bottom:4px;margin-bottom:2px}
 </style>"""
 
 
@@ -359,37 +445,52 @@ def _render_masthead(conflict_agg: dict) -> None:
         if _logo else ""
     )
 
-    # ── Header ────────────────────────────────────────────────────────────
-    _page_header(
-        "Command Center",
-        "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
-    )
-
-    # ── Status bar ────────────────────────────────────────────────────────
-    _sit_rgb = {_C["danger"]: "192,57,43", _C["warn"]: "230,126,34", _C["safe"]: "39,174,96"}.get(sit_color, "207,185,145")
+    # ── Merged header: title left · live status right (bar row removed) ───
+    import streamlit.components.v1 as _cmp
+    _cmp.html('<script>window.parent.scrollTo({top:0,behavior:"instant"});</script>', height=0)
+    st.markdown("""<style>
+[data-testid="stAppViewContainer"],[data-testid="stMain"],.main,
+[data-testid="stSidebar"],.stApp,body{background:#000!important}
+[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid #1a1a1a!important}
+</style>""", unsafe_allow_html=True)
+    _eye = ("Cross-Asset Spillover Monitor · Purdue Daniels School of Business "
+            "· MSF Research Terminal")
+    _sit_rgb = {_C["danger"]: "192,57,43", _C["warn"]: "230,126,34",
+                _C["safe"]: "39,174,96"}.get(sit_color, "207,185,145")
     st.markdown(
-        f'<div class="hm-shimmer" style="position:relative;background:{_C["card2"]};'
-        f'border:1px solid {_C["border"]};border-left:3px solid {sit_color};'
-        f'padding:.4rem 1rem;display:flex;align-items:center;gap:16px;'
-        f'flex-wrap:wrap;margin-bottom:.75rem">'
+        f'<div style="border-left:2px solid #CFB991;padding-left:12px;'
+        f'margin-bottom:.6rem;display:flex;align-items:flex-end;'
+        f'justify-content:space-between;gap:16px;flex-wrap:wrap">'
+        # left: eyebrow · title · subtitle
+        f'<div style="min-width:0">'
+        f'<div style="display:flex;align-items:center;margin-bottom:4px">{_logo_img}'
+        f'<span style="{_M}font-size:0.52rem;font-weight:700;letter-spacing:.2em;'
+        f'text-transform:uppercase;color:#8E9AAA">{_eye}</span></div>'
+        f'<h1 style="{_F}font-size:1.55rem;font-weight:700;color:#e8e9ed;'
+        f'margin:0 0 2px;line-height:1.1">Command Center</h1>'
+        f'<p style="{_F}font-size:0.72rem;color:#8890a1;margin:0">'
+        f'Geopolitical &amp; Cross-Asset Intelligence · Equity · Commodity · FX '
+        f'· Fixed Income</p></div>'
+        # right: one wrap-friendly status cluster, right-aligned
+        f'<div style="display:flex;align-items:center;justify-content:flex-end;'
+        f'gap:8px 12px;flex-wrap:wrap;max-width:520px">'
         f'<span class="nx-live-dot"></span>'
-        f'<span style="{_M}font-size:0.69rem;color:{_C["text"]};letter-spacing:.02em">'
+        f'<span style="{_M}font-size:0.62rem;color:{_C["text"]};white-space:nowrap">'
         f'{now.strftime("%a %d %b %Y")}&nbsp;'
         f'<span style="color:{_C["border2"]}">│</span>&nbsp;'
-        f'{now.strftime("%H:%M")} LOCAL'
-        f'</span>'
-        f'<span class="hm-badge-pop" style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
-        f'border:1px solid rgba({_sit_rgb},0.35);'
-        f'{_M}font-size:0.56rem;font-weight:700;padding:2px 9px;letter-spacing:.14em;border-radius:1px">'
-        f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE'
-        f'</span>'
-        f'<span style="{_M}font-size:0.63rem;color:{_C["label"]}">{sc_note}</span>'
-        f'<span style="{_M}font-size:0.63rem;color:{_C["label"]}">'
-        f'CIS&nbsp;<b class="hm-num-pop" style="color:{sit_color}">{cis:.0f}</b>'
-        f'</span>'
-        f'<span class="hm-badge-pop" style="margin-left:auto;background:{sit_color};color:#000;'
-        f'{_M}font-size:0.56rem;font-weight:700;padding:3px 11px;letter-spacing:.16em">'
-        f'{sit_label}</span>'
+        f'{now.strftime("%H:%M")} LOCAL</span>'
+        f'<span style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
+        f'border:1px solid rgba({_sit_rgb},0.35);{_M}font-size:0.54rem;font-weight:700;'
+        f'padding:2px 8px;letter-spacing:.12em;white-space:nowrap">■ {n_act} CONFLICT'
+        f'{"S" if n_act != 1 else ""} ACTIVE</span>'
+        f'<span style="{_M}font-size:0.6rem;color:{_C["label"]};'
+        f'white-space:nowrap">{sc_note}</span>'
+        f'<span style="{_M}font-size:0.6rem;color:{_C["label"]};white-space:nowrap">'
+        f'CIS&nbsp;<b class="cc-num" style="color:{sit_color}">{cis:.0f}</b></span>'
+        f'<span style="background:{sit_color};color:#000;{_M}font-size:0.56rem;'
+        f'font-weight:700;padding:3px 11px;letter-spacing:.16em;'
+        f'white-space:nowrap">{sit_label}</span>'
+        f'</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -439,7 +540,7 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
     pct = min(value, 100)
     weighted_contribution = value * weight
     return (
-        f'<div style="display:flex;align-items:center;gap:7px;padding:5px 0;'
+        f'<div style="display:flex;align-items:center;gap:7px;padding:3px 0;'
         f'border-bottom:1px solid {_C["border"]}">'
         f'<span style="{_M}font-size:0.63rem;color:{_C["text"]};min-width:95px;white-space:nowrap">'
         f'{label}</span>'
@@ -451,6 +552,538 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
         f'×{weight:.0%}={weighted_contribution:.0f}</span>'
         f'<span style="{_F}font-size:0.75rem;color:{_C["text"]}">{note}</span>'
         f'</div>'
+    )
+
+
+def _spark_bare(values: list, width: int = 64, height: int = 16,
+                color: str = "#8890a1") -> str:
+    """Bare row sparkline — no label, greyscale by default (hero mover rows)."""
+    if len(values) < 2:
+        return ""
+    vmin, vmax = min(values), max(values)
+    span = (vmax - vmin) or 1.0
+    n = len(values)
+    pts = " L ".join(
+        f"{i / (n - 1) * width:.1f},{height - 2 - (v - vmin) / span * (height - 4):.1f}"
+        for i, v in enumerate(values)
+    )
+    return (f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+            f'style="vertical-align:middle"><path d="M {pts}" fill="none" '
+            f'stroke="{color}" stroke-width="1.2"/></svg>')
+
+
+def _render_command_hero(
+    risk: dict,
+    conflict_agg: dict,
+    conflict_results: dict,
+    score_hist,
+    yday_deltas: list | None,
+    yday_date: str | None,
+    alerts: list,
+    regimes,
+    avg_corr,
+    eq_r,
+    cmd_r,
+) -> None:
+    """
+    Command hero v3 — maximum packing. Thin one-line top strip (reserved slot,
+    alerts inline, regime inline), then GRS | full conflict roster w/ TPS |
+    16 movers with 1d+5d, then the tape with computed vol/corr cells.
+    Display-only: all values already computed or trivial arithmetic on loaded
+    frames.
+    """
+    score = float(risk.get("score", 0.0))
+    s_col = risk.get("color", _GOLD)
+
+    d_geo = None
+    for d in (yday_deltas or []):
+        if d.get("key") == "geo_risk_score":
+            d_geo = d.get("delta")
+    if d_geo is None:
+        d_geo = st.session_state.get("_delta_geo_score")
+    d_txt = "—" if d_geo is None else f"{d_geo:+.1f}"
+    d_col = _C["label"] if not d_geo else (_C["danger"] if d_geo > 0 else _C["safe"])
+
+    spark = ""
+    try:
+        vals = [float(v) for v in list(score_hist.tail(90))]
+        spark = _sparkline_svg(vals, width=150, height=26, line_color=s_col)
+    except Exception:
+        pass
+
+    # ── GRS component rows ──────────────────────────────────────────────────
+    d_cis = next((d["delta"] for d in (yday_deltas or []) if d.get("key") == "portfolio_cis"), None)
+    d_tps = next((d["delta"] for d in (yday_deltas or []) if d.get("key") == "portfolio_tps"), None)
+    peak_cis = max((float(r.get("cis", 0)) for r in conflict_results.values()), default=0.0)
+    news_gpr = risk.get("news_gpr")
+    comp_rows = ""
+    for lbl, val, dd in (
+        ("CIS · conflict ×35%", float(risk.get("cis", 0)), d_cis),
+        ("TPS · transmission ×30%", float(risk.get("tps", 0)), d_tps),
+        ("MCS · market ×35%", float(risk.get("mcs", 0)), None),
+        ("News GPR", float(news_gpr) if news_gpr is not None else None, None),
+        ("Peak conflict CIS", peak_cis, None),
+        ("Confidence %", float(risk.get("confidence", 0)) * 100, None),
+    ):
+        v_txt = "    —" if val is None else f"{val:5.1f}"
+        dd_txt = "" if dd is None else f"{dd:+5.1f}"
+        dd_col = _C["danger"] if (dd or 0) > 0 else _C["safe"]
+        comp_rows += (
+            f'<div class="cc-row"><span style="{_M}font-size:.56rem;'
+            f'color:{_C["text"]}">{lbl}</span>'
+            f'<span><span class="cc-num" style="font-size:.64rem;font-weight:700;'
+            f'color:{_C["text"]}">{v_txt}</span>'
+            + (f'<span class="cc-num" style="font-size:.56rem;color:{dd_col};'
+               f'margin-left:6px">{dd_txt}</span>' if dd_txt else '')
+            + f'</span></div>'
+        )
+
+    # Weighted-contribution bar: which layer is driving the composite (greys —
+    # categorical, not state; labels differentiate)
+    _wc = float(risk.get("cis", 0)) * 0.35
+    _wt = float(risk.get("tps", 0)) * 0.30
+    _wm = float(risk.get("mcs", 0)) * 0.35
+    _tot = (_wc + _wt + _wm) or 1.0
+    def _seg(v: float, c: str) -> str:
+        return (f'<span style="display:inline-block;width:{v / _tot * 100:.1f}%;'
+                f'background:{c};height:100%"></span>')
+    stack_bar = (
+        f'<div style="margin-top:4px">'
+        f'<div style="height:7px;background:#141414;font-size:0;white-space:nowrap">'
+        + _seg(_wc, "#6b7280") + _seg(_wt, "#4b5563") + _seg(_wm, "#30363f")
+        + f'</div>'
+        f'<div class="cc-num" style="font-size:.48rem;color:{_C["label"]};'
+        f'text-align:left;margin-top:1px">DRIVER SPLIT · CIS {_wc:4.1f} · TPS {_wt:4.1f} '
+        f'· MCS {_wm:4.1f} · Σ {_tot:4.1f}</div></div>'
+    )
+
+    # Zone scale: semantic zone tints, the ACTIVE zone lit, threshold numbers
+    # at the boundaries, caret marker at the score. Same 26px footprint.
+    _zones = [(0, 25, "LOW", _C["safe"]), (25, 45, "MOD", "#8890a1"),
+              (45, 65, "ELEV", _C["warn"]), (65, 100, "HIGH", _C["danger"])]
+    _zone_cells = ""
+    for a, b, z, zc in _zones:
+        _active = a <= score < b or (b == 100 and score >= 100)
+        _zone_cells += (
+            f'<div style="position:absolute;left:{a}%;width:{b - a}%;top:5px;height:12px;'
+            f'background:{zc}{"2e" if _active else "12"};'
+            f'border-top:2px solid {zc}{"cc" if _active else "44"};'
+            f'border-right:1px solid #000">'
+            f'<div style="{_M}font-size:.44rem;font-weight:{700 if _active else 400};'
+            f'letter-spacing:.1em;text-align:center;line-height:10px;'
+            f'color:{zc if _active else "#4a4a4a"}">{z}</div></div>'
+        )
+    _thresh = "".join(
+        f'<span class="cc-num" style="position:absolute;left:{x}%;top:18px;'
+        f'transform:translateX(-50%);font-size:.42rem;color:#555">{x}</span>'
+        for x in (25, 45, 65)
+    )
+    zone_strip = (
+        f'<div style="position:relative;height:26px;margin-top:5px">'
+        f'{_zone_cells}'
+        f'<span class="cc-num" style="position:absolute;left:0;top:18px;'
+        f'font-size:.42rem;color:#555">0</span>'
+        f'<span class="cc-num" style="position:absolute;right:0;top:18px;'
+        f'font-size:.42rem;color:#555">100</span>'
+        f'{_thresh}'
+        f'<div style="position:absolute;left:calc({min(score, 100):.1f}% - 4px);top:0;'
+        f'width:0;height:0;border-left:4px solid transparent;'
+        f'border-right:4px solid transparent;border-top:5px solid {s_col}"></div>'
+        f'<div style="position:absolute;left:calc({min(score, 100):.1f}% - 1px);'
+        f'top:5px;width:2px;height:12px;background:{s_col}"></div>'
+        f'</div>'
+    )
+
+    # 90d trail statistics: range, median, percentile rank, momentum
+    trail_stats = ""
+    try:
+        _tv = [float(v) for v in list(score_hist.dropna().tail(90))]
+        if len(_tv) >= 20:
+            _lo, _hi = min(_tv), max(_tv)
+            _med = float(np.median(_tv))
+            _prk = sum(1 for v in _tv if v < score) / len(_tv) * 100
+            _d5 = score - _tv[-6] if len(_tv) > 6 else float("nan")
+            _d20 = score - _tv[-21] if len(_tv) > 21 else float("nan")
+            def _dv(v):
+                if v != v:
+                    return f'<span style="color:{_C["label"]}">—</span>'
+                c = _C["danger"] if v > 0 else _C["safe"]
+                return f'<span style="color:{c}">{v:+.1f}</span>'
+            trail_stats = (
+                f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+                f'border-top:1px solid #141414;margin-top:4px;padding-top:3px">'
+                f'<span class="cc-num" style="font-size:.56rem;color:{_C["text"]}">'
+                f'<span style="{_M}font-size:.46rem;color:{_C["label"]};'
+                f'letter-spacing:.08em">90D RANGE </span>{_lo:.1f}–{_hi:.1f}</span>'
+                f'<span class="cc-num" style="font-size:.56rem;color:{_C["text"]}">'
+                f'<span style="{_M}font-size:.46rem;color:{_C["label"]};'
+                f'letter-spacing:.08em">MEDIAN </span>{_med:.1f}</span>'
+                f'<span class="cc-num" style="font-size:.56rem;color:{_C["text"]}">'
+                f'<span style="{_M}font-size:.46rem;color:{_C["label"]};'
+                f'letter-spacing:.08em">NOW P</span>{_prk:.0f}</span>'
+                f'<span class="cc-num" style="font-size:.56rem;font-weight:700">'
+                f'<span style="{_M}font-size:.46rem;color:{_C["label"]};'
+                f'letter-spacing:.08em;font-weight:400">Δ5D </span>{_dv(_d5)}</span>'
+                f'<span class="cc-num" style="font-size:.56rem;font-weight:700">'
+                f'<span style="{_M}font-size:.46rem;color:{_C["label"]};'
+                f'letter-spacing:.08em;font-weight:400">Δ20D </span>{_dv(_d20)}</span>'
+                f'</div>'
+            )
+    except Exception:
+        pass
+
+    # ── Theaters table: theater · channel · CIS · TPS · age · trend ─────────
+    from src.data.config import CONFLICTS as _CONF_REG
+    _starts = {c["id"]: c.get("start") for c in _CONF_REG}
+    _CH_CODE = {"oil_gas": "OIL", "metals": "MTL", "agriculture": "AGR",
+                "shipping": "SHP", "chokepoint": "CHK", "sanctions": "SNC",
+                "equity_sector": "EQT", "fx": "FX", "inflation": "INF",
+                "supply_chain": "SUP", "credit": "CRD", "energy_infra": "NRG"}
+
+    def _age_txt(cid: str) -> str:
+        st_d = _starts.get(cid)
+        if not isinstance(st_d, datetime.date):
+            return "  — "
+        days = (datetime.date.today() - st_d).days
+        return f"{days:3d}d" if days < 365 else f"{days / 365.25:3.1f}y"
+
+    _col = lambda w: f'display:inline-block;width:{w}px;text-align:right'
+    roster = sorted(conflict_results.values(),
+                    key=lambda r: float(r.get("cis", 0)), reverse=True)[:6]
+    roster_rows = (
+        f'<div class="cc-row" style="border-bottom:1px solid #1e1e1e">'
+        f'<span style="{_M}font-size:.48rem;color:{_C["label"]};letter-spacing:.1em">THEATER</span>'
+        f'<span style="{_M}font-size:.48rem;color:{_C["label"]};letter-spacing:.06em">'
+        f'<span style="{_col(26)}">CH</span><span style="{_col(28)}">CIS</span>'
+        f'<span style="{_col(28)}">TPS</span><span style="{_col(34)}">AGE</span>'
+        f'<span style="{_col(14)}"></span></span></div>'
+    )
+    for r in roster:
+        esc = r.get("escalation") == "escalating"
+        cis_v = float(r.get("cis", 0))
+        tps_v = float(r.get("tps", 0))
+        c_col = _C["danger"] if esc else _C["text"]
+        bar_c = _C["danger"] if cis_v >= 65 else _C["warn"] if cis_v >= 45 else "#3a3a3a"
+        state_dim = "opacity:.45" if r.get("state") != "active" else ""
+        tx = r.get("transmission", {}) or {}
+        top_ch = _CH_CODE.get(max(tx, key=tx.get), "—") if tx else "—"
+        roster_rows += (
+            f'<div class="cc-row" style="position:relative;{state_dim}">'
+            f'<div style="position:absolute;left:0;bottom:0;height:1.5px;'
+            f'width:{cis_v:.0f}%;background:{bar_c};opacity:.6"></div>'
+            f'<span style="{_M}font-size:.56rem;color:{_C["text"]};'
+            f'white-space:nowrap">{r["label"]}</span>'
+            f'<span style="white-space:nowrap">'
+            f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
+            f'{_col(26)}">{top_ch}</span>'
+            f'<span class="cc-num" style="font-size:.6rem;font-weight:700;'
+            f'color:{c_col};{_col(28)}">{cis_v:3.0f}</span>'
+            f'<span class="cc-num" style="font-size:.6rem;color:{_C["text"]};'
+            f'{_col(28)}">{tps_v:3.0f}</span>'
+            f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
+            f'{_col(34)}">{_age_txt(r["id"])}</span>'
+            f'<span class="{"cc-state-pulse" if esc else ""}" '
+            f'style="{_M}font-size:.52rem;{_col(14)};'
+            f'color:{c_col if esc else _C["label"]}">{"▲" if esc else "→"}</span>'
+            f'</span></div>'
+        )
+
+    # Portfolio aggregate + composition footers
+    _p_cis = float(conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 0)))
+    _p_tps = float(conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 0)))
+    _n_act = sum(1 for r in conflict_results.values() if r.get("state") == "active")
+    _n_lat = len(conflict_results) - _n_act
+    _n_esc = sum(1 for r in conflict_results.values()
+                 if r.get("escalation") == "escalating")
+    _regions = {}
+    for r in conflict_results.values():
+        _reg = (r.get("region") or "?")[:9]
+        _regions[_reg] = _regions.get(_reg, 0) + 1
+    _reg_txt = " · ".join(f"{k} {v}" for k, v in
+                          sorted(_regions.items(), key=lambda x: -x[1])[:4])
+    roster_rows += (
+        f'<div class="cc-row" style="border-top:1px solid #1e1e1e;margin-top:2px">'
+        f'<span style="{_M}font-size:.48rem;font-weight:700;letter-spacing:.1em;'
+        f'color:{_GOLD}">PORTFOLIO</span>'
+        f'<span style="white-space:nowrap">'
+        f'<span class="cc-num" style="font-size:.6rem;font-weight:700;'
+        f'color:{_C["text"]};{_col(54)}">{_p_cis:3.0f}</span>'
+        f'<span class="cc-num" style="font-size:.6rem;font-weight:700;'
+        f'color:{_C["text"]};{_col(28)}">{_p_tps:3.0f}</span>'
+        f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
+        f'{_col(48)}">{_n_act}A {_n_lat}L</span></span></div>'
+        f'<div class="cc-row">'
+        f'<span style="{_M}font-size:.48rem;color:{_C["muted"]};'
+        f'letter-spacing:.04em">{_reg_txt}</span>'
+        f'<span class="cc-num" style="font-size:.52rem;color:'
+        f'{_C["danger"] if _n_esc >= 3 else _C["text"]}">{_n_esc}▲ escalating</span></div>'
+    )
+
+    # ── Movers: 16 two-up, 1d + 5d columns ─────────────────────────────────
+    mover_items = ""
+    breadth_html = ""
+    try:
+        combined = pd.concat([eq_r, cmd_r], axis=1).dropna(how="all")
+        last = combined.iloc[-1].dropna()
+        # Breadth footer: advance/decline + average absolute move, whole universe
+        _adv = int((last > 0).sum())
+        _dec = int((last < 0).sum())
+        _avg = float(last.abs().mean()) * 100
+        breadth_html = (
+            f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+            f'border-top:1px solid #1e1e1e;margin-top:3px;padding-top:2px">'
+            f'<span style="{_M}font-size:.5rem;color:{_C["label"]};'
+            f'letter-spacing:.08em">BREADTH · {len(last)} ASSETS</span>'
+            f'<span><span class="cc-num" style="font-size:.56rem;font-weight:700;'
+            f'color:{_C["safe"]}">{_adv} adv</span>'
+            f'<span class="cc-num" style="font-size:.56rem;font-weight:700;'
+            f'color:{_C["danger"]};margin-left:7px">{_dec} dec</span>'
+            f'<span class="cc-num" style="font-size:.56rem;color:{_C["text"]};'
+            f'margin-left:7px">avg |1d| {_avg:.2f}%</span></span></div>'
+        )
+        for name in last.abs().sort_values(ascending=False).head(20).index:
+            ser = combined[name].dropna()
+            r1 = float(last[name]) * 100
+            r5 = float(np.expm1(ser.iloc[-5:].sum()) * 100) if len(ser) >= 5 else float("nan")
+            c1 = _C["danger"] if r1 < 0 else _C["safe"]
+            c5 = _C["label"] if r5 != r5 else (_C["danger"] if r5 < 0 else _C["safe"])
+            r5t = "  —  " if r5 != r5 else f"{r5:+5.1f}"
+            short = name if len(name) <= 10 else name[:9] + "…"
+            # sparkline color MATCHES the adjacent 5d figure — a trend color
+            # contradicting the printed number reads as an error (1d fallback
+            # when 5d is unavailable)
+            _t20 = [float(v) for v in ser.tail(20)]
+            _c20 = c1 if r5 != r5 else c5
+            mover_items += (
+                f'<span class="cc-mv-it">'
+                f'<span style="{_M}font-size:.54rem;color:{_C["text"]};overflow:hidden;'
+                f'text-overflow:ellipsis;white-space:nowrap">{short}</span>'
+                f'{_spark_bare(_t20, width=34, height=10, color=_c20)}'
+                f'<span class="cc-num" style="font-size:.56rem;font-weight:700;'
+                f'color:{c1}">{r1:+6.2f}</span>'
+                f'<span class="cc-num" style="font-size:.52rem;color:{c5}">{r5t}</span>'
+                f'</span>'
+            )
+    except Exception:
+        mover_items = f'<span style="{_M}font-size:.6rem;color:{_C["label"]}">unavailable</span>'
+
+    # ── Tape: pulse instruments + computed vol / corr cells ────────────────
+    # Sparklines are coloured red/green by their own direction (VIX-inverted
+    # so risk-off reads red everywhere); labels and figures stay neutral.
+    tape_html = ""
+    try:
+        cells = ""
+        for d in _load_market_pulse()[:8]:
+            pct = d["pct"]
+            inv = d["label"] == "VIX"
+            p_col = _C["danger"] if (inv and pct > 0) or (not inv and pct < 0) \
+                    else (_C["safe"] if pct != 0 else _C["label"])
+            ser = d.get("series") or []
+            lo, hi = (min(ser), max(ser)) if ser else (d["val"], d["val"])
+            fmt = lambda v: f"{v:,.2f}" if v < 10000 else f"{v:,.0f}"
+            cells += (
+                f'<span><span style="{_M}font-size:.5rem;font-weight:700;'
+                f'letter-spacing:.08em;color:{_C["label"]}">{d["label"]}</span>'
+                f'<span class="cc-num" style="font-size:.64rem;font-weight:700;'
+                f'color:{_C["text"]};margin-left:5px">{fmt(d["val"])}</span>'
+                f'<span class="cc-num" style="font-size:.56rem;font-weight:700;'
+                f'color:{p_col};margin-left:4px">{pct:+.2f}%</span>'
+                f'<span class="cc-num cc-clip" style="font-size:.48rem;color:{_C["label"]};'
+                f'margin-left:5px">{fmt(lo)}–{fmt(hi)}</span>'
+                f'<span style="margin-left:4px">{_spark_bare(ser, width=32, height=10, color=p_col)}</span>'
+                f'</span>'
+            )
+        # Computed cells from already-loaded frames (display arithmetic only).
+        # Sparklines colored by their own 5-observation direction — rising vol
+        # or coupling is risk-off (red), falling is green, matching the VIX
+        # convention so no cell contradicts its neighbours.
+        try:
+            _eqv_s = (eq_r.rolling(20).std().mean(axis=1)
+                      * np.sqrt(252) * 100).dropna().tail(30)
+            _cmv_s = (cmd_r.rolling(20).std().mean(axis=1)
+                      * np.sqrt(252) * 100).dropna().tail(30)
+            _cor_s = (avg_corr.dropna() * 100).tail(30)
+            # Transmission beta (WTI→S&P, 60d rolling), correlation velocity
+            # (10d change), and equity breadth (% advancing) — same
+            # value·Δ5·30d-range·spark format as the vol/corr cells
+            _beta_s = pd.Series(dtype=float)
+            try:
+                _bp = pd.concat([cmd_r["WTI Crude Oil"], eq_r["S&P 500"]],
+                                axis=1).dropna()
+                _beta_s = (_bp.iloc[:, 0].rolling(60).cov(_bp.iloc[:, 1])
+                           / _bp.iloc[:, 0].rolling(60).var().replace(0, np.nan)
+                           ).dropna().tail(30)
+            except Exception:
+                pass
+            _vel_s = avg_corr.dropna().diff(10).dropna().tail(30)
+            _brd_s = ((eq_r > 0).mean(axis=1) * 100).dropna().tail(30)
+            # (label, series, format, rising_is_good)
+            for lbl, ser_t, _fmt, _good_up in (
+                ("EQ VOL 20D", _eqv_s, "{:4.1f}%", False),
+                ("CMD VOL 20D", _cmv_s, "{:4.1f}%", False),
+                ("EQ-CMD CORR", _cor_s, "{:4.1f}%", False),
+                ("OIL→SPX β60", _beta_s, "{:+.2f}", False),
+                ("CORR VEL 10D", _vel_s, "{:+.3f}", False),
+                ("EQ BREADTH", _brd_s, "{:3.0f}%", True),
+            ):
+                tail_v = [float(x) for x in ser_t]
+                if len(tail_v) < 6:
+                    continue
+                v = tail_v[-1]
+                d5 = v - tail_v[-6]
+                lo30, hi30 = min(tail_v), max(tail_v)
+                _rising_bad = not _good_up
+                if d5 == 0:
+                    sc = _C["label"]
+                elif (d5 > 0) == _rising_bad:
+                    sc = _C["danger"]
+                else:
+                    sc = _C["safe"]
+                cells += (
+                    f'<span><span style="{_M}font-size:.5rem;font-weight:700;'
+                    f'letter-spacing:.08em;color:{_C["label"]}">{lbl}</span>'
+                    f'<span class="cc-num" style="font-size:.64rem;font-weight:700;'
+                    f'color:{_C["text"]};margin-left:5px">{_fmt.format(v)}</span>'
+                    f'<span class="cc-num" style="font-size:.52rem;font-weight:700;'
+                    f'color:{sc};margin-left:4px">{d5:+.2f}</span>'
+                    f'<span class="cc-num cc-clip" style="font-size:.48rem;'
+                    f'color:{_C["label"]};margin-left:5px">'
+                    f'30d {_fmt.format(lo30).strip()}–{_fmt.format(hi30).strip()}</span>'
+                    f'<span style="margin-left:5px">'
+                    f'{_spark_bare(tail_v, width=34, height=11, color=sc)}</span></span>'
+                )
+        except Exception:
+            pass
+        if cells:
+            tape_html = f'<div class="cc-tape">{cells}</div>'
+    except Exception:
+        pass
+
+    # ── Thin top strip: reserved slot | alerts inline | regime inline ──────
+    n_crit = sum(1 for a in alerts if getattr(a, "severity", "") == "critical")
+    n_warn = sum(1 for a in alerts if getattr(a, "severity", "") == "warning")
+    n_info = max(len(alerts) - n_crit - n_warn, 0)
+    latest_crit = next(
+        (getattr(a, "title", "")[:52] for a in alerts
+         if getattr(a, "severity", "") == "critical"), "",
+    )
+    alerts_line = (
+        f'<span class="{"cc-state-pulse" if n_crit else ""}" '
+        f'style="{_M}font-size:.56rem;color:{_C["danger"]};font-weight:700">'
+        f'CRIT {n_crit}</span>'
+        f'<span style="{_M}font-size:.56rem;color:{_C["warn"]};margin-left:8px">WARN {n_warn}</span>'
+        f'<span style="{_M}font-size:.56rem;color:{_C["label"]};margin-left:8px">INFO {n_info}</span>'
+        + (f'<span style="{_M}font-size:.54rem;color:{_C["danger"]};margin-left:10px;'
+           f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">» {latest_crit}</span>'
+           if latest_crit else '')
+    )
+
+    regime_name, regime_days, corr_txt, vel_txt = "—", "—", "—", "—"
+    try:
+        _rn = {0: "DECORRELATED", 1: "NORMAL", 2: "ELEVATED", 3: "CRISIS"}
+        rlast = int(regimes.iloc[-1])
+        regime_name = _rn[rlast]
+        run = regimes[::-1]
+        regime_days = f"{int((run == rlast).cummin().sum()):d}d"
+        _ac = avg_corr.dropna()
+        corr_txt = f"{float(_ac.iloc[-1]):.3f}"
+        if len(_ac) > 10:
+            vel_txt = f"{float(_ac.iloc[-1] - _ac.iloc[-11]):+.3f}"
+    except Exception:
+        pass
+    regime_col = {"CRISIS": _C["danger"], "ELEVATED": _C["warn"]}.get(regime_name, _C["label"])
+    regime_strip = ""
+    try:
+        _rc = {0: "#27ae60", 1: "#3f4652", 2: "#e67e22", 3: "#c0392b"}
+        _blocks = "".join(
+            f'<span style="display:inline-block;width:3px;height:9px;'
+            f'background:{_rc.get(int(v), "#3f4652")};margin-right:1px"></span>'
+            for v in regimes.tail(60)
+        )
+        regime_strip = (
+            f'<span style="margin-left:10px;white-space:nowrap;align-self:center">{_blocks}</span>'
+            f'<span style="{_M}font-size:.46rem;color:{_C["label"]};margin-left:4px">60D</span>'
+        )
+    except Exception:
+        pass
+    _sep = (f'<span style="border-left:1px solid #1e1e1e;height:11px;'
+            f'align-self:center;margin:0 8px"></span>')
+    try:
+        _vel_v = float(vel_txt)
+        _vel_col = _C["danger"] if _vel_v > 0 else (_C["safe"] if _vel_v < 0 else _C["label"])
+    except Exception:
+        _vel_col = _C["label"]
+    regime_line = (
+        f'<span class="{"cc-state-pulse" if regime_name == "CRISIS" else ""}" '
+        f'style="{_M}font-size:.58rem;font-weight:700;letter-spacing:.06em;'
+        f'color:{regime_col}">{regime_name}</span>'
+        f'<span class="cc-num" style="font-size:.54rem;color:{_C["text"]};'
+        f'margin-left:5px">{regime_days}</span>'
+        f'{_sep}'
+        f'<span style="{_M}font-size:.46rem;letter-spacing:.08em;'
+        f'color:{_C["label"]}">CORR</span>'
+        f'<span class="cc-num" style="font-size:.58rem;font-weight:700;'
+        f'color:{_C["text"]};margin-left:4px">{corr_txt}</span>'
+        f'{_sep}'
+        f'<span style="{_M}font-size:.46rem;letter-spacing:.08em;'
+        f'color:{_C["label"]}">VEL10</span>'
+        f'<span class="cc-num" style="font-size:.58rem;font-weight:700;'
+        f'color:{_vel_col};margin-left:4px">{vel_txt}</span>'
+    )
+
+    st.markdown(
+        f'<div class="cc-hero">'
+
+        # Row A — thin strip: reserved slot | alerts | regime (one line each)
+        f'<div class="cc-cell cc-thin" style="grid-column:span 3;border-style:dashed;opacity:.6">'
+        f'<span style="{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
+        f'color:{_C["label"]}">CHANGED SINCE YESTERDAY</span>'
+        f'<span style="{_M}font-size:.54rem;color:{_C["label"]};margin-left:8px">reserved</span></div>'
+        f'<div class="cc-cell cc-thin" style="grid-column:span 5">'
+        f'<span style="{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
+        f'color:{_C["label"]};margin-right:10px">ALERTS · {len(alerts)}</span>{alerts_line}</div>'
+        f'<div class="cc-cell cc-thin" style="grid-column:span 4">'
+        f'<span style="{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
+        f'color:{_C["label"]};margin-right:10px">REGIME</span>{regime_line}{regime_strip}</div>'
+
+        # Row B — GRS (span 5) | conflict roster (span 3) | movers 16 (span 4)
+        f'<div class="cc-cell" style="grid-column:span 5;border-left:3px solid {s_col}">'
+        f'<div class="cc-lbl">Global Risk Score · composite 0–100</div>'
+        f'<div class="cc-grs2">'
+        f'<div style="text-align:center;padding:6px 4px 0 0">'
+        f'<div class="cc-num" style="font-size:4rem;font-weight:700;line-height:1;'
+        f'letter-spacing:-.02em;color:{s_col};text-align:center">{score:.1f}</div>'
+        f'<div style="margin-top:7px">'
+        f'<span style="{_M}font-size:.7rem;font-weight:700;letter-spacing:.22em;'
+        f'color:{s_col}">{risk.get("label", "").upper()}</span></div>'
+        f'<div style="margin-top:2px">'
+        f'<span class="cc-num" style="font-size:.72rem;font-weight:700;'
+        f'color:{d_col}">{d_txt.strip()}</span>'
+        f'<span style="{_M}font-size:.5rem;color:#555;margin-left:5px">'
+        f'vs {yday_date or "prior"}</span></div>'
+        f'</div>'
+        f'<div style="min-width:0">'
+        f'<div style="display:flex;align-items:center;justify-content:space-between;'
+        f'border-bottom:1px solid #141414;padding-bottom:2px;margin-bottom:2px">'
+        f'<span style="{_M}font-size:.5rem;letter-spacing:.12em;'
+        f'color:{_C["label"]}">90D TRAIL</span>'
+        f'<span style="white-space:nowrap">{spark}</span></div>'
+        f'<div class="cc-comp2">{comp_rows}</div>'
+        f'</div>'
+        f'</div>'
+        f'{stack_bar}{zone_strip}{trail_stats}</div>'
+
+        f'<div class="cc-cell" style="grid-column:span 3">'
+        f'<div class="cc-lbl">Theaters · channel / CIS / TPS / age</div>{roster_rows}</div>'
+
+        f'<div class="cc-cell" style="grid-column:span 4">'
+        f'<div class="cc-lbl">What Moved · 1d / 5d · top 20</div>'
+        f'<div class="cc-mv2">{mover_items}</div>{breadth_html}</div>'
+
+        f'{tape_html}'
+
+        f'</div>',
+        unsafe_allow_html=True,
     )
 
 
@@ -785,14 +1418,11 @@ def _render_geo_risk_block(
         st.markdown(
             f'<div style="display:flex;align-items:center;gap:10px;'
             f'border-top:3px solid {color};border-bottom:1px solid {_C["border"]};'
-            f'background:{_C["card"]};padding:.45rem .9rem;margin-bottom:.4rem">'
+            f'background:{_C["card"]};padding:.3rem .7rem;margin-bottom:.4rem">'
             f'<span style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{_C["text"]}">Geopolitical Risk Score</span>'
-            f'<span style="background:{color};color:#000;{_M}font-size:0.69rem;font-weight:700;'
-            f'padding:1px 7px;letter-spacing:.10em">{label.upper()}&nbsp;{score:.1f}</span>'
+            f'text-transform:uppercase;color:{_C["text"]}">Geopolitical Risk Score · Detail</span>'
             f'<span style="{_M}font-size:0.63rem;color:{_C["text"]};margin-left:4px">'
-            f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b>'
-            f'&nbsp;·&nbsp;{spark_html}</span>'
+            f'Confidence&nbsp;<b style="color:{conf_color}">{conf:.0%}</b></span>'
             f'<span style="margin-left:auto">{freshness}</span>'
             f'</div>',
             unsafe_allow_html=True,
@@ -810,7 +1440,7 @@ def _render_geo_risk_block(
         st.markdown(
             f'<div style="background:#1a0a00;border:1px solid {_C["warn"]};border-left:3px solid {_C["warn"]};'
             f'padding:.3rem .8rem;margin-bottom:.4rem;{_M}font-size:0.63rem;color:{_C["warn"]}">'
-            f'⚠ MARKET DATA UNAVAILABLE - score is Conflict Model estimate only '
+            f'MARKET DATA UNAVAILABLE - score is Conflict Model estimate only '
             f'(40% CIS + 35% TPS). MCS layer set to neutral 50. '
             f'Hit ↻ to retry.</div>',
             unsafe_allow_html=True,
@@ -823,145 +1453,57 @@ def _render_geo_risk_block(
             unsafe_allow_html=True,
         )
 
-    # ── Gauge: full-width dominant centerpiece ────────────────────────────
-    # Render full-width so it takes the entire center column — prominent by design.
-    # History chart stacks below as a compact 220px strip.
-    _gauge_col, _gauge_meta = st.columns([1.6, 1.0], gap="small")
-    with _gauge_col:
-        svg_gauge = _build_speedometer_svg(score, color, label, delta)
-        # Override max-height to let the SVG breathe at full column width
-        svg_gauge = svg_gauge.replace(
-            'style="width:100%;max-height:315px;display:block"',
-            'style="width:100%;max-height:400px;display:block"',
+    # ── LAYOUT PASS: speedometer + score-layer bars removed — both repeated
+    # the hero's GRS readout (the number rendered 4×: hero, feed tile, header
+    # badge, gauge). This block now carries only what the hero does not:
+    # conflict movers, news GPR, the fear-index history, and the decomposition.
+    _conflict_movers = [
+        d for d in (yday_deltas or [])
+        if d["category"] == "conflict" and d["key"].endswith("_cis")
+    ][:4]
+    if _conflict_movers:
+        _mv_html = ""
+        for _mv in _conflict_movers:
+            _ms  = _mv["delta"]
+            _mc  = _C["danger"] if _ms > 0 else _C["safe"]
+            _mi  = f"▲ +{_ms:.1f}" if _ms > 0 else f"▼ {_ms:.1f}"
+            _mlbl = _mv["label"].replace(" · CIS", "")
+            _mv_html += (
+                f'<span style="margin-right:14px;white-space:nowrap">'
+                f'<span style="{_M}font-size:0.6rem;font-weight:700;color:{_mc}">{_mi}</span>'
+                f'<span style="{_F}font-size:0.62rem;color:{_C["text"]};margin-left:5px">{_mlbl}</span>'
+                f'</span>'
+            )
+        _mv_block = (
+            f'<span style="{_M}font-size:0.5rem;font-weight:700;letter-spacing:.14em;'
+            f'text-transform:uppercase;color:{_C["label"]};margin-right:10px">Conflict Movers'
+            + (f' vs {yday_date}' if yday_date else '') + f'</span>{_mv_html}'
         )
-        st.markdown(svg_gauge, unsafe_allow_html=True)
-        st.markdown(
-            f'<p style="{_M}font-size:0.56rem;color:{_C["label"]};margin:.2rem 0 0;'
-            f'padding:0 2px">40% CIS&nbsp;·&nbsp;35% TPS&nbsp;·&nbsp;25% MCS</p>',
-            unsafe_allow_html=True,
+    else:
+        _mv_block = (
+            f'<span style="{_M}font-size:0.58rem;color:{_C["muted"]}">'
+            + ("— no conflict moves vs prior snapshot" if yday_deltas is not None
+               else "no prior baseline yet") + '</span>'
         )
-    with _gauge_meta:
-        # ── Build delta lookup {key → delta_dict} for quick access ────────
-        _dl: dict[str, dict] = {}
-        if yday_deltas:
-            for _d in yday_deltas:
-                _dl[_d["key"]] = _d
-
-        # ── Header ────────────────────────────────────────────────────────
-        _yday_label     = f"vs {yday_date}" if yday_date else ""
-        _yday_label_html = (
-            f'<span style="{_M}font-size:0.44rem;color:{_C["muted"]};'
-            f'letter-spacing:.06em">{_yday_label}</span>'
-            if _yday_label else ""
+    _gpr_block = ""
+    if news_gpr is not None:
+        _gpr_block = (
+            f'<span style="margin-left:auto;white-space:nowrap">'
+            f'<span style="{_M}font-size:0.5rem;font-weight:700;letter-spacing:.14em;'
+            f'color:{_C["label"]}">NEWS GPR</span>'
+            f'<span style="{_M}font-size:0.8rem;font-weight:700;color:{_GOLD};'
+            f'margin-left:6px">{news_gpr:.0f}</span>'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]};margin-left:6px">'
+            f'{n_threat} threat · {n_act_hl} act</span></span>'
         )
-        st.markdown(
-            f'<div style="display:flex;align-items:baseline;gap:6px;'
-            f'margin-bottom:10px;padding-top:.5rem">'
-            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
-            f'text-transform:uppercase;color:{_C["label"]}">Score Layers</span>'
-            f'{_yday_label_html}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        f'<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;'
+        f'background:{_C["card"]};border:1px solid {_C["border"]};'
+        f'padding:.4rem .8rem;margin-bottom:.4rem">{_mv_block}{_gpr_block}</div>',
+        unsafe_allow_html=True,
+    )
 
-        # ── Score layer rows with inline delta ────────────────────────────
-        _layer_map = [
-            ("Conflict Intensity",    cis, cis_color, "portfolio_cis"),
-            ("Transmission Pressure", tps, tps_color, "portfolio_tps"),
-            ("Market Confirmation",   mcs, mcs_color, None),
-        ]
-        for _lbl, _val, _col, _dkey in _layer_map:
-            _pct   = min(_val, 100)
-            _dd    = _dl.get(_dkey) if _dkey else None
-            _delta = _dd["delta"] if _dd else None
-
-            if _delta is not None and abs(_delta) >= 0.3:
-                _dsign = f"▲ +{_delta:.1f}" if _delta > 0 else f"▼ {_delta:.1f}"
-                _dcol  = _C["danger"] if _delta > 0 else _C["safe"]
-                _delta_html = (
-                    f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_dcol};'
-                    f'margin-left:5px">{_dsign}</span>'
-                )
-            else:
-                _delta_html = ""
-
-            st.markdown(
-                f'<div style="margin-bottom:10px">'
-                f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
-                f'{_F}font-size:0.69rem;margin-bottom:3px">'
-                f'<span style="color:{_C["text"]}">{_lbl}</span>'
-                f'<span style="display:flex;align-items:baseline;gap:0">'
-                f'<span style="{_M}font-weight:700;color:{_col}">{_val:.0f}</span>'
-                f'{_delta_html}</span></div>'
-                f'<div style="height:4px;background:#1a1a1a;border-radius:1px">'
-                f'<div style="width:{_pct:.0f}%;height:4px;background:{_col};'
-                f'border-radius:1px"></div></div></div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── Top movers from yesterday ─────────────────────────────────────
-        _conflict_movers = [
-            d for d in (yday_deltas or [])
-            if d["category"] == "conflict" and d["key"].endswith("_cis")
-        ][:4]
-
-        if _conflict_movers:
-            _rows_html = ""
-            for _mv in _conflict_movers:
-                _ms  = _mv["delta"]
-                _mc  = _C["danger"] if _ms > 0 else _C["safe"]
-                _mi  = f"▲ +{_ms:.1f}" if _ms > 0 else f"▼ {_ms:.1f}"
-                # Strip " · CIS" suffix for compact display
-                _mlbl = _mv["label"].replace(" · CIS", "")
-                _rows_html += (
-                    f'<div style="display:flex;align-items:center;gap:6px;'
-                    f'padding:2px 0;border-bottom:1px solid #0e0e0e">'
-                    f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_mc};'
-                    f'min-width:52px;text-align:right">{_mi}</span>'
-                    f'<span style="{_F}font-size:0.60rem;color:{_C["text"]};'
-                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_mlbl}</span>'
-                    f'</div>'
-                )
-            st.markdown(
-                f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid {_C["border"]}">'
-                f'<div style="{_M}font-size:0.44rem;font-weight:700;letter-spacing:.14em;'
-                f'text-transform:uppercase;color:{_C["label"]};margin-bottom:5px">'
-                f'Conflict Movers</div>'
-                f'{_rows_html}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-        elif yday_deltas is not None:
-            # Has snapshot but no conflict movers — show stable note
-            st.markdown(
-                f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid {_C["border"]}">'
-                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">— No conflict moves</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-        elif yday_deltas is None:
-            # No prior snapshot at all
-            st.markdown(
-                f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid {_C["border"]}">'
-                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">No prior baseline yet</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── News GPR ──────────────────────────────────────────────────────
-        if news_gpr is not None:
-            st.markdown(
-                f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid {_C["border"]}">'
-                f'<div style="{_M}font-size:0.50rem;color:{_C["label"]};letter-spacing:.12em;margin-bottom:3px">NEWS GPR</div>'
-                f'<div style="{_M}font-size:1.1rem;font-weight:700;color:{_GOLD}">'
-                f'{news_gpr:.0f}</div>'
-                f'<div style="{_M}font-size:0.56rem;color:{_C["muted"]}">'
-                f'{"▲" if n_threat else ""}{n_threat} threat &nbsp;·&nbsp; '
-                f'{"▲" if n_act_hl else ""}{n_act_hl} act</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-    # ── History chart: compact strip below the gauge ───────────────────────
+    # ── History chart ──────────────────────────────────────────────────────
     st.markdown(
         f'<div style="margin:.8rem 0 .4rem;padding:.35rem .6rem;'
         f'background:{_C["card"]};border-top:1px solid {_C["border"]};'
@@ -974,7 +1516,7 @@ def _render_geo_risk_block(
         unsafe_allow_html=True,
     )
     if score_history is not None and not score_history.empty:
-        fig_hist = plot_risk_history(score_history, height=260)
+        fig_hist = plot_risk_history(score_history, height=200)
         fig_hist.update_layout(
             paper_bgcolor="#080808",
             plot_bgcolor="#080808",
@@ -1283,24 +1825,23 @@ def _render_intelligence_feed(
         unsafe_allow_html=True,
     )
 
-    # GRS score tile
-    if score >= 65:   sc_badge, sc_bg = "CRITICAL",  "rgba(192,57,43,0.12)"
-    elif score >= 45: sc_badge, sc_bg = "ELEVATED",  "rgba(230,126,34,0.10)"
-    else:             sc_badge, sc_bg = "NOMINAL",   "rgba(39,174,96,0.08)"
-    st.markdown(
-        f'<div style="background:{sc_bg};border:1px solid {_C["border"]};'
-        f'border-left:3px solid {color};padding:.55rem .7rem;margin-bottom:.6rem">'
-        f'<div style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
-        f'text-transform:uppercase;color:{color};margin-bottom:3px">SYSTEMIC MONITOR</div>'
-        f'<div style="{_M}font-size:1.5rem;font-weight:700;color:{color};line-height:1">'
-        f'{score:.1f}'
-        f'<span style="font-size:.55rem;color:{_C["label"]};margin-left:4px">/100 · {label.upper()}</span>'
-        f'</div>'
-        f'<div style="{_M}font-size:0.50rem;font-weight:700;background:{color};color:#000;'
-        f'display:inline-block;padding:1px 6px;margin-top:4px;letter-spacing:.12em">{sc_badge}</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+    # News GPR pulse — media-derived geopolitical risk, threat/act headline mix
+    _gpr = risk.get("news_gpr")
+    if _gpr is not None:
+        _gc = _C["danger"] if _gpr >= 65 else _C["warn"] if _gpr >= 45 else _C["label"]
+        st.markdown(
+            f'<div style="display:flex;align-items:baseline;gap:8px;background:{_C["card"]};'
+            f'border:1px solid {_C["border"]};border-left:2px solid {_gc};'
+            f'padding:.3rem .55rem;margin-bottom:.5rem">'
+            f'<span style="{_M}font-size:0.5rem;font-weight:700;letter-spacing:.12em;'
+            f'color:{_C["label"]}">NEWS GPR</span>'
+            f'<span class="cc-num" style="font-size:0.72rem;font-weight:700;'
+            f'color:{_gc}">{_gpr:.0f}</span>'
+            f'<span style="{_M}font-size:0.52rem;color:{_C["muted"]}">'
+            f'{risk.get("n_threat", 0)} threat · {risk.get("n_act", 0)} act headlines · 24h</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     # Alert cards (CRITICAL → ELEVATED → NORMAL)
     all_alerts = sorted(
@@ -1318,22 +1859,52 @@ def _render_intelligence_feed(
         else:
             border_c, badge_bg, badge_c, badge_lbl = _C["label"], "rgba(136,144,161,0.08)", _C["label"], "NORMAL"
 
-        title  = getattr(a, "title",  str(a))[:68]
-        detail = (getattr(a, "detail", None) or getattr(a, "message", ""))[:115]
+        title  = getattr(a, "title", str(a))[:68]
+        # Alert dataclass carries body/category/page_hint/data — .detail and
+        # .message never existed, so card bodies silently rendered empty.
+        body   = getattr(a, "body", "")[:150]
+        cat    = getattr(a, "category", "")
+        hint   = getattr(a, "page_hint", "")
         ts_str = datetime.datetime.now().strftime("%H:%M")
+
+        # Up to two numeric readouts from the alert's raw data payload
+        kv_html = ""
+        try:
+            _num_items = [(k, v) for k, v in (getattr(a, "data", {}) or {}).items()
+                          if isinstance(v, (int, float))][:2]
+            kv_html = "".join(
+                f'<span class="cc-num" style="font-size:0.54rem;color:{badge_c};'
+                f'margin-left:8px">{k.replace("_", " ")} {v:,.2f}</span>'
+                for k, v in _num_items
+            )
+        except Exception:
+            pass
+        cat_html = (
+            f'<span style="{_M}font-size:0.48rem;color:{_C["muted"]};'
+            f'letter-spacing:.1em;margin-left:6px">{cat.upper()}</span>'
+            if cat else ""
+        )
+        hint_html = (
+            f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]}">→ {hint}</span>'
+            if hint else ""
+        )
         st.markdown(
             f'<div style="border-left:2px solid {border_c};background:{_C["card"]};'
             f'border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};'
-            f'border-bottom:1px solid {_C["border"]};padding:.55rem .65rem;margin-bottom:.5rem">'
+            f'border-bottom:1px solid {_C["border"]};padding:.4rem .6rem;margin-bottom:.35rem">'
             f'<div style="display:flex;justify-content:space-between;'
-            f'align-items:center;margin-bottom:4px">'
-            f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
+            f'align-items:center;margin-bottom:3px">'
+            f'<span><span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
             f'background:{badge_bg};color:{badge_c};padding:2px 6px">{badge_lbl}</span>'
+            f'{cat_html}</span>'
             f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{ts_str}</span>'
             f'</div>'
             f'<div style="{_M}font-size:0.69rem;font-weight:700;color:{_C["text"]};'
             f'line-height:1.3;margin-bottom:3px">{title}</div>'
-            + (f'<div style="{_F}font-size:0.69rem;color:{_C["label"]};line-height:1.45">{detail}</div>' if detail else "")
+            + (f'<div style="{_F}font-size:0.66rem;color:{_C["label"]};line-height:1.45;'
+               f'margin-bottom:3px">{body}</div>' if body else "")
+            + f'<div style="display:flex;justify-content:space-between;align-items:baseline">'
+              f'{hint_html}<span>{kv_html}</span></div>'
             + f'</div>',
             unsafe_allow_html=True,
         )
@@ -1357,26 +1928,87 @@ def _render_intelligence_feed(
         st.markdown(
             f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
             f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
-            f'margin-top:.7rem;border-top:1px solid {_C["border"]}">Active Conflicts</div>',
+            f'margin-top:.7rem;border-top:1px solid {_C["border"]}">Active Conflicts '
+            f'<span style="{_M}font-size:0.48rem;color:{_C["muted"]};letter-spacing:.06em;'
+            f'text-transform:none">· bar+left CIS · right TPS · trend</span></div>',
             unsafe_allow_html=True,
         )
+        _CH_LBL = {"oil_gas": "oil/gas", "metals": "metals", "agriculture": "agri",
+                   "shipping": "shipping", "chokepoint": "chokepoint",
+                   "sanctions": "sanctions", "equity_sector": "equity",
+                   "fx": "FX", "inflation": "inflation", "supply_chain": "supply",
+                   "credit": "credit", "energy_infra": "energy infra"}
         for ci, (cid, r) in enumerate(active):
             cv    = r["cis"]
+            tv    = float(r.get("tps", 0))
             bar_c = _C["danger"] if cv >= 65 else _C["warn"] if cv >= 45 else _C["label"]
-            r_delay = f"{ci * 0.07:.2f}s"
+            esc   = r.get("escalation") == "escalating"
+            tx    = r.get("transmission", {}) or {}
+            top_ch = max(tx, key=tx.get) if tx else ""
+            cmds  = ", ".join((r.get("affected_commodities") or [])[:2])
+            sub   = " · ".join(x for x in (
+                r.get("region", ""),
+                f"top channel: {_CH_LBL.get(top_ch, top_ch)} {tx.get(top_ch, 0):.0%}" if top_ch else "",
+                cmds,
+            ) if x)
             st.markdown(
-                f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:6px .6rem;'
-                f'border-left:2px solid {bar_c};background:{_C["card"]};'
-                f'border-bottom:1px solid {_C["border"]};margin-bottom:4px;animation-delay:{r_delay}">'
+                f'<div style="padding:3px .5rem;border-left:2px solid {bar_c};'
+                f'background:{_C["card"]};border-bottom:1px solid {_C["border"]};margin-bottom:4px">'
+                f'<div style="display:flex;align-items:center;gap:6px">'
                 f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{r["color"]};'
                 f'min-width:52px;white-space:nowrap">{r["label"][:10]}</span>'
-                f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
-                f'<div class="hm-bar-grow" style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c};animation-delay:{r_delay}"></div></div>'
-                f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{bar_c};'
-                f'min-width:22px;text-align:right">{cv:.0f}</span>'
+                f'<div style="flex:1;background:{_C["card2"]};height:4px">'
+                f'<div style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c}"></div></div>'
+                f'<span class="cc-num" style="{_M}font-size:0.63rem;font-weight:700;color:{bar_c};'
+                f'min-width:22px">{cv:.0f}</span>'
+                f'<span class="cc-num" style="{_M}font-size:0.56rem;color:{_C["text"]};'
+                f'min-width:22px">{tv:.0f}</span>'
+                f'<span class="{"cc-state-pulse" if esc else ""}" '
+                f'style="{_M}font-size:0.52rem;min-width:10px;'
+                f'color:{bar_c if esc else _C["label"]}">{"▲" if esc else "→"}</span>'
+                f'</div>'
+                + (f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:1px;'
+                   f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{sub}</div>'
+                   if sub else "")
+                + f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Chokepoint pressure — structural shipping/chokepoint weights of the
+    # active theaters (registry transmission channels, display-only)
+    _cp = sorted(
+        ((r["label"], (float((r.get("transmission") or {}).get("chokepoint", 0))
+                       + float((r.get("transmission") or {}).get("shipping", 0))) / 2, r.get("escalation"))
+         for _cid, r in active),
+        key=lambda x: x[1], reverse=True,
+    )[:3]
+    _cp = [c for c in _cp if c[1] > 0.05]
+    if _cp:
+        st.markdown(
+            f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
+            f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
+            f'margin-top:.4rem;border-top:1px solid {_C["border"]}">Chokepoint Pressure</div>',
+            unsafe_allow_html=True,
+        )
+        for _lbl, _w, _esc in _cp:
+            _wc = _C["danger"] if _w >= 0.7 else _C["warn"] if _w >= 0.4 else _C["label"]
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:6px;padding:2px .5rem;'
+                f'border-bottom:1px solid #111">'
+                f'<span style="{_M}font-size:0.58rem;color:{_C["text"]};min-width:70px;'
+                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_lbl}</span>'
+                f'<div style="flex:1;background:{_C["card2"]};height:3px">'
+                f'<div style="width:{_w * 100:.0f}%;height:3px;background:{_wc}"></div></div>'
+                f'<span class="cc-num" style="{_M}font-size:0.58rem;font-weight:700;'
+                f'color:{_wc};min-width:30px">{_w * 100:.0f}%</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
+        st.markdown(
+            f'<div style="{_M}font-size:0.46rem;color:{_C["muted"]};margin:2px 0 0 .5rem">'
+            f'structural shipping+chokepoint channel weights · registry-calibrated</div>',
+            unsafe_allow_html=True,
+        )
 
     # Agent activity
     feed = st.session_state.get("agent_activity", [])[:3]
@@ -1393,7 +2025,7 @@ def _render_intelligence_feed(
             ts_str = entry["ts"].strftime("%H:%M") if isinstance(entry["ts"], datetime.datetime) else "-"
             st.markdown(
                 f'<div style="display:flex;gap:6px;align-items:flex-start;'
-                f'padding:4px 0;border-bottom:1px solid #111">'
+                f'padding:2px 0;border-bottom:1px solid #111">'
                 f'<span style="{_M}font-size:0.56rem;color:{ag_col};font-weight:700;min-width:28px">'
                 f'{ag.get("short","?")}</span>'
                 f'<span style="{_F}font-size:0.63rem;color:#b8b8b8;flex:1;line-height:1.45">'
@@ -1425,7 +2057,7 @@ def _render_intelligence_feed(
             f'background:{tc};opacity:.7;flex-shrink:0"></span>'
         )
         strait_rows += (
-            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:4px 0;'
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:2px 0;'
             f'border-bottom:1px solid {_C["border"]};animation-delay:{s_delay}">'
             f'{pulse_dot}'
             f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{tc};min-width:66px;'
@@ -1486,6 +2118,10 @@ def _render_market_pulse_cards() -> None:
     """Right column: market instruments as vertical stacked cards."""
     data = _load_market_pulse()
     if not data:
+        _card("DAILY RETURNS · 5D",
+              f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
+              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'retries automatically (15-min cache)</div>')
         return
 
     body = ""
@@ -1770,7 +2406,7 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
         f'color:{_C["muted"]};margin:.3rem 0 0;line-height:1.55">'
-        f'⚠ Scenario multipliers are <b>manual scenario assumptions</b> — '
+        f'NOTE — Scenario multipliers are <b>manual scenario assumptions</b> — '
         f'not statistically calibrated against historical episodes. '
         f'{_calib}</p>',
         unsafe_allow_html=True,
@@ -1792,7 +2428,7 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
     if cis >= 55:
         top_c = (conflict_agg.get("top_conflict") or "active conflict").replace("_"," ").title()
         recs.append({
-            "color": _C["danger"], "tag": "⚡ ALERT",
+            "color": _C["danger"], "tag": "ALERT",
             "label": "Conflict Intel", "page_id": "conflict_intelligence",
             "text": (
                 f'Portfolio CIS is <b style="color:{_C["danger"]}">{cis:.0f}/100</b>. '
@@ -1802,7 +2438,7 @@ def _render_next_action(conflict_agg: dict, conflict_results: dict, compact: boo
         })
     if tps >= 55:
         recs.append({
-            "color": _C["warn"], "tag": "⚡ ALERT",
+            "color": _C["warn"], "tag": "ALERT",
             "label": "Transmission Matrix", "page_id": "transmission_matrix",
             "text": (
                 f'Transmission Pressure at <b style="color:{_C["warn"]}">{tps:.0f}/100</b>. '
@@ -2054,6 +2690,10 @@ def _load_market_pulse() -> list[dict]:
 def _render_market_pulse() -> None:
     data = _load_market_pulse()
     if not data:
+        _card("DAILY RETURNS · 5D",
+              f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
+              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'retries automatically (15-min cache)</div>')
         return
 
     def _tile(d: dict) -> str:
@@ -2251,7 +2891,7 @@ def _render_live_signals() -> None:
                 f'margin-right:4px;opacity:.7"></span>'
             )
             rows_s += (
-                f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:4px 0;'
+                f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:2px 0;'
                 f'border-bottom:1px solid {_C["card"]};animation-delay:{ls_delay}">'
                 + pulse
                 + f'<span style="{_M}font-size:0.69rem;font-weight:700;color:{tc};'
@@ -2614,7 +3254,7 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
         # escalating rows glow for emphasis
         arrow_cls = "hm-glow-pulse" if esc == "escalating" else ""
         rows += (
-            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:7px .65rem;'
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:8px;padding:4px .55rem;'
             f'border-bottom:1px solid #111;background:{_C["card"]};animation-delay:{esc_delay}">'
             # trend arrow
             f'<span class="{arrow_cls}" style="{_M}font-size:0.69rem;font-weight:700;color:{t_col};'
@@ -2678,7 +3318,7 @@ def _render_top_commodities(conflict_results: dict) -> None:
             bar_c = _C["label"]
 
         rows += (
-            f'<div class="hm-row-in" style="padding:.4rem .65rem;border-bottom:1px solid #111;animation-delay:{tc_delay}">'
+            f'<div class="hm-row-in" style="padding:.25rem .5rem;border-bottom:1px solid #111;animation-delay:{tc_delay}">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{_C["text"]};'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">'
@@ -2757,9 +3397,9 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
             f'font-family="JetBrains Mono,monospace" text-anchor="end">{v}</text>'
         )
     axis_lbls = (
-        f'<text x="{W}" y="{H}" font-size="7.5" fill="{_C["muted"]}" '
+        f'<text x="{W}" y="{H - 12}" font-size="7.5" fill="{_C["muted"]}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="end">CIS →</text>'
-        f'<text x="2" y="9" font-size="7.5" fill="{_C["muted"]}" '
+        f'<text x="{ML + 5}" y="9" font-size="7.5" fill="{_C["muted"]}" '
         f'font-family="JetBrains Mono,monospace">↑ TPS</text>'
     )
 
@@ -2780,12 +3420,20 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
             f'<circle cx="{px:.1f}" cy="{py:.1f}" r="5" '
             f'fill="{col}" fill-opacity="0.18" stroke="{col}" stroke-width="0.6" stroke-opacity="0.4"/>'
         )
+    _placed: list[tuple[float, float]] = []
     for cis_v, tps_v, col, lbl in active_items:
         px, py = _fx(cis_v), _fy(tps_v)
+        # collision nudge: conflicts with near-identical CIS/TPS would print
+        # their labels on top of each other — stack subsequent labels below
+        ly = py + 3
+        for ox_, oy_ in _placed:
+            if abs(px - ox_) < 18 and abs(ly - oy_) < 9:
+                ly = oy_ + 9
+        _placed.append((px, ly))
         dots += (
             f'<circle class="hm-dot-live" cx="{px:.1f}" cy="{py:.1f}" r="9" '
             f'fill="{col}" fill-opacity="0.18" stroke="{col}" stroke-width="1.5"/>'
-            f'<text x="{px:.1f}" y="{py + 3:.1f}" font-size="7" fill="{col}" '
+            f'<text x="{px:.1f}" y="{ly:.1f}" font-size="7" fill="{col}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{lbl}</text>'
         )
 
@@ -2891,7 +3539,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         anc = "middle" if abs(cos_a) < 0.3 else ("start" if cos_a > 0 else "end")
         # stagger name / value vertically so they don't overlap
         n_dy = -5 if sin_a < -0.25 else (3 if sin_a > 0.25 else -4)
-        v_dy = n_dy + 10
+        v_dy = n_dy + 13
         lbl_html += (
             f'<text x="{lx:.1f}" y="{ly + n_dy:.1f}" font-size="9" fill="{_C["label"]}" '
             f'font-family="JetBrains Mono,monospace" text-anchor="{anc}">{name}</text>'
@@ -2943,6 +3591,10 @@ def _render_returns_heatmap() -> None:
     """Right column: 5-day daily-return heat grid for each pulse instrument."""
     data = _load_market_pulse()
     if not data:
+        _card("DAILY RETURNS · 5D",
+              f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
+              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'retries automatically (15-min cache)</div>')
         return
 
     # Need at least 2 price points to compute any return
@@ -3090,7 +3742,7 @@ def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
         elif score >= 40: bc = _C["warn"]
         else:             bc = _C["info"]
         rows += (
-            f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
+            f'<div style="padding:.25rem .5rem;border-bottom:1px solid #111">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<span style="{_M}font-size:0.53rem;font-weight:700;color:{_C["label"]}">{group}</span>'
             f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{bc}">{score:.0f}</span>'
@@ -3243,16 +3895,278 @@ def _render_alert_summary(alerts: list) -> None:
 
     # Most recent alert message
     recent = alerts[0]
-    msg    = (getattr(recent, "message", "") or "")[:80]
+    msg    = (getattr(recent, "title", "") or getattr(recent, "detail", "")
+              or getattr(recent, "message", ""))[:80]
     rc     = sev_col.get(getattr(recent, "severity", "low"), "#555")
 
     _card(f"ACTIVE ALERTS · {len(alerts)}",
         f'{badges}'
-        f'<div style="border-top:1px solid #1a1a1a;margin-top:.4rem;padding-top:.4rem">'
-        f'<span style="{_M}font-size:0.53rem;color:{rc};font-weight:600">LATEST:</span>'
-        f'<span style="{_M}font-size:0.53rem;color:{_C["label"]};margin-left:5px">{msg}</span>'
+        f'<div style="display:flex;align-items:baseline;gap:5px;'
+        f'border-top:1px solid #1a1a1a;margin-top:.4rem;padding-top:.4rem">'
+        f'<span style="{_M}font-size:0.53rem;color:{rc};font-weight:600;'
+        f'flex-shrink:0">LATEST:</span>'
+        f'<span style="{_M}font-size:0.53rem;color:{_C["label"]};overflow:hidden;'
+        f'text-overflow:ellipsis;white-space:nowrap">{msg}</span>'
         f'</div>',
     )
+
+
+def _render_transmission_beta(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Center: rolling 60d OLS beta of S&P 500 on WTI — the transmission dial."""
+    if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
+        return
+    if "WTI Crude Oil" not in cmd_r.columns or "S&P 500" not in eq_r.columns:
+        return
+    pair = pd.concat([cmd_r["WTI Crude Oil"], eq_r["S&P 500"]], axis=1).dropna()
+    if len(pair) < 90:
+        return
+    cov = pair.iloc[:, 0].rolling(60).cov(pair.iloc[:, 1])
+    var = pair.iloc[:, 0].rolling(60).var()
+    beta = (cov / var.replace(0, np.nan)).dropna().tail(120)
+    if len(beta) < 20:
+        return
+    W, H, ML, MB = 320, 92, 30, 14
+    vmin, vmax = float(min(beta.min(), 0)), float(max(beta.max(), 0.05))
+    span = (vmax - vmin) or 1.0
+    def _y(v): return 4 + (vmax - v) / span * (H - MB - 8)
+    n = len(beta)
+    pts = " L ".join(f"{ML + i / (n - 1) * (W - ML - 6):.1f},{_y(float(v)):.1f}"
+                     for i, v in enumerate(beta))
+    zero_y = _y(0.0)
+    cur = float(beta.iloc[-1])
+    cur_c = _C["warn"] if cur > 0.15 else _C["label"]
+    svg = (
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block">'
+        f'<line x1="{ML}" y1="{zero_y:.1f}" x2="{W - 6}" y2="{zero_y:.1f}" '
+        f'stroke="#2a2a2a" stroke-width="0.8"/>'
+        f'<text x="{ML - 3}" y="{zero_y + 2:.1f}" font-size="7" fill="{_C["label"]}" '
+        f'text-anchor="end" font-family="JetBrains Mono,monospace">0</text>'
+        f'<path d="M {pts}" fill="none" stroke="{cur_c}" stroke-width="1.4"/>'
+        f'<circle class="hm-dot-live" cx="{W - 6}" cy="{_y(cur):.1f}" r="2.5" fill="{cur_c}"/>'
+        f'<text x="{W - 10}" y="{_y(cur) - 5:.1f}" font-size="8" fill="{cur_c}" '
+        f'text-anchor="end" font-weight="700" '
+        f'font-family="JetBrains Mono,monospace">{cur:+.3f}</text>'
+        f'<text x="{ML}" y="{H - 2}" font-size="6.5" fill="#333" '
+        f'font-family="JetBrains Mono,monospace">−120d</text>'
+        f'<text x="{W - 6}" y="{H - 2}" font-size="6.5" fill="#333" text-anchor="end" '
+        f'font-family="JetBrains Mono,monospace">NOW</text>'
+        f'</svg>'
+    )
+    note = ("elevated — oil shocks transmitting into equities"
+            if cur > 0.15 else "muted — equities absorbing commodity moves")
+    _card("TRANSMISSION BETA · WTI→S&P · 60D ROLLING",
+          svg + f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:2px">{note}</div>')
+
+
+def _render_corr_distribution(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Center: histogram of ALL pairwise eq×cmd 60d correlations — regime shape."""
+    if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
+        return
+    eq60, cmd60 = eq_r.tail(60), cmd_r.tail(60)
+    combined = pd.concat([eq60, cmd60], axis=1)
+    cm = combined.corr()
+    vals = [float(cm.loc[e, c]) for e in eq60.columns for c in cmd60.columns
+            if e in cm.index and c in cm.columns and pd.notna(cm.loc[e, c])]
+    if len(vals) < 30:
+        return
+    lo, hi, nb = -0.6, 0.9, 15
+    counts = [0] * nb
+    for v in vals:
+        counts[min(max(int((v - lo) / (hi - lo) * nb), 0), nb - 1)] += 1
+    mx = max(counts) or 1
+    mean_v = float(np.mean(vals))
+    W, H, MB = 320, 92, 16
+    bw = W / nb
+    bars = "".join(
+        f'<rect x="{i * bw + 1:.1f}" y="{4 + (1 - c / mx) * (H - MB - 6):.1f}" '
+        f'width="{bw - 2:.1f}" height="{c / mx * (H - MB - 6):.1f}" '
+        f'fill="#4b5563" opacity=".8"/>'
+        for i, c in enumerate(counts)
+    )
+    mean_x = (mean_v - lo) / (hi - lo) * W
+    svg = (
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block">'
+        f'{bars}'
+        f'<line x1="{mean_x:.1f}" y1="2" x2="{mean_x:.1f}" y2="{H - MB}" '
+        f'stroke="{_GOLD}" stroke-width="1.2" stroke-dasharray="3,2"/>'
+        f'<text x="{mean_x + 3:.1f}" y="10" font-size="8" fill="{_GOLD}" font-weight="700" '
+        f'font-family="JetBrains Mono,monospace">μ {mean_v:+.2f}</text>'
+        f'<text x="2" y="{H - 3}" font-size="6.5" fill="#333" '
+        f'font-family="JetBrains Mono,monospace">{lo:+.1f}</text>'
+        f'<text x="{W / 2:.0f}" y="{H - 3}" font-size="6.5" fill="#333" text-anchor="middle" '
+        f'font-family="JetBrains Mono,monospace">0</text>'
+        f'<text x="{W - 2}" y="{H - 3}" font-size="6.5" fill="#333" text-anchor="end" '
+        f'font-family="JetBrains Mono,monospace">{hi:+.1f}</text>'
+        f'</svg>'
+    )
+    right_mass = sum(1 for v in vals if v > 0.3) / len(vals) * 100
+    _card(f"EQ×CMD CORRELATION SHAPE · 60D · {len(vals)} PAIRS",
+          svg + f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:2px">'
+                f'{right_mass:.0f}% of pairs above +0.30 — right-shifted mass = broad coupling</div>')
+
+
+def _render_risk_appetite(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Right: S&P minus Gold cumulative spread, 60d — the risk-on/off dial."""
+    if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
+        return
+    if "S&P 500" not in eq_r.columns or "Gold" not in cmd_r.columns:
+        return
+    pair = pd.concat([eq_r["S&P 500"], cmd_r["Gold"]], axis=1).dropna().tail(60)
+    if len(pair) < 20:
+        return
+    spread = ((pair.iloc[:, 0] - pair.iloc[:, 1]).cumsum() * 100)
+    W, H, MB = 300, 84, 14
+    vmin, vmax = float(min(spread.min(), 0)), float(max(spread.max(), 0.1))
+    span = (vmax - vmin) or 1.0
+    def _y(v): return 4 + (vmax - v) / span * (H - MB - 8)
+    n = len(spread)
+    pts = " L ".join(f"{6 + i / (n - 1) * (W - 12):.1f},{_y(float(v)):.1f}"
+                     for i, v in enumerate(spread))
+    cur = float(spread.iloc[-1])
+    d5 = cur - float(spread.iloc[-6]) if n > 6 else 0.0
+    on = d5 > 0
+    line_c = _C["safe"] if on else _C["danger"]
+    svg = (
+        f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block">'
+        f'<line x1="6" y1="{_y(0):.1f}" x2="{W - 6}" y2="{_y(0):.1f}" '
+        f'stroke="#2a2a2a" stroke-width="0.8"/>'
+        f'<path d="M {pts}" fill="none" stroke="{line_c}" stroke-width="1.4"/>'
+        f'<circle class="hm-dot-live" cx="{W - 6}" cy="{_y(cur):.1f}" r="2.5" fill="{line_c}"/>'
+        f'<text x="6" y="{H - 2}" font-size="6.5" fill="#333" '
+        f'font-family="JetBrains Mono,monospace">−60d</text>'
+        f'<text x="{W - 6}" y="{H - 2}" font-size="6.5" fill="#333" text-anchor="end" '
+        f'font-family="JetBrains Mono,monospace">NOW</text>'
+        f'</svg>'
+    )
+    _card("RISK APPETITE · S&P − GOLD · 60D CUM",
+          svg + f'<div style="display:flex;justify-content:space-between;margin-top:2px">'
+                f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]}">'
+                f'{"risk-ON — equities outrunning gold" if on else "risk-OFF — gold bid over equities"}</span>'
+                f'<span class="cc-num" style="font-size:0.56rem;font-weight:700;'
+                f'color:{line_c}">{d5:+.1f}pp/5d</span></div>')
+
+
+def _render_range_position(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Right: where each instrument sits in its 120d range — percentile dot strip."""
+    if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
+        return
+    assets = ["S&P 500", "Nasdaq 100", "DAX", "Nikkei 225",
+              "WTI Crude Oil", "Gold", "Copper", "Natural Gas", "Wheat"]
+    combined = pd.concat([eq_r, cmd_r], axis=1)
+    rows_html = ""
+    for a in assets:
+        if a not in combined.columns:
+            continue
+        r = combined[a].dropna().tail(120)
+        if len(r) < 40:
+            continue
+        cum = np.log1p(r).cumsum()
+        lo, hi = float(cum.min()), float(cum.max())
+        pct = 50.0 if hi - lo < 1e-12 else (float(cum.iloc[-1]) - lo) / (hi - lo) * 100
+        dot_c = _C["warn"] if pct >= 90 or pct <= 10 else _C["label"]
+        rows_html += (
+            f'<div style="display:flex;align-items:center;gap:7px;padding:2px .5rem;'
+            f'border-bottom:1px solid #111">'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["text"]};min-width:82px;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{a}</span>'
+            f'<div style="flex:1;height:3px;background:#141414;position:relative">'
+            f'<div style="position:absolute;left:calc({pct:.0f}% - 2px);top:-2px;'
+            f'width:5px;height:7px;background:{dot_c}"></div></div>'
+            f'<span class="cc-num" style="font-size:0.56rem;font-weight:700;'
+            f'color:{dot_c};min-width:34px">{pct:3.0f}%</span>'
+            f'</div>'
+        )
+    if not rows_html:
+        return
+    _card("120D RANGE POSITION · 0% = LOW · 100% = HIGH", rows_html)
+
+
+def _render_regional_performance(eq_r: "pd.DataFrame | None") -> None:
+    """Center sub-grid: 1d / 5d average equity return by region — bar infographic."""
+    if eq_r is None or eq_r.empty:
+        return
+    from src.data.config import EQUITY_REGIONS
+    rows_html = ""
+    max_abs = 0.5
+    stats = []
+    for region, members in EQUITY_REGIONS.items():
+        cols = [c for c in members if c in eq_r.columns]
+        if not cols:
+            continue
+        sub = eq_r[cols].dropna(how="all")
+        if len(sub) < 5:
+            continue
+        r1 = float(sub.iloc[-1].mean()) * 100
+        r5 = float(np.expm1(sub.iloc[-5:].sum()).mean()) * 100
+        stats.append((region, r1, r5, len(cols)))
+        max_abs = max(max_abs, abs(r5))
+    for region, r1, r5, n in stats:
+        c1 = _C["danger"] if r1 < 0 else _C["safe"]
+        c5 = _C["danger"] if r5 < 0 else _C["safe"]
+        w  = abs(r5) / max_abs * 50            # half-track, diverging from center
+        side = "margin-left:50%" if r5 >= 0 else f"margin-left:{50 - w:.1f}%"
+        rows_html += (
+            f'<div style="display:flex;align-items:center;gap:7px;padding:2px .5rem;'
+            f'border-bottom:1px solid #111">'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["text"]};min-width:44px">{region}</span>'
+            f'<span style="{_M}font-size:0.46rem;color:{_C["muted"]};min-width:14px">×{n}</span>'
+            f'<div style="flex:1;background:#141414;height:4px;position:relative">'
+            f'<div style="position:absolute;left:50%;top:0;width:1px;height:4px;background:#2a2a2a"></div>'
+            f'<div style="{side};width:{w:.1f}%;height:4px;background:{c5};opacity:.75"></div></div>'
+            f'<span class="cc-num" style="font-size:0.58rem;font-weight:700;color:{c1};'
+            f'min-width:46px">{r1:+5.2f}</span>'
+            f'<span class="cc-num" style="font-size:0.58rem;font-weight:700;color:{c5};'
+            f'min-width:46px">{r5:+5.2f}</span>'
+            f'</div>'
+        )
+    if not rows_html:
+        return
+    hdr = (
+        f'<div style="display:flex;justify-content:flex-end;gap:0;padding:0 .5rem 2px">'
+        f'<span class="cc-num" style="font-size:.46rem;color:{_C["label"]};min-width:46px">1D%</span>'
+        f'<span class="cc-num" style="font-size:.46rem;color:{_C["label"]};min-width:46px">5D%</span></div>'
+    )
+    _card("REGIONAL EQUITIES · 1D / 5D", hdr + rows_html)
+
+
+def _render_drawdown_monitor(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
+    """Right column: distance from each asset's 60-day high — drawdown bars."""
+    if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
+        return
+    assets = ["S&P 500", "Nasdaq 100", "DAX", "Nikkei 225",
+              "WTI Crude Oil", "Brent Crude", "Gold", "Copper", "Natural Gas"]
+    combined = pd.concat([eq_r, cmd_r], axis=1)
+    rows = []
+    for a in assets:
+        if a not in combined.columns:
+            continue
+        r = combined[a].dropna().tail(60)
+        if len(r) < 20:
+            continue
+        cum = np.log1p(r).cumsum()
+        dd = float(np.expm1((cum - cum.cummax()).iloc[-1]) * 100)
+        rows.append((a, dd))
+    if not rows:
+        return
+    max_dd = max((abs(d) for _, d in rows), default=1.0) or 1.0
+    rows_html = ""
+    for a, dd in sorted(rows, key=lambda x: x[1]):
+        at_high = dd > -0.05
+        col = _C["label"] if at_high else (_C["danger"] if dd < -8 else _C["warn"])
+        w = abs(dd) / max_dd * 100
+        rows_html += (
+            f'<div style="display:flex;align-items:center;gap:7px;padding:2px .5rem;'
+            f'border-bottom:1px solid #111">'
+            f'<span style="{_M}font-size:0.56rem;color:{_C["text"]};min-width:82px;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{a}</span>'
+            f'<div style="flex:1;background:#141414;height:4px">'
+            f'<div style="width:{w:.0f}%;height:4px;background:{col};opacity:.7;'
+            f'float:right"></div></div>'
+            f'<span class="cc-num" style="font-size:0.58rem;font-weight:700;color:{col};'
+            f'min-width:50px">{"AT HIGH" if at_high else f"{dd:5.1f}%"}</span>'
+            f'</div>'
+        )
+    _card("DRAWDOWN FROM 60D HIGH", rows_html)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3343,6 +4257,10 @@ def _render_macro_snapshot() -> None:
     """Right column: 2×2 grid of macro regime indicators from pulse tickers."""
     data = _load_market_pulse()
     if not data:
+        _card("DAILY RETURNS · 5D",
+              f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
+              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'retries automatically (15-min cache)</div>')
         return
 
     by_sym = {d["sym"]: d for d in data}
@@ -3444,7 +4362,9 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
             if asset in members:
                 s = cmd_r[col].dropna()
                 if len(s) >= 5:
-                    ret5 = float((s.iloc[-1] / s.iloc[-5] - 1) * 100) if s.iloc[-5] != 0 else 0.0
+                    # cmd_r holds daily LOG RETURNS, not prices — the 5-day
+                    # return is exp(sum of last 5) - 1, not a price ratio.
+                    ret5 = float(np.expm1(s.iloc[-5:].sum()) * 100)
                     group_rets[g].append(ret5)
                 break
 
@@ -3467,7 +4387,7 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
         abbr   = {"Energy": "ENGY", "Precious Metals": "PREC",
                   "Industrial Metals": "INDU", "Agriculture": "AGRI"}.get(g, g[:4].upper())
         rows_html += (
-            f'<div style="padding:.4rem .65rem;border-bottom:1px solid #111">'
+            f'<div style="padding:.25rem .5rem;border-bottom:1px solid #111">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
             f'<span style="{_M}font-size:0.53rem;font-weight:700;color:{gc}">{abbr}</span>'
             f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{sign}{avg:.2f}%</span>'
@@ -3986,6 +4906,13 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         lrad = rad_r + dot_r + 8
         lx = CX + lrad * math.cos(theta)
         ly = CY + lrad * math.sin(theta)
+        # clamp: a label running past the ring collides with the fixed angle
+        # ticks (90/270) — flip it to the inner side of the blip
+        _est_w = 5.2 * len(label)
+        if anchor == "start" and lx + _est_w > CX + R + 6:
+            anchor, lx = "end", bx - dot_r - 5
+        elif anchor == "end" and lx - _est_w < CX - R - 6:
+            anchor, lx = "start", bx + dot_r + 5
         blips += (
             f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8" fill="{color}" '
             f'text-anchor="{anchor}" dominant-baseline="middle" '
@@ -4120,6 +5047,7 @@ def _render_risk_convergence(
     end_dots = ""
     legend_items = ""
 
+    _lbl_ys: list[float] = []
     for name, vals, col, cur in series_data:
         n = len(vals)
         pts  = _pts(vals)
@@ -4131,18 +5059,32 @@ def _render_risk_convergence(
         )
         ex = ML + PW
         ey = MT + (1 - cur/100) * PH
-        end_dots += (
-            f'<circle class="hm-dot-live" cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{col}"/>'
-            f'<text x="{ex-5}" y="{ey:.1f}" font-size="7" fill="{col}" '
-            f'dominant-baseline="middle" text-anchor="end" font-family="JetBrains Mono,monospace">'
-            f'{cur:.0f}</text>'
-        )
+        end_dots += f'<circle class="hm-dot-live" cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{col}"/>'
+        _lbl_ys.append([min(max(ey, MT + 6), MT + PH - 6), cur, col, ex])
         legend_items += (
             f'<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px">'
             f'<svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" '
             f'stroke="{col}" stroke-width="2"/></svg>'
             f'<span style="{_M}font-size:0.50rem;color:{col}">{name}</span>'
             f'</span>'
+        )
+
+    # End-value labels: sorted downward sweep enforcing 12-unit separation,
+    # then a bottom-clamp back-sweep — no ordering can stack two labels.
+    _lbl_ys.sort(key=lambda x: x[0])
+    for _i in range(1, len(_lbl_ys)):
+        if _lbl_ys[_i][0] - _lbl_ys[_i - 1][0] < 12:
+            _lbl_ys[_i][0] = _lbl_ys[_i - 1][0] + 12
+    if _lbl_ys and _lbl_ys[-1][0] > MT + PH - 6:
+        _lbl_ys[-1][0] = MT + PH - 6
+        for _i in range(len(_lbl_ys) - 2, -1, -1):
+            if _lbl_ys[_i + 1][0] - _lbl_ys[_i][0] < 12:
+                _lbl_ys[_i][0] = _lbl_ys[_i + 1][0] - 12
+    for _ly, _cur, _col, _ex in _lbl_ys:
+        end_dots += (
+            f'<text x="{_ex-5}" y="{_ly:.1f}" font-size="7" fill="{_col}" '
+            f'dominant-baseline="middle" text-anchor="end" font-family="JetBrains Mono,monospace">'
+            f'{_cur:.0f}</text>'
         )
 
     # x-axis: just label start and end
@@ -4463,7 +5405,7 @@ def _render_risk_signal_waterfall(
         BAR_W   = 120
         PAD_Y   = 6
         H = PAD_Y * 2 + len(signals) * (BAR_H + GAP) - GAP
-        W = LABEL_W + BAR_W + 45
+        W = LABEL_W + BAR_W + 75   # room for the longest note (TRANSITIONING)
 
         bars = ""
         for i, (lbl, pct, col, note) in enumerate(signals):
@@ -4832,7 +5774,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         )
         if _snap_yday is not None:
             _yday_deltas = compute_deltas(_snap_yday, _snap_today)
-            _yday_date   = _snap_yday.get("date")
+            # Label by baseline type: same-day baseline is an intraday anchor
+            # ("since first capture today"); an earlier date is day-over-day.
+            if _snap_yday.get("date") == datetime.date.today().isoformat():
+                _yday_date = f"{_snap_yday.get('captured_at', '')} today".strip()
+            else:
+                _yday_date = _snap_yday.get("date")
     except Exception:
         pass
 
@@ -4913,26 +5860,20 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_masthead(conflict_agg)
     _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
 
-    # § 1.0  Project intro — context for first-time visitors
-    st.markdown(
-        f'<div style="background:#080808;border:1px solid #1e1e1e;'
-        f'border-left:3px solid {_GOLD};padding:.55rem 1rem;margin-bottom:.5rem;'
-        f'display:flex;align-items:baseline;gap:1.2rem;flex-wrap:wrap">'
-        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.20em;'
-        f'text-transform:uppercase;color:{_GOLD};flex-shrink:0">About This Terminal</span>'
-        f'<span style="{_F}font-size:0.70rem;color:#b8b8b8;line-height:1.65;">'
-        f'A research-grade cross-asset intelligence platform built during the MSF program '
-        f'at Purdue Daniels School of Business. Tracks geopolitical risk, correlation regimes, '
-        f'and spillover dynamics across 32 assets &mdash; equities, commodities, fixed income, '
-        f'and FX &mdash; using the Diebold-Yilmaz FEVD methodology, live data from 6 sources, '
-        f'and an 8-agent AI orchestration pipeline. '
-        f'<span style="color:#8890a1">Not investment advice.</span>'
-        f'</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+    # § 1.05  Command hero — LAYOUT PASS: insight first. GRS + biggest movers
+    # top-left, largest; strip carries the reserved "changed since yesterday"
+    # stub slot. Display-only — all values computed above.
+    try:
+        _render_command_hero(
+            risk, conflict_agg, conflict_results, _score_hist,
+            _yday_deltas, _yday_date, _cached_alerts,
+            _al_regimes, _al_corr, _al_eq_r, _al_cmd_r,
+        )
+    except Exception:
+        _err_slot("command hero")
 
-    # § 1.1  Analytical reading guide — orients first-time reviewers to the workflow
+    # § 1.1  Analytical reading guide — moved to the bottom expander in the
+    # layout pass (onboarding chrome, not signal); steps defined here for reuse.
     _steps = [
         ("1", "Shock / Scenario",    "What geopolitical event or scenario are we analysing?",  _C["warn"]),
         ("2", "Commodities",         "Which commodity markets moved and by how much?",          _C["info"]),
@@ -4957,19 +5898,34 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
            if i < len(_steps) - 1 else "")
         for i, (n, title, q, c) in enumerate(_steps)
     )
-    st.markdown(
+    _guide_html = (
         f'<div style="background:#060606;border:1px solid {_C["border"]};'
         f'border-left:2px solid rgba(207,185,145,0.25);padding:.4rem .7rem .35rem;margin-bottom:.4rem">'
         f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:.3rem">'
         f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["muted"]}">Analytical Reading Guide</span>'
-        f'<span style="{_F}font-size:0.56rem;color:{_C["muted"]};font-style:italic">'
+        f'<span style="{_F}font-size:0.56rem;color:{_C["muted"]}">'
         f'· follow this sequence for a first-time review</span>'
         f'</div>'
-        f'<div style="display:flex;gap:4px;align-items:flex-start;flex-wrap:nowrap;overflow-x:auto">'
+        f'<div style="display:flex;gap:4px;align-items:flex-start;flex-wrap:nowrap">'
         f'{_step_items}'
-        f'</div></div>',
-        unsafe_allow_html=True,
+        f'</div></div>'
+    )
+    _about_html = (
+        f'<div style="background:#080808;border:1px solid #1e1e1e;'
+        f'border-left:3px solid {_GOLD};padding:.55rem 1rem;margin-bottom:.5rem;'
+        f'display:flex;align-items:baseline;gap:1.2rem;flex-wrap:wrap">'
+        f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.20em;'
+        f'text-transform:uppercase;color:{_GOLD};flex-shrink:0">About This Terminal</span>'
+        f'<span style="{_F}font-size:0.70rem;color:#b8b8b8;line-height:1.65;">'
+        f'A research-grade cross-asset intelligence platform built during the MSF program '
+        f'at Purdue Daniels School of Business. Tracks geopolitical risk, correlation regimes, '
+        f'and spillover dynamics across 32 assets &mdash; equities, commodities, fixed income, '
+        f'and FX &mdash; using the Diebold-Yilmaz FEVD methodology, live data from 6 sources, '
+        f'and an 8-agent AI orchestration pipeline. '
+        f'<span style="color:#8890a1">Not investment advice.</span>'
+        f'</span>'
+        f'</div>'
     )
 
     # ── 3-col layout: intel feed | dominant gauge | market pulse cards ────────
@@ -4979,7 +5935,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     #   Right  = market pulse cards + where-to-go-now recommendations
     # Context narrative + intel panel + morning briefing go BELOW as full-width.
     # ─────────────────────────────────────────────────────────────────────────
-    _col_left, _col_ctr, _col_right = st.columns([1.1, 2.0, 1.1], gap="medium")
+    # LAYOUT PASS: 12-col scheme — [3,6,3], uniform small gap (CSS pins to 12px)
+    _col_left, _col_ctr, _col_right = st.columns([3, 6, 3], gap="small")
 
     with _col_left:
         _section_header("01", "Intelligence Feed", "alerts · signals · chokepoints")
@@ -4996,31 +5953,15 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _err_slot("threat radar")
         # § L3  Correlation pulse — 60-day equity↔commodity sparkline + regime badge
         _render_correlation_pulse(_al_corr, _al_regimes)
-        # § L4  Conflict landscape — CIS×TPS 2-D scatter of all tracked conflicts
-        _render_conflict_landscape(conflict_results)
-        # § L5  Escalation tracker — trend/escalation velocity per active conflict
-        _render_escalation_tracker(conflict_results)
-        # § L6  Top commodities — exposure-weighted commodity risk ranking
-        _render_top_commodities(conflict_results)
-        # § L7  Regime history — 60-day day-by-day correlation regime colour strip
+        # (Conflict landscape → center sub-grid, risk compass → right column:
+        #  the enriched feed made the left column ~1000px taller than its
+        #  neighbours; the two chart panels re-level the trio.)
+        # § L4  Regime history strip — 60d day-by-day coupling regime
         _render_regime_history(_al_regimes)
-        # § L8  Alert summary — severity breakdown of active proactive alerts
-        _render_alert_summary(_cached_alerts)
-        # § L9  Commodity sector returns — Energy / Metals / Agri 5-day performance
-        try:
-            _render_commodity_sector_returns(_al_cmd_r)
-        except Exception:
-            _err_slot("commodity sector returns")
-        # § L10 Lead-lag bars — CMD→EQ cross-correlation at lags 0–5d
-        try:
-            _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
-        except Exception:
-            _err_slot("cross-corr lag")
 
     with _col_ctr:
         _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals")
-        # Market pulse horizontal strip
-        _render_market_pulse()
+        # (Market pulse strip removed — duplicated the right column's pulse cards.)
         # Portfolio pulse (conditional — hidden unless CSV uploaded)
         _render_portfolio_pulse()
         # Geo risk block: gauge + history chart + decomposition — the CENTERPIECE
@@ -5051,12 +5992,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _lag = transmission_lag_signal(_al_cmd_r, _al_eq_r)
             if _lag["active"]:
                 _lc = _C["warn"] if _lag["lag_signal"] == "In progress" else "#e74c3c"
-                _li = "⏳" if _lag["lag_signal"] == "In progress" else "⚡"
+                _li = ""
                 st.markdown(
                     f'<div style="background:#0d0c04;border-left:3px solid {_lc};'
                     f'border:1px solid {_lc}33;padding:8px 14px;margin:6px 0">'
                     f'<span style="color:{_lc};{_M}font-size:0.69rem;font-weight:700;'
-                    f'letter-spacing:.08em">{_li} TRANSMISSION LAG · {_lag["lag_signal"].upper()}</span><br>'
+                    f'letter-spacing:.08em">TRANSMISSION LAG · {_lag["lag_signal"].upper()}</span><br>'
                     f'<span style="color:#b0b0b0;{_M}font-size:0.69rem">{_lag["detail"]}</span></div>',
                     unsafe_allow_html=True,
                 )
@@ -5067,7 +6008,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _render_top_corr_pairs(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("cross-asset correlations")
-        # § C1–C4  2-column sub-grid: each panel ~half the center width (~340px)
+        # § C1–C8  Center sub-grid — ONE 2-column split with panels stacked
+        # continuously per side. Separate st.columns rows set each row's height
+        # to its tallest cell, leaving black voids beneath every shorter panel;
+        # a single split lets heights average out and the sides end together.
         _cc_l, _cc_r = st.columns(2, gap="small")
         with _cc_l:
             # § C1  Asset Correlation Heatmap
@@ -5075,29 +6019,60 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _render_corr_heatmap(_al_eq_r, _al_cmd_r)
             except Exception:
                 _err_slot("correlation heatmap")
-            st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
             # § C3  Conflict × Commodity Impact Matrix
             try:
                 _render_conflict_commodity_matrix(conflict_results)
             except Exception:
                 _err_slot("conflict × commodity matrix")
+            # § C5  Escalation tracker
+            _render_escalation_tracker(conflict_results)
+            # (§ C7 regime history → left column end; balance.)
+            # § C10 Transmission beta — WTI→S&P rolling 60d (new visual)
+            try:
+                _render_transmission_beta(_al_eq_r, _al_cmd_r)
+            except Exception:
+                _err_slot("transmission beta")
+            # § C12 Conflict landscape — CIS×TPS scatter (moved from the left column)
+            _render_conflict_landscape(conflict_results)
         with _cc_r:
             # § C2  Cross-Model Signal Waterfall
             try:
                 _render_risk_signal_waterfall(risk, conflict_results, _al_regimes, _cached_alerts)
             except Exception:
                 _err_slot("signal waterfall")
-            st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
             # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per conflict
             try:
                 _render_geo_event_timeline(conflict_results)
             except Exception:
                 _err_slot("severity timeline")
+            # § C6  Commodity exposure ranking
+            _render_top_commodities(conflict_results)
+            # § C8  Alert summary
+            _render_alert_summary(_cached_alerts)
+            # § C9  Regional equity performance — new visual (fills the tail)
+            try:
+                _render_regional_performance(_al_eq_r)
+            except Exception:
+                _err_slot("regional performance")
+            # § C11 Correlation distribution — regime shape (new visual)
+            try:
+                _render_corr_distribution(_al_eq_r, _al_cmd_r)
+            except Exception:
+                _err_slot("correlation distribution")
+            # § C13 Risk signal convergence — GRS / coupling / VIX 60d overlay
+            try:
+                _render_risk_convergence(_score_hist, _al_corr)
+            except Exception:
+                _err_slot("risk convergence")
 
     with _col_right:
-        _section_header("03", "Market Signals", "instruments · risk arc · channels")
-        # § R1  Market pulse cards — 6 live instrument cards with sparklines
-        _render_market_pulse_cards()
+        _section_header("03", "Market Signals", "returns · channels · risk arc")
+        # (§ R1 pulse cards removed — the hero tape row shows the same six
+        #  instruments in one line each; density pass.)
+        # § R1  Returns heatmap — 5-day day-over-day asset return grid
+        _render_returns_heatmap()
+        # § R1b Transmission channels — CIS-weighted channel pressure breakdown
+        _render_transmission_channels(conflict_results, risk)
         # § R2a Hot stocks — top mega-caps by 24h news activity, clickable headlines
         _section_header("", "Stocks to Watch", "most active by news · click to read")
         try:
@@ -5106,44 +6081,70 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             pass
         # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
         _render_risk_arc(risk)
-        # § R3  Risk convergence — showpiece directly under risk arc:
-        #        60d overlapping area chart of GRS / coupling / VIX stress signals
-        try:
-            _render_risk_convergence(_score_hist, _al_corr)
-        except Exception:
-            _err_slot("risk convergence")
+        # (§ R3 risk convergence → center-right sub-stack; balance after the
+        #  compass landed here.)
         # § R4  Next action — routing recommendation based on dominant risk driver
         _render_next_action(conflict_agg, conflict_results, compact=True)
-        # § R5  Risk compass — 5-axis radar (CIS, TPS, MCS, Volatility, Coupling)
+        # § R5  Drawdown monitor — distance from 60d highs (new visual)
+        try:
+            _render_drawdown_monitor(_al_eq_r, _al_cmd_r)
+        except Exception:
+            _err_slot("drawdown monitor")
+        # § R6  Risk appetite dial — S&P vs Gold spread (new visual)
+        try:
+            _render_risk_appetite(_al_eq_r, _al_cmd_r)
+        except Exception:
+            _err_slot("risk appetite")
+        # § R7  120d range position strip (new visual)
+        try:
+            _render_range_position(_al_eq_r, _al_cmd_r)
+        except Exception:
+            _err_slot("range position")
+        # § R8  Risk compass — 5-axis radar (moved from the left column)
         _corr_cur = (
             float(_al_corr.dropna().iloc[-1])
             if _al_corr is not None and len(_al_corr.dropna()) >= 1
             else None
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
-        # § R6  Returns heatmap — 5-day day-over-day asset return grid
-        _render_returns_heatmap()
-        # § R7  Transmission channels — CIS-weighted channel pressure breakdown
-        _render_transmission_channels(conflict_results, risk)
-        # § R8  GRS trend — 60-day composite risk score sparkline with zone bands
-        _render_grs_trend(_score_hist if isinstance(_score_hist, pd.Series) else None)
-        # § R9  Macro snapshot — VIX / 10Y / DXY / WTI 2×2 regime grid
-        _render_macro_snapshot()
-        # § R10 Yield curve — 3M / 5Y / 10Y / 30Y shape (normal / inverted / flat)
+        # (§ R5 risk compass moved to the left column for balance.)
+        # (§ R6–R11 layout pass: returns heatmap, transmission channels, yield
+        #  curve, and vol trio moved to the § 04 bottom row to balance column
+        #  heights. GRS trend and macro snapshot REMOVED — the trend repeated
+        #  the hero sparkline + fear-index chart, the snapshot repeated the
+        #  pulse cards above.)
+
+    # ── § 04  Market Detail — full-width 3-across row (layout pass) ──────────
+    # Hosts the panels moved out of the over-long side columns so all three
+    # columns above end together instead of leaving a center void.
+    st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
+    _section_header("04", "Market Detail", "sectors · lead-lag · rates · vol")
+    _md1, _md2, _md3, _md4 = st.columns([3, 3, 3, 3], gap="small")
+    with _md1:
+        try:
+            _render_commodity_sector_returns(_al_cmd_r)
+        except Exception:
+            _err_slot("commodity sector returns")
+    with _md2:
+        try:
+            _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
+        except Exception:
+            _err_slot("cross-corr lag")
+    with _md3:
         _render_yield_curve_snap()
-        # § R11 Vol regime trio — VIX / OVX / GVZ gauge bars vs 1-year range
+    with _md4:
         _render_vol_trio()
 
-    # ── Full-width below 3-col ────────────────────────────────────────────────
+    # ── Full-width below ──────────────────────────────────────────────────────
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
-    _section_header("04", "Scenario & Context", "scenario switch · narrative · intel monitor")
+    _section_header("05", "Scenario & Context", "scenario switch · narrative · intel monitor")
 
     # Scenario switch — full-width, 8 buttons in one row
     _render_scenario_switch()
 
     # Context narrative + Intel panel — collapsed by default to save space
     with st.expander("Context & Intelligence  ·  Narrative · Conflict Monitor · Channels", expanded=False):
-        _col_ctx, _col_intel = st.columns([1.2, 1.0], gap="medium")
+        _col_ctx, _col_intel = st.columns([6, 6], gap="small")
         with _col_ctx:
             _render_context_narrative(risk, conflict_results)
         with _col_intel:
@@ -5157,7 +6158,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _risk_val     = float(risk["score"])
         _expanded     = _risk_val >= 50
         _panel_label  = (
-            f"⚡ AI Analyst Team · Morning Briefing (Risk {_risk_val:.0f}/100)"
+            f"AI Analyst Team · Morning Briefing (Risk {_risk_val:.0f}/100)"
             if _expanded else
             f"AI Analyst Team · Morning Briefing (Risk {_risk_val:.0f}/100)"
         )
@@ -5172,6 +6173,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             )
     except Exception:
         pass
+
+    # About & reading guide — moved here in the layout pass (chrome, not signal)
+    with st.expander("About This Terminal  ·  Reading Guide", expanded=False):
+        st.markdown(_about_html, unsafe_allow_html=True)
+        st.markdown(_guide_html, unsafe_allow_html=True)
 
     # Navigate Terminal — collapsed by default; open when switching pages
     with st.expander("Navigate Terminal  ·  14 modules", expanded=False):

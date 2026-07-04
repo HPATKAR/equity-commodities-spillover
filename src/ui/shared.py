@@ -346,7 +346,7 @@ def _thread(text: str) -> None:
     """Narrative connector paragraph between page sections."""
     st.markdown(
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.69rem;'
-        f'color:#8890a1;line-height:1.7;margin:0.1rem 0 0.55rem;font-style:italic">'
+        f'color:#8890a1;line-height:1.7;margin:0.1rem 0 0.55rem">'
         f'{text}</p>',
         unsafe_allow_html=True,
     )
@@ -391,11 +391,11 @@ def _section_header(number: str, title: str, subtitle: str = "") -> None:
     """Numbered section header - establishes reading sequence within a page."""
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.64rem;'
-        f'color:#888;font-weight:400;margin-left:0.6rem;font-style:italic">{subtitle}</span>'
+        f'color:#888;font-weight:400;margin-left:0.6rem">{subtitle}</span>'
         if subtitle else ""
     )
     st.markdown(
-        f'<div style="margin:1.4rem 0 0.7rem;padding-bottom:0.4rem;'
+        f'<div style="margin:0.8rem 0 0.4rem;padding-bottom:0.25rem;'
         f'border-bottom:1px solid #2a2a2a;display:flex;align-items:baseline;gap:0">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:0.10em;color:{_GOLD};'
@@ -411,7 +411,7 @@ def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
     """Flat inline regime label with ambient glow at crisis intensity."""
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;'
-        f'color:#8890a1;margin-left:0.75rem;font-weight:400;font-style:italic">{sub}</span>'
+        f'color:#8890a1;margin-left:0.75rem;font-weight:400">{sub}</span>'
         if sub else ""
     )
     # Ambient glow — more visible at higher severity (crisis red vs. normal gold)
@@ -458,7 +458,7 @@ def _primary_chart(fig, caption: str = "") -> None:
     if caption:
         st.markdown(
             f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;'
-            f'color:#888;font-style:italic;margin:0 0 0.55rem 0">{caption}</p>',
+            f'color:#888;margin:0 0 0.55rem 0">{caption}</p>',
             unsafe_allow_html=True,
         )
 

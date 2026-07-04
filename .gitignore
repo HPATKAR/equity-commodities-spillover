@@ -24,8 +24,9 @@ env/
 .vscode/
 .idea/
 
-# Runtime logs — session LLM trace data, not source
+# Runtime logs — session LLM trace data + daily snapshot state, not source
 logs/*.csv
+logs/*.json
 # keep the directory itself (logs/.gitkeep) so a fresh clone has the folder
 !logs/.gitkeep
 
@@ -34,3 +35,4 @@ logs/*.csv
 *.docx
 generate_*.py
 docs/CAPSTONE_FINAL.md
+.gstack/

@@ -621,6 +621,29 @@ button[data-testid="baseButton-primary"] {
     margin-top: 3px;
 }
 
+/* ── Markdown negative-margin fix (all pages) ─────────────────────────
+   Streamlit sets margin-bottom:-16px on stMarkdownContainer to cancel the
+   final <p>'s 16px margin in ordinary markdown. Our panels are raw HTML
+   with no trailing <p>, so every card's box ends 16px ABOVE its painted
+   content — panels spill over whatever follows (clipped headers, panel
+   overlap). Zero the negative margin and instead zero the last <p>'s own
+   margin so ordinary markdown spacing is preserved. */
+section[data-testid="stMain"] [data-testid="stMarkdownContainer"] {
+    margin-bottom: 0 !important;
+}
+section[data-testid="stMain"] [data-testid="stMarkdownContainer"] > p:last-child {
+    margin-bottom: 0 !important;
+}
+/* Belt-and-braces: keep markdown wrappers at natural flow height (scoped via
+   :has so components.html iframe containers, collapsed on purpose, are
+   untouched). */
+section[data-testid="stMain"] [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]),
+section[data-testid="stMain"] [data-testid="stMarkdown"],
+section[data-testid="stMain"] [data-testid="stMarkdown"] > div {
+    height: auto !important;
+    max-height: none !important;
+}
+
 /* ── Footer gold rule - spans full viewport width ── */
 body::after {
     content: '';
@@ -1000,7 +1023,8 @@ _VALID_PAGES = {
     "home",
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test", "scenario_engine",
-    "model_accuracy", "ai_chat", "methodology", "insights", "strait_watch",
+    "model_accuracy", "ai_chat", "methodology", "insights", "strait_watch", "replay",
+    "pattern_memory",
     # Intelligence pages
     "conflict_intelligence", "threat_act_monitor", "transmission_matrix", "exposure_scoring",
     "about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce",
@@ -1712,7 +1736,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var INTEL    =['conflict_intelligence','threat_act_monitor','transmission_matrix','exposure_scoring'];
     var STRATEGY =['trade_ideas','stress_test','scenario_engine'];
     var MONITOR  =['watchlist'];
-    var RESEARCH =['model_accuracy','ai_chat','methodology'];
+    var RESEARCH =['model_accuracy','ai_chat','methodology','replay','pattern_memory'];
     var INSIGHTS =['insights'];
     var ABOUT    =['about_heramb','about_jiahe','about_ilian','about_ai_workforce'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
@@ -1806,6 +1830,8 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Model Signal Audit</a></li>
         <li><a data-pg="ai_chat"        class="{'active' if current=='ai_chat' else ''}">AI Research Desk</a></li>
         <li><a data-pg="methodology"    class="{'active' if current=='methodology' else ''}">Model Methodology</a></li>
+        <li><a data-pg="replay"         class="{'active' if current=='replay' else ''}">Replay Mode</a></li>
+        <li><a data-pg="pattern_memory" class="{'active' if current=='pattern_memory' else ''}">Pattern Memory</a></li>
       </ul>
     </li>
 
@@ -1899,6 +1925,8 @@ from src.pages.stress_test     import page_stress_test
 from src.pages.scenario_engine import page_scenario_engine
 from src.pages.macro_dashboard  import page_macro_dashboard
 from src.pages.model_accuracy   import page_model_accuracy
+from src.pages.replay           import page_replay
+from src.pages.pattern_memory   import page_pattern_memory
 from src.pages.ai_chat         import page_ai_chat, open_chat_dialog
 from src.pages.insights        import page_insights
 from src.pages.strait_watch    import page_strait_watch
@@ -2007,6 +2035,8 @@ _PAGE_MAP = {
     "stress_test":    lambda: page_stress_test(_start, _end, _FRED_KEY),
     "scenario_engine": lambda: page_scenario_engine(_start, _end, _FRED_KEY),
     "model_accuracy": lambda: page_model_accuracy(_start, _end, _FRED_KEY),
+    "replay":         lambda: page_replay(_start, _end, _FRED_KEY),
+    "pattern_memory": lambda: page_pattern_memory(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "methodology":    lambda: page_methodology(_start, _end, _FRED_KEY),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),

@@ -1,25 +1,48 @@
 """
-Daily snapshot for the Home "what changed since yesterday" delta panel.
+Daily snapshot for the Home "what changed" delta panel.
 
-Stores two slots:
-  snapshot_today     — written on the first load of each calendar day
-  snapshot_yesterday — previous day's snapshot_today, rolled over automatically
+Stores three slots:
+  snapshot_today       — latest capture, rewritten on every load
+  snapshot_yesterday   — previous calendar day's last capture, rolled over
+  snapshot_first_today — the FIRST capture of the current calendar day
 
-File: logs/delta_snapshot.json (project-relative, gitignored or irrelevant to CI).
+Baseline selection (what "today" is compared against), best available first:
+  1. snapshot_yesterday    → true day-over-day move (preferred)
+  2. snapshot_first_today  → intraday move "since first capture today", used
+                             until a prior calendar day exists. This is what
+                             keeps the panel useful on day one and on an
+                             ephemeral filesystem (e.g. Render), where a
+                             prior-day file rarely survives a restart.
+  3. None                  → only on the very first capture ever seen, when
+                             there is genuinely nothing to diff against.
+
+File: <SNAPSHOT_DIR or logs>/delta_snapshot.json. Set SPILLOVER_SNAPSHOT_DIR to
+a persistent path (a mounted disk) to survive restarts on ephemeral hosts.
 
 Day-rollover logic (called on every page load):
-  - If snapshot_today.date < today   → copy today → yesterday, write fresh today
-  - If snapshot_today.date == today  → keep yesterday unchanged, update today
-  - If no file                       → write today only, yesterday = None
+  - No file                     → write today + first_today, baseline None
+  - snapshot_today.date < today → roll today → yesterday, reset first_today
+  - snapshot_today.date == today→ keep yesterday + first_today, update today
 """
 
 from __future__ import annotations
 
 import datetime
 import json
+import os
 import pathlib
 
-_SNAPSHOT_PATH = pathlib.Path(__file__).resolve().parents[2] / "logs" / "delta_snapshot.json"
+
+def _snapshot_path() -> pathlib.Path:
+    """Resolve the snapshot file path. Honours SPILLOVER_SNAPSHOT_DIR so a
+    persistent disk can back it on ephemeral hosts without a code change."""
+    env_dir = os.environ.get("SPILLOVER_SNAPSHOT_DIR")
+    base = (pathlib.Path(env_dir) if env_dir
+            else pathlib.Path(__file__).resolve().parents[2] / "logs")
+    return base / "delta_snapshot.json"
+
+
+_SNAPSHOT_PATH = _snapshot_path()
 _MIN_DELTA     = 0.3   # suppress noise below this magnitude
 _TOP_N         = 8     # maximum rows shown in the panel
 
@@ -28,8 +51,9 @@ _TOP_N         = 8     # maximum rows shown in the panel
 
 def _read_file() -> dict:
     try:
-        if _SNAPSHOT_PATH.exists():
-            return json.loads(_SNAPSHOT_PATH.read_text())
+        path = _snapshot_path()
+        if path.exists():
+            return json.loads(path.read_text())
     except Exception:
         pass
     return {}
@@ -37,8 +61,9 @@ def _read_file() -> dict:
 
 def _write_file(data: dict) -> None:
     try:
-        _SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _SNAPSHOT_PATH.write_text(json.dumps(data, indent=2, default=str))
+        path = _snapshot_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2, default=str))
     except Exception:
         pass
 
@@ -75,37 +100,56 @@ def update_snapshot(
     geo_risk_score: float,
 ) -> tuple[dict | None, dict]:
     """
-    Persist today's snapshot and return (yesterday, today) for delta computation.
+    Persist today's snapshot and return (baseline, today) for delta computation.
     Call once per page load after conflict data is available.
 
     Returns
     -------
-    yesterday : dict | None  — previous day's payload, or None if first run
-    today     : dict         — current payload
+    baseline : dict | None  — what today is compared against. Prior calendar
+                              day if one exists; else the first capture of the
+                              current day (intraday); else None only on the
+                              very first capture ever, when nothing can be
+                              compared. The caller labels it by inspecting the
+                              baseline's own ``date`` vs today.
+    today    : dict         — current payload
     """
     today_str = datetime.date.today().isoformat()
     file_data = _read_file()
-    today_slot     = file_data.get("snapshot_today")
-    yesterday_slot = file_data.get("snapshot_yesterday")
+    today_slot       = file_data.get("snapshot_today")
+    yesterday_slot   = file_data.get("snapshot_yesterday")
+    first_today_slot = file_data.get("snapshot_first_today")
 
     new_today = _build_payload(conflict_results, portfolio_cis, portfolio_tps, geo_risk_score)
 
     if today_slot is None:
-        # First ever run
-        new_file = {"snapshot_today": new_today, "snapshot_yesterday": None}
-        _write_file(new_file)
+        # First capture ever — seed first_today so an intraday baseline can
+        # form on the next load; nothing to compare against yet.
+        _write_file({"snapshot_today": new_today, "snapshot_yesterday": None,
+                     "snapshot_first_today": new_today})
         return None, new_today
 
     if today_slot.get("date", "") < today_str:
-        # New day: roll today → yesterday, fresh today
-        new_file = {"snapshot_today": new_today, "snapshot_yesterday": today_slot}
-        _write_file(new_file)
+        # New calendar day: roll today → yesterday, reset the intraday anchor.
+        _write_file({"snapshot_today": new_today, "snapshot_yesterday": today_slot,
+                     "snapshot_first_today": new_today})
         return today_slot, new_today
-    else:
-        # Same day: keep yesterday unchanged, update today's values
-        new_file = {"snapshot_today": new_today, "snapshot_yesterday": yesterday_slot}
-        _write_file(new_file)
+
+    # Same day: keep yesterday, preserve the day's first capture as the
+    # intraday anchor (heal older two-slot files that predate first_today).
+    if first_today_slot is None or first_today_slot.get("date", "") != today_str:
+        first_today_slot = today_slot
+    _write_file({"snapshot_today": new_today, "snapshot_yesterday": yesterday_slot,
+                 "snapshot_first_today": first_today_slot})
+
+    # Prefer a true prior-day baseline; else fall back to the intraday anchor,
+    # but only once it is an EARLIER capture than now (otherwise there is no
+    # move to show).
+    if yesterday_slot is not None:
         return yesterday_slot, new_today
+    if (first_today_slot is not None
+            and first_today_slot.get("captured_at") != new_today.get("captured_at")):
+        return first_today_slot, new_today
+    return None, new_today
 
 
 # ── Delta computation ─────────────────────────────────────────────────────────
