@@ -1197,19 +1197,23 @@ def _thesis_stage3_cached(
     }
 
 
-def _library_stage3_results(_all_r: pd.DataFrame, _regimes) -> dict[str, dict]:
+def _library_stage3_results(_all_r: pd.DataFrame, _regimes,
+                            trades: list[dict] | None = None) -> dict[str, dict]:
     """
-    Stage-3 confirmation for every library thesis whose legs all exist in the
-    loaded returns frame. Predicted signs derive mechanically from the legs
-    (Long → +1, Short → −1). Phantom-leg entries are skipped — Stage 3 cannot
-    run without data, and the leg check in annotate_eligibility() locks them
-    with the specific missing legs named.
+    Stage-3 confirmation for every thesis whose legs all exist in the loaded
+    returns frame. Predicted signs derive mechanically from the legs (Long →
+    +1, Short → −1). Phantom-leg entries are skipped — Stage 3 cannot run
+    without data, and the leg check in annotate_eligibility() locks them with
+    the specific missing legs named.
+
+    `trades` defaults to the static library base; pass the combined
+    static+live-generated set to confirm generated candidates too.
 
     Not cached itself: each _thesis_stage3_cached call below carries its own
     daily cache (nesting cached calls trips Streamlit's cache guard).
     """
     out: dict[str, dict] = {}
-    for tr in _TRADE_LIBRARY_BASE:          # read-only: keyed by trade name
+    for tr in (trades if trades is not None else _TRADE_LIBRARY_BASE):
         assets = tr.get("assets") or []
         dirs = tr.get("direction") or []
         if not assets or any(a not in _all_r.columns for a in assets):
@@ -2355,6 +2359,28 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     import copy as _copy
     _TRADE_LIBRARY = _copy.deepcopy(_TRADE_LIBRARY_BASE)
 
+    # ── LIVE IDEA GENERATION — conflict-driven candidates for THIS regime ────
+    # The desk is not just a static catalogue: it also generates fresh trades
+    # from the current conflict / exposure / scenario / regime state and runs
+    # them through the SAME eligibility → Stage-3 → DSR gate as the library.
+    # Nothing is weakened — the honest trial count (n_strategies) is raised to
+    # the full eligible set below, so the wider search is properly penalised by
+    # the deflated Sharpe. Generated ideas only deploy if they earn it.
+    _n_generated = 0
+    try:
+        from src.analysis.trade_generator import generate_conflict_trades
+        with st.spinner("Generating live conflict-driven ideas…"):
+            _gen = generate_conflict_trades(regime=current)
+        _existing = {t.get("name") for t in _TRADE_LIBRARY}
+        for _g in _gen:
+            if _g.get("name") and _g["name"] not in _existing:
+                _g["generated"] = True
+                _TRADE_LIBRARY.append(_g)
+                _existing.add(_g["name"])
+                _n_generated += 1
+    except Exception:
+        _n_generated = 0
+
     # ── STEP 1 OF 4 — ELIGIBILITY GATE ─────────────────────────────────────
     # Eligible ⟺ every leg exists in the loaded returns frame AND the thesis
     # passed Stage-3 confirmation. Everything else is NON-ALLOCATABLE: still
@@ -2408,11 +2434,18 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     )
     try:
         with st.spinner("Running eligibility gate — leg check + Stage-3 confirmation…"):
-            _s3_results = _library_stage3_results(_all_r_gate, regimes)
+            _s3_results = _library_stage3_results(_all_r_gate, regimes,
+                                                  trades=_TRADE_LIBRARY)
     except Exception:
         _s3_results = {}
     annotate_eligibility(_TRADE_LIBRARY, _all_r_gate.columns, _s3_results,
                          loadable_universe=_loadable)
+    # Honest trial count for the deflated Sharpe: the number of ELIGIBLE
+    # strategies actually searched (static + generated). A wider search MUST
+    # raise this so the best-of-N luck benchmark is harder, not easier — this
+    # is the anti-gaming half of live generation.
+    _n_eligible_total = sum(1 for _t in _TRADE_LIBRARY if _t.get("is_eligible"))
+    _n_trials = max(_n_eligible_total, 9)
     # ── STEP 2 OF 4 — WEIGHT ALLOCATOR (silent: stamps alloc_weight +
     # alloc_detail; ranking and display are steps 3–4) ──────────────────────
     try:
@@ -2421,7 +2454,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
         _alloc_metrics = build_allocation_inputs(
             _TRADE_LIBRARY, _all_r_gate, regimes, _s3_results,
-            deploy_bar=_eff_bar,
+            n_strategies=_n_trials, deploy_bar=_eff_bar,
         )
         allocate_weights(_TRADE_LIBRARY, _alloc_metrics)
         # ── STEP 3 OF 4 — PORTFOLIO CONSTRAINTS (silent) ────────────────────
@@ -2449,6 +2482,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _dead_note = (f' · <b style="color:#555960">{_n_dead} STRUCTURALLY DEAD</b> '
                   f'(no data source — excluded from the live count)'
                   if _n_dead else '')
+    _gen_note = (f' · <b style="color:#2980b9">{_n_generated} LIVE-GENERATED</b> '
+                 f'(conflict-driven, this regime)' if _n_generated else '')
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid {"#27ae60" if _n_elig else "#c0392b"};'
@@ -2456,9 +2491,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         f'font-family:\'JetBrains Mono\',monospace;font-size:.6rem;color:#8890a1">'
         f'ELIGIBILITY GATE · <b style="color:#27ae60">{_n_elig} ELIGIBLE</b> · '
         f'<b style="color:#c0392b">{_n_lock} NON-ALLOCATABLE</b> (zero-weight locked)'
-        f'{_dead_note} · '
-        f'eligible ⟺ all legs in return data AND thesis Stage-3 confirmed · '
-        f'locked trades render below with their reason</div>',
+        f'{_gen_note}{_dead_note} · DSR trial count n={_n_trials} '
+        f'(deflated for the full search) · '
+        f'eligible ⟺ all legs in return data AND thesis Stage-3 confirmed</div>',
         unsafe_allow_html=True,
     )
 
@@ -2539,7 +2574,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:.9rem;'
                 f'font-weight:700;color:{col}">{val}</div></div>'
                 for lbl, val, col in [
-                    ("EXPECTED (E[R] ON BOOK)", _pct(_up["expected"]), _exp_c),
+                    (f"EXPECTED (E[R] ON BOOK · {_hz.upper()})", _pct(_up["expected"]), _exp_c),
                     ("BULL CASE (90th)", _pct(_up["best"]), "#27ae60"),
                     ("BEAR CASE (10th)", _pct(_up["worst"]), "#c0392b"),
                     ("BREAKEVEN PROB", f'{_up["breakeven"]*100:.0f}%', "#CFB991"),
