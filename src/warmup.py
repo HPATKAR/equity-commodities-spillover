@@ -60,7 +60,8 @@ def _run() -> None:
 
         # 3. Walk-forward backtests for every static trade card, cached 3600 s
         from src.pages.trade_ideas import (
-            _TRADE_LIBRARY, _wf_backtest_trade, _parse_holding_days,
+            _TRADE_LIBRARY_BASE as _TRADE_LIBRARY,   # read-only warmup pass
+            _wf_backtest_trade, _parse_holding_days,
         )
         for trade in _TRADE_LIBRARY:
             try:

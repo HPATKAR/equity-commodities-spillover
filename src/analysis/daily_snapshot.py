@@ -74,8 +74,9 @@ def _build_payload(
     portfolio_tps: float,
     geo_risk_score: float,
 ) -> dict:
-    today_str = datetime.date.today().isoformat()
-    now_str   = datetime.datetime.now().strftime("%H:%M")
+    from src.utils.timeutil import now_ct, today_ct
+    today_str = today_ct().isoformat()
+    now_str   = now_ct().strftime("%H:%M")
     conflicts: dict[str, dict] = {}
     for cid, v in conflict_results.items():
         conflicts[cid] = {
@@ -113,7 +114,8 @@ def update_snapshot(
                               baseline's own ``date`` vs today.
     today    : dict         — current payload
     """
-    today_str = datetime.date.today().isoformat()
+    from src.utils.timeutil import today_ct
+    today_str = today_ct().isoformat()
     file_data = _read_file()
     today_slot       = file_data.get("snapshot_today")
     yesterday_slot   = file_data.get("snapshot_yesterday")

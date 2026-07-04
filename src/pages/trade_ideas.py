@@ -196,7 +196,12 @@ _TRADE_TICKERS: dict[str, dict[str, str]] = {
 
 
 # ── Trade idea library ─────────────────────────────────────────────────────
-_TRADE_LIBRARY = [
+# IMMUTABLE SOURCE. Module globals are shared across every Streamlit session in
+# a process, so the pipeline must never mutate this in place (it stamps
+# is_eligible / alloc_weight / rank on each dict). page_trade_ideas() works on a
+# per-run deepcopy bound to the local name _TRADE_LIBRARY; read-only consumers
+# (warmup, stage-3) may reference this base directly.
+_TRADE_LIBRARY_BASE = [
     {
         "regime":    [2, 3],
         "trigger":   "Elevated/Crisis correlation",
@@ -1204,7 +1209,7 @@ def _library_stage3_results(_all_r: pd.DataFrame, _regimes) -> dict[str, dict]:
     daily cache (nesting cached calls trips Streamlit's cache guard).
     """
     out: dict[str, dict] = {}
-    for tr in _TRADE_LIBRARY:
+    for tr in _TRADE_LIBRARY_BASE:          # read-only: keyed by trade name
         assets = tr.get("assets") or []
         dirs = tr.get("direction") or []
         if not assets or any(a not in _all_r.columns for a in assets):
@@ -2131,18 +2136,57 @@ from src.analysis.trade_allocator import DSR_DEPLOY_BAR as _DSR_DEPLOY_BAR
 
 def _weight_earn_condition(alloc_detail: dict) -> str:
     """One-line, trade-specific statement of what must improve for a
-    zero-weight eligible trade to earn allocation under Step 2's factors."""
+    zero-weight eligible trade to earn allocation under Step 2's factors.
+    Uses the EFFECTIVE (appetite-adjusted) deploy bar stamped on the trade."""
     from src.analysis.trade_allocator import MIN_TRADES_FOR_DSR
     n = int(alloc_detail.get("n_trades", 0))
     dsr = float(alloc_detail.get("dsr", 0.0))
     conv = float(alloc_detail.get("conviction", 0.0))
+    bar = float(alloc_detail.get("deploy_bar", _DSR_DEPLOY_BAR))
     if n < MIN_TRADES_FOR_DSR:
         return f"needs ≥{MIN_TRADES_FOR_DSR} live signals (has {n})"
-    if dsr <= _DSR_DEPLOY_BAR:
-        return f"DSR +{_DSR_DEPLOY_BAR - dsr:.2f} to clear {_DSR_DEPLOY_BAR:.2f} bar"
+    if dsr <= bar:
+        return f"DSR +{bar - dsr:.2f} to clear {bar:.2f} bar"
     if conv <= 0:
         return "needs Stage-3 conviction > 0"
     return "sizes on next reload"
+
+
+def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
+    """Aggregate targeted upside for the CONSTRUCTED portfolio (deployed trades
+    only), reusing the existing scenario projection (project_trade). Each trade's
+    projected P&L is weighted by its allocation, so figures are returns on TOTAL
+    book capital (the un-deployed cash portion contributes 0). This is
+    scenario-projected upside IF theses play out — deliberately distinct from the
+    deflated-Sharpe confidence that drives sizing. None when the book is cash."""
+    deployed = [t for t in book if float(t.get("alloc_weight", 0.0)) > 0]
+    if not deployed:
+        return None
+    from src.analysis.profit_projection import project_trade
+    exp = best = worst = be_w = 0.0
+    horizons: list[int] = []
+    gross = sum(float(t["alloc_weight"]) for t in deployed)
+    for t in deployed:
+        w = float(t["alloc_weight"])
+        # Project over the trade's OWN stated horizon, not a fixed 3-month
+        # default — a 12-month thesis's target upside should reflect 12 months.
+        hy = max(_parse_holding_days(t, default=63) / 252.0, 0.02)
+        try:
+            p = project_trade(t, holding_years=hy, current_regime=current_regime)
+        except Exception:
+            continue
+        exp   += w * float(p.get("expected_pnl", 0.0))
+        best  += w * float(p.get("best_case_pnl", 0.0))
+        worst += w * float(p.get("worst_case_pnl", 0.0))
+        be_w  += w * float(p.get("breakeven_prob", 0.0))
+        horizons.append(int(round(hy * 12)))
+    return {
+        "expected": exp, "best": best, "worst": worst,
+        "breakeven": (be_w / gross if gross > 1e-9 else 0.0),
+        "months_lo": min(horizons) if horizons else 0,
+        "months_hi": max(horizons) if horizons else 0,
+        "gross": gross, "n": len(deployed),
+    }
 
 
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
@@ -2303,6 +2347,14 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _RAW_N = 18
     _effective_n: int = st.session_state.get("_effective_n", 9)
 
+    # Per-run working copy of the trade library. The pipeline below stamps
+    # is_eligible / alloc_weight / rank onto each dict; mutating the module
+    # global would leak one session's state into every other session sharing
+    # the process. This local rebind means every _TRADE_LIBRARY reference in
+    # this function operates on the isolated copy.
+    import copy as _copy
+    _TRADE_LIBRARY = _copy.deepcopy(_TRADE_LIBRARY_BASE)
+
     # ── STEP 1 OF 4 — ELIGIBILITY GATE ─────────────────────────────────────
     # Eligible ⟺ every leg exists in the loaded returns frame AND the thesis
     # passed Stage-3 confirmation. Everything else is NON-ALLOCATABLE: still
@@ -2316,6 +2368,44 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     from src.data.config import FIXED_INCOME_TICKERS, FX_TICKERS
     _loadable = (set(all_r_concat.columns) | set(FIXED_INCOME_TICKERS)
                  | set(FX_TICKERS) | set(_PC_LEG_MAP.values()))
+
+    # ── Risk appetite ──────────────────────────────────────────────────────
+    # Explicit, disclosed control over how far BELOW the deflated-Sharpe 0.50
+    # confidence bar the desk will deploy. Defensive (default) keeps the strict
+    # bar — honest cash when nothing clears it. Higher appetite lowers the
+    # EFFECTIVE bar toward 0.15, deploying the strongest relative ideas as
+    # speculative bets (labelled as such). The strict bar is never silently
+    # moved; the raw DSR and ranking are unaffected — only sizing responds.
+    from src.analysis.trade_allocator import (
+        APPETITE_STOPS, effective_deploy_bar, DSR_DEPLOY_BAR, DEPLOY_BAR_FLOOR,
+    )
+    _appetite_names = list(APPETITE_STOPS.keys())
+    _appetite_label = st.select_slider(
+        "Risk appetite",
+        options=_appetite_names,
+        value=st.session_state.get("ti_risk_appetite", _appetite_names[0]),
+        key="ti_risk_appetite",
+        help=("How far below the deflated-Sharpe 0.50 confidence bar the book "
+              "will deploy. Defensive holds the strict bar (cash when no thesis "
+              "clears it); Aggressive lowers it to 0.15, deploying the strongest "
+              "relative ideas as disclosed speculative bets. Ranking is "
+              "unaffected — only position sizing responds."),
+    )
+    _appetite = float(APPETITE_STOPS.get(_appetite_label, 0.0))
+    _eff_bar = effective_deploy_bar(_appetite)
+    _app_col = "#27ae60" if _appetite == 0 else "#e67e22" if _appetite < 1 else "#c0392b"
+    _bar_note = (
+        '<span style="color:#c0392b">(below the 0.50 confidence bar — deploying '
+        'speculative relative bets)</span>' if _eff_bar < DSR_DEPLOY_BAR - 1e-9
+        else '<span style="color:#8890a1">(strict deflated-Sharpe gate)</span>'
+    )
+    st.markdown(
+        f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:.55rem;'
+        f'color:#8890a1;margin:-.2rem 0 .5rem">RISK APPETITE · '
+        f'<b style="color:{_app_col}">{_appetite_label.upper()}</b> · '
+        f'effective deploy bar <b style="color:#e8e9ed">{_eff_bar:.2f}</b> {_bar_note}</p>',
+        unsafe_allow_html=True,
+    )
     try:
         with st.spinner("Running eligibility gate — leg check + Stage-3 confirmation…"):
             _s3_results = _library_stage3_results(_all_r_gate, regimes)
@@ -2331,6 +2421,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
         _alloc_metrics = build_allocation_inputs(
             _TRADE_LIBRARY, _all_r_gate, regimes, _s3_results,
+            deploy_bar=_eff_bar,
         )
         allocate_weights(_TRADE_LIBRARY, _alloc_metrics)
         # ── STEP 3 OF 4 — PORTFOLIO CONSTRAINTS (silent) ────────────────────
@@ -2374,13 +2465,22 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     if _ranked_book:
         _gross_bk = sum(t.get("alloc_weight", 0.0) for t in _ranked_book)
         # Cash is a position, not an absence: when no eligible thesis clears
-        # the DSR deploy bar the book is 100% cash BY DECISION — headline it,
-        # and demote the ranked table to a watchlist with per-trade gaps.
+        # the (appetite-adjusted) deploy bar the book is 100% cash BY DECISION.
         _is_cash_book = _gross_bk <= 1e-9
+        _speculative = _eff_bar < _DSR_DEPLOY_BAR - 1e-9   # risk-on: below the confidence bar
+        _best_dsr = max(
+            (float((t.get("alloc_detail") or {}).get("dsr", 0.0))
+             for t in _ranked_book), default=0.0)
+        _n_deployed = sum(1 for t in _ranked_book if t.get("alloc_weight", 0.0) > 0)
         if _is_cash_book:
-            _best_dsr = max(
-                float((t.get("alloc_detail") or {}).get("dsr", 0.0))
-                for t in _ranked_book
+            _reason = (
+                f'All {len(_ranked_book)} eligible theses sit below the '
+                f'{_eff_bar:.2f} deploy bar (best {_best_dsr:.2f})'
+                + (f' — even at your lowered <b>{_appetite_label}</b> risk bar '
+                   f'nothing clears it.' if _speculative else
+                   f' — no confirmed edge clears the deflated-Sharpe luck '
+                   f'benchmark, so nothing earns weight.')
+                + ' Ranked ideas below are a watchlist, not an allocation.'
             )
             st.markdown(
                 f'<div style="border:1px solid #CFB991;background:#0d0b06;'
@@ -2391,15 +2491,76 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
                 f'color:#CFB991">DESK CALL — 0% DEPLOYED · 100% CASH</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                f'font-size:.52rem;color:#8890a1">cash is a position — held, '
-                f'not defaulted</span></div>'
+                f'font-size:.52rem;color:#8890a1">{_appetite_label.upper()} · '
+                f'cash is a position — held, not defaulted</span></div>'
+                f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
+                f'color:#8890a1;margin-top:4px">{_reason}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        elif _speculative:
+            # Deployed BELOW the confidence bar — disclose it prominently.
+            st.markdown(
+                f'<div style="border:1px solid #c0392b;background:#120707;'
+                f'padding:.65rem 1rem;margin:.2rem 0 .6rem">'
+                f'<div style="display:flex;justify-content:space-between;'
+                f'align-items:baseline;flex-wrap:wrap">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
+                f'color:#e67e22">DESK CALL — RISK-ON · {_gross_bk*100:.0f}% DEPLOYED '
+                f'· {_appetite_label.upper()}</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:.52rem;color:#c0392b">SPECULATIVE — BELOW '
+                f'DEFLATED-SHARPE BAR</span></div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
                 f'color:#8890a1;margin-top:4px">'
-                f'All {len(_ranked_book)} eligible theses sit below the '
-                f'DSR {_DSR_DEPLOY_BAR:.2f} deploy threshold (best '
-                f'{_best_dsr:.2f}) — no confirmed edge clears the '
-                f'deflated-Sharpe luck benchmark, so nothing earns weight. '
-                f'Ranked ideas below are a watchlist, not an allocation.</div>'
+                f'{_n_deployed} of {len(_ranked_book)} ideas sized at a lowered '
+                f'<b>{_eff_bar:.2f}</b> deploy bar — below the 0.50 deflated-Sharpe '
+                f'confidence threshold. These are best-available <b>relative</b> '
+                f'bets, not statistically confirmed edges; each is sized by how far '
+                f'it clears your risk bar. Drop to Defensive for the strict '
+                f'evidence-gated book.</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Portfolio targeted upside (constructed book only) ───────────────
+        _up = _portfolio_upside(_ranked_book, current)
+        if _up is not None:
+            _lo, _hi = _up["months_lo"], _up["months_hi"]
+            _hz = (f"~{_hi}mo" if _lo == _hi else f"{_lo}–{_hi}mo") if _hi else "stated horizon"
+            _exp_c = "#27ae60" if _up["expected"] >= 0 else "#c0392b"
+            def _pct(v: float) -> str: return f"{v:+.1f}%"
+            _tiles = "".join(
+                f'<div style="flex:1;min-width:96px;border-left:2px solid {col};'
+                f'padding:2px 10px">'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:.46rem;'
+                f'letter-spacing:.1em;color:#8890a1">{lbl}</div>'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:.9rem;'
+                f'font-weight:700;color:{col}">{val}</div></div>'
+                for lbl, val, col in [
+                    ("EXPECTED (E[R] ON BOOK)", _pct(_up["expected"]), _exp_c),
+                    ("BULL CASE (90th)", _pct(_up["best"]), "#27ae60"),
+                    ("BEAR CASE (10th)", _pct(_up["worst"]), "#c0392b"),
+                    ("BREAKEVEN PROB", f'{_up["breakeven"]*100:.0f}%', "#CFB991"),
+                    ("HORIZON", _hz, "#8890a1"),
+                ]
+            )
+            st.markdown(
+                f'<div style="border:1px solid #1e1e1e;background:#070707;'
+                f'padding:.55rem .9rem;margin:0 0 .6rem">'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:.54rem;'
+                f'font-weight:700;letter-spacing:.13em;color:#CFB991;margin-bottom:6px">'
+                f'PORTFOLIO TARGETED UPSIDE · {_up["n"]} POSITIONS · '
+                f'{_up["gross"]*100:.0f}% DEPLOYED</div>'
+                f'<div style="display:flex;flex-wrap:wrap;gap:6px 4px">{_tiles}</div>'
+                f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.55rem;'
+                f'color:#555960;margin-top:6px">Scenario-projected P&amp;L if the '
+                f'theses play out, weighted by allocation (cash portion earns 0). '
+                f'This is <b>potential upside</b>, distinct from the deflated-Sharpe '
+                f'confidence that sizes the book — high appetite buys more upside '
+                f'AND more downside. Not a forecast; scenario payoff assumptions '
+                f'are disclosed in each trade card.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )

@@ -39,6 +39,37 @@ MAX_SINGLE_WEIGHT = 0.35
 MIN_TRADES_FOR_DSR = 3
 _N_STRATEGIES = 9          # honest trial count — see backtest._N_LIBRARY_STRATEGIES
 
+# ── Deploy bar & risk appetite ────────────────────────────────────────────────
+# DSR_DEPLOY_BAR is the deflated-Sharpe confidence threshold (Bailey & López de
+# Prado): below it a strategy cannot be distinguished from the best-of-9 luck
+# benchmark. It is the DEFAULT (Defensive) bar and the labelled reference — it
+# is never silently lowered. A user-set risk appetite may lower the EFFECTIVE
+# bar toward DEPLOY_BAR_FLOOR, deploying the strongest relative ideas below the
+# confidence bar. That is an explicit, disclosed choice (see the desk-call
+# disclosure), not a presentation tweak.
+DSR_DEPLOY_BAR = 0.50       # Defensive / reference (deflated-Sharpe threshold)
+DEPLOY_BAR_FLOOR = 0.05     # most-aggressive effective bar; below this = no edge
+
+# Named appetite stops → risk appetite fraction in [0, 1].
+APPETITE_STOPS: dict[str, float] = {
+    "Defensive":    0.0,
+    "Cautious":     0.25,
+    "Balanced":     0.50,
+    "Constructive": 0.75,
+    "Aggressive":   1.0,
+}
+
+
+def effective_deploy_bar(appetite: float) -> float:
+    """Map risk appetite [0,1] to the effective DSR deploy bar. Appetite 0
+    keeps the strict deflated-Sharpe bar (Defensive); appetite 1 lowers it to
+    DEPLOY_BAR_FLOOR (best-available). The ramp is concave (sqrt) so the upper
+    half of the slider deploys progressively — a linear ramp would leave every
+    mid-setting stranded above a weak-edge book's DSR mass and only the extreme
+    would ever leave cash."""
+    a = float(np.clip(appetite, 0.0, 1.0))
+    return DSR_DEPLOY_BAR - (DSR_DEPLOY_BAR - DEPLOY_BAR_FLOOR) * (a ** 0.5)
+
 # ── Stated liquidity tiers (calibration, not measurement) ────────────────────
 LIQUIDITY_TIERS: dict[str, float] = {
     # deepest futures / index complexes
@@ -92,15 +123,22 @@ def build_allocation_inputs(
     regimes: pd.Series,
     thesis_results: dict[str, dict],
     n_strategies: int = _N_STRATEGIES,
+    deploy_bar: float = DSR_DEPLOY_BAR,
 ) -> dict[str, dict]:
     """
     Assemble the four sizing factors per ELIGIBLE trade using the existing
     backtest machinery. Ineligible trades are skipped — they can never carry
     weight, so computing metrics for them would only invite misuse.
 
+    deploy_bar is the EFFECTIVE DSR threshold sizing scales from (Defensive =
+    DSR_DEPLOY_BAR = 0.50; a higher risk appetite lowers it toward
+    DEPLOY_BAR_FLOOR). The raw `dsr` is stored unchanged so ranking stays
+    evidence-based — only `dsr_factor` (and thus weight) responds to appetite.
+
     Returns {trade_name: {conviction, dsr, dsr_factor, vol, liquidity,
-                          sharpe_raw, n_trades}}.
+                          sharpe_raw, n_trades, deploy_bar}}.
     """
+    bar = float(np.clip(deploy_bar, 0.0, 0.99))
     from src.analysis.backtest import (
         vectorized_backtest, deflated_sharpe_probability, _parse_holding_days,
     )
@@ -141,11 +179,14 @@ def build_allocation_inputs(
         metrics[name] = {
             "conviction": conviction,
             "dsr": float(dsr),
-            "dsr_factor": float(np.clip((dsr - 0.5) / 0.5, 0.0, 1.0)),
+            # sizing ramp above the EFFECTIVE bar (appetite-adjusted); raw dsr
+            # above is untouched so ranking stays evidence-based
+            "dsr_factor": float(np.clip((dsr - bar) / (1.0 - bar), 0.0, 1.0)),
             "vol": vol,
             "liquidity": _liquidity(t),
             "sharpe_raw": sharpe_raw,      # reported for transparency, never sized on
             "n_trades": n_tr,
+            "deploy_bar": bar,
         }
     return metrics
 
@@ -438,12 +479,6 @@ def rank_trades(
     return ranked
 
 
-# Deploy bar of Step 2's dsr_factor = clip((DSR − 0.50)/0.50) above: a trade
-# sizes above zero only past this DSR. Display-side code imports this name —
-# it is NOT a second tunable.
-DSR_DEPLOY_BAR = 0.50
-
-
 def desk_report_feed(ranked: list[dict]) -> list[dict]:
     """
     Adapt the ranked book to the EXISTING generate_report() trade-card schema
@@ -463,22 +498,27 @@ def desk_report_feed(ranked: list[dict]) -> list[dict]:
     if cash_book:
         best_dsr = max(float((t.get("alloc_detail") or {}).get("dsr", 0.0))
                        for t in ranked)
+        # effective bar in force (appetite-adjusted); falls back to the strict
+        # reference bar if unstamped
+        bar = min((float((t.get("alloc_detail") or {}).get("deploy_bar",
+                          DSR_DEPLOY_BAR)) for t in ranked),
+                  default=DSR_DEPLOY_BAR)
+        _appetite_note = ("" if bar >= DSR_DEPLOY_BAR - 1e-9 else
+                          f" even at your lowered {bar:.2f} risk bar")
         feed.append({
             "name": "DESK CALL — 0% DEPLOYED · 100% CASH",
             "category": "Desk Call",
             "trigger": "CASH IS THE POSITION — HELD, NOT DEFAULTED",
             "rationale": (
-                f"All {len(ranked)} eligible theses sit below the DSR "
-                f"{DSR_DEPLOY_BAR:.2f} deploy threshold (best {best_dsr:.2f}) "
-                "— no confirmed edge clears the deflated-Sharpe luck "
-                "benchmark, so nothing earns weight. The ranked ideas that "
-                "follow are a watchlist, not an allocation."
+                f"All {len(ranked)} eligible theses sit below the "
+                f"{bar:.2f} deploy bar{_appetite_note} (best {best_dsr:.2f}) "
+                "— no thesis clears it, so nothing earns weight. The ranked "
+                "ideas that follow are a watchlist, not an allocation."
             ),
             "regime": [], "assets": [], "direction": [],
             "entry": "—", "exit": "—",
-            "risk": (f"INVALIDATED IF: any eligible thesis clears the DSR "
-                     f"{DSR_DEPLOY_BAR:.2f} deploy bar — the book redeploys "
-                     "on the next reload"),
+            "risk": (f"INVALIDATED IF: any eligible thesis clears the "
+                     f"{bar:.2f} deploy bar — the book redeploys on reload"),
         })
 
     for t in ranked:

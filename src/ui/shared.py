@@ -776,18 +776,84 @@ def _no_api_key_banner(context: str = "AI analysis features") -> None:
     pass
 
 
+def _header_status_html() -> str:
+    """Live status cluster shown on the right of every page header, mirroring
+    the command center: date/time · N conflicts active · scenario · CIS ·
+    situation. Built from cached conflict scores; returns "" on any failure so
+    the header still renders."""
+    try:
+        from src.utils.timeutil import now_ct, CT_LABEL
+        from src.analysis.conflict_model import (
+            score_all_conflicts, aggregate_portfolio_scores)
+        _M = "font-family:'JetBrains Mono',monospace;"
+        now = now_ct()
+        cr  = score_all_conflicts()
+        # Prime live market-freshness ONCE per session so the header's CIS and
+        # every page's own CIS use the same freshness-adjusted scores, instead
+        # of diverging based on which page happened to load first.
+        if "_mf_signals" not in st.session_state:
+            try:
+                from src.data.loader import load_returns
+                from src.analysis.conflict_model import build_market_signals
+                _, _cmd = load_returns()
+                st.session_state["_mf_signals"] = build_market_signals(_cmd)
+            except Exception:
+                pass
+        agg = aggregate_portfolio_scores(cr)
+        cis = float(agg.get("portfolio_cis", agg.get("cis", 50.0)))
+        n_act = sum(1 for v in cr.values() if v.get("state") == "active")
+        if cis >= 70:   sc, sl = "#c0392b", "CRITICAL"
+        elif cis >= 50: sc, sl = "#e67e22", "ELEVATED"
+        else:           sc, sl = "#27ae60", "MODERATE"
+        rgb = {"#c0392b": "192,57,43", "#e67e22": "230,126,34",
+               "#27ae60": "39,174,96"}[sc]
+        try:
+            from src.analysis.scenario_state import get_scenario, get_scenario_id
+            scen, sid = get_scenario(), get_scenario_id()
+            sc_note = (f'SCENARIO: <b style="color:{scen["color"]}">'
+                       f'{scen["label"].upper()}</b>' if sid != "base"
+                       else 'SCENARIO: <span style="color:#e8e9ed">BASE</span>')
+        except Exception:
+            sc_note = 'SCENARIO: <span style="color:#e8e9ed">BASE</span>'
+        return (
+            f'<div style="display:flex;align-items:center;justify-content:flex-end;'
+            f'gap:7px 11px;flex-wrap:wrap;max-width:540px;margin-left:auto">'
+            f'<span style="{_M}font-size:0.6rem;color:#e8e9ed;white-space:nowrap">'
+            f'{now.strftime("%a %d %b %Y")}&nbsp;<span style="color:#3a3f4a">│</span>'
+            f'&nbsp;{now.strftime("%H:%M")} {CT_LABEL}</span>'
+            f'<span style="background:rgba({rgb},0.15);color:{sc};'
+            f'border:1px solid rgba({rgb},0.35);{_M}font-size:0.54rem;font-weight:700;'
+            f'padding:2px 8px;letter-spacing:.12em;white-space:nowrap">'
+            f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE</span>'
+            f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
+            f'{sc_note}</span>'
+            f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
+            f'CIS&nbsp;<b style="color:{sc}">{cis:.0f}</b></span>'
+            f'<span style="background:{sc};color:#000;{_M}font-size:0.56rem;'
+            f'font-weight:700;padding:3px 11px;letter-spacing:.16em;'
+            f'white-space:nowrap">{sl}</span>'
+            f'</div>'
+        )
+    except Exception:
+        return ""
+
+
 def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
     """
     Branded page header used on every page.
-    Gold left-border structural anchor · logo mark eyebrow · clean h1 title.
+    Gold left-border structural anchor · logo mark eyebrow · clean h1 title,
+    with the live status cluster (date · conflicts · scenario · CIS) on the right.
     """
     import streamlit.components.v1 as _cmp
     _cmp.html('<script>window.parent.scrollTo({top:0,behavior:"instant"});</script>', height=0)
-    # Global pitch-black background — injected once per page via the header
+    # Global pitch-black background — injected once per page via the header.
+    # block-container padding-top matches the command center (home.py) so the
+    # gap between the top nav bar and the header is identical on every page.
     st.markdown("""<style>
 [data-testid="stAppViewContainer"],[data-testid="stMain"],.main,
 [data-testid="stSidebar"],.stApp,body{background:#000!important}
 [data-testid="stHeader"]{background:#000!important;border-bottom:1px solid #1a1a1a!important}
+.block-container{padding-top:.6rem!important}
 </style>""", unsafe_allow_html=True)
     _Fh = "font-family:'DM Sans',sans-serif;"
     _Mh = "font-family:'JetBrains Mono',monospace;"
@@ -802,10 +868,17 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         f'<p style="{_Fh}font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem 0">{subtitle}</p>'
         if subtitle else '<div style="margin-bottom:0.5rem"></div>'
     )
+    _status = _header_status_html()
     st.markdown(
         f'<div style="border-left:2px solid #CFB991;'
         f'box-shadow:-1px 0 12px rgba(207,185,145,0.10);'
-        f'padding-left:12px;margin-bottom:0.75rem">'
+        # negative top margin collapses Streamlit's default element gaps above
+        # the header so the eyebrow tucks under the nav at the same distance as
+        # the command center (home.py, which uses a tighter global gap instead)
+        f'padding-left:12px;margin-top:-2.25rem;margin-bottom:0.75rem;display:flex;'
+        f'align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">'
+        # left: eyebrow · title · subtitle
+        f'<div style="min-width:0">'
         f'<div style="display:flex;align-items:center;margin-bottom:4px">'
         f'{_logo_img}'
         f'<span style="{_Mh}font-size:0.56rem;font-weight:700;letter-spacing:.20em;'
@@ -814,6 +887,9 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         f'<h1 style="{_Fh}font-size:1.22rem;font-weight:700;'
         f'color:#e8e8e8;margin:0 0 2px;letter-spacing:-0.01em;line-height:1.2">{title}</h1>'
         f'{_sub_html}'
+        f'</div>'
+        # right: live status cluster (mirrors the command center)
+        f'{_status}'
         f'</div>',
         unsafe_allow_html=True,
     )

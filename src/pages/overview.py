@@ -182,7 +182,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
 
     _hdr_col, _btn_col = st.columns([5, 1])
     with _hdr_col:
-        _page_header("Market Spillover Command Center",
+        _page_header("Market Overview",
                      "Step 5 of 7 · Regime Classification · 15 equity indices · 17 commodity futures · Correlation regimes · AI briefing")
     with _btn_col:
         _stale_color = "#c0392b" if _stale else "#27ae60"

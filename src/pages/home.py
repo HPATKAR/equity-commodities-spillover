@@ -415,7 +415,8 @@ def _err_slot(label: str) -> None:
 
 
 def _render_masthead(conflict_agg: dict) -> None:
-    now      = datetime.datetime.now()
+    from src.utils.timeutil import now_ct
+    now      = now_ct()   # America/Chicago — correct once deployed off a CT box
     cis      = conflict_agg.get("portfolio_cis", conflict_agg.get("cis",  50.0))
     n_act    = conflict_agg.get("n_active", sum(
         1 for v in st.session_state.get("_conflict_results_cache", {}).values()
@@ -478,7 +479,7 @@ def _render_masthead(conflict_agg: dict) -> None:
         f'<span style="{_M}font-size:0.62rem;color:{_C["text"]};white-space:nowrap">'
         f'{now.strftime("%a %d %b %Y")}&nbsp;'
         f'<span style="color:{_C["border2"]}">│</span>&nbsp;'
-        f'{now.strftime("%H:%M")} LOCAL</span>'
+        f'{now.strftime("%H:%M")} CT</span>'
         f'<span style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
         f'border:1px solid rgba({_sit_rgb},0.35);{_M}font-size:0.54rem;font-weight:700;'
         f'padding:2px 8px;letter-spacing:.12em;white-space:nowrap">■ {n_act} CONFLICT'
@@ -5776,7 +5777,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _yday_deltas = compute_deltas(_snap_yday, _snap_today)
             # Label by baseline type: same-day baseline is an intraday anchor
             # ("since first capture today"); an earlier date is day-over-day.
-            if _snap_yday.get("date") == datetime.date.today().isoformat():
+            from src.utils.timeutil import today_ct as _today_ct
+            if _snap_yday.get("date") == _today_ct().isoformat():
                 _yday_date = f"{_snap_yday.get('captured_at', '')} today".strip()
             else:
                 _yday_date = _snap_yday.get("date")

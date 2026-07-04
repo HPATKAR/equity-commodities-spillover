@@ -135,6 +135,271 @@ _HOMETURF_WARS: list[dict] = [
 ]
 
 
+# ── Transmission map: conflict source epicenters + market-hub targets ─────────
+# The upgrade from a static exposure choropleth to a live TRANSMISSION map. Each
+# active conflict is a SOURCE node at its epicenter; flows run along its dominant
+# TPS channels to fixed global MARKET HUBS. Nothing here invents transmission
+# math — thickness/speed/glow are read straight off CIS, TPS channel weights, and
+# the live intensity multipliers already computed on this page.
+
+_CONFLICT_EPICENTER: dict[str, tuple[float, float]] = {
+    "ukraine_russia": (49.0, 32.0),    # central Ukraine front
+    "red_sea_houthi": (13.5, 43.0),    # Bab-el-Mandeb
+    "israel_gaza":    (31.5, 34.6),    # Israel / Gaza
+    "iran_conflict":  (26.6, 56.3),    # Strait of Hormuz
+    "india_pakistan": (33.7, 74.9),    # Kashmir / Line of Control
+    "taiwan_strait":  (24.4, 119.5),   # Taiwan Strait
+}
+
+# Each hub is where a set of TPS channels lands. Together the eight cover all
+# twelve channels. Coordinates are the real market/production hub for that flow.
+_MARKET_HUBS: list[dict] = [
+    {"id": "oil",    "name": "Oil & Gas",             "lat": 29.8, "lon": -95.4,
+     "channels": ["oil_gas", "energy_infra"]},          # Houston / NYMEX
+    {"id": "ship",   "name": "Shipping & Chokepoints", "lat": 1.3,  "lon": 103.8,
+     "channels": ["shipping", "chokepoint"]},           # Singapore
+    {"id": "grain",  "name": "Grains",                 "lat": 41.8, "lon": -87.6,
+     "channels": ["agriculture"]},                      # Chicago / CME
+    {"id": "metal",  "name": "Base Metals",            "lat": 51.5, "lon": -0.1,
+     "channels": ["metals"]},                           # London / LME
+    {"id": "equity", "name": "Equity Vol",             "lat": 40.7, "lon": -74.0,
+     "channels": ["equity_sector"]},                    # New York
+    {"id": "supply", "name": "Supply Chain / Tech",    "lat": 31.2, "lon": 121.5,
+     "channels": ["supply_chain"]},                     # Shanghai
+    {"id": "credit", "name": "Sanctions & Credit",     "lat": 50.1, "lon": 8.7,
+     "channels": ["sanctions", "credit", "inflation"]}, # Frankfurt
+    {"id": "emfx",   "name": "EM FX & India",          "lat": 19.1, "lon": 72.9,
+     "channels": ["fx"]},                               # Mumbai
+]
+
+# How many strongest flows show by default (filtered, not a spiderweb).
+_FLOW_TOP_N = 9
+
+
+def _transmission_flows(
+    conflict_results: dict,
+    multipliers: dict | None = None,
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """
+    Build (sources, hubs, flows) for the transmission overlay from EXISTING
+    scores — no new transmission math.
+
+      source glow  = CIS               (per conflict)
+      flow width   = Σ transmission[ch]·TPS_weight over the hub's channels
+                     (that hub's slice of the conflict's TPS), normalised 0–1
+      flow speed   = conflict TPS scaled by its live intensity multiplier where
+                     one exists (Ukraine/Hamas/Iran), normalised 0–1
+
+    Only the top-N flows are flagged ``top`` (default-visible); every flow is
+    still emitted so a click on a source can reveal that conflict's full set.
+    """
+    from src.analysis.conflict_model import _TPS_WEIGHTS
+
+    mult = multipliers or {}
+    live_mult = {                      # map the 3 live multipliers to conflict ids
+        "ukraine_russia": float(mult.get("ukraine", 1.0)),
+        "israel_gaza":    float(mult.get("hamas",   1.0)),
+        "iran_conflict":  float(mult.get("iran",    1.0)),
+    }
+
+    sources: list[dict] = []
+    raw_flows: list[dict] = []
+    for cid, r in conflict_results.items():
+        epi = _CONFLICT_EPICENTER.get(cid)
+        if epi is None or float(r.get("cis", 0)) <= 0:
+            continue
+        lat, lon = epi
+        tx = r.get("transmission", {}) or {}
+        tps = float(r.get("tps", 50.0))
+        sources.append({
+            "id":    cid,
+            "name":  r.get("label", cid),
+            "lat":   lat, "lng": lon,
+            "cis":   round(float(r.get("cis", 0)), 1),
+            "tps":   round(tps, 1),
+            "color": r.get("color", "#CFB991"),
+        })
+        for hub in _MARKET_HUBS:
+            pressure = sum(float(tx.get(ch, 0.0)) * _TPS_WEIGHTS.get(ch, 0.0)
+                           for ch in hub["channels"])
+            if pressure <= 1e-4:
+                continue
+            speed = (tps / 100.0) * live_mult.get(cid, 1.0)
+            raw_flows.append({
+                "src": cid, "hub": hub["id"],
+                "pressure": pressure, "speed": speed,
+            })
+
+    # Normalise width + speed to 0–1 so the strongest flow reads as the thickest
+    # / fastest regardless of absolute channel scale.
+    max_p = max((f["pressure"] for f in raw_flows), default=1.0) or 1.0
+    max_s = max((f["speed"] for f in raw_flows), default=1.0) or 1.0
+    for f in raw_flows:
+        f["pressure"] = round(f["pressure"] / max_p, 4)
+        f["speed"] = round(f["speed"] / max_s, 4)
+
+    top_ids = {(f["src"], f["hub"]) for f in
+               sorted(raw_flows, key=lambda x: -x["pressure"])[:_FLOW_TOP_N]}
+    for f in raw_flows:
+        f["top"] = (f["src"], f["hub"]) in top_ids
+
+    return sources, _MARKET_HUBS, raw_flows
+
+
+# ── Transmission pressure matrix (fills the space under the globe) ────────────
+# The globe shows only the strongest flows; this heatmap shows the FULL
+# conflict × market matrix at a glance — same pressure numbers, nothing new.
+
+_HUB_SHORT = {"oil": "OIL / GAS", "ship": "SHIPPING", "grain": "GRAINS",
+              "metal": "METALS", "equity": "EQ VOL", "supply": "SUPPLY CH",
+              "credit": "SANCT / CR", "emfx": "EM FX"}
+
+
+def _heat_rgba(p: float, alpha: float = 1.0) -> str:
+    """Sequential single-hue heat ramp (dim → bright) for pressure 0–1."""
+    stops = [(0.0, (26, 25, 22)), (0.30, (86, 52, 20)), (0.55, (170, 92, 28)),
+             (0.78, (224, 110, 40)), (1.0, (201, 58, 44))]
+    p = max(0.0, min(1.0, p))
+    for a, b in zip(stops, stops[1:]):
+        if a[0] <= p <= b[0]:
+            t = 0 if b[0] == a[0] else (p - a[0]) / (b[0] - a[0])
+            r, g, bl = (round(a[1][j] + t * (b[1][j] - a[1][j])) for j in range(3))
+            return f"rgba({r},{g},{bl},{alpha})"
+    return f"rgba(26,25,22,{alpha})"
+
+
+def _render_transmission_matrix(sources: list[dict], hubs: list[dict],
+                                flows: list[dict]) -> None:
+    """Render the conflict × market pressure heatmap below the globe."""
+    if not sources or not flows:
+        return
+    pmap = {(f["src"], f["hub"]): f["pressure"] for f in flows}
+    rows_src = sorted(sources, key=lambda s: -s["cis"])
+    row_max = {s["id"]: max((pmap.get((s["id"], h["id"]), 0.0) for h in hubs),
+                            default=0.0) for s in sources}
+
+    M = "font-family:'JetBrains Mono',monospace;"
+    head = (f'<th style="{M}font-size:.5rem;color:#8E9AAA;text-align:left;'
+            f'padding:4px 8px;letter-spacing:.08em">CONFLICT</th>'
+            f'<th style="{M}font-size:.5rem;color:#8E9AAA;text-align:right;'
+            f'padding:4px 6px">CIS</th>')
+    for h in hubs:
+        head += (f'<th style="{M}font-size:.48rem;color:#8E9AAA;text-align:center;'
+                 f'padding:4px 3px;letter-spacing:.04em">{_HUB_SHORT.get(h["id"], h["id"])}</th>')
+
+    body = ""
+    for s in rows_src:
+        cells = (
+            f'<td style="{M}font-size:.62rem;font-weight:700;color:#e8e9ed;'
+            f'padding:5px 8px;white-space:nowrap;border-left:2px solid {s["color"]}">'
+            f'{s["name"]}</td>'
+            f'<td style="{M}font-size:.6rem;font-weight:700;text-align:right;'
+            f'padding:5px 6px;color:{s["color"]}">{s["cis"]:.0f}</td>'
+        )
+        for h in hubs:
+            p = pmap.get((s["id"], h["id"]), 0.0)
+            is_max = p > 0 and abs(p - row_max[s["id"]]) < 1e-9
+            txt = f'{p*100:.0f}' if p >= 0.02 else '·'
+            tcol = "#12100c" if p >= 0.55 else ("#e8e9ed" if p >= 0.02 else "#3a3a3a")
+            ring = "box-shadow:inset 0 0 0 1.5px #fff;" if is_max else ""
+            cells += (
+                f'<td style="{M}font-size:.6rem;font-weight:700;text-align:center;'
+                f'padding:5px 3px;background:{_heat_rgba(p)};color:{tcol};{ring}'
+                f'border:1px solid #060606">{txt}</td>'
+            )
+        body += f'<tr>{cells}</tr>'
+
+    # heat legend gradient
+    grad = ",".join(_heat_rgba(i / 8) for i in range(9))
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;background:#070707;padding:.6rem .8rem;'
+        f'margin-top:.5rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+        f'margin-bottom:6px">'
+        f'<span style="{M}font-size:.56rem;font-weight:700;letter-spacing:.14em;'
+        f'color:#CFB991">TRANSMISSION PRESSURE MATRIX — CONFLICT → MARKET</span>'
+        f'<span style="{M}font-size:.5rem;color:#8E9AAA">every flow · pressure 0–100 · '
+        f'white ring = each conflict\'s hardest-hit market</span></div>'
+        f'<table style="width:100%;border-collapse:collapse">'
+        f'<thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-top:8px">'
+        f'<span style="{M}font-size:.5rem;color:#8E9AAA">LOW</span>'
+        f'<div style="flex:1;height:7px;background:linear-gradient(90deg,{grad})"></div>'
+        f'<span style="{M}font-size:.5rem;color:#8E9AAA">HIGH PRESSURE</span></div>'
+        f'<div style="{M}font-size:.5rem;color:#555960;margin-top:5px">'
+        f'Pressure = Σ transmission-channel weight × TPS contribution into that market. '
+        f'Same numbers the globe animates — here as the full matrix the globe filters.</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_transmission_bars(sources: list[dict], hubs: list[dict],
+                              flows: list[dict]) -> None:
+    """Two-panel readout below the matrix: which markets absorb the most
+    transmission (column aggregate) and the single strongest flows (leaderboard)."""
+    if not sources or not flows:
+        return
+    M = "font-family:'JetBrains Mono',monospace;"
+    src_by = {s["id"]: s for s in sources}
+    hub_by = {h["id"]: h for h in hubs}
+
+    # Panel A — incoming pressure per market (column sums), sorted desc
+    incoming = {h["id"]: 0.0 for h in hubs}
+    for f in flows:
+        incoming[f["hub"]] = incoming.get(f["hub"], 0.0) + f["pressure"]
+    rank_hubs = sorted(hubs, key=lambda h: -incoming[h["id"]])
+    max_in = max(incoming.values()) or 1.0
+    rows_a = ""
+    for h in rank_hubs:
+        v = incoming[h["id"]]
+        w = max(3, round(v / max_in * 100))
+        rows_a += (
+            f'<div style="margin:4px 0">'
+            f'<div style="display:flex;justify-content:space-between;{M}font-size:.56rem">'
+            f'<span style="color:#d8d8d8">{h["name"]}</span>'
+            f'<span style="color:#CFB991;font-weight:700">{v:.2f}</span></div>'
+            f'<div style="height:6px;background:#141414;margin-top:2px">'
+            f'<div style="width:{w}%;height:6px;background:{_heat_rgba(v / max_in)}"></div>'
+            f'</div></div>'
+        )
+
+    # Panel B — strongest individual flows (leaderboard)
+    top = sorted(flows, key=lambda f: -f["pressure"])[:8]
+    max_p = top[0]["pressure"] if top else 1.0
+    rows_b = ""
+    for i, f in enumerate(top, 1):
+        s, h = src_by.get(f["src"]), hub_by.get(f["hub"])
+        if not s or not h:
+            continue
+        w = max(3, round(f["pressure"] / max_p * 100))
+        rows_b += (
+            f'<div style="margin:4px 0">'
+            f'<div style="display:flex;justify-content:space-between;{M}font-size:.56rem">'
+            f'<span style="color:#d8d8d8"><span style="color:#555960">{i:02d}</span>&nbsp; '
+            f'<b style="color:{s["color"]}">{s["name"]}</b>'
+            f'<span style="color:#555960"> → </span>{h["name"]}</span>'
+            f'<span style="color:#fff;font-weight:700">{f["pressure"]*100:.0f}</span></div>'
+            f'<div style="height:6px;background:#141414;margin-top:2px">'
+            f'<div style="width:{w}%;height:6px;background:{s["color"]}"></div>'
+            f'</div></div>'
+        )
+
+    def _hdr(t):
+        return (f'<div style="{M}font-size:.54rem;font-weight:700;letter-spacing:.13em;'
+                f'color:#CFB991;margin-bottom:7px">{t}</div>')
+
+    st.markdown(
+        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:.5rem">'
+        f'<div style="border:1px solid #1e1e1e;background:#070707;padding:.6rem .8rem">'
+        f'{_hdr("MARKETS UNDER PRESSURE — total incoming, all conflicts")}{rows_a}</div>'
+        f'<div style="border:1px solid #1e1e1e;background:#070707;padding:.6rem .8rem">'
+        f'{_hdr("STRONGEST PROPAGATIONS — conflict → market")}{rows_b}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
 # ── Colorscale (cream → deep-crimson) ────────────────────────────────────────
 
 _COLORSCALE = [
@@ -282,6 +547,7 @@ _GLOBE_HTML = r"""<!DOCTYPE html>
 body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:none}
 #wrap{position:relative;width:100%;height:580px}
 #gc{display:block;touch-action:none}
+#fx{position:absolute;top:0;left:0;pointer-events:none}
 #panel{
   position:absolute;bottom:14px;left:14px;width:222px;
   background:rgba(5,11,26,0.95);
@@ -310,9 +576,10 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
 </style></head><body>
 <div id="wrap">
   <canvas id="gc"></canvas>
+  <canvas id="fx"></canvas>
   <div id="panel">
-    <div class="plbl">Country Analysis</div>
-    <p class="ph">Drag to rotate &middot; Scroll to zoom<br>Hover any country for war-impact data</p>
+    <div class="plbl">Transmission Desk</div>
+    <p class="ph">Drag to rotate &middot; Scroll to zoom<br>Click a conflict node to isolate its propagation</p>
   </div>
   <div id="legend">
     <div class="lt">Impact Scale</div>
@@ -323,7 +590,11 @@ body{background:#050d1a;overflow:hidden;user-select:none;-webkit-user-select:non
     <div class="lr"><div class="lc" style="background:#b82020"></div>High (75&ndash;90)</div>
     <div class="lr"><div class="lc" style="background:#7a0e0e"></div>Crisis (90&ndash;100)</div>
     <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:5px 0">
-    <div class="lr"><div style="width:9px;height:9px;border-radius:50%;background:#ff3333;flex-shrink:0"></div>Active War Zone</div>
+    <div class="lt">Transmission</div>
+    <div class="lr"><div style="width:11px;height:11px;border-radius:50%;background:radial-gradient(circle,#ff6b4a,rgba(255,107,74,0));flex-shrink:0"></div>Conflict source &middot; glow = CIS</div>
+    <div class="lr"><div style="width:11px;height:11px;background:#CFB991;flex-shrink:0"></div>Market hub</div>
+    <div class="lr"><svg width="26" height="8" style="flex-shrink:0"><line x1="1" y1="4" x2="25" y2="4" stroke="#ffb37a" stroke-width="3"/></svg>Flow &middot; width = pressure</div>
+    <div class="lr" style="color:#7f8aa0;font-size:0.52rem">Dash speed = live firing &middot; top __TOPN__ shown</div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -333,6 +604,9 @@ const CDATA    = __COUNTRY_DATA__;     // {ISO3:{score}}
 const HOVER    = __HOVER_DATA__;       // {ISO3:html}
 const HT       = __HOMETURF__;         // [{lat,lng,name,war,note}]
 const GEO_RAW  = __GEO_FEATURES__;     // [{iso,name,g:{type,coordinates}}]
+const SOURCES  = __SOURCES__;          // [{id,name,lat,lng,cis,tps,color}]
+const HUBS     = __HUBS__;             // [{id,name,lat,lon,channels}]
+const FLOWS    = __FLOWS__;            // [{src,hub,pressure,speed,top}]
 
 /* ── canvas setup - size after layout ── */
 const wrap   = document.getElementById('wrap');
@@ -346,6 +620,15 @@ canvas.height = H;
 const ctx = canvas.getContext('2d');
 const cx = W / 2, cy = H / 2;
 const R0 = Math.min(W, H * 0.88) * 0.44;
+
+/* ── transmission overlay canvas (flows animate here; base globe stays cheap) ── */
+const fxCanvas = document.getElementById('fx');
+fxCanvas.width = W; fxCanvas.height = H;
+const fxc = fxCanvas.getContext('2d');
+const SRC_BY_ID = Object.fromEntries(SOURCES.map(s => [s.id, s]));
+const HUB_BY_ID = Object.fromEntries(HUBS.map(h => [h.id, h]));
+let selectedSrc = null;          // clicked conflict → isolate its flows; null → top-N
+let flowPhase = 0;               // animation clock (advances every frame)
 
 /* ── D3 orthographic projection ── */
 const proj = d3.geoOrthographic()
@@ -431,6 +714,8 @@ function setHover(iso, name) {
   hoverIso = iso; draw();
   const lbl = '<div class="plbl">Country Analysis</div>';
   if (!iso) {
+    /* fall back to the isolated-conflict panel if one is selected, else the hint */
+    if (selectedSrc) { showSourcePanel(SRC_BY_ID[selectedSrc]); return; }
     panel.classList.remove('lit');
     panel.innerHTML = lbl+'<p class="ph">Drag to rotate &middot; Scroll to zoom<br>Hover any country for war-impact data</p>';
     return;
@@ -471,9 +756,11 @@ function startInertia() {
   inertiaId = requestAnimationFrame(tick);
 }
 
+let downX=0, downY=0, moved=0;
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);   /* ← keeps events flowing even outside iframe */
   dragging=true; lastX=e.clientX; lastY=e.clientY; lastT=e.timeStamp;
+  downX=e.clientX; downY=e.clientY; moved=0;
   velX=velY=0;
   if (inertiaId) { cancelAnimationFrame(inertiaId); inertiaId=null; }
   canvas.style.cursor='grabbing';
@@ -486,6 +773,7 @@ canvas.addEventListener('pointermove', e => {
   if (dragging) {
     const dx=e.clientX-lastX, dy=e.clientY-lastY;
     const dt=Math.max(1, e.timeStamp-lastT);
+    moved += Math.hypot(dx, dy);
     velX=dx/dt*16; velY=dy/dt*16;
     rot[0]+=dx*0.28; rot[1]-=dy*0.28; clampPhi();
     lastX=e.clientX; lastY=e.clientY; lastT=e.timeStamp;
@@ -497,7 +785,15 @@ canvas.addEventListener('pointermove', e => {
 
 canvas.addEventListener('pointerup', e => {
   canvas.releasePointerCapture(e.pointerId);
-  dragging=false; canvas.style.cursor='grab'; startInertia();
+  dragging=false; canvas.style.cursor='grab';
+  /* click (not a drag) → isolate the clicked conflict's propagation, or reset */
+  if (moved < 5) {
+    const r = canvas.getBoundingClientRect();
+    const hit = hitSource(e.clientX - r.left, e.clientY - r.top);
+    selectSource(hit ? hit.id : null);
+    return;                       /* a tap should not fling the globe */
+  }
+  startInertia();
 });
 
 canvas.addEventListener('pointerleave', e => {
@@ -511,6 +807,149 @@ canvas.addEventListener('wheel', e => {
   draw();
 }, {passive:false});
 
+/* ── transmission overlay: animated conflict → channel → market flows ── */
+function hexA(hex, a) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return 'rgba(255,107,74,' + a + ')';
+  const n = parseInt(m[1], 16);
+  return 'rgba(' + [(n>>16)&255, (n>>8)&255, n&255].join(',') + ',' + a + ')';
+}
+function isFront(lonlat, front) { return d3.geoDistance(lonlat, front) < Math.PI/2 - 0.02; }
+
+function visibleFlows() {
+  if (selectedSrc) return FLOWS.filter(f => f.src === selectedSrc);
+  return FLOWS.filter(f => f.top);
+}
+
+function drawFlows() {
+  proj.rotate(rot);
+  fxc.clearRect(0, 0, W, H);
+  const front = [-rot[0], -rot[1]];
+  const fl = visibleFlows();
+
+  /* flow arcs (great-circle, animated dash = firing speed, width = pressure) */
+  for (const f of fl) {
+    const s = SRC_BY_ID[f.src], h = HUB_BY_ID[f.hub];
+    if (!s || !h) continue;
+    const a = [s.lng, s.lat], b = [h.lon, h.lat];
+    const interp = d3.geoInterpolate(a, b);
+    const w = 1.2 + f.pressure * 6.5;
+    const col = s.color || '#ffb37a';
+    fxc.save();
+    fxc.strokeStyle = col;
+    fxc.globalAlpha = selectedSrc ? 0.95 : 0.78;
+    fxc.lineWidth = w; fxc.lineCap = 'round';
+    const dash = 9 + f.pressure * 9;
+    fxc.setLineDash([dash, dash * 1.15]);
+    fxc.lineDashOffset = -flowPhase * (0.7 + f.speed * 3.4);   /* faster = firing harder */
+    fxc.beginPath();
+    let pen = false;
+    for (let i = 0; i <= 48; i++) {
+      const p = interp(i / 48);
+      if (!isFront(p, front)) { pen = false; continue; }
+      const xy = proj(p); if (!xy) { pen = false; continue; }
+      if (!pen) { fxc.moveTo(xy[0], xy[1]); pen = true; } else fxc.lineTo(xy[0], xy[1]);
+    }
+    fxc.stroke();
+    fxc.restore();
+
+    /* traveling pulse head on the strongest / isolated flows */
+    if (f.pressure > 0.45 || selectedSrc) {
+      const tt = ((flowPhase * (0.003 + f.speed * 0.012)) % 1 + 1) % 1;
+      const pp = interp(tt);
+      if (isFront(pp, front)) {
+        const xy = proj(pp);
+        if (xy) {
+          fxc.globalAlpha = 0.95;
+          fxc.beginPath(); fxc.arc(xy[0], xy[1], Math.max(2, w * 0.7), 0, Math.PI*2);
+          fxc.fillStyle = col; fxc.fill();
+        }
+      }
+    }
+  }
+
+  /* market hubs */
+  fxc.globalAlpha = 1;
+  for (const h of HUBS) {
+    const ll = [h.lon, h.lat];
+    if (!isFront(ll, front)) continue;
+    const xy = proj(ll); if (!xy) continue;
+    fxc.fillStyle = '#CFB991'; fxc.strokeStyle = '#12100c'; fxc.lineWidth = 1;
+    fxc.beginPath(); fxc.rect(xy[0]-3.5, xy[1]-3.5, 7, 7); fxc.fill(); fxc.stroke();
+    fxc.font = '600 9px "DM Sans",sans-serif';
+    fxc.fillStyle = 'rgba(235,226,206,0.92)'; fxc.textAlign = 'left';
+    fxc.fillText(h.name, xy[0] + 6, xy[1] + 3.2);
+  }
+
+  /* conflict sources — radial glow sized by CIS */
+  for (const s of SOURCES) {
+    const ll = [s.lng, s.lat];
+    if (!isFront(ll, front)) continue;
+    const xy = proj(ll); if (!xy) continue;
+    const [px, py] = xy;
+    const sel = selectedSrc === s.id;
+    const dim = selectedSrc && !sel;
+    const glowR = 9 + (s.cis / 100) * 21;
+    const cc = s.color || '#ff6b4a';
+    const rg = fxc.createRadialGradient(px, py, 0, px, py, glowR);
+    rg.addColorStop(0, hexA(cc, dim ? 0.22 : (sel ? 0.9 : 0.6)));
+    rg.addColorStop(1, hexA(cc, 0));
+    fxc.globalAlpha = 1;
+    fxc.beginPath(); fxc.arc(px, py, glowR, 0, Math.PI*2); fxc.fillStyle = rg; fxc.fill();
+    fxc.beginPath(); fxc.arc(px, py, sel ? 6 : 4.4, 0, Math.PI*2);
+    fxc.fillStyle = cc; fxc.globalAlpha = dim ? 0.5 : 1; fxc.fill();
+    fxc.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,0.8)';
+    fxc.lineWidth = sel ? 2 : 1.2; fxc.stroke();
+  }
+}
+
+function animateFlows() { flowPhase += 1; drawFlows(); requestAnimationFrame(animateFlows); }
+
+function hitSource(mx, my) {
+  const front = [-rot[0], -rot[1]];
+  let best = null, bestD = 15 * 15;
+  for (const s of SOURCES) {
+    const ll = [s.lng, s.lat];
+    if (!isFront(ll, front)) continue;
+    const xy = proj(ll); if (!xy) continue;
+    const dx = mx - xy[0], dy = my - xy[1], d = dx*dx + dy*dy;
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return best;
+}
+
+function showSourcePanel(s) {
+  const lbl = '<div class="plbl">Transmission Desk</div>';
+  if (!s) {
+    panel.classList.remove('lit');
+    panel.innerHTML = lbl + '<p class="ph">Drag to rotate &middot; Scroll to zoom<br>Click a conflict node to isolate its propagation</p>';
+    return;
+  }
+  panel.classList.add('lit');
+  const fl = FLOWS.filter(f => f.src === s.id).sort((a, b) => b.pressure - a.pressure).slice(0, 4);
+  const rows = fl.map(f => {
+    const h = HUB_BY_ID[f.hub], pct = Math.round(f.pressure * 100);
+    const bar = Math.max(4, Math.round(f.pressure * 92));
+    return '<div style="margin:2px 0"><div style="display:flex;justify-content:space-between;font-size:0.62rem">'
+      + '<span style="color:#d8d8d8">' + h.name + '</span>'
+      + '<b style="font-family:monospace">' + pct + '</b></div>'
+      + '<div style="height:3px;background:rgba(255,255,255,0.08);margin-top:1px"><div style="width:'
+      + bar + '%;height:3px;background:' + (s.color || '#CFB991') + '"></div></div></div>';
+  }).join('');
+  panel.innerHTML = lbl
+    + '<div style="font-size:0.72rem;font-weight:700;color:#fff;margin-bottom:2px">' + s.name + '</div>'
+    + '<div style="font-size:0.62rem;color:#9aa6ba">CIS <b style="color:#ff8a6a">' + s.cis
+    + '</b> &middot; TPS <b style="color:#CFB991">' + s.tps + '</b></div><hr>'
+    + '<div style="font-size:0.48rem;letter-spacing:.12em;color:#CFB991;text-transform:uppercase;margin-bottom:4px">Pressure into markets</div>'
+    + rows
+    + '<hr><div style="font-size:0.55rem;color:#7f8aa0">Click the node again or empty space to reset</div>';
+}
+
+function selectSource(id) {
+  selectedSrc = (selectedSrc === id) ? null : id;
+  showSourcePanel(selectedSrc ? SRC_BY_ID[selectedSrc] : null);
+}
+
 /* ── build feature index from injected data (synchronous - no fetch needed) ── */
 featData = GEO_RAW.map(d => ({
   f:    {type: 'Feature', geometry: d.g, properties: {ISO_A3: d.iso}},
@@ -518,11 +957,21 @@ featData = GEO_RAW.map(d => ({
   name: d.name,
 }));
 draw();
+animateFlows();
 </script></body></html>"""
 
 
-def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
-    """Fetch GeoJSON server-side, inject all data into D3 globe template, render."""
+def _render_globe_component(
+    df: pd.DataFrame,
+    score_col: str,
+    sources: list[dict] | None = None,
+    hubs: list[dict] | None = None,
+    flows: list[dict] | None = None,
+    top_n: int = _FLOW_TOP_N,
+) -> None:
+    """Fetch GeoJSON server-side, inject choropleth + transmission overlay into
+    the D3 globe template, render. sources/hubs/flows come from
+    _transmission_flows(); empty lists render the choropleth alone."""
     country_data = {str(row["iso3"]): {"score": int(row[score_col])}
                     for _, row in df.iterrows()}
     hover_data   = {str(row["iso3"]): str(row.get("hover", ""))
@@ -540,6 +989,10 @@ def _render_globe_component(df: pd.DataFrame, score_col: str) -> None:
         .replace("__HOVER_DATA__",   json.dumps(hover_data))
         .replace("__HOMETURF__",     json.dumps(hometurf_data))
         .replace("__GEO_FEATURES__", json.dumps(geo_features))
+        .replace("__SOURCES__",      json.dumps(sources or []))
+        .replace("__HUBS__",         json.dumps(hubs or []))
+        .replace("__FLOWS__",        json.dumps(flows or []))
+        .replace("__TOPN__",         str(top_n))
     )
     components.html(html, height=600, scrolling=False)
 
@@ -551,21 +1004,23 @@ _F = "font-family:'DM Sans',sans-serif;"
 def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Page header ───────────────────────────────────────────────────────────
-    _page_header("Global Conflict Risk Map",
-                 "Live conflict risk · Composite 0–100 index · Active theatre mapping")
+    _page_header("Global Conflict Transmission Map",
+                 "Live conflict → channel → market propagation · CIS / TPS driven")
     _no_api_key_banner("AI-generated conflict narratives")
     st.markdown(
         f'<p style="{_F}font-size:0.70rem;color:#8890a1;margin:0 0 0.8rem;line-height:1.6">'
-        f'Active conflicts disrupt commodity supply chains - oil, wheat, metals - causing those '
-        f'commodities to decouple from their usual equity correlation. This map scores each country\'s '
-        f'<strong>structural exposure to that decoupling risk</strong>: geographic proximity, energy '
-        f'dependency, trade-route vulnerability, and alliance obligations. High-exposure markets are '
-        f'the ones where a commodity supply shock is most likely to produce an equity spillover event. '
-        f'Hover any country for a full breakdown and its realised equity returns during active war windows.</p>',
+        f'This is our core thesis made visible: <strong>conflict → channel → market</strong>. '
+        f'The choropleth underneath scores each country\'s structural exposure; on top, each active '
+        f'conflict is a <strong>source node</strong> (glow = CIS) with animated flows running along its '
+        f'dominant TPS transmission channels to the markets it actually hits — line width is transmission '
+        f'pressure, dash speed is how hard that channel is firing live. Only the strongest flows show by '
+        f'default; <strong>click any conflict node to isolate its full propagation</strong>, or use the '
+        f'filter below.</p>',
         unsafe_allow_html=True,
     )
 
     # ── Live conflict scoring overlay ─────────────────────────────────────────
+    _wm_cr: dict = {}   # conflict results, reused for the transmission overlay
     try:
         from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
         _wm_cr  = score_all_conflicts()
@@ -645,6 +1100,16 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         score_col = "iran_score"
     else:
         score_col = "score"
+
+    # ── Transmission overlay data (reuses CIS / TPS channels / live multipliers) ─
+    _wm_sources, _wm_hubs, _wm_flows = _transmission_flows(_wm_cr, multipliers)
+    # The existing conflict filter also isolates propagation on the map: when a
+    # single war is picked, show only that conflict's flows (all marked visible).
+    _filter_cid = {"Ukraine War only": "ukraine_russia",
+                   "Israel-Hamas only": "israel_gaza",
+                   "Iran/Hormuz only": "iran_conflict"}.get(war_filter)
+    if _filter_cid:
+        _wm_flows = [{**f, "top": True} for f in _wm_flows if f["src"] == _filter_cid]
 
     st.markdown('<div style="margin:0.4rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
@@ -790,7 +1255,12 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             hover_texts.append(tip)
         df["hover"] = hover_texts
 
-        _render_globe_component(df, score_col)
+        _render_globe_component(df, score_col,
+                                sources=_wm_sources, hubs=_wm_hubs, flows=_wm_flows)
+        # Fill the space under the globe: market aggregates + flow leaderboard
+        # first, then the full conflict × market matrix below.
+        _render_transmission_bars(_wm_sources, _wm_hubs, _wm_flows)
+        _render_transmission_matrix(_wm_sources, _wm_hubs, _wm_flows)
 
     st.markdown('<div style="margin:0.6rem 0 0.5rem;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)

@@ -122,7 +122,7 @@ def test_feed_cash_book_leads_with_desk_call():
     feed = desk_report_feed(ranked)
     assert len(feed) == 3                  # lead card + 2 watchlist entries
     assert feed[0]["name"] == "DESK CALL — 0% DEPLOYED · 100% CASH"
-    assert "DSR 0.50 deploy threshold" in feed[0]["rationale"]
+    assert "0.50 deploy bar" in feed[0]["rationale"]     # strict default bar
     assert "best 0.30" in feed[0]["rationale"]
     for k in _GENERATOR_KEYS:              # lead card renders through the
         assert k in feed[0]                # SAME existing trade-card schema

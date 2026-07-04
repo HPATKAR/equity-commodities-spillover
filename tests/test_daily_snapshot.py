@@ -51,7 +51,8 @@ def test_first_capture_ever_has_no_baseline(snap_dir):
 
 
 def test_intraday_baseline_forms_without_a_prior_day(snap_dir):
-    today = datetime.date.today().isoformat()
+    from src.utils.timeutil import today_ct
+    today = today_ct().isoformat()
     _seed(snap_dir, {
         "snapshot_today":       _payload(today, "07:00", cis=50),
         "snapshot_yesterday":   None,
@@ -65,8 +66,9 @@ def test_intraday_baseline_forms_without_a_prior_day(snap_dir):
 
 
 def test_prior_day_is_preferred_over_intraday_anchor(snap_dir):
-    today = datetime.date.today().isoformat()
-    yday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    from src.utils.timeutil import today_ct
+    today = today_ct().isoformat()
+    yday = (today_ct() - datetime.timedelta(days=1)).isoformat()
     _seed(snap_dir, {
         "snapshot_today":       _payload(yday, "16:00", cis=40),
         "snapshot_yesterday":   None,
@@ -80,18 +82,19 @@ def test_prior_day_is_preferred_over_intraday_anchor(snap_dir):
 
 
 def test_equal_capture_time_yields_no_intraday_move(snap_dir):
-    today = datetime.date.today().isoformat()
+    from src.utils.timeutil import today_ct
+    today = today_ct().isoformat()
     _seed(snap_dir, {
         "snapshot_today":       _payload(today, "07:00"),
         "snapshot_yesterday":   None,
         "snapshot_first_today": _payload(today, "07:00"),
     })
-    # Force the new capture to land at the same minute as the anchor.
+    # Force the new capture to land at the same minute as the anchor. The
+    # module builds captured_at via timeutil.now_ct(), so patch that.
     from unittest.mock import patch
-    fixed = datetime.datetime.combine(datetime.date.today(),
-                                      datetime.time(7, 0))
-    with patch("src.analysis.daily_snapshot.datetime.datetime") as m:
-        m.now.return_value = fixed
+    from src.utils import timeutil
+    fixed = timeutil.now_ct().replace(hour=7, minute=0, second=0, microsecond=0)
+    with patch("src.utils.timeutil.now_ct", return_value=fixed):
         base, _cur = ds.update_snapshot(_CR, 99, 99, 99)
     assert base is None                                  # same minute, no move
 
