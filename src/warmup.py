@@ -58,7 +58,33 @@ def _run() -> None:
         detect_correlation_regime(avg_corr)
         n_corr   = len(avg_corr)
 
-        # 3. Walk-forward backtests for every static trade card, cached 3600 s
+        # Guarded warmer — one slow source can't abort the rest. (Background
+        # thread has no ScriptRunContext; @st.cache_data still populates the
+        # shared process cache — the "missing ScriptRunContext" warning is benign.)
+        def _warm(fn, *a, **k):
+            try:
+                fn(*a, **k)
+            except Exception as exc:
+                _log.debug("warmup: %s skipped: %s", getattr(fn, "__name__", fn), exc)
+
+        # 3. LANDING-PAGE essentials FIRST — the deployed link opens on the
+        # command center, so warm what it renders (conflict scores, portfolio
+        # aggregate, the yfinance market tape, exposure) BEFORE the heavier
+        # Trade-Ideas backtests, so the first visitor to the landing page hits
+        # warm caches soonest.
+        from src.analysis.conflict_model import (
+            score_all_conflicts, aggregate_portfolio_scores)
+        _cr = score_all_conflicts()
+        _warm(aggregate_portfolio_scores, _cr)
+        from src.pages.home import _load_market_pulse
+        _warm(_load_market_pulse)
+        try:
+            from src.analysis.exposure import score_all_assets
+            _warm(score_all_assets)
+        except Exception:
+            pass
+
+        # 4. Walk-forward backtests for every static trade card, cached 3600 s
         from src.pages.trade_ideas import (
             _TRADE_LIBRARY_BASE as _TRADE_LIBRARY,   # read-only warmup pass
             _wf_backtest_trade, _parse_holding_days,
@@ -79,9 +105,17 @@ def _run() -> None:
             except Exception as exc:
                 _log.debug("warmup: backtest skipped for '%s': %s", trade["name"], exc)
 
-        # 4. Stock-price fetch — warms the yfinance connection for the full universe
+        # 5. Stock-price fetch — warms the yfinance connection for the full universe
         from src.pages.trade_ideas import _fetch_stock_prices
         _fetch_stock_prices(sectors=())
+
+        # 6. Trade Ideas extra legs (fixed income / FX / private credit) so the
+        # ALERTS → Trade Ideas shortcut lands on warm caches too.
+        from src.data.loader import (
+            load_fixed_income_returns, load_fx_returns, load_private_credit_returns)
+        _warm(load_fixed_income_returns, _app_start, _today)
+        _warm(load_fx_returns, _app_start, _today)
+        _warm(load_private_credit_returns, _app_start, _today)
 
         _log.info("warmup: complete in %.1f s", time.monotonic() - t0)
 
