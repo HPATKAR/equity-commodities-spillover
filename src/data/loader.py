@@ -14,7 +14,6 @@ LSEG setup (Purdue account):
 from __future__ import annotations
 
 import logging
-import os
 import time as _time
 import numpy as np
 import pandas as pd
@@ -27,26 +26,11 @@ from typing import Optional
 _log = logging.getLogger(__name__)
 
 # ── Disk price cache (survives process restarts; avoids cold yfinance re-fetch) ─
-# Parquet files persist prices so a cold process start reads from disk (~0.06s)
-# instead of re-downloading 30+ tickers (~3-15s). To survive DEPLOYS/RESTARTS on
-# an ephemeral host (Render), point this at a mounted persistent disk via
-# SPILLOVER_CACHE_DIR (or reuse SPILLOVER_SNAPSHOT_DIR). Without either, it falls
-# back to ~/.cache — still helps within a process lifetime, but every redeploy is
-# cold. Max age 4 hours — acceptable staleness for daily-close return series.
-def _resolve_cache_dir() -> Path:
-    root = os.environ.get("SPILLOVER_CACHE_DIR") or os.environ.get("SPILLOVER_SNAPSHOT_DIR")
-    candidate = (Path(root) / "price_cache") if root else (Path.home() / ".cache" / "spillover_monitor")
-    try:
-        candidate.mkdir(parents=True, exist_ok=True)
-        return candidate
-    except Exception:
-        fallback = Path.home() / ".cache" / "spillover_monitor"
-        fallback.mkdir(parents=True, exist_ok=True)
-        return fallback
-
-_DISK_CACHE_DIR = _resolve_cache_dir()
+# Parquet files live in ~/.cache/spillover_monitor/. Max age 4 hours — data is
+# at most 4 h stale, which is acceptable for daily-close return series.
+_DISK_CACHE_DIR = Path.home() / ".cache" / "spillover_monitor"
+_DISK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _DISK_CACHE_MAX_AGE = 4 * 3600   # seconds
-_DISK_CACHE_KEEP = 6             # newest parquets kept per series (prunes daily-key sprawl)
 
 
 def _disk_path(name: str, start: str, end: str) -> Path:
@@ -71,29 +55,8 @@ def _disk_load(path: Path, min_rows: int = 50, min_cols: int = 5) -> pd.DataFram
 def _disk_save(df: pd.DataFrame, path: Path) -> None:
     try:
         df.to_parquet(path, index=True)
-        _disk_prune(path)
     except Exception as exc:
         _log.debug("disk cache write failed: %s", exc)
-
-
-def _disk_prune(path: Path, keep: int = _DISK_CACHE_KEEP) -> None:
-    """Keep only the newest `keep` parquets for this series prefix.
-
-    Every cache key embeds end=today, so a new parquet is written each day the
-    process runs — unbounded on a persistent disk. Prefix is the text before the
-    first underscore (e.g. "equity", "commodity"); the newest few are retained
-    for both fast hits and _disk_stale_fallback, the rest are removed.
-    """
-    try:
-        prefix = path.name.split("_", 1)[0]
-        files = sorted(
-            _DISK_CACHE_DIR.glob(f"{prefix}_*.parquet"),
-            key=lambda f: f.stat().st_mtime, reverse=True,
-        )
-        for f in files[keep:]:
-            f.unlink(missing_ok=True)
-    except Exception as exc:
-        _log.debug("disk cache prune failed: %s", exc)
 
 
 def _disk_stale_fallback(name: str, start: str, end: str) -> pd.DataFrame | None:
