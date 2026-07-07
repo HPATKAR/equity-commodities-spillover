@@ -1730,19 +1730,17 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     /* Mark active page + group */
     var cur={json.dumps(current)};
     var HOME     =['home'];
-    var OVERVIEW =['overview'];
-    var MACRO    =['macro_dashboard'];
-    var ANALYSIS =['war_impact_map','geopolitical','correlation','spillover','strait_watch'];
-    var INTEL    =['conflict_intelligence','threat_act_monitor','transmission_matrix','exposure_scoring'];
+    var OVERVIEW =['overview','insights'];
+    var ANALYSIS =['correlation','spillover','transmission_matrix','exposure_scoring','macro_dashboard'];
+    var GEO      =['geopolitical','war_impact_map','strait_watch','conflict_intelligence','threat_act_monitor'];
     var STRATEGY =['trade_ideas','stress_test','scenario_engine'];
-    var MONITOR  =['watchlist'];
-    var RESEARCH =['model_accuracy','ai_chat','methodology','replay','pattern_memory'];
-    var INSIGHTS =['insights'];
+    var MONITOR  =['watchlist','early_warning'];
+    var RESEARCH =['ai_chat','model_accuracy','methodology','replay','pattern_memory'];
     var ABOUT    =['about_heramb','about_jiahe','about_ilian','about_ai_workforce'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
       if(a.dataset.pg===cur) a.classList.add('active');
     }});
-    var MAP={{'ghome':HOME,'gov':OVERVIEW,'gm':MACRO,'ga':ANALYSIS,'gintel':INTEL,'gs':STRATEGY,'gmon':MONITOR,'gr':RESEARCH,'gin':INSIGHTS,'gab':ABOUT}};
+    var MAP={{'ghome':HOME,'gov':OVERVIEW,'ga':ANALYSIS,'gintel':GEO,'gs':STRATEGY,'gmon':MONITOR,'gr':RESEARCH,'gab':ABOUT}};
     Object.keys(MAP).forEach(function(id){{
       if(MAP[id].indexOf(cur)>-1){{
         var el=document.getElementById(id);
@@ -1777,34 +1775,29 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       <span class="lnk">Overview <span class="ct">&#9660;</span></span>
       <ul class="drop">
         <li><a data-pg="overview" class="{'active' if current=='overview' else ''}">Market Overview</a></li>
-      </ul>
-    </li>
-
-    <li class="ni" id="gm">
-      <span class="lnk">Macro <span class="ct">&#9660;</span></span>
-      <ul class="drop">
-        <li><a data-pg="macro_dashboard" class="{'active' if current=='macro_dashboard' else ''}">Global Macro Lens</a></li>
+        <li><a data-pg="insights" class="{'active' if current=='insights' else ''}">Intelligence Briefing</a></li>
       </ul>
     </li>
 
     <li class="ni" id="ga">
       <span class="lnk">Analysis <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="correlation"    class="{'active' if current=='correlation' else ''}">Cross-Asset Correlation</a></li>
-        <li><a data-pg="spillover"      class="{'active' if current=='spillover' else ''}">Spillover Network</a></li>
-        <li><a data-pg="geopolitical"   class="{'active' if current=='geopolitical' else ''}">Geopolitical Event Impact</a></li>
-        <li><a data-pg="war_impact_map" class="{'active' if current=='war_impact_map' else ''}">Global Conflict Risk Map</a></li>
-        <li><a data-pg="strait_watch"   class="{'active' if current=='strait_watch' else ''}">Strait Watch</a></li>
+        <li><a data-pg="correlation"         class="{'active' if current=='correlation' else ''}">Cross-Asset Correlation</a></li>
+        <li><a data-pg="spillover"           class="{'active' if current=='spillover' else ''}">Spillover Network</a></li>
+        <li><a data-pg="transmission_matrix" class="{'active' if current=='transmission_matrix' else ''}">Market Transmission Matrix</a></li>
+        <li><a data-pg="exposure_scoring"    class="{'active' if current=='exposure_scoring' else ''}">Asset Exposure Engine</a></li>
+        <li><a data-pg="macro_dashboard"     class="{'active' if current=='macro_dashboard' else ''}">Global Macro Lens</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gintel">
-      <span class="lnk">Intelligence <span class="ct">&#9660;</span></span>
+      <span class="lnk">Geopolitics <span class="ct">&#9660;</span></span>
       <ul class="drop">
+        <li><a data-pg="geopolitical"          class="{'active' if current=='geopolitical' else ''}">Geopolitical Event Impact</a></li>
+        <li><a data-pg="war_impact_map"        class="{'active' if current=='war_impact_map' else ''}">Global Conflict Risk Map</a></li>
+        <li><a data-pg="strait_watch"          class="{'active' if current=='strait_watch' else ''}">Strait Watch</a></li>
         <li><a data-pg="conflict_intelligence" class="{'active' if current=='conflict_intelligence' else ''}">Conflict Intelligence Center</a></li>
         <li><a data-pg="threat_act_monitor"    class="{'active' if current=='threat_act_monitor' else ''}">News GPR · Threat/Act Monitor</a></li>
-        <li><a data-pg="transmission_matrix"   class="{'active' if current=='transmission_matrix' else ''}">Market Transmission Matrix</a></li>
-        <li><a data-pg="exposure_scoring"      class="{'active' if current=='exposure_scoring' else ''}">Asset Exposure Engine</a></li>
       </ul>
     </li>
 
@@ -1820,26 +1813,19 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     <li class="ni" id="gmon">
       <span class="lnk">Monitor <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="watchlist" class="{'active' if current=='watchlist' else ''}">Commodity Watchlist</a></li>
+        <li><a data-pg="watchlist"     class="{'active' if current=='watchlist' else ''}">Commodity Watchlist</a></li>
+        <li><a data-pg="early_warning" class="{'active' if current=='early_warning' else ''}">Early-Warning Radar</a></li>
       </ul>
     </li>
 
     <li class="ni" id="gr">
       <span class="lnk">Research <span class="ct">&#9660;</span></span>
       <ul class="drop">
-        <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Model Signal Audit</a></li>
         <li><a data-pg="ai_chat"        class="{'active' if current=='ai_chat' else ''}">AI Research Desk</a></li>
+        <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Model Signal Audit</a></li>
         <li><a data-pg="methodology"    class="{'active' if current=='methodology' else ''}">Model Methodology</a></li>
         <li><a data-pg="replay"         class="{'active' if current=='replay' else ''}">Replay Mode</a></li>
         <li><a data-pg="pattern_memory" class="{'active' if current=='pattern_memory' else ''}">Pattern Memory</a></li>
-        <li><a data-pg="early_warning"  class="{'active' if current=='early_warning' else ''}">Early-Warning Radar</a></li>
-      </ul>
-    </li>
-
-    <li class="ni" id="gin">
-      <span class="lnk">Insights <span class="ct">&#9660;</span></span>
-      <ul class="drop">
-        <li><a data-pg="insights" class="{'active' if current=='insights' else ''}">Intelligence Briefing</a></li>
       </ul>
     </li>
 
