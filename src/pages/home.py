@@ -2108,6 +2108,49 @@ def _render_intelligence_feed(
             unsafe_allow_html=True,
         )
 
+    # ── Regime-transition radar chip (critical slowing down) ──────────────────
+    # Runs the early-warning engine on the already-loaded avg_corr driver — no
+    # extra data load. Links to the full Early-Warning Radar (Research menu).
+    try:
+        from src.analysis import critical_slowing as _cs
+        _ew = _cs.compute_ews(avg_corr, detrend_bw=30, window=60)
+        if not _ew.empty:
+            _tau = _cs.trend_tau(_ew, window=40)
+            _rd  = _cs.latest_reading(_ew, _tau, alert_threshold=62.0)
+            _st  = _rd["status"]
+            _sc  = (_C["danger"] if _st.startswith("TRANSITION")
+                    else _C["warn"] if _st.startswith("WATCH") else _C["safe"])
+
+            def _tarrow(t):
+                if t is None:
+                    return f'<span style="color:{_C["muted"]}">–</span>'
+                if t > 0.1:
+                    return f'<span style="color:{_C["danger"]}">▲</span>'
+                if t < -0.1:
+                    return f'<span style="color:{_C["safe"]}">▼</span>'
+                return f'<span style="color:{_C["muted"]}">→</span>'
+
+            st.markdown(
+                f'<a href="?page=early_warning" target="_self" title="Open Early-Warning Radar" '
+                f'style="text-decoration:none;display:block">'
+                f'<div style="margin-top:.5rem;padding:.4rem .55rem;background:{_C["card"]};'
+                f'border:1px solid {_C["border"]};border-left:3px solid {_sc};'
+                f'display:flex;gap:12px;flex-wrap:wrap;align-items:center;cursor:pointer">'
+                f'<span style="{_M}font-size:0.56rem;letter-spacing:.10em;text-transform:uppercase;'
+                f'color:{_C["label"]}">Transition radar</span>'
+                f'<span style="{_M}font-size:0.60rem;font-weight:700;color:{_sc}">{_st}</span>'
+                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">warning&nbsp;'
+                f'<b style="color:{_sc}">{_rd["composite"]:.0f}</b>/100</span>'
+                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">AR(1)&nbsp;'
+                f'{_tarrow(_rd.get("ar1_tau"))}&nbsp;·&nbsp;Var&nbsp;{_tarrow(_rd.get("var_tau"))}</span>'
+                f'<span style="{_M}font-size:0.52rem;color:{_C["label"]};margin-left:auto">'
+                f'critical slowing down →</span>'
+                f'</div></a>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
+
     st.markdown(
         f'<div style="{_M}font-size:0.56rem;color:{_C["label"]};padding-top:.5rem;'
         f'border-top:1px solid {_C["border"]};margin-top:.4rem">'
