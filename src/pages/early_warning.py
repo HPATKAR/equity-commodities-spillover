@@ -91,6 +91,59 @@ def _regime_series(start: str, end: str, corr_window: int) -> pd.Series:
     return detect_correlation_regime(acc)
 
 
+_AI_SYSTEM = (
+    "You are the AI Transition Analyst embedded in the Cross-Asset Spillover Monitor "
+    "at Purdue University Daniels School of Business. You read a critical-slowing-down "
+    "early-warning signal (rising lag-1 autocorrelation + rising variance ahead of a "
+    "correlation-regime flip) and explain, in plain language, what it currently implies. "
+    "You produce research analysis for an academic dashboard — not investment advice. "
+    "Critical slowing down is a LEADING but NOISY precursor: never state a flip is coming, "
+    "only that transition risk is elevated or not, and always respect the historical "
+    "false-alarm rate you are given. Distinguish evidence from inference."
+)
+
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=8)
+def _ai_transition_read(context_str: str, provider: str, api_key: str) -> str:
+    """Plain-language read of the current early-warning signal. Cached 1 hour,
+    keyed by the context string so it only regenerates when the signal changes."""
+    prompt = (
+        f"CURRENT EARLY-WARNING STATE (live):\n{context_str}\n\n"
+        "Write a 3–4 sentence read of this signal covering: "
+        "1) whether critical slowing down is genuinely present right now "
+        "(both AR(1) autocorrelation AND variance rising) or only partial, "
+        "2) how much weight it deserves given the historical hit rate, median lead "
+        "time, and false-alarm rate shown above — be explicit that this is a noisy "
+        "precursor, not a forecast, "
+        "3) one specific thing to watch that would confirm or kill the signal. "
+        "Be quantitative and terse. Do not give trade advice.\n\n"
+        "End with these labeled lines:\n"
+        "VERDICT: [one line — elevated transition risk / mixed / stable, and why]\n"
+        "INVALIDATED IF: [what reading would contradict this]"
+    )
+    try:
+        if provider == "anthropic":
+            import anthropic as _ant
+            client = _ant.Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001", max_tokens=380,
+                system=_AI_SYSTEM,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text.strip()
+        else:
+            from openai import OpenAI as _OAI
+            client = _OAI(api_key=api_key)
+            resp = client.chat.completions.create(
+                model="gpt-4o", max_tokens=380, temperature=0.2,
+                messages=[{"role": "system", "content": _AI_SYSTEM},
+                          {"role": "user", "content": prompt}],
+            )
+            return resp.choices[0].message.content.strip()
+    except Exception:
+        return ""   # silent — section is skipped rather than surfacing API errors
+
+
 # ── Charts ───────────────────────────────────────────────────────────────────
 
 def _radar_gauge(composite: float, threshold: float) -> go.Figure:
@@ -370,6 +423,51 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
             f'<tbody>{rows}</tbody></table></div>',
             unsafe_allow_html=True,
         )
+
+    # ── AI read on the signal ───────────────────────────────────────────────
+    _ai_key, _ai_provider = "", ""
+    try:
+        _sec = st.secrets.get("keys", {})
+        if _sec.get("anthropic_api_key", ""):
+            _ai_key, _ai_provider = _sec["anthropic_api_key"], "anthropic"
+        elif _sec.get("openai_api_key", ""):
+            _ai_key, _ai_provider = _sec["openai_api_key"], "openai"
+    except Exception:
+        pass
+
+    if _ai_key:
+        def _tw(t):
+            return "n/a" if t is None else ("rising" if t > 0.1 else "falling" if t < -0.1 else "flat")
+        _ctx = (
+            f"Driver: {driver_name}\n"
+            f"Engine status: {reading['status']}\n"
+            f"Composite warning level: {reading['composite']:.0f}/100 (alert bar {threshold:.0f})\n"
+            f"Current Markov correlation regime: {_REGIME_NAMES.get(int(regime.iloc[-1]),'?')}\n"
+            f"AR(1) autocorrelation: {reading['ar1']:.2f} ({reading['ar1_z']:+.2f} sd vs history), "
+            f"trend {_tw(reading.get('ar1_tau'))}\n"
+            f"Variance: {reading['var_z']:+.2f} sd vs history, trend {_tw(reading.get('var_tau'))}\n"
+            f"Both CSD indicators rising together: {reading.get('both_rising')}\n"
+            f"--- Historical validation of this driver+threshold ---\n"
+            f"Flips caught: {ev['n_caught']}/{ev['n_flips']} "
+            f"(hit rate {ev['hit_rate']*100:.0f}%)\n"
+            f"Median lead time: {ev['median_lead']:.0f} calendar days\n"
+            f"False-alarm rate: {ev['false_alarm_rate']*100:.0f}% "
+            f"({ev['n_false_alarms']}/{ev['n_alert_episodes']} alert episodes did NOT precede a flip)"
+        ) if ev["hit_rate"] == ev["hit_rate"] else ""
+
+        _read = _ai_transition_read(_ctx, _ai_provider, _ai_key) if _ctx else ""
+        if _read:
+            _section_label("AI read on the signal")
+            st.markdown(
+                f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-left:3px solid {_GOLD};'
+                f'padding:.85rem 1.05rem;margin-bottom:.9rem">'
+                f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#e8e9ed;'
+                f'line-height:1.75">{_read.replace(chr(10), "<br>")}</div>'
+                f'<div style="font-size:0.52rem;color:{_MUTED};margin-top:.5rem;'
+                f'border-top:1px solid #1e1e1e;padding-top:.4rem">AI Transition Analyst · reads the '
+                f'engine output and its track record · research analysis, not investment advice</div></div>',
+                unsafe_allow_html=True,
+            )
 
     _definition_block(
         "What this engine is — and is not",
