@@ -1024,7 +1024,7 @@ _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "methodology", "insights", "strait_watch", "replay",
-    "pattern_memory",
+    "pattern_memory", "early_warning",
     # Intelligence pages
     "conflict_intelligence", "threat_act_monitor", "transmission_matrix", "exposure_scoring",
     "about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce",
@@ -1832,6 +1832,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
         <li><a data-pg="methodology"    class="{'active' if current=='methodology' else ''}">Model Methodology</a></li>
         <li><a data-pg="replay"         class="{'active' if current=='replay' else ''}">Replay Mode</a></li>
         <li><a data-pg="pattern_memory" class="{'active' if current=='pattern_memory' else ''}">Pattern Memory</a></li>
+        <li><a data-pg="early_warning"  class="{'active' if current=='early_warning' else ''}">Early-Warning Radar</a></li>
       </ul>
     </li>
 
@@ -1927,6 +1928,7 @@ from src.pages.macro_dashboard  import page_macro_dashboard
 from src.pages.model_accuracy   import page_model_accuracy
 from src.pages.replay           import page_replay
 from src.pages.pattern_memory   import page_pattern_memory
+from src.pages.early_warning    import page_early_warning
 from src.pages.ai_chat         import page_ai_chat, open_chat_dialog
 from src.pages.insights        import page_insights
 from src.pages.strait_watch    import page_strait_watch
@@ -2037,6 +2039,7 @@ _PAGE_MAP = {
     "model_accuracy": lambda: page_model_accuracy(_start, _end, _FRED_KEY),
     "replay":         lambda: page_replay(_start, _end, _FRED_KEY),
     "pattern_memory": lambda: page_pattern_memory(_start, _end, _FRED_KEY),
+    "early_warning":  lambda: page_early_warning(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "methodology":    lambda: page_methodology(_start, _end, _FRED_KEY),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
