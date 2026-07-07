@@ -5702,25 +5702,6 @@ def _live_heartbeat() -> None:
     )
 
 
-def _skeleton_hero_html() -> str:
-    """Page-shaped placeholder shown in the cold-load shell so the above-the-fold
-    is a shimmering skeleton of the command hero, not a black void, while live
-    data loads. Fully removed when the real masthead replaces the shell slot."""
-    def _sk(h: str, extra: str = "") -> str:
-        return (f'<div class="hm-shimmer" style="background:{_C["card2"]};'
-                f'border:1px solid {_C["border"]};height:{h};border-radius:2px;{extra}"></div>')
-    rows = "".join(_sk("38px", "margin-bottom:8px") for _ in range(4))
-    tiles = "".join(_sk("60px", "flex:1") for _ in range(4))
-    return (
-        f'<div style="display:flex;gap:10px;margin-bottom:10px">'
-        f'{_sk("196px", "flex:0 0 34%")}'
-        f'<div style="flex:1;display:flex;flex-direction:column">{rows}</div>'
-        f'</div>'
-        f'<div style="display:flex;gap:10px;margin-bottom:10px">{tiles}</div>'
-        f'{_sk("46px")}'
-    )
-
-
 def page_home(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(_STYLE, unsafe_allow_html=True)
     init_agents()
@@ -5759,8 +5740,6 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 f'<div class="hm-load-sweep"></div></div></div>',
                 unsafe_allow_html=True,
             )
-            # Page-shaped skeleton for the command-hero region below the loading bar
-            st.markdown(_skeleton_hero_html(), unsafe_allow_html=True)
 
     # ── Parallel data load ────────────────────────────────────────────────
     # score_all_conflicts (GDELT HTTP) and _load_market_pulse (yfinance 6-ticker)
