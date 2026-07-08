@@ -313,13 +313,13 @@ section[data-testid="stMain"] [data-testid="stMarkdown"] > div{
 section[data-testid="stMain"] [data-testid="stElementContainer"]{margin-bottom:0!important}
 section[data-testid="stMain"] .nx-intel-row{padding:.3rem 0!important}
 section[data-testid="stMain"] [data-testid="stExpander"] summary{padding:.4rem .8rem!important}
-.cc-tape{display:flex;align-items:baseline;gap:0;border:1px solid #1e1e1e;
-    background:#0a0a0a;grid-column:span 12;padding:0}
-.cc-tape > span{flex:1;display:flex;align-items:baseline;min-width:0;
-    padding:.4rem .7rem;border-right:1px solid #141414;white-space:nowrap;overflow:hidden}
+.cc-tape{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;
+    grid-column:span 12;padding:0;background:transparent;border:none}
+.cc-tape > span{display:flex;align-items:baseline;gap:0 4px;min-width:0;
+    white-space:nowrap;overflow:hidden;padding:.3rem .5rem;
+    background:#0a0a0a;border:1px solid #1e1e1e}
 .cc-tape > span > *{flex-shrink:0}
 .cc-tape .cc-clip{flex-shrink:1;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.cc-tape > span:last-child{border-right:none}
 /* Hero interior grids — pack cells with columns, not padding */
 .cc-grs{display:grid;grid-template-columns:270px 1fr;gap:0 20px;align-items:start}
 .cc-mv2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
@@ -877,7 +877,10 @@ def _render_command_hero(
     tape_html = ""
     try:
         cells = ""
-        for d in _load_market_pulse()[:8]:
+        # Drop VIX here (shown in the §1.5 pulse strip + vol trio); leaves a
+        # deterministic 5 price cells (DXY, S&P, WTI, Gold, 10Y) so the tape is
+        # an even 12 with the 7 derived cells below → clean 6×2 grid.
+        for d in [x for x in _load_market_pulse() if x["label"] != "VIX"][:8]:
             pct = d["pct"]
             inv = d["label"] == "VIX"
             p_col = _C["danger"] if (inv and pct > 0) or (not inv and pct < 0) \
@@ -894,7 +897,7 @@ def _render_command_hero(
                 f'color:{p_col};margin-left:4px">{pct:+.2f}%</span>'
                 f'<span class="cc-num cc-clip" style="font-size:.48rem;color:{_C["label"]};'
                 f'margin-left:5px">{fmt(lo)}–{fmt(hi)}</span>'
-                f'<span style="margin-left:4px">{_spark_bare(ser, width=32, height=10, color=p_col)}</span>'
+                f'<span style="margin-left:4px">{_spark_bare(ser, width=44, height=12, color=p_col)}</span>'
                 f'</span>'
             )
         # Computed cells from already-loaded frames (display arithmetic only).
@@ -921,6 +924,7 @@ def _render_command_hero(
                 pass
             _vel_s = avg_corr.dropna().diff(10).dropna().tail(30)
             _brd_s = ((eq_r > 0).mean(axis=1) * 100).dropna().tail(30)
+            _cmb_s = ((cmd_r > 0).mean(axis=1) * 100).dropna().tail(30)  # commodity breadth
             # (label, series, format, rising_is_good)
             for lbl, ser_t, _fmt, _good_up in (
                 ("EQ VOL 20D", _eqv_s, "{:4.1f}%", False),
@@ -929,6 +933,7 @@ def _render_command_hero(
                 ("OIL→SPX β60", _beta_s, "{:+.2f}", False),
                 ("CORR VEL 10D", _vel_s, "{:+.3f}", False),
                 ("EQ BREADTH", _brd_s, "{:3.0f}%", True),
+                ("CMD BREADTH", _cmb_s, "{:3.0f}%", True),
             ):
                 tail_v = [float(x) for x in ser_t]
                 if len(tail_v) < 6:
@@ -954,7 +959,7 @@ def _render_command_hero(
                     f'color:{_C["label"]};margin-left:5px">'
                     f'30d {_fmt.format(lo30).strip()}–{_fmt.format(hi30).strip()}</span>'
                     f'<span style="margin-left:5px">'
-                    f'{_spark_bare(tail_v, width=34, height=11, color=sc)}</span></span>'
+                    f'{_spark_bare(tail_v, width=44, height=12, color=sc)}</span></span>'
                 )
         except Exception:
             pass
