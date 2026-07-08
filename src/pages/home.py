@@ -1043,12 +1043,9 @@ def _render_command_hero(
     st.markdown(
         f'<div class="cc-hero">'
 
-        # Row A — thin strip: reserved slot | alerts | regime (one line each)
-        f'<div class="cc-cell cc-thin" style="grid-column:span 3;border-style:dashed;opacity:.6">'
-        f'<span style="{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
-        f'color:{_C["label"]}">CHANGED SINCE YESTERDAY</span>'
-        f'<span style="{_M}font-size:.54rem;color:{_C["label"]};margin-left:8px">reserved</span></div>'
-        f'<div class="cc-cell cc-thin" style="grid-column:span 5">'
+        # Row A — thin strip: alerts | regime (the reserved "changed since
+        # yesterday" slot moved up beside the LIVE pill; ALERTS takes its width)
+        f'<div class="cc-cell cc-thin" style="grid-column:span 8">'
         f'<span style="{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
         f'color:{_C["label"]};margin-right:10px">ALERTS · {len(alerts)}</span>{alerts_line}'
         f'<a href="?page=trade_ideas" target="_self" title="Go to Trade Ideas" '
@@ -5732,14 +5729,23 @@ def _live_heartbeat() -> None:
 
     ts = datetime.datetime.now().strftime("%H:%M:%S")
     st.markdown(
-        f'<div style="display:flex;align-items:center;gap:6px;'
-        f'padding:.18rem .5rem;margin-bottom:.3rem;'
-        f'border:1px solid {_C["border"]};background:#060606;width:fit-content">'
+        # LIVE pill + the "changed since yesterday" reserved slot on ONE row
+        # (the slot moved out of the command-hero strip to sit beside LIVE).
+        f'<div style="display:flex;align-items:stretch;gap:8px;margin-bottom:.3rem;flex-wrap:wrap">'
+        f'<div style="display:flex;align-items:center;gap:6px;padding:.18rem .5rem;'
+        f'border:1px solid {_C["border"]};background:#060606">'
         f'<span class="hm-live-blink" style="display:inline-block;width:6px;height:6px;'
         f'border-radius:50%;background:{_C["safe"]}"></span>'
         f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
         f'color:{_C["safe"]}">LIVE</span>'
         f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">· refreshed {ts} · auto 60s</span>'
+        f'</div>'
+        f'<div style="display:flex;align-items:center;gap:8px;padding:.18rem .6rem;'
+        f'border:1px dashed {_C["border"]};opacity:.6">'
+        f'<span style="{_M}font-size:.5rem;font-weight:700;letter-spacing:.14em;'
+        f'color:{_C["label"]}">CHANGED SINCE YESTERDAY</span>'
+        f'<span style="{_M}font-size:.52rem;color:{_C["label"]}">reserved</span>'
+        f'</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
