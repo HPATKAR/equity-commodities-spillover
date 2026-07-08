@@ -19,15 +19,17 @@ services:
       # Optional data sources
       - key: FRED_API_KEY
         sync: false
-      # ── Optional: persist the daily "what changed" baseline across deploys ──
-      # The Home delta panel works out of the box via an intraday baseline.
-      # It resets on each redeploy/restart because Render's filesystem is
-      # ephemeral. To keep TRUE day-over-day deltas across deploys, uncomment
-      # the disk below and this env var (adds a small monthly disk cost; a
-      # disk pins the service to a single instance — already the case here).
-      # - key: SPILLOVER_SNAPSHOT_DIR
-      #   value: /var/data
-    # disk:
-    #   name: snapshot-store
-    #   mountPath: /var/data
-    #   sizeGB: 1
+      # ── Persistent disk (survives deploys/restarts) ──
+      # Backs two things off the ephemeral filesystem:
+      #   1. The price parquet cache (loader._resolve_cache_dir → $DIR/price_cache)
+      #      so a cold process start reads prices from disk (~0.06s) instead of
+      #      re-downloading 30+ tickers — the main cold-start win.
+      #   2. The daily "what changed" baseline, giving TRUE day-over-day deltas.
+      # Cost: a small monthly disk charge; a disk pins the service to one
+      # instance (already numInstances: 1). To disable, re-comment both blocks.
+      - key: SPILLOVER_SNAPSHOT_DIR
+        value: /var/data
+    disk:
+      name: snapshot-store
+      mountPath: /var/data
+      sizeGB: 1
