@@ -6022,7 +6022,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _col_left, _col_ctr, _col_right = st.columns([3, 6, 3], gap="small")
 
     with _col_left:
-        _section_header("01", "Intelligence Feed", "alerts · signals · chokepoints")
+        _section_header("01", "Intelligence Feed", "alerts · signals · chokepoints",
+                        link_page="conflict_intelligence", link_label="Conflict Intel")
         # § L1  Intelligence feed — live alerts + morning briefing + chokepoint watch
         try:
             _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
@@ -6043,7 +6044,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_regime_history(_al_regimes)
 
     with _col_ctr:
-        _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals")
+        _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals",
+                        link_page="overview", link_label="Overview")
         # (Market pulse strip removed — duplicated the right column's pulse cards.)
         # Portfolio pulse (conditional — hidden unless CSV uploaded)
         _render_portfolio_pulse()
@@ -6149,7 +6151,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _err_slot("risk convergence")
 
     with _col_right:
-        _section_header("03", "Market Signals", "returns · channels · risk arc")
+        _section_header("03", "Market Signals", "returns · channels · risk arc",
+                        link_page="transmission_matrix", link_label="Transmission")
         # (§ R1 pulse cards removed — the hero tape row shows the same six
         #  instruments in one line each; density pass.)
         # § R1  Returns heatmap — 5-day day-over-day asset return grid
@@ -6157,7 +6160,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # § R1b Transmission channels — CIS-weighted channel pressure breakdown
         _render_transmission_channels(conflict_results, risk)
         # § R2a Hot stocks — top mega-caps by 24h news activity, clickable headlines
-        _section_header("", "Stocks to Watch", "most active by news · click to read")
+        _section_header("", "Stocks to Watch", "most active by news · click to read",
+                        link_page="watchlist", link_label="Watchlist")
         try:
             _render_hot_stocks()
         except Exception:
@@ -6201,7 +6205,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     # Hosts the panels moved out of the over-long side columns so all three
     # columns above end together instead of leaving a center void.
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
-    _section_header("04", "Market Detail", "sectors · lead-lag · rates · vol")
+    _section_header("04", "Market Detail", "sectors · lead-lag · rates · vol",
+                    link_page="macro_dashboard", link_label="Macro Lens")
     _md1, _md2, _md3, _md4 = st.columns([3, 3, 3, 3], gap="small")
     with _md1:
         try:
@@ -6220,7 +6225,8 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
 
     # ── Full-width below ──────────────────────────────────────────────────────
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
-    _section_header("05", "Scenario & Context", "scenario switch · narrative · intel monitor")
+    _section_header("05", "Scenario & Context", "scenario switch · narrative · intel monitor",
+                    link_page="scenario_engine", link_label="Scenario Sim")
 
     # Scenario switch — full-width, 8 buttons in one row
     _render_scenario_switch()

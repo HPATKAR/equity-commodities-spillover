@@ -387,12 +387,24 @@ def _metric_card(label: str, value: str, delta: str = "", delta_color: str = "")
     )
 
 
-def _section_header(number: str, title: str, subtitle: str = "") -> None:
-    """Numbered section header - establishes reading sequence within a page."""
+def _section_header(number: str, title: str, subtitle: str = "",
+                    link_page: str = "", link_label: str = "") -> None:
+    """Numbered section header - establishes reading sequence within a page.
+
+    Optional link_page renders a gold drill-through shortcut (?page=link_page)
+    pushed to the right of the header, matching the Intelligence Feed shortcuts.
+    """
     sub_html = (
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.64rem;'
         f'color:#888;font-weight:400;margin-left:0.6rem">{subtitle}</span>'
         if subtitle else ""
+    )
+    link_html = (
+        f'<a href="?page={link_page}" target="_self" title="Open {link_label or link_page}" '
+        f'style="margin-left:auto;text-decoration:none;font-family:\'JetBrains Mono\',monospace;'
+        f'font-size:0.58rem;font-weight:700;letter-spacing:0.06em;color:{_GOLD};'
+        f'white-space:nowrap;cursor:pointer">{link_label or link_page} &rarr;</a>'
+        if link_page else ""
     )
     st.markdown(
         f'<div style="margin:0.8rem 0 0.4rem;padding-bottom:0.25rem;'
@@ -402,7 +414,7 @@ def _section_header(number: str, title: str, subtitle: str = "") -> None:
         f'margin-right:0.65rem">{number}</span>'
         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.76rem;font-weight:700;'
         f'color:#e8e9ed">{title}</span>'
-        f'{sub_html}</div>',
+        f'{sub_html}{link_html}</div>',
         unsafe_allow_html=True,
     )
 
