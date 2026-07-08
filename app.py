@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Cross-Asset Spillover Monitor | Purdue Daniels",
-    page_icon="assets/logo_mark.png",
+    page_icon="assets/favicon.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
