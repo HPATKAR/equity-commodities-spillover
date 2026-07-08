@@ -1810,6 +1810,24 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 # § L  INTELLIGENCE FEED  (left column — Stitch-style severity card feed)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Alert page_hint → short display label + click-through target. Keys are the
+# page_hint values emitted by src/analysis/proactive_alerts.py; all are valid
+# pages in app._VALID_PAGES, so ?page=<key> navigation resolves.
+_HINT_LABELS = {
+    "overview":              "Overview",
+    "correlation":           "Correlation",
+    "watchlist":             "Watchlist",
+    "spillover":             "Spillover",
+    "war_impact_map":        "Conflict Map",
+    "conflict_intelligence": "Conflict Intel",
+    "strait_watch":          "Strait Watch",
+    "geopolitical":          "Geo Impact",
+    "macro_dashboard":       "Macro Lens",
+    "trade_ideas":           "Trade Ideas",
+    "scenario_engine":       "Scenario Sim",
+}
+
+
 def _render_intelligence_feed(
     risk: dict,
     conflict_results: dict,
@@ -1890,10 +1908,19 @@ def _render_intelligence_feed(
             f'letter-spacing:.1em;margin-left:6px">{cat.upper()}</span>'
             if cat else ""
         )
-        hint_html = (
-            f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]}">→ {hint}</span>'
-            if hint else ""
-        )
+        # Clickable shortcut to the alert's suggested page (was inert text).
+        if hint and hint in _HINT_LABELS:
+            _hlabel = _HINT_LABELS[hint]
+            hint_html = (
+                f'<a href="?page={hint}" target="_self" title="Open {_hlabel}" '
+                f'style="text-decoration:none;{_M}font-size:0.5rem;font-weight:700;'
+                f'letter-spacing:.06em;color:{_GOLD};white-space:nowrap;cursor:pointer">'
+                f'→ {_hlabel}</a>'
+            )
+        elif hint:
+            hint_html = f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]}">→ {hint}</span>'
+        else:
+            hint_html = ""
         st.markdown(
             f'<div style="border-left:2px solid {border_c};background:{_C["card"]};'
             f'border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};'
