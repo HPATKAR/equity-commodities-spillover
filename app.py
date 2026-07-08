@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Cross-Asset Spillover Monitor | Purdue Daniels",
-    page_icon="assets/logo.png",
+    page_icon="assets/logo_mark.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -1125,7 +1125,7 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stApp"],.main{
 # ── Logo (base64-encoded once per session) ────────────────────────────────────
 import base64 as _b64
 from pathlib import Path as _Path
-_LOGO_PATH = _Path(__file__).parent / "assets" / "logo.png"
+_LOGO_PATH = _Path(__file__).parent / "assets" / "logo_mark.png"
 _LOGO_B64  = (
     "data:image/png;base64," + _b64.b64encode(_LOGO_PATH.read_bytes()).decode()
     if _LOGO_PATH.exists() else ""

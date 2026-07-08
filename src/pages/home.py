@@ -398,9 +398,12 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
 def _home_logo_b64() -> str:
     import base64
     from pathlib import Path
-    p = Path(__file__).resolve().parent.parent.parent / "assets" / "logo.png"
-    if p.exists():
-        return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+    # Compact 14px masthead eyebrow → globe+pulse mark (full wordmark illegible here)
+    _assets = Path(__file__).resolve().parent.parent.parent / "assets"
+    for name in ("logo_mark.png", "logo.png"):
+        p = _assets / name
+        if p.exists():
+            return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
     return ""
 
 

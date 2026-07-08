@@ -858,7 +858,7 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
     _Fh = "font-family:'DM Sans',sans-serif;"
     _Mh = "font-family:'JetBrains Mono',monospace;"
     _eye = eyebrow or "Cross-Asset Spillover Monitor \u00b7 Purdue Daniels School of Business \u00b7 MSF Research Terminal"
-    _logo = _footer_logo_b64()
+    _logo = _mark_logo_b64()
     _logo_img = (
         f'<img src="{_logo}" alt="" style="height:14px;width:auto;object-fit:contain;'
         f'opacity:0.55;flex-shrink:0;display:block;margin-right:8px;" />'
@@ -899,8 +899,20 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
 
 @st.cache_data(ttl=86400, max_entries=3)
 def _footer_logo_b64() -> str:
-    # Prefer the project logo; fall back to Purdue reverse logo
+    # Full lockup for wide slots (footer); fall back to Purdue reverse logo
     for name in ("logo.png", "purdue_daniels_logo_reverse.png"):
+        p = _ASSETS / name
+        if p.exists():
+            ext = p.suffix.lstrip(".")
+            return f"data:image/{ext};base64," + base64.b64encode(p.read_bytes()).decode()
+    return ""
+
+
+@st.cache_data(ttl=86400, max_entries=3)
+def _mark_logo_b64() -> str:
+    # Globe+pulse mark for compact slots (small eyebrows) where the full
+    # wordmark would be illegible; falls back to the full logo, then Purdue.
+    for name in ("logo_mark.png", "logo.png", "purdue_daniels_logo_reverse.png"):
         p = _ASSETS / name
         if p.exists():
             ext = p.suffix.lstrip(".")
