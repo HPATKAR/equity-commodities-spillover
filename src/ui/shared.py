@@ -1084,8 +1084,8 @@ div[data-testid="stPopoverBody"] .stButton > button {
     if _logo_src:
         logo_html = (
             f"<img src='{_logo_src}' alt='Cross-Asset Spillover Monitor' "
-            "style='width:180px;height:auto;object-fit:contain;"
-            "margin-bottom:12px;display:block;' />"
+            "style='width:440px;max-width:80%;height:auto;object-fit:contain;"
+            "margin-bottom:18px;display:block;' />"
         )
     else:
         logo_html = (
