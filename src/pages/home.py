@@ -1985,6 +1985,9 @@ def _render_intelligence_feed(
                 cmds,
             ) if x)
             st.markdown(
+                f'<a href="?page=conflict_intelligence" target="_self" '
+                f'title="Open Conflict Intelligence · {r["label"]}" '
+                f'style="text-decoration:none;display:block;cursor:pointer">'
                 f'<div style="padding:3px .5rem;border-left:2px solid {bar_c};'
                 f'background:{_C["card"]};border-bottom:1px solid {_C["border"]};margin-bottom:4px">'
                 f'<div style="display:flex;align-items:center;gap:6px">'
@@ -2003,7 +2006,7 @@ def _render_intelligence_feed(
                 + (f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:1px;'
                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{sub}</div>'
                    if sub else "")
-                + f'</div>',
+                + f'</div></a>',
                 unsafe_allow_html=True,
             )
 
