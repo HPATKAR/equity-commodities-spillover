@@ -610,10 +610,9 @@ def score_all_conflicts() -> dict[str, dict]:
     market_freshness is initialised to 1.0 here; callers with live market
     data should call apply_market_freshness() to update it before ranking.
     """
-    results: dict[str, dict] = {}
-    for c in CONFLICTS:
+    def _score_one(c: dict) -> tuple[str, dict]:
         cid = c["id"]
-        cis, cis_source = compute_cis(c)
+        cis, cis_source = compute_cis(c)          # makes the (slow) GDELT call
         tps  = compute_tps(c)
         conf = compute_confidence(c)
 
@@ -631,7 +630,7 @@ def score_all_conflicts() -> dict[str, dict]:
             live_dims   = []
             manual_dims = _CIS_ALWAYS_MANUAL + list(_CIS_LIVE_REPLACEABLE)
 
-        results[cid] = {
+        return cid, {
             "id":           cid,
             "name":         c["name"],
             "label":        c["label"],
@@ -658,6 +657,22 @@ def score_all_conflicts() -> dict[str, dict]:
             "hedge_assets":         c.get("hedge_assets",         []),
             "last_updated":         str(c.get("last_updated", "")),
         }
+
+    # Score conflicts CONCURRENTLY: each compute_cis() fires an independent GDELT
+    # request; running them in parallel caps total GDELT wait at ~one request
+    # instead of N sequential ones (~108s -> ~1 timeout when GDELT is slow).
+    # Conflicts are independent (distinct cache keys), so this is safe; falls
+    # back to serial if the pool errors for any reason.
+    results: dict[str, dict] = {}
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max(1, len(CONFLICTS))) as _ex:
+            for cid, res in _ex.map(_score_one, CONFLICTS):
+                results[cid] = res
+    except Exception:
+        for c in CONFLICTS:
+            cid, res = _score_one(c)
+            results[cid] = res
     # GAP 17 fix: freshness of conflict_manual should reflect when the CONFLICTS dict
     # was last edited, not when this function ran. We check the most recent
     # last_updated field across all conflicts rather than calling record_fetch()

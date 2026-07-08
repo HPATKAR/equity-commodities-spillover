@@ -164,7 +164,7 @@ def fetch_gdelt_escalation(
             "TIMESPAN":   timespan,
             "MAXRECORDS": 250,
         }
-        resp = requests.get(_GDELT_DOC_API, params=params, timeout=20, headers=_HEADERS)
+        resp = requests.get(_GDELT_DOC_API, params=params, timeout=8, headers=_HEADERS)
         resp.raise_for_status()
         data = resp.json()
 
@@ -223,7 +223,7 @@ def fetch_gdelt_escalation(
                 "TIMESPAN":   "3d",
                 "MAXRECORDS": 50,
             }
-            art_resp = requests.get(_GDELT_DOC_API, params=art_params, timeout=15,
+            art_resp = requests.get(_GDELT_DOC_API, params=art_params, timeout=8,
                                     headers=_HEADERS)
             art_data = art_resp.json()
             articles = art_data.get("articles", [])
