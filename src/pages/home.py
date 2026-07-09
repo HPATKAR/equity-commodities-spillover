@@ -1612,11 +1612,38 @@ def _render_geo_risk_block(
             + (f' vs {yday_date}' if yday_date else '') + f'</span>{_mv_html}'
         )
     else:
-        _mv_block = (
-            f'<span style="{_M}font-size:0.58rem;color:{_C["muted"]}">'
-            + ("— no conflict moves vs prior snapshot" if yday_deltas is not None
-               else "no prior baseline yet") + '</span>'
-        )
+        # No day-over-day moves — conflict CIS is static when GDELT isn't
+        # corroborating. Light the card up with the current top conflicts by
+        # intensity (CIS) + escalation arrow instead of an empty message.
+        _top = sorted(
+            (r for r in conflict_results.values() if r.get("state") == "active"),
+            key=lambda r: r.get("cis", 0), reverse=True,
+        )[:4]
+        if _top:
+            _tv_html = ""
+            for r in _top:
+                _cis = float(r.get("cis", 0))
+                _esc = r.get("escalation") == "escalating"
+                _ec  = _C["danger"] if _cis >= 65 else _C["warn"] if _cis >= 45 else _C["label"]
+                _lbl = r.get("label", "").replace(" · CIS", "")[:14]
+                _tv_html += (
+                    f'<span style="margin-right:14px;white-space:nowrap">'
+                    f'<span style="{_M}font-size:0.6rem;font-weight:700;color:{_ec}">'
+                    f'{_cis:.0f} {"▲" if _esc else "→"}</span>'
+                    f'<span style="{_F}font-size:0.62rem;color:{_C["text"]};margin-left:5px">{_lbl}</span>'
+                    f'</span>'
+                )
+            _mv_block = (
+                f'<span style="{_M}font-size:0.5rem;font-weight:700;letter-spacing:.14em;'
+                f'text-transform:uppercase;color:{_C["label"]};margin-right:10px">'
+                f'Top Conflicts · CIS</span>{_tv_html}'
+            )
+        else:
+            _mv_block = (
+                f'<span style="{_M}font-size:0.58rem;color:{_C["muted"]}">'
+                + ("— no conflict moves vs prior snapshot" if yday_deltas is not None
+                   else "no prior baseline yet") + '</span>'
+            )
     _gpr_block = ""
     if news_gpr is not None:
         _gpr_block = (
