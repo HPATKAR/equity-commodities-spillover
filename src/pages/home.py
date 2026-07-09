@@ -1344,6 +1344,111 @@ def _build_speedometer_svg(
     return "\n".join(S)
 
 
+def _fear_index_chart(sh: "pd.Series", height: int = 250) -> "go.Figure":
+    """Geeky statistical view of the Market Fear Index for the Command Center:
+    252d MA / High / Low, a rolling ±1σ envelope, spline risk line with gradient
+    fill, regime bands, conflict markers, a right-margin distribution histogram,
+    and a monospace NOW callout (percentile + z-score vs the visible window)."""
+    from plotly.subplots import make_subplots
+    from src.data.config import GEOPOLITICAL_EVENTS
+    if sh.index.tz is not None:
+        sh = sh.copy(); sh.index = sh.index.tz_localize(None)
+    x0  = max(pd.Timestamp("2024-01-01"), sh.index[0])
+    view = sh[sh.index >= x0]
+    if view.empty:
+        view = sh
+    cur = float(sh.iloc[-1])
+    mu, sd = float(view.mean()), float(view.std() or 1.0)
+    z = (cur - mu) / sd
+    pctile = float((view <= cur).mean() * 100)
+
+    w = 252
+    ma    = sh.rolling(w, min_periods=20).mean()
+    hi    = sh.rolling(w, min_periods=5).max()
+    lo    = sh.rolling(w, min_periods=5).min()
+    sroll = sh.rolling(w, min_periods=20).std()
+    up1, dn1 = ma + sroll, ma - sroll
+
+    fig = make_subplots(rows=1, cols=2, column_widths=[0.875, 0.125],
+                        shared_yaxes=True, horizontal_spacing=0.008)
+
+    for y0, y1, c in [(0, 25, "rgba(46,125,50,0.10)"), (25, 50, "rgba(120,120,120,0.05)"),
+                      (50, 75, "rgba(230,126,34,0.10)"), (75, 100, "rgba(192,57,43,0.16)")]:
+        fig.add_hrect(y0=y0, y1=y1, fillcolor=c, line_width=0, layer="below", row=1, col=1)
+
+    fig.add_trace(go.Scatter(x=up1.index, y=up1, line=dict(width=0), showlegend=False,
+                             hoverinfo="skip"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=dn1.index, y=dn1, line=dict(width=0), fill="tonexty",
+                             fillcolor="rgba(207,185,145,0.07)", name="±1σ",
+                             hoverinfo="skip"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=ma.index, y=ma, name="252d MA",
+                             line=dict(color="rgba(207,185,145,0.9)", width=1.3)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=hi.index, y=hi, name="252d High",
+                             line=dict(color="rgba(207,185,145,0.35)", width=0.8, dash="dot")), row=1, col=1)
+    fig.add_trace(go.Scatter(x=lo.index, y=lo, name="252d Low",
+                             line=dict(color="rgba(142,154,170,0.35)", width=0.8, dash="dot")), row=1, col=1)
+    fig.add_trace(go.Scatter(x=sh.index, y=sh, name="Risk Score",
+                             line=dict(color="#e0392b", width=1.7, shape="spline", smoothing=0.4),
+                             fill="tozeroy", fillcolor="rgba(224,57,43,0.07)"), row=1, col=1)
+
+    for ev in GEOPOLITICAL_EVENTS:
+        t = pd.Timestamp(ev["start"])
+        if t < x0 or t > sh.index[-1]:
+            continue
+        col = ev.get("color", "#8E6F3E")
+        fig.add_vline(x=t.value // 10**6, line=dict(color=col, width=1, dash="dot"), row=1, col=1)
+        fig.add_annotation(x=t, y=98, text=ev["label"], showarrow=False, textangle=-90,
+                           font=dict(size=7, color=col, family="JetBrains Mono, monospace"),
+                           xanchor="right", yanchor="top", bgcolor="rgba(8,10,16,0.65)",
+                           borderpad=1, row=1, col=1)
+
+    fig.add_hline(y=cur, line=dict(color="#e67e22", width=1, dash="dot"), row=1, col=1)
+    fig.add_hline(y=mu, line=dict(color="rgba(207,185,145,0.45)", width=0.8, dash="dashdot"), row=1, col=1)
+
+    fig.add_annotation(
+        xref="x domain", yref="y domain", x=0.985, y=0.97, xanchor="right", yanchor="top",
+        align="right", showarrow=False, borderpad=4,
+        bgcolor="rgba(8,10,16,0.82)", bordercolor="rgba(207,185,145,0.35)", borderwidth=1,
+        font=dict(size=9, family="JetBrains Mono, monospace", color="#e8e9ed"),
+        text=(f"NOW <b>{cur:.0f}</b>   pctile <b>{pctile:.0f}</b>   z <b>{z:+.1f}σ</b><br>"
+              f"<span style='color:#8890a1'>μ {mu:.0f} · σ {sd:.1f} · n {len(view)}</span>"),
+        row=1, col=1)
+    fig.add_annotation(xref="x domain", yref="y domain", x=0.01, y=0.04, xanchor="left",
+                       yanchor="bottom", showarrow=False, borderpad=2,
+                       bgcolor="rgba(8,10,16,0.6)",
+                       font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
+                       text="MCS proxy · market-signal layer only (conflict layer excluded)",
+                       row=1, col=1)
+
+    fig.add_trace(go.Histogram(y=view.values, nbinsy=26, orientation="h",
+                               marker=dict(color="rgba(224,57,43,0.35)",
+                                           line=dict(color="rgba(224,57,43,0.5)", width=0.4)),
+                               showlegend=False, hoverinfo="skip"), row=1, col=2)
+    fig.add_hline(y=cur, line=dict(color="#e67e22", width=1.4), row=1, col=2)
+    fig.add_hline(y=mu, line=dict(color="rgba(207,185,145,0.6)", width=0.9, dash="dot"), row=1, col=2)
+
+    fig.update_layout(
+        height=height, paper_bgcolor="#070709", plot_bgcolor="#070709",
+        font=dict(color="#c8ccd6", family="JetBrains Mono, monospace", size=10),
+        margin=dict(l=40, r=14, t=8, b=26), bargap=0.06, hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0,
+                    font=dict(size=8.5, color="#c8ccd6"), bgcolor="rgba(10,10,12,0.6)",
+                    bordercolor="#1e1e1e", borderwidth=1))
+    fig.update_xaxes(row=1, col=1, range=[str(x0), str(sh.index[-1])], showgrid=False,
+                     showspikes=True, spikecolor="rgba(207,185,145,0.4)", spikethickness=1,
+                     spikedash="dot", spikemode="across", tickangle=-30, tickfont=dict(size=8.5),
+                     linecolor="#1e1e1e", nticks=8)
+    fig.update_xaxes(row=1, col=2, showgrid=False, showticklabels=False, zeroline=False,
+                     fixedrange=True)
+    fig.update_yaxes(row=1, col=1, range=[-1, 104], tickvals=[0, 25, 50, 75, 100],
+                     ticktext=["0", "25", "50", "75", "100"], showgrid=True,
+                     gridcolor="rgba(30,32,38,0.9)", tickfont=dict(size=8.5), linecolor="#1e1e1e",
+                     showspikes=True, spikecolor="rgba(207,185,145,0.3)", spikethickness=1,
+                     spikedash="dot")
+    fig.update_yaxes(row=1, col=2, range=[-1, 104], showticklabels=False, showgrid=False)
+    return fig
+
+
 def _render_geo_risk_block(
     risk: dict,
     conflict_agg: dict,
@@ -1543,57 +1648,7 @@ def _render_geo_risk_block(
         unsafe_allow_html=True,
     )
     if score_history is not None and not score_history.empty:
-        fig_hist = plot_risk_history(score_history, height=242)
-        # Clip the view to Jan 2024 onward — the score is sparse/flat before
-        # then, so the early region just wasted the card. Start at the later of
-        # Jan-2024 and the data's own start so there's never an empty left gap.
-        _hist_x0 = str(max(pd.Timestamp("2024-01-01"), score_history.index[0]))
-        _hist_x1 = str(score_history.index[-1])
-        fig_hist.update_layout(
-            paper_bgcolor="#080808",
-            plot_bgcolor="#080808",
-            font={"color": _C["text"], "family": "JetBrains Mono, monospace", "size": 11},
-            title_text="",
-            # tight margins so the plot fills the card (little bezel after texts)
-            margin=dict(l=44, r=34, t=10, b=30),
-            xaxis=dict(
-                showgrid=False,
-                tickfont={"size": 9, "color": _C["text"], "family": "JetBrains Mono"},
-                linecolor=_C["border"],
-                tickangle=-30,
-                nticks=8,
-                range=[_hist_x0, _hist_x1],
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#1e1e1e",
-                gridwidth=1,
-                tickfont={"size": 9, "color": _C["text"], "family": "JetBrains Mono"},
-                linecolor=_C["border"],
-                title_text="",
-                tickvals=[0, 25, 50, 75, 100],
-                ticktext=["0", "25", "50", "75", "100"],
-                range=[-2, 105],
-            ),
-            legend=dict(
-                font={"size": 9, "color": _C["text"]},
-                bgcolor="rgba(10,10,10,0.7)",
-                borderwidth=1,
-                bordercolor=_C["border"],
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="left",
-                x=0,
-            ),
-        )
-        fig_hist.add_hline(
-            y=float(score),
-            line=dict(color=color, width=1.2, dash="dot"),
-            annotation_text=f'NOW {score:.0f}',
-            annotation_font={"size": 10, "color": color, "family": "JetBrains Mono"},
-            annotation_position="right",
-        )
+        fig_hist = _fear_index_chart(score_history, height=250)
         st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
     else:
         st.markdown(
