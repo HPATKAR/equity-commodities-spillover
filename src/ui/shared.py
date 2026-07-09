@@ -1123,7 +1123,7 @@ html,body{{
 .ft-body{{background:#0a0a0a;padding:44px 0 40px;border-top:1px solid #1e1e1e;}}
 .ft-grid{{
   display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1fr;
-  gap:28px;width:100%;padding:0 48px;
+  gap:28px;width:100%;padding:0 20px;
 }}
 .ft-logo{{height:38px;margin-bottom:16px;display:block;}}
 .ft-wordmark{{
@@ -1156,7 +1156,7 @@ a{{
 }}
 a:hover{{color:#CFB991;}}
 .ft-bar{{
-  background:#0a0a0a;padding:10px 48px;text-align:center;
+  background:#0a0a0a;padding:10px 20px;text-align:center;
   border-top:1px solid rgba(207,185,145,0.25);
 }}
 .ft-bar p{{
