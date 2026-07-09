@@ -5770,9 +5770,13 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _header_slot = st.empty()
     if _is_cold:
         with _header_slot.container():
+            # top_margin="0": _page_header's default -2.25rem pull tucks the title
+            # under the fixed navbar on home, making "Command Center" unreadable
+            # during the fetch. Keep it at its natural position instead.
             _page_header(
                 "Command Center",
                 "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
+                top_margin="0",
             )
             st.markdown(
                 f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'

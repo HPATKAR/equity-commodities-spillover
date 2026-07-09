@@ -850,7 +850,8 @@ def _header_status_html() -> str:
         return ""
 
 
-def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
+def _page_header(title: str, subtitle: str = "", eyebrow: str = "",
+                 top_margin: str = "-2.25rem") -> None:
     """
     Branded page header used on every page.
     Gold left-border structural anchor · logo mark eyebrow · clean h1 title,
@@ -887,7 +888,7 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         # negative top margin collapses Streamlit's default element gaps above
         # the header so the eyebrow tucks under the nav at the same distance as
         # the command center (home.py, which uses a tighter global gap instead)
-        f'padding-left:12px;margin-top:-2.25rem;margin-bottom:0.75rem;display:flex;'
+        f'padding-left:12px;margin-top:{top_margin};margin-bottom:0.75rem;display:flex;'
         f'align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">'
         # left: eyebrow · title · subtitle
         f'<div style="min-width:0">'
