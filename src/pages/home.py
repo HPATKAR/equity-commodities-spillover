@@ -256,7 +256,7 @@ section[data-testid="stMain"] *{border-radius:0!important;box-shadow:none!import
 /* Hero band — CSS grid, 12 columns, 12px gap everywhere */
 .cc-hero{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin:0 0 12px}
 .cc-cell{background:#0a0a0a;border:1px solid #1e1e1e;padding:.4rem .65rem;min-width:0}
-.cc-thin{display:flex;align-items:baseline;padding:.3rem .65rem;overflow:hidden}
+.cc-thin{display:flex;align-items:center;padding:.3rem .65rem;overflow:hidden}
 .cc-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;
     letter-spacing:.14em;text-transform:uppercase;color:#8890a1;margin-bottom:4px}
 .cc-num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;
@@ -1045,7 +1045,7 @@ def _render_command_hero(
         f'<div class="cc-hero">'
 
         # Row A — one status line: LIVE | changed-slot | alerts | regime
-        f'<div class="cc-cell cc-thin" style="grid-column:span 2;gap:5px;align-items:center">'
+        f'<div class="cc-cell cc-thin" style="grid-column:span 2;gap:5px">'
         f'<span class="hm-live-blink" style="display:inline-block;width:6px;height:6px;'
         f'border-radius:50%;background:{_C["safe"]};flex-shrink:0"></span>'
         f'<span style="{_M}font-size:.5rem;font-weight:700;letter-spacing:.14em;'
