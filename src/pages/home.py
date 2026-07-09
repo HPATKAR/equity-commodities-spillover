@@ -5763,13 +5763,20 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _header_slot = st.empty()
     if _is_cold:
         with _header_slot.container():
-            # Loading state: a square-footprint circular spinner sits beside the
-            # header status cluster (top-right). The whole cold shell is replaced
-            # by the real masthead once data finishes loading, so it vanishes.
             _page_header(
                 "Command Center",
                 "Geopolitical & Cross-Asset Intelligence · Equity · Commodity · FX · Fixed Income",
-                loading=True,
+            )
+            st.markdown(
+                f'<div style="background:{_C["card2"]};border:1px solid {_C["border"]};'
+                f'border-left:3px solid {_GOLD};padding:.12rem .8rem;display:flex;'
+                f'align-items:center;gap:12px;margin-bottom:.25rem">'
+                f'<span class="nx-live-dot"></span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.54rem;'
+                f'color:{_C["label"]};letter-spacing:.12em">FETCHING LIVE DATA</span>'
+                f'<div style="flex:1;height:1px;background:{_C["border"]};overflow:hidden;position:relative">'
+                f'<div class="hm-load-sweep"></div></div></div>',
+                unsafe_allow_html=True,
             )
 
     # ── Parallel data load ────────────────────────────────────────────────
