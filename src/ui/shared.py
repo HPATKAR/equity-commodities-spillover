@@ -850,7 +850,8 @@ def _header_status_html() -> str:
         return ""
 
 
-def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
+def _page_header(title: str, subtitle: str = "", eyebrow: str = "",
+                 loading: bool = False) -> None:
     """
     Branded page header used on every page.
     Gold left-border structural anchor · logo mark eyebrow · clean h1 title,
@@ -866,6 +867,10 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
 [data-testid="stSidebar"],.stApp,body{background:#000!important}
 [data-testid="stHeader"]{background:#000!important;border-bottom:1px solid #1a1a1a!important}
 .block-container{padding-top:.6rem!important}
+@keyframes hm-spin{to{transform:rotate(360deg)}}
+.hm-spinner{width:22px;height:22px;border-radius:50%;box-sizing:border-box;
+  border:2.5px solid rgba(207,185,145,0.18);border-top-color:#CFB991;
+  animation:hm-spin .7s linear infinite;flex-shrink:0}
 </style>""", unsafe_allow_html=True)
     _Fh = "font-family:'DM Sans',sans-serif;"
     _Mh = "font-family:'JetBrains Mono',monospace;"
@@ -881,6 +886,14 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "") -> None:
         if subtitle else '<div style="margin-bottom:0.5rem"></div>'
     )
     _status = _header_status_html()
+    if loading:
+        # Square-footprint circular spinner beside the status cluster; the whole
+        # header is replaced by the real masthead once data loads, so it vanishes.
+        _status = (
+            f'<div style="display:flex;align-items:center;gap:14px">'
+            f'<div class="hm-spinner" title="Fetching live data"></div>'
+            f'{_status}</div>'
+        )
     st.markdown(
         f'<div style="border-left:2px solid #CFB991;'
         f'box-shadow:-1px 0 12px rgba(207,185,145,0.10);'
