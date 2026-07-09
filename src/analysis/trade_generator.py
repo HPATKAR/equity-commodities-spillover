@@ -646,3 +646,183 @@ def merge_with_library(
     ]
     combined.sort(key=lambda t: float(t.get("confidence", 0.5)), reverse=True)
     return combined
+
+
+# ── Signal-ranked candidate universe ─────────────────────────────────────────
+# Broadens the desk from a handful of conflict trades to a large candidate set
+# drawn from the whole scored universe: relative-value long/short pairs (SAS
+# divergence), directional single-asset signals, and safe-haven hedges. Every
+# candidate carries a signal-derived thesis. These are SCREENED CANDIDATES only
+# — the eligibility → backtest → deflated-Sharpe gate decides what deploys, and a
+# wider search automatically raises the DSR multiple-testing penalty (honest by
+# construction; nothing about the deploy bar is weakened here).
+
+_MIN_RV_SPREAD = 12.0   # min SAS divergence to form a relative-value pair
+
+
+def _sig_sector(d: dict) -> str:
+    tags = d.get("sector_tags") or []
+    return tags[0] if tags else "cross-asset"
+
+
+def _rv_pair_trade(ln, ld, sn, sd, spread, conf, regime, now) -> dict:
+    ls, ss = _sig_sector(ld), _sig_sector(sd)
+    return {
+        "name": f"Long {ln} / Short {sn}",
+        "trigger": f"Cross-asset SAS divergence — {ln} {ld['sas']:.0f} vs {sn} {sd['sas']:.0f} ({spread:.0f}-pt spread)",
+        "rationale": (
+            f"Signal-screened relative value: {ln} ({ls}) scores SAS {ld['sas']:.0f} on the geo-risk / "
+            f"spillover signal versus {sn} ({ss}) at {sd['sas']:.0f} — a {spread:.0f}-point cross-asset "
+            f"divergence in current risk sensitivity. Expressed long the higher-signal leg, short the lower. "
+            f"A screened candidate, not a discretionary call — sized only if it clears the eligibility and "
+            f"deflated-Sharpe gate."
+        ),
+        "entry": f"{ln} SAS holds above {sd['sas']:.0f}; spread ≥ {spread * 0.7:.0f} pts; regime {regime}",
+        "exit": f"Spread compresses below {spread * 0.4:.0f} pts or the two legs invert on the signal rank",
+        "risk": "Both legs re-rate together (spread-neutral); a shift to a decorrelated regime weakens the divergence signal.",
+        "tickers": _resolve_tickers([ln, sn]),
+        "assets": [ln, sn],
+        "direction": ["Long", "Short"],
+        "regime": [1, 2, 3] if regime >= 2 else [0, 1, 2],
+        "category": "Relative Value",
+        "scenarios": ["base", "escalation", "supply_shock"],
+        "confidence": round(conf, 3),
+        "upside_pct": round(conf * 12, 1),
+        "qc_flags": [],
+        "generated": True,
+        "generated_at": now,
+        "stop": f"Spread inverts ({sn} SAS exceeds {ln})",
+        "target": "Spread widens 30–50% or holds through the regime",
+        "invalidation": f"{ln} and {sn} SAS ranks converge within {max(1, spread * 0.3):.0f} pts",
+        "holding_period": "3–8 weeks (signal-driven)",
+        "reward_risk": f"{round(1.2 + conf * 1.5, 1)}:1 estimated",
+    }
+
+
+def _directional_trade(n, d, side, conf, regime, now) -> dict:
+    sect = _sig_sector(d)
+    return {
+        "name": f"{side} {n} (signal-screened)",
+        "trigger": f"{n} SAS {d['sas']:.0f} — top-decile {sect} on the geo-risk / spillover signal",
+        "rationale": (
+            f"Directional signal candidate: {n} ({sect}) carries SAS {d['sas']:.0f}, among the highest in the "
+            f"scored universe, driven by {str(d.get('direction', 'signal')).replace('_', ' ')} sensitivity to "
+            f"the current regime. Screened, not discretionary — gated by backtest + deflated Sharpe."
+        ),
+        "entry": f"{n} SAS above {max(15, d['sas'] - 8):.0f}; regime {regime}",
+        "exit": f"{n} SAS drops below {max(10, d['sas'] - 15):.0f}",
+        "risk": "Single-leg directional — carries full market beta with no relative hedge.",
+        "tickers": _resolve_tickers([n]),
+        "assets": [n],
+        "direction": [side],
+        "regime": [1, 2, 3] if regime >= 2 else [0, 1, 2],
+        "category": "Directional Signal",
+        "scenarios": ["base", "escalation"],
+        "confidence": round(conf, 3),
+        "upside_pct": round(conf * 11, 1),
+        "qc_flags": [],
+        "generated": True,
+        "generated_at": now,
+        "stop": f"{n} SAS below {max(10, d['sas'] - 15):.0f}",
+        "target": f"{n} SAS holds top-quartile through the regime",
+        "invalidation": f"{n} SAS falls out of the top decile",
+        "holding_period": "2–6 weeks",
+        "reward_risk": f"{round(1.1 + conf * 1.4, 1)}:1 estimated",
+    }
+
+
+def _haven_trade(n, d, conf, regime, now) -> dict:
+    hs = d.get("hedge_score", 0)
+    return {
+        "name": f"Long {n} — safe-haven hedge",
+        "trigger": f"{n} hedge score {hs:.0f}/100 — portfolio crisis ballast",
+        "rationale": (
+            f"Safe-haven hedge candidate: {n} scores {hs:.0f}/100 on the crisis-ballast signal "
+            f"(SAS {d.get('sas', 0):.0f}, safe-haven direction). Held as a hedge overlay, not an alpha bet."
+        ),
+        "entry": f"Regime ≥ Elevated OR rising cross-asset correlation; {n} hedge score ≥ 40",
+        "exit": "Regime normalizes / cross-asset correlation falls back",
+        "risk": "Carry cost in calm regimes; the hedge decays if a crisis does not materialize.",
+        "tickers": _resolve_tickers([n]),
+        "assets": [n],
+        "direction": ["Long"],
+        "regime": [2, 3],
+        "category": "Safe-Haven Hedge",
+        "scenarios": ["escalation", "risk_off", "supply_shock"],
+        "confidence": round(conf, 3),
+        "upside_pct": round(conf * 10, 1),
+        "qc_flags": [],
+        "generated": True,
+        "generated_at": now,
+        "stop": "Regime falls to Normal for 5+ days",
+        "target": "Outperforms risk assets during a correlation spike",
+        "invalidation": "Sustained risk-on regime",
+        "holding_period": "Hedge overlay — regime-conditional",
+        "reward_risk": "Convex / hedge (asymmetric)",
+    }
+
+
+def generate_signal_trades(
+    regime: int = 1,
+    all_assets: Optional[dict] = None,
+    max_trades: int = 90,
+) -> list[dict]:
+    """Signal-ranked candidate universe across the scored asset set: relative-
+    value long/short pairs + directional single-asset trades + safe-haven hedges.
+    Ranked by signal strength, deduped, capped at max_trades. Screened candidates
+    only — the eligibility/DSR gate decides deployment (and is made stricter by
+    the wider search via the deflated-Sharpe trial count)."""
+    from src.analysis.exposure import score_all_assets
+    if all_assets is None:
+        try:
+            all_assets = score_all_assets()
+        except Exception:
+            return []
+    if not all_assets:
+        return []
+
+    now   = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    items = sorted(all_assets.items(), key=lambda kv: kv[1].get("sas", 0), reverse=True)
+    highs = [(n, d) for n, d in items if d.get("sas", 0) >= 22]
+    lows  = [(n, d) for n, d in reversed(items) if d.get("sas", 0) <= 18]
+    havens = sorted(
+        ((n, d) for n, d in all_assets.items() if d.get("direction") == "safe_haven"),
+        key=lambda kv: kv[1].get("hedge_score", 0), reverse=True,
+    )
+
+    cands: list[tuple[float, dict]] = []
+
+    # 1. Relative-value pairs (long high-SAS / short low-SAS), cross-sector preferred
+    for ln, ld in highs:
+        for sn, sd in lows:
+            if ln == sn:
+                continue
+            spread = ld["sas"] - sd["sas"]
+            if spread < _MIN_RV_SPREAD:
+                continue
+            cross = _sig_sector(ld) != _sig_sector(sd)
+            sig   = spread * (1.15 if cross else 1.0)
+            conf  = float(np.clip(0.16 + (spread - _MIN_RV_SPREAD) / 42.0, 0.15, 0.62))
+            cands.append((sig, _rv_pair_trade(ln, ld, sn, sd, spread, conf, regime, now)))
+
+    # 2. Directional single-asset (long top-SAS names)
+    for n, d in highs[:10]:
+        conf = float(np.clip(0.16 + (d["sas"] - 22) / 55.0, 0.15, 0.55))
+        cands.append((d["sas"] * 0.9, _directional_trade(n, d, "Long", conf, regime, now)))
+
+    # 3. Safe-haven hedges
+    for n, d in havens[:4]:
+        conf = float(np.clip(0.20 + d.get("hedge_score", 0) / 250.0, 0.18, 0.55))
+        cands.append((d.get("hedge_score", 0) * 0.5, _haven_trade(n, d, conf, regime, now)))
+
+    cands.sort(key=lambda x: x[0], reverse=True)
+    out: list[dict] = []
+    seen: set[str] = set()
+    for _, t in cands:
+        if t["name"] in seen:
+            continue
+        seen.add(t["name"])
+        out.append(t)
+        if len(out) >= max_trades:
+            break
+    return out

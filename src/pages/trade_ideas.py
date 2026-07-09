@@ -2378,6 +2378,16 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 _TRADE_LIBRARY.append(_g)
                 _existing.add(_g["name"])
                 _n_generated += 1
+        # Signal-ranked candidate universe — relative-value pairs + directional
+        # signals + safe-haven hedges across the scored universe. Broadens the
+        # book to 100+ candidates; each runs the SAME eligibility → Stage-3 → DSR
+        # gate, and the wider search raises the deflated-Sharpe trial penalty.
+        from src.analysis.trade_generator import generate_signal_trades
+        for _g in generate_signal_trades(regime=current, max_trades=90):
+            if _g.get("name") and _g["name"] not in _existing:
+                _TRADE_LIBRARY.append(_g)
+                _existing.add(_g["name"])
+                _n_generated += 1
     except Exception:
         _n_generated = 0
 
