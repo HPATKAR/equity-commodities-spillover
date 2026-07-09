@@ -1543,19 +1543,26 @@ def _render_geo_risk_block(
         unsafe_allow_html=True,
     )
     if score_history is not None and not score_history.empty:
-        fig_hist = plot_risk_history(score_history, height=200)
+        fig_hist = plot_risk_history(score_history, height=242)
+        # Clip the view to Jan 2024 onward — the score is sparse/flat before
+        # then, so the early region just wasted the card. Start at the later of
+        # Jan-2024 and the data's own start so there's never an empty left gap.
+        _hist_x0 = str(max(pd.Timestamp("2024-01-01"), score_history.index[0]))
+        _hist_x1 = str(score_history.index[-1])
         fig_hist.update_layout(
             paper_bgcolor="#080808",
             plot_bgcolor="#080808",
             font={"color": _C["text"], "family": "JetBrains Mono, monospace", "size": 11},
             title_text="",
-            margin=dict(l=52, r=24, t=18, b=64),
+            # tight margins so the plot fills the card (little bezel after texts)
+            margin=dict(l=44, r=34, t=10, b=30),
             xaxis=dict(
                 showgrid=False,
                 tickfont={"size": 9, "color": _C["text"], "family": "JetBrains Mono"},
                 linecolor=_C["border"],
                 tickangle=-30,
-                nticks=10,
+                nticks=8,
+                range=[_hist_x0, _hist_x1],
             ),
             yaxis=dict(
                 showgrid=True,
