@@ -1658,13 +1658,13 @@ def _render_geo_risk_block(
     st.markdown(
         f'<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;'
         f'background:{_C["card"]};border:1px solid {_C["border"]};'
-        f'padding:.4rem .8rem;margin-bottom:.4rem">{_mv_block}{_gpr_block}</div>',
+        f'padding:.4rem .8rem;margin-bottom:.15rem">{_mv_block}{_gpr_block}</div>',
         unsafe_allow_html=True,
     )
 
     # ── History chart ──────────────────────────────────────────────────────
     st.markdown(
-        f'<div style="margin:.8rem 0 .4rem;padding:.35rem .6rem;'
+        f'<div style="margin:.2rem 0 .3rem;padding:.35rem .6rem;'
         f'background:{_C["card"]};border-top:1px solid {_C["border"]};'
         f'border-bottom:1px solid {_C["border"]}">'
         f'<span style="{_M}font-size:0.56rem;font-weight:700;letter-spacing:.16em;'
