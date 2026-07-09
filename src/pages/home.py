@@ -890,7 +890,7 @@ def _render_command_hero(
             fmt = lambda v: f"{v:,.2f}" if v < 10000 else f"{v:,.0f}"
             cells += (
                 f'<span><span style="{_M}font-size:.5rem;font-weight:700;'
-                f'letter-spacing:.08em;color:{_C["label"]}">{d["label"]}</span>'
+                f'letter-spacing:.08em;color:{_C["text"]}">{d["label"]}</span>'
                 f'<span class="cc-num" style="font-size:.64rem;font-weight:700;'
                 f'color:{_C["text"]};margin-left:5px">{fmt(d["val"])}</span>'
                 f'<span class="cc-num" style="font-size:.56rem;font-weight:700;'
@@ -950,7 +950,7 @@ def _render_command_hero(
                     sc = _C["safe"]
                 cells += (
                     f'<span><span style="{_M}font-size:.5rem;font-weight:700;'
-                    f'letter-spacing:.08em;color:{_C["label"]}">{lbl}</span>'
+                    f'letter-spacing:.08em;color:{_C["text"]}">{lbl}</span>'
                     f'<span class="cc-num" style="font-size:.64rem;font-weight:700;'
                     f'color:{_C["text"]};margin-left:5px">{_fmt.format(v)}</span>'
                     f'<span class="cc-num" style="font-size:.52rem;font-weight:700;'
