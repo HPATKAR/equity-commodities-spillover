@@ -1421,9 +1421,13 @@ def _render_trade_card(
     is_economic_prior: bool = True,
 ) -> None:
     """Render a single trade card with QC grade, confidence, payoff table, and debate thread."""
-    # Suppress low-confidence generated ideas to keep the page signal-to-noise high
+    # Suppress low-confidence generated CONFLICT ideas to keep signal-to-noise
+    # high. The signal-ranked candidate universe (relative-value / directional /
+    # safe-haven) is intentionally broad — it's meant to be browsed, and the
+    # eligibility → DSR gate does the real filtering — so it is exempt.
     _conf_raw = float(trade.get("confidence", 0.60))
-    if trade.get("generated") and _conf_raw < 0.55:
+    if (trade.get("generated") and not trade.get("screened")
+            and _conf_raw < 0.55):
         return
 
     cat_col = _CATEGORY_COLORS.get(trade["category"], "#CFB991")
@@ -2193,6 +2197,35 @@ def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
     }
 
 
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=2)
+def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
+    """Log-returns for the liquid single-stock universe (US S&P 500 + top India
+    NSE + top China HK), columns keyed by DISPLAY NAME so they line up with the
+    generated single-name trades' legs. Merged into the gate frame so those
+    trades are eligible, backtestable and deployable — not just candidates."""
+    try:
+        from src.analysis.trade_generator import all_stock_universe
+        uni = all_stock_universe()
+        if not uni:
+            return pd.DataFrame()
+        name_by_ticker = {tk: disp for disp, (tk, _s, _r) in uni.items()}
+        import yfinance as yf, datetime as _dt
+        # Clamp to ~5y — backtest windows are ≤252d, so deeper history just
+        # slows the 184-ticker fetch. Recent 5y is plenty for these signals.
+        _floor = str(_dt.date.today() - _dt.timedelta(days=5 * 365))
+        _s = _floor if start < _floor else start
+        raw = yf.download(list(name_by_ticker.keys()), start=_s, end=end,
+                          auto_adjust=True, progress=False, threads=True)
+        if raw.empty:
+            return pd.DataFrame()
+        close = raw["Close"] if "Close" in raw.columns else raw
+        close = close.rename(columns=name_by_ticker)
+        ret = np.log(close / close.shift(1)).dropna(how="all")
+        return ret
+    except Exception:
+        return pd.DataFrame()
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -2397,12 +2430,23 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # rendered, clearly marked, hard-locked to zero weight (enforce_weight in
     # trade_filter.py is the choke point steps 2–4 must route through).
     from src.analysis.trade_filter import annotate_eligibility
-    _all_r_gate = all_r_concat   # full tradeable universe — eq/cmd/FI/FX/PC
+    # Merge single-stock returns (US/India/China) into the gate frame so the
+    # generated single-name trades are eligible + backtestable + deployable.
+    try:
+        with st.spinner("Loading single-stock returns (US · India · China)…"):
+            _stock_r = _load_stock_returns(start, end)
+    except Exception:
+        _stock_r = pd.DataFrame()
+    if _stock_r is not None and not _stock_r.empty:
+        _all_r_gate = pd.concat([all_r_concat, _stock_r.reindex(all_r_concat.index)], axis=1)
+        _all_r_gate = _all_r_gate.loc[:, ~_all_r_gate.columns.duplicated()]
+    else:
+        _all_r_gate = all_r_concat   # full tradeable universe — eq/cmd/FI/FX/PC
     # Loadable universe: every leg display name with ANY loader mapping,
     # loaded or not. A missing leg outside this set is STRUCTURALLY DEAD
     # (can never trade); inside it, it is merely missing from today's fetch.
     from src.data.config import FIXED_INCOME_TICKERS, FX_TICKERS
-    _loadable = (set(all_r_concat.columns) | set(FIXED_INCOME_TICKERS)
+    _loadable = (set(_all_r_gate.columns) | set(FIXED_INCOME_TICKERS)
                  | set(FX_TICKERS) | set(_PC_LEG_MAP.values()))
 
     # ── Risk appetite ──────────────────────────────────────────────────────

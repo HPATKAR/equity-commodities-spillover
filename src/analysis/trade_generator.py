@@ -648,130 +648,195 @@ def merge_with_library(
     return combined
 
 
-# ── Signal-ranked candidate universe ─────────────────────────────────────────
-# Broadens the desk from a handful of conflict trades to a large candidate set
-# drawn from the whole scored universe: relative-value long/short pairs (SAS
-# divergence), directional single-asset signals, and safe-haven hedges. Every
-# candidate carries a signal-derived thesis. These are SCREENED CANDIDATES only
-# — the eligibility → backtest → deflated-Sharpe gate decides what deploys, and a
-# wider search automatically raises the DSR multiple-testing penalty (honest by
-# construction; nothing about the deploy bar is weakened here).
+# ── Individual signal-ranked candidate universe ──────────────────────────────
+# Individual (single-name / single-asset) directional trades — NOT pairs —
+# across a LIQUID universe people actually trade: liquid macro (energy, metals,
+# major indices, safe havens; niche softs deprioritised), plus liquid single
+# stocks (S&P 500 + top India NSE + top China HK), each mapped to the macro
+# signal driving its sector. Screened candidates only: the eligibility → DSR
+# gate still decides deployment, and the wider search raises the DSR penalty.
 
-_MIN_RV_SPREAD = 12.0   # min SAS divergence to form a relative-value pair
+# Niche soft-ag commodities kept "lite" (excluded from generation)
+_NICHE_AG = {"Cotton", "Coffee", "Sugar #11", "Soybeans"}
+
+# Top India large-caps (NSE) — ticker → (name, sector)
+_INDIA_UNIVERSE: dict[str, tuple[str, str]] = {
+    "RELIANCE.NS": ("Reliance Industries", "Energy"),
+    "TCS.NS": ("Tata Consultancy", "Tech"),
+    "HDFCBANK.NS": ("HDFC Bank", "Financials"),
+    "ICICIBANK.NS": ("ICICI Bank", "Financials"),
+    "INFY.NS": ("Infosys", "Tech"),
+    "HINDUNILVR.NS": ("Hindustan Unilever", "Consumer Staples"),
+    "ITC.NS": ("ITC", "Consumer Staples"),
+    "SBIN.NS": ("State Bank of India", "Financials"),
+    "BHARTIARTL.NS": ("Bharti Airtel", "Communications"),
+    "BAJFINANCE.NS": ("Bajaj Finance", "Financials"),
+    "KOTAKBANK.NS": ("Kotak Mahindra Bank", "Financials"),
+    "LT.NS": ("Larsen & Toubro", "Industrials"),
+    "AXISBANK.NS": ("Axis Bank", "Financials"),
+    "ASIANPAINT.NS": ("Asian Paints", "Materials"),
+    "MARUTI.NS": ("Maruti Suzuki", "Consumer Discretionary"),
+    "SUNPHARMA.NS": ("Sun Pharma", "Healthcare"),
+    "TITAN.NS": ("Titan", "Consumer Discretionary"),
+    "ONGC.NS": ("ONGC", "Energy"),
+    "NTPC.NS": ("NTPC", "Utilities"),
+}
+
+# Top China large-caps (HK) — ticker → (name, sector)
+_CHINA_UNIVERSE: dict[str, tuple[str, str]] = {
+    "0700.HK": ("Tencent", "Tech"),
+    "9988.HK": ("Alibaba", "Tech"),
+    "3690.HK": ("Meituan", "Tech"),
+    "0941.HK": ("China Mobile", "Communications"),
+    "1299.HK": ("AIA Group", "Financials"),
+    "0939.HK": ("China Construction Bank", "Financials"),
+    "1810.HK": ("Xiaomi", "Tech"),
+    "2318.HK": ("Ping An", "Financials"),
+    "0883.HK": ("CNOOC", "Energy"),
+    "1211.HK": ("BYD", "Consumer Discretionary"),
+    "9618.HK": ("JD.com", "Consumer Discretionary"),
+    "0388.HK": ("HKEX", "Financials"),
+    "9999.HK": ("NetEase", "Tech"),
+    "0857.HK": ("PetroChina", "Energy"),
+    "2628.HK": ("China Life", "Financials"),
+    "3968.HK": ("China Merchants Bank", "Financials"),
+    "1088.HK": ("China Shenhua Energy", "Energy"),
+    "0386.HK": ("Sinopec", "Energy"),
+    "2382.HK": ("Sunny Optical", "Tech"),
+    "1024.HK": ("Kuaishou", "Tech"),
+}
+
+# Stock sector → (macro signal proxy, direction sign, thesis angle).
+# Proxy "__equity__" uses the region's index SAS; "__conflict__" uses conflict.
+_STOCK_SECTOR_SIGNAL: dict[str, tuple[str, int, str]] = {
+    "Energy":                 ("WTI Crude Oil", +1, "crude-leveraged earnings"),
+    "Defense":                ("__conflict__",  +1, "elevated conflict intensity / defense spend"),
+    "Gold Mining":            ("Gold",          +1, "gold-price leverage + safe-haven bid"),
+    "Airlines":               ("WTI Crude Oil", -1, "jet-fuel cost squeeze when crude is bid"),
+    "Industrial Metals":      ("Copper",        +1, "industrial-metals demand"),
+    "Materials":              ("Copper",        +1, "commodity / materials beta"),
+    "Utilities":              ("Natural Gas",   +1, "power generation, gas input pass-through"),
+    "Agriculture":            ("Wheat",         +1, "ag supply-shock leverage"),
+    "Financials":             ("__equity__",    +1, "rate / credit cycle"),
+    "Tech":                   ("__equity__",    +1, "growth / risk appetite"),
+    "Healthcare":             ("__equity__",    +1, "defensive quality"),
+    "Consumer Staples":       ("__equity__",    +1, "defensive staples"),
+    "Consumer Discretionary": ("__equity__",    +1, "consumer cycle"),
+    "Industrials":            ("__equity__",    +1, "capex / cycle"),
+    "Real Estate":            ("__equity__",    +1, "rate-sensitive property"),
+    "Communications":         ("__equity__",    +1, "growth / connectivity"),
+}
+
+_REGION_INDEX = {"US": "S&P 500", "India": "Nifty 50", "China": "Hang Seng"}
 
 
-def _sig_sector(d: dict) -> str:
-    tags = d.get("sector_tags") or []
-    return tags[0] if tags else "cross-asset"
+def all_stock_universe() -> dict[str, tuple[str, str, str]]:
+    """Combined liquid single-stock universe → {display_name: (ticker, sector, region)}.
+    Lazy-imports the S&P 500 set from the page to avoid a circular import."""
+    out: dict[str, tuple[str, str, str]] = {}
+    try:
+        from src.pages.trade_ideas import _SP500_UNIVERSE
+        for tk, (nm, sec) in _SP500_UNIVERSE.items():
+            out[nm] = (tk, sec, "US")
+    except Exception:
+        pass
+    for tk, (nm, sec) in _INDIA_UNIVERSE.items():
+        out[nm] = (tk, sec, "India")
+    for tk, (nm, sec) in _CHINA_UNIVERSE.items():
+        out[nm] = (tk, sec, "China")
+    return out
 
 
-def _rv_pair_trade(ln, ld, sn, sd, spread, conf, regime, now) -> dict:
-    ls, ss = _sig_sector(ld), _sig_sector(sd)
+def _confidence(sas: float, lo: float = 0.28, hi: float = 0.70, base: float = 0.30, div: float = 100.0) -> float:
+    return float(np.clip(base + max(sas, 0.0) / div, lo, hi))
+
+
+def _macro_directional(name, d, side, conf, regime, now) -> dict:
+    sect = (d.get("sector_tags") or ["cross-asset"])[0]
+    verb = "beneficiary" if side == "Long" else "underweight"
     return {
-        "name": f"Long {ln} / Short {sn}",
-        "trigger": f"Cross-asset SAS divergence — {ln} {ld['sas']:.0f} vs {sn} {sd['sas']:.0f} ({spread:.0f}-pt spread)",
+        "name": f"{side} {name}",
+        "trigger": f"{name} SAS {d['sas']:.0f} — {sect} {verb} on the geo-risk / spillover signal",
         "rationale": (
-            f"Signal-screened relative value: {ln} ({ls}) scores SAS {ld['sas']:.0f} on the geo-risk / "
-            f"spillover signal versus {sn} ({ss}) at {sd['sas']:.0f} — a {spread:.0f}-point cross-asset "
-            f"divergence in current risk sensitivity. Expressed long the higher-signal leg, short the lower. "
-            f"A screened candidate, not a discretionary call — sized only if it clears the eligibility and "
-            f"deflated-Sharpe gate."
+            f"Individual directional signal: {name} ({sect}) scores SAS {d['sas']:.0f} on the current "
+            f"geo-risk / spillover signal, a {'top' if side == 'Long' else 'bottom'}-ranked {sect} read. "
+            f"Screened candidate, not discretionary — gated by backtest + deflated Sharpe."
         ),
-        "entry": f"{ln} SAS holds above {sd['sas']:.0f}; spread ≥ {spread * 0.7:.0f} pts; regime {regime}",
-        "exit": f"Spread compresses below {spread * 0.4:.0f} pts or the two legs invert on the signal rank",
-        "risk": "Both legs re-rate together (spread-neutral); a shift to a decorrelated regime weakens the divergence signal.",
-        "tickers": _resolve_tickers([ln, sn]),
-        "assets": [ln, sn],
-        "direction": ["Long", "Short"],
+        "entry": f"{name} SAS { 'above' if side=='Long' else 'below' } {max(12, d['sas'] + (-8 if side=='Long' else 8)):.0f}; regime {regime}",
+        "exit": f"Signal rank reverts to the middle of the universe",
+        "risk": "Single-leg directional — carries full asset beta, no relative hedge.",
+        "tickers": _resolve_tickers([name]),
+        "assets": [name], "direction": [side],
         "regime": [1, 2, 3] if regime >= 2 else [0, 1, 2],
-        "category": "Relative Value",
+        "category": "Commodity" if sect not in ("broad_equity", "tech", "small_cap") else "Equity Index",
         "scenarios": ["base", "escalation", "supply_shock"],
-        "confidence": round(conf, 3),
-        "upside_pct": round(conf * 12, 1),
-        "qc_flags": [],
-        "generated": True,
-        "generated_at": now,
-        "stop": f"Spread inverts ({sn} SAS exceeds {ln})",
-        "target": "Spread widens 30–50% or holds through the regime",
-        "invalidation": f"{ln} and {sn} SAS ranks converge within {max(1, spread * 0.3):.0f} pts",
-        "holding_period": "3–8 weeks (signal-driven)",
-        "reward_risk": f"{round(1.2 + conf * 1.5, 1)}:1 estimated",
+        "confidence": round(conf, 3), "upside_pct": round(conf * 11, 1),
+        "qc_flags": [], "generated": True, "screened": True, "generated_at": now,
+        "stop": "Signal rank falls out of the actionable band",
+        "target": "Signal rank holds through the regime",
+        "invalidation": "SAS rank mean-reverts to neutral",
+        "holding_period": "2–6 weeks", "reward_risk": f"{round(1.1 + conf * 1.4, 1)}:1 est.",
     }
 
 
-def _directional_trade(n, d, side, conf, regime, now) -> dict:
-    sect = _sig_sector(d)
-    return {
-        "name": f"{side} {n} (signal-screened)",
-        "trigger": f"{n} SAS {d['sas']:.0f} — top-decile {sect} on the geo-risk / spillover signal",
-        "rationale": (
-            f"Directional signal candidate: {n} ({sect}) carries SAS {d['sas']:.0f}, among the highest in the "
-            f"scored universe, driven by {str(d.get('direction', 'signal')).replace('_', ' ')} sensitivity to "
-            f"the current regime. Screened, not discretionary — gated by backtest + deflated Sharpe."
-        ),
-        "entry": f"{n} SAS above {max(15, d['sas'] - 8):.0f}; regime {regime}",
-        "exit": f"{n} SAS drops below {max(10, d['sas'] - 15):.0f}",
-        "risk": "Single-leg directional — carries full market beta with no relative hedge.",
-        "tickers": _resolve_tickers([n]),
-        "assets": [n],
-        "direction": [side],
-        "regime": [1, 2, 3] if regime >= 2 else [0, 1, 2],
-        "category": "Directional Signal",
-        "scenarios": ["base", "escalation"],
-        "confidence": round(conf, 3),
-        "upside_pct": round(conf * 11, 1),
-        "qc_flags": [],
-        "generated": True,
-        "generated_at": now,
-        "stop": f"{n} SAS below {max(10, d['sas'] - 15):.0f}",
-        "target": f"{n} SAS holds top-quartile through the regime",
-        "invalidation": f"{n} SAS falls out of the top decile",
-        "holding_period": "2–6 weeks",
-        "reward_risk": f"{round(1.1 + conf * 1.4, 1)}:1 estimated",
-    }
-
-
-def _haven_trade(n, d, conf, regime, now) -> dict:
+def _haven(name, d, conf, regime, now) -> dict:
     hs = d.get("hedge_score", 0)
     return {
-        "name": f"Long {n} — safe-haven hedge",
-        "trigger": f"{n} hedge score {hs:.0f}/100 — portfolio crisis ballast",
+        "name": f"Long {name} — safe-haven hedge",
+        "trigger": f"{name} hedge score {hs:.0f}/100 — portfolio crisis ballast",
         "rationale": (
-            f"Safe-haven hedge candidate: {n} scores {hs:.0f}/100 on the crisis-ballast signal "
-            f"(SAS {d.get('sas', 0):.0f}, safe-haven direction). Held as a hedge overlay, not an alpha bet."
+            f"Safe-haven hedge: {name} scores {hs:.0f}/100 on the crisis-ballast signal "
+            f"(SAS {d.get('sas', 0):.0f}). Held as a hedge overlay, not an alpha bet."
         ),
-        "entry": f"Regime ≥ Elevated OR rising cross-asset correlation; {n} hedge score ≥ 40",
-        "exit": "Regime normalizes / cross-asset correlation falls back",
-        "risk": "Carry cost in calm regimes; the hedge decays if a crisis does not materialize.",
-        "tickers": _resolve_tickers([n]),
-        "assets": [n],
-        "direction": ["Long"],
-        "regime": [2, 3],
-        "category": "Safe-Haven Hedge",
+        "entry": f"Regime ≥ Elevated OR rising cross-asset correlation; {name} hedge score ≥ 40",
+        "exit": "Regime normalises / cross-asset correlation falls back",
+        "risk": "Carry cost in calm regimes; hedge decays without a crisis.",
+        "tickers": _resolve_tickers([name]), "assets": [name], "direction": ["Long"],
+        "regime": [2, 3], "category": "Safe-Haven Hedge",
         "scenarios": ["escalation", "risk_off", "supply_shock"],
-        "confidence": round(conf, 3),
-        "upside_pct": round(conf * 10, 1),
-        "qc_flags": [],
-        "generated": True,
-        "generated_at": now,
+        "confidence": round(conf, 3), "upside_pct": round(conf * 9, 1),
+        "qc_flags": [], "generated": True, "screened": True, "generated_at": now,
         "stop": "Regime falls to Normal for 5+ days",
         "target": "Outperforms risk assets during a correlation spike",
         "invalidation": "Sustained risk-on regime",
-        "holding_period": "Hedge overlay — regime-conditional",
-        "reward_risk": "Convex / hedge (asymmetric)",
+        "holding_period": "Hedge overlay — regime-conditional", "reward_risk": "Convex / hedge",
+    }
+
+
+def _stock_trade(disp, ticker, sector, region, side, sig_sas, angle, conf, regime, now) -> dict:
+    return {
+        "name": f"{side} {disp} ({region})",
+        "trigger": f"{disp} · {sector} — {angle} (signal {sig_sas:.0f})",
+        "rationale": (
+            f"Individual single-name {region} equity: {disp} is a liquid {sector} name whose earnings track "
+            f"the {angle} macro signal (strength {sig_sas:.0f} on the current read). Expressed {side.lower()} "
+            f"the name directly. Screened candidate — gated by backtest + deflated Sharpe."
+        ),
+        "entry": f"{sector} signal { 'elevated' if side=='Long' else 'stretched'} (≈{sig_sas:.0f}); regime {regime}",
+        "exit": f"{sector} macro signal normalises",
+        "risk": f"Single-name idiosyncratic risk on top of the {sector} macro signal; liquidity/FX for non-US.",
+        "tickers": {disp: ticker}, "assets": [disp], "direction": [side],
+        "regime": [1, 2, 3] if regime >= 2 else [0, 1, 2],
+        "category": f"{region} Equity",
+        "scenarios": ["base", "escalation"],
+        "confidence": round(conf, 3), "upside_pct": round(conf * 12, 1),
+        "qc_flags": [], "generated": True, "screened": True, "generated_at": now,
+        "stop": f"{sector} macro signal reverses",
+        "target": f"Name re-rates with the {sector} signal",
+        "invalidation": f"{sector} signal mean-reverts to neutral",
+        "holding_period": "3–8 weeks", "reward_risk": f"{round(1.1 + conf * 1.5, 1)}:1 est.",
     }
 
 
 def generate_signal_trades(
     regime: int = 1,
     all_assets: Optional[dict] = None,
-    max_trades: int = 90,
+    max_trades: int = 135,
 ) -> list[dict]:
-    """Signal-ranked candidate universe across the scored asset set: relative-
-    value long/short pairs + directional single-asset trades + safe-haven hedges.
-    Ranked by signal strength, deduped, capped at max_trades. Screened candidates
-    only — the eligibility/DSR gate decides deployment (and is made stricter by
-    the wider search via the deflated-Sharpe trial count)."""
+    """Individual (single-name) directional candidates across the liquid macro +
+    liquid stock universe (US / India / China), each mapped to the macro signal
+    driving it. Ranked by signal strength; all India + China + macro always
+    included, remaining slots filled with top-signal US names."""
     from src.analysis.exposure import score_all_assets
     if all_assets is None:
         try:
@@ -780,49 +845,57 @@ def generate_signal_trades(
             return []
     if not all_assets:
         return []
+    now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
 
-    now   = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
-    items = sorted(all_assets.items(), key=lambda kv: kv[1].get("sas", 0), reverse=True)
-    highs = [(n, d) for n, d in items if d.get("sas", 0) >= 22]
-    lows  = [(n, d) for n, d in reversed(items) if d.get("sas", 0) <= 18]
-    havens = sorted(
-        ((n, d) for n, d in all_assets.items() if d.get("direction") == "safe_haven"),
-        key=lambda kv: kv[1].get("hedge_score", 0), reverse=True,
-    )
+    def sas(asset):  # macro SAS lookup
+        return float((all_assets.get(asset) or {}).get("sas", 0.0))
 
-    cands: list[tuple[float, dict]] = []
+    # conflict intensity proxy for Defense
+    try:
+        from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
+        _conf_sig = float(aggregate_portfolio_scores(score_all_conflicts()).get("portfolio_cis", 45.0))
+    except Exception:
+        _conf_sig = 45.0
 
-    # 1. Relative-value pairs (long high-SAS / short low-SAS), cross-sector preferred
-    for ln, ld in highs:
-        for sn, sd in lows:
-            if ln == sn:
-                continue
-            spread = ld["sas"] - sd["sas"]
-            if spread < _MIN_RV_SPREAD:
-                continue
-            cross = _sig_sector(ld) != _sig_sector(sd)
-            sig   = spread * (1.15 if cross else 1.0)
-            conf  = float(np.clip(0.16 + (spread - _MIN_RV_SPREAD) / 42.0, 0.15, 0.62))
-            cands.append((sig, _rv_pair_trade(ln, ld, sn, sd, spread, conf, regime, now)))
+    def sector_signal(sector, region):
+        proxy, sign, angle = _STOCK_SECTOR_SIGNAL.get(sector, ("__equity__", +1, "regional growth"))
+        if proxy == "__equity__":
+            s = sas(_REGION_INDEX.get(region, "S&P 500"))
+        elif proxy == "__conflict__":
+            s = _conf_sig
+        else:
+            s = sas(proxy)
+        return s, ("Long" if sign > 0 else "Short"), angle
 
-    # 2. Directional single-asset (long top-SAS names)
-    for n, d in highs[:10]:
-        conf = float(np.clip(0.16 + (d["sas"] - 22) / 55.0, 0.15, 0.55))
-        cands.append((d["sas"] * 0.9, _directional_trade(n, d, "Long", conf, regime, now)))
+    macro, stocks_us, stocks_other = [], [], []
 
-    # 3. Safe-haven hedges
-    for n, d in havens[:4]:
-        conf = float(np.clip(0.20 + d.get("hedge_score", 0) / 250.0, 0.18, 0.55))
-        cands.append((d.get("hedge_score", 0) * 0.5, _haven_trade(n, d, conf, regime, now)))
+    # ── Macro individual (liquid; niche ag excluded) ──
+    for n, d in sorted(all_assets.items(), key=lambda kv: -kv[1].get("sas", 0)):
+        if n in _NICHE_AG:
+            continue
+        if d.get("direction") == "safe_haven":
+            macro.append((d.get("hedge_score", 0), _haven(n, d, _confidence(d.get("hedge_score", 0), base=0.35, div=200), regime, now)))
+        elif d.get("sas", 0) >= 22:
+            macro.append((d["sas"] + 30, _macro_directional(n, d, "Long", _confidence(d["sas"], base=0.32, div=90), regime, now)))
 
-    cands.sort(key=lambda x: x[0], reverse=True)
-    out: list[dict] = []
-    seen: set[str] = set()
-    for _, t in cands:
+    # ── Single stocks (US / India / China) ──
+    for disp, (ticker, sector, region) in all_stock_universe().items():
+        s, side, angle = sector_signal(sector, region)
+        conf = _confidence(s, base=0.30, div=100)
+        tr = _stock_trade(disp, ticker, sector, region, side, s, angle, conf, regime, now)
+        (stocks_us if region == "US" else stocks_other).append((s, tr))
+
+    # rank US by signal; always keep macro + all non-US (India/China)
+    macro.sort(key=lambda x: -x[0])
+    stocks_us.sort(key=lambda x: -x[0])
+    keep = [t for _, t in macro] + [t for _, t in stocks_other]
+    room = max(0, max_trades - len(keep))
+    keep += [t for _, t in stocks_us[:room]]
+
+    out, seen = [], set()
+    for t in keep:
         if t["name"] in seen:
             continue
         seen.add(t["name"])
         out.append(t)
-        if len(out) >= max_trades:
-            break
     return out
