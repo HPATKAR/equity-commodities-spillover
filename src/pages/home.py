@@ -1070,12 +1070,12 @@ def _render_command_hero(
     # ── "Changed since yesterday" slot — top day-over-day movers from the daily
     # snapshot (GRS / CIS / TPS / per-conflict CIS), colour-coded: red = risk
     # rose, green = risk fell. Fills what used to be the reserved placeholder.
+    _CHG_SHORT = {"geo_risk_score": "GRS", "portfolio_cis": "CIS",
+                  "portfolio_tps": "TPS", "mcs": "MCS", "news_gpr": "GPR",
+                  "confidence": "CONF"}
     def _chg_tag(_it):
         _k = _it.get("key", "")
-        if _k == "geo_risk_score": return "GRS"
-        if _k == "portfolio_cis":  return "CIS"
-        if _k == "portfolio_tps":  return "TPS"
-        return ((_it.get("label", "") or _k).replace(" · ", " "))[:11]
+        return _CHG_SHORT.get(_k) or ((_it.get("label", "") or _k).replace(" · ", " "))[:11]
     if yday_deltas is None:
         _chg_content = (f'<span style="{_M}font-size:.5rem;color:{_C["muted"]};'
                         f'margin-left:7px">baseline set · &Delta; from tomorrow</span>')
@@ -1086,7 +1086,8 @@ def _render_command_hero(
         _chg_content = ""
         for _it in yday_deltas[:2]:
             _d  = float(_it.get("delta", 0.0))
-            _cc = _C["danger"] if _d > 0 else _C["safe"]
+            _wu = _it.get("worse_up", True)   # inverted metrics (Confidence): a rise is good
+            _cc = _C["danger"] if (_d > 0) == _wu else _C["safe"]
             _ar = "▲︎" if _d > 0 else "▼︎"
             _chg_content += (
                 f'<span style="{_M}font-size:.5rem;font-weight:700;color:{_cc};'
@@ -6007,6 +6008,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             portfolio_cis  = conflict_agg.get("portfolio_cis", conflict_agg.get("cis",  50.0)),
             portfolio_tps  = conflict_agg.get("portfolio_tps", conflict_agg.get("tps",  50.0)),
             geo_risk_score = float(risk["score"]),
+            mcs            = risk.get("mcs"),
+            news_gpr       = risk.get("news_gpr"),
+            confidence     = (risk.get("confidence") * 100.0
+                              if risk.get("confidence") is not None else None),
         )
         if _snap_yday is not None:
             _yday_deltas = compute_deltas(_snap_yday, _snap_today)

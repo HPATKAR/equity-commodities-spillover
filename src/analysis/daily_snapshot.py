@@ -73,6 +73,9 @@ def _build_payload(
     portfolio_cis: float,
     portfolio_tps: float,
     geo_risk_score: float,
+    mcs: float | None = None,
+    news_gpr: float | None = None,
+    confidence: float | None = None,
 ) -> dict:
     from src.utils.timeutil import now_ct, today_ct
     today_str = today_ct().isoformat()
@@ -90,6 +93,9 @@ def _build_payload(
         "portfolio_cis":    round(float(portfolio_cis),    2),
         "portfolio_tps":    round(float(portfolio_tps),    2),
         "geo_risk_score":   round(float(geo_risk_score),   2),
+        "mcs":        (round(float(mcs), 2)        if mcs        is not None else None),
+        "news_gpr":   (round(float(news_gpr), 2)   if news_gpr   is not None else None),
+        "confidence": (round(float(confidence), 2) if confidence is not None else None),
         "conflicts":        conflicts,
     }
 
@@ -99,6 +105,9 @@ def update_snapshot(
     portfolio_cis: float,
     portfolio_tps: float,
     geo_risk_score: float,
+    mcs: float | None = None,
+    news_gpr: float | None = None,
+    confidence: float | None = None,
 ) -> tuple[dict | None, dict]:
     """
     Persist today's snapshot and return (baseline, today) for delta computation.
@@ -121,7 +130,8 @@ def update_snapshot(
     yesterday_slot   = file_data.get("snapshot_yesterday")
     first_today_slot = file_data.get("snapshot_first_today")
 
-    new_today = _build_payload(conflict_results, portfolio_cis, portfolio_tps, geo_risk_score)
+    new_today = _build_payload(conflict_results, portfolio_cis, portfolio_tps,
+                               geo_risk_score, mcs, news_gpr, confidence)
 
     if today_slot is None:
         # First capture ever — seed first_today so an intraday baseline can
@@ -166,7 +176,9 @@ def compute_deltas(yesterday: dict, today: dict) -> list[dict]:
     """
     rows: list[dict] = []
 
-    def _add(key, label, prev, curr, category):
+    def _add(key, label, prev, curr, category, worse_up=True):
+        if prev is None or curr is None:
+            return
         d = round(float(curr) - float(prev), 2)
         if abs(d) >= _MIN_DELTA:
             rows.append({
@@ -176,12 +188,19 @@ def compute_deltas(yesterday: dict, today: dict) -> list[dict]:
                 "current":  round(float(curr), 1),
                 "previous": round(float(prev), 1),
                 "category": category,
+                "worse_up": worse_up,   # True: a rise is bad (red); False: inverted
             })
 
     # Portfolio-level scores
-    _add("geo_risk_score",  "Geo Risk Score",    yesterday["geo_risk_score"],  today["geo_risk_score"],  "composite")
-    _add("portfolio_cis",   "Portfolio CIS",     yesterday["portfolio_cis"],   today["portfolio_cis"],   "aggregate")
-    _add("portfolio_tps",   "Portfolio TPS",     yesterday["portfolio_tps"],   today["portfolio_tps"],   "aggregate")
+    _add("geo_risk_score",  "Geo Risk Score",    yesterday.get("geo_risk_score"),  today.get("geo_risk_score"),  "composite")
+    _add("portfolio_cis",   "Portfolio CIS",     yesterday.get("portfolio_cis"),   today.get("portfolio_cis"),   "aggregate")
+    _add("portfolio_tps",   "Portfolio TPS",     yesterday.get("portfolio_tps"),   today.get("portfolio_tps"),   "aggregate")
+
+    # Market layer (higher = worse, except Confidence which is inverted: a rise
+    # is good). Guarded by _add so older snapshots without these keys are skipped.
+    _add("mcs",        "Market Confirmation", yesterday.get("mcs"),        today.get("mcs"),        "market")
+    _add("news_gpr",   "News GPR",            yesterday.get("news_gpr"),   today.get("news_gpr"),   "market")
+    _add("confidence", "Confidence",          yesterday.get("confidence"), today.get("confidence"), "market", worse_up=False)
 
     # Per-conflict
     yc = yesterday.get("conflicts", {})
