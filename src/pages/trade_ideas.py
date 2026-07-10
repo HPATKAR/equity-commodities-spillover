@@ -2188,16 +2188,19 @@ def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
         w = float(t["alloc_weight"])
         det = t.get("alloc_detail") or {}
         hd = int(det.get("holding_days") or _parse_holding_days(t, default=63))
+        kf = 21.0 / max(hd, 1)          # window → MONTHLY (return ×k, vol ×√k)
         if "avg_return" in det and int(det.get("n_trades", 0)) >= 1:
-            mu = float(det.get("avg_return", 0.0))
-            sd = max(float(det.get("ret_std", 0.0)), 0.0)
+            mu = float(det.get("avg_return", 0.0)) * kf
+            sd = max(float(det.get("ret_std", 0.0)), 0.0) * math.sqrt(kf)
         else:
             # curated thesis without a backtest sample — scenario fallback
             try:
                 p = project_trade(t, holding_years=max(hd / 252.0, 0.02),
                                   current_regime=current_regime)
-                mu = float(p.get("expected_pnl", 0.0))
-                sd = abs(float(p.get("best_case_pnl", 0.0)) - mu) / Z if Z else 0.0
+                _e = float(p.get("expected_pnl", 0.0))
+                mu = _e * kf
+                sd = (abs(float(p.get("best_case_pnl", 0.0)) - _e) / Z
+                      if Z else 0.0) * math.sqrt(kf)
             except Exception:
                 continue
         exp += w * mu
@@ -2208,9 +2211,10 @@ def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
         horizons.append(max(1, round(hd / 21.0)))
     port_vol = math.sqrt(max((1.0 - RHO) * ws_indep + RHO * ws_sum ** 2, 0.0))
     return {
-        "expected": exp,
+        "expected": exp,                       # per MONTH (horizon-normalised)
         "best": exp + Z * port_vol,
         "worst": exp - Z * port_vol,
+        "annualized": exp * 12.0,
         "breakeven": (be_w / gross if gross > 1e-9 else 0.0),
         "months_lo": min(horizons) if horizons else 0,
         "months_hi": max(horizons) if horizons else 0,
@@ -2516,21 +2520,25 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # Retained only for the dsr_factor transparency column; sizing no longer
     # gates on it (the sleeve is fully invested).
     _eff_bar = effective_deploy_bar(_appetite)
-    _concentration = 1.0 + 2.0 * _appetite
+    # Return-forward sizing: concentration sharpens the edge tilt and top_n caps
+    # the book to the strongest N names. Defensive ~20 names / Aggressive ~11.
+    _concentration = 1.5 + 1.25 * _appetite
+    _top_n = int(round(20 - 9 * _appetite))
     _app_col = "#27ae60" if _appetite == 0 else "#e67e22" if _appetite < 1 else "#c0392b"
     _conc_note = (
-        '<span style="color:#27ae60">(broadly diversified — every positive-edge '
-        'idea carries weight)</span>' if _appetite <= 0.34
-        else '<span style="color:#c0392b">(tightly concentrated in the strongest '
-        'ideas)</span>' if _appetite >= 0.67
+        '<span style="color:#27ae60">(broadly diversified across the top names)'
+        '</span>' if _appetite <= 0.34
+        else '<span style="color:#c0392b">(tightly concentrated in the '
+        'highest-return ideas)</span>' if _appetite >= 0.67
         else '<span style="color:#e67e22">(balanced concentration)</span>'
     )
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:.55rem;'
         f'color:#8890a1;margin:-.2rem 0 .5rem">RISK APPETITE · '
         f'<b style="color:{_app_col}">{_appetite_label.upper()}</b> · '
-        f'100% invested · concentration '
-        f'<b style="color:#e8e9ed">{_concentration:.1f}&times;</b> {_conc_note}</p>',
+        f'100% invested · &le;<b style="color:#e8e9ed">{_top_n}</b> positions · '
+        f'concentration <b style="color:#e8e9ed">{_concentration:.1f}&times;</b> '
+        f'{_conc_note}</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -2561,7 +2569,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # confidence tilt (Defensive spreads broadly, Aggressive concentrates in
         # the highest-DSR ideas) rather than moving capital to cash.
         allocate_weights(_TRADE_LIBRARY, _alloc_metrics,
-                         concentration=_concentration)
+                         concentration=_concentration, top_n=_top_n)
         # ── STEP 3 OF 4 — PORTFOLIO CONSTRAINTS (silent) ────────────────────
         # Conflict cap 40% / correlation-cluster cap 45% of gross, iterative
         # re-normalization; runtime-asserted, stamps constraint_detail.
@@ -2678,11 +2686,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:.9rem;'
                 f'font-weight:700;color:{col}">{val}</div></div>'
                 for lbl, val, col in [
-                    (f"EXPECTED (E[R] ON BOOK · {_hz.upper()})", _pct(_up["expected"]), _exp_c),
-                    ("BULL CASE (90th)", _pct(_up["best"]), "#27ae60"),
-                    ("BEAR CASE (10th)", _pct(_up["worst"]), "#c0392b"),
-                    ("BREAKEVEN PROB", f'{_up["breakeven"]*100:.0f}%', "#CFB991"),
-                    ("HORIZON", _hz, "#8890a1"),
+                    ("ANNUALIZED E[R] (~)", _pct(_up.get("annualized", _up["expected"]*12)), _exp_c),
+                    ("EXPECTED · E[R]/MO", _pct(_up["expected"]), _exp_c),
+                    ("BULL /MO (90th)", _pct(_up["best"]), "#27ae60"),
+                    ("BEAR /MO (10th)", _pct(_up["worst"]), "#c0392b"),
+                    ("BREAKEVEN /MO", f'{_up["breakeven"]*100:.0f}%', "#CFB991"),
                 ]
             )
             st.markdown(
@@ -2696,11 +2704,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.55rem;'
                 f'color:#555960;margin-top:6px">Projected from each position&rsquo;s '
                 f'own regime-conditional, direction-aware <b>backtest</b> (mean and '
-                f'dispersion of realised returns per holding window), weighted by '
-                f'allocation on a fully-invested book. Expected is the sleeve&rsquo;s '
-                f'targeted return; the bull/bear cone is a &plusmn;1.28&sigma; band '
-                f'using a disclosed 0.35 intra-book correlation so diversification is '
-                f'credited. Potential upside, not a forecast.</div>'
+                f'dispersion of realised returns), normalised to a common monthly '
+                f'horizon and weighted by allocation on a fully-invested book. '
+                f'Annualised is the monthly E[R] &times;12; the bull/bear cone is a '
+                f'&plusmn;1.28&sigma; band using a disclosed 0.35 intra-book '
+                f'correlation so diversification is credited. Positions held ~{_hz}. '
+                f'Potential upside, not a forecast.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )

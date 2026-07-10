@@ -208,6 +208,7 @@ def allocate_weights(
     metrics: dict[str, dict],
     cap: float = MAX_SINGLE_WEIGHT,
     concentration: float = 1.0,
+    top_n: int = 0,
 ) -> list[dict]:
     """
     Pure allocator. Stamps every trade with:
@@ -229,10 +230,13 @@ def allocate_weights(
     sleeve falls back to an inverse-vol spread (still fully invested, never
     cash). Raw weights normalize to 100% gross.
 
-    `concentration` (driven by risk appetite) sharpens the edge tilt: 1.0
-    spreads capital broadly across positive-edge ideas; higher values
-    concentrate into the strongest. It never changes gross deployment — only
-    the shape.
+    Sizing is RETURN-FORWARD: it rewards each idea's absolute expected return
+    (normalised to a common monthly horizon) with only a mild sqrt-vol check,
+    so the book leans into its highest-return names rather than the blandest
+    low-vol ones. `concentration` (from risk appetite) sharpens that tilt and
+    `top_n`, if set, hard-caps the book to the strongest N ideas (the rest are
+    a zero-weight watchlist) — together they trade diversification for return.
+    Neither changes gross deployment: the book is always 100% invested.
     """
     conc = float(np.clip(concentration, 0.5, 6.0))
     raw: dict[str, float] = {}
@@ -245,14 +249,21 @@ def allocate_weights(
         vol = m.get("vol", float("nan"))
         inv_vol = (1.0 / vol) if (vol and np.isfinite(vol) and vol > 1e-9) else 0.0
         inv_vol_fallback[name] = inv_vol
-        mu   = float(m.get("avg_return", 0.0))        # realised mean P&L / window
-        sd   = max(float(m.get("ret_std", 0.0)), 1e-6)
+        # Normalise backtest stats to a common MONTHLY horizon so a 3-month
+        # thesis is not mechanically favoured over a 1-month one (return scales
+        # with time, vol with sqrt-time) — sizing compares like-for-like.
+        hd   = max(int(m.get("holding_days", 21) or 21), 1)
+        k    = 21.0 / hd
+        mu_m = float(m.get("avg_return", 0.0)) * k
+        sd_m = max(float(m.get("ret_std", 0.0)) * np.sqrt(k), 1e-6)
         dsr  = max(m.get("dsr", 0.0), 0.0)            # deflated-Sharpe prob
         liq  = max(m.get("liquidity", 0.0), 0.0)
-        # Risk-adjusted expected edge (direction-aware realised Sharpe), shrunk
-        # by deflated-Sharpe confidence. max(...,0) starves historically
-        # losing signals so capital flows to the winners, not to cash.
-        edge = max(mu / sd, 0.0) * (0.35 + 0.65 * dsr)
+        # RETURN-FORWARD edge: reward absolute monthly expected return with a
+        # mild sqrt-vol check (so one high-variance outlier can't run away),
+        # shrunk by deflated-Sharpe confidence. max(...,0) starves historically
+        # losing signals so capital concentrates in the best ideas, not cash.
+        er   = max(mu_m, 0.0)
+        edge = er * np.sqrt(er / sd_m) * (0.35 + 0.65 * dsr)
         raw[name] = (edge ** conc) * (0.40 + 0.60 * liq)
 
     total = sum(raw.values())
@@ -260,6 +271,11 @@ def allocate_weights(
         # No positive-edge trade in this regime — keep the sleeve fully invested
         # by spreading over eligible names inverse to volatility (never cash).
         raw = dict(inv_vol_fallback)
+    # Concentrate: keep only the top-N strongest ideas (diversify less); the
+    # rest fall to a zero-weight watchlist. 0 = no cap (spread across all).
+    if top_n and sum(1 for w in raw.values() if w > 0) > top_n:
+        keep = set(sorted(raw, key=lambda n: raw[n], reverse=True)[:top_n])
+        raw = {n: (w if n in keep else 0.0) for n, w in raw.items()}
     total = sum(raw.values())
     weights = {n: (w / total if total > 1e-12 else 0.0) for n, w in raw.items()}
 
