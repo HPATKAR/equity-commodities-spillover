@@ -407,7 +407,7 @@ def _section_header(number: str, title: str, subtitle: str = "",
         if link_page else ""
     )
     st.markdown(
-        f'<div style="margin:0.8rem 0 0.4rem;padding-bottom:0.25rem;'
+        f'<div style="margin:0.55rem 0 0.4rem;padding-bottom:0.25rem;'
         f'border-bottom:1px solid #2a2a2a;display:flex;align-items:baseline;gap:0">'
         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:0.10em;color:{_GOLD};'
