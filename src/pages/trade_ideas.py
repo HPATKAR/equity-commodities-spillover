@@ -2346,15 +2346,15 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # (guarded); the finished PDF is stashed and the download surfaces here.
         st.markdown('<div style="height:.2rem"></div>', unsafe_allow_html=True)
         if st.button("Generate Desk Report (PDF)", key="gen_report_top",
-                     type="primary", use_container_width=True,
+                     type="primary", width="stretch",
                      help="Invested book only · with recent third-party coverage per name"):
             st.session_state["_ti_pdf_pending"] = True
         if st.session_state.get("_ti_pdf_bytes"):
             st.download_button(
-                "⬇  Download Desk Report", data=st.session_state["_ti_pdf_bytes"],
+                "Download Desk Report", data=st.session_state["_ti_pdf_bytes"],
                 file_name=st.session_state.get("_ti_pdf_name", "desk_report.pdf"),
                 mime="application/pdf", key="dl_report_top",
-                use_container_width=True)
+                width="stretch")
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'

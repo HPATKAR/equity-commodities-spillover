@@ -130,14 +130,6 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
     padding: 0.45rem 1.4rem !important; transition: all 0.2s !important;
 }
 .stButton > button:hover { background: var(--gold) !important; color: #000 !important; border-color: var(--gold) !important; }
-/* Primary = filled gold box with BLACK BOLD text */
-.stButton > button[kind="primary"], button[data-testid="baseButton-primary"] {
-    background: var(--gold) !important; color: #000 !important;
-    border-color: var(--gold) !important; font-weight: 800 !important;
-}
-.stButton > button[kind="primary"]:hover, button[data-testid="baseButton-primary"]:hover {
-    background: #dcc9a3 !important; color: #000 !important; border-color: #dcc9a3 !important;
-}
 
 /* ── Form controls ── */
 [data-testid="stSelectbox"] label, [data-testid="stMultiSelect"] label,
@@ -733,16 +725,28 @@ h1, h2, h3, label, p { color: #e8e9ed !important; }
     background: #CFB991 !important;
     color: #131313 !important;
 }
-/* Primary buttons - gold bg, always dark text */
+/* Primary buttons - gold bg, BLACK BOLD UPPERCASE text. Streamlit 1.54's testid
+   is stBaseButton-primary (older builds: baseButton-primary); the label lives in
+   a nested element, so target children (*) too or the default text color wins. */
 .stButton > button[kind="primary"],
-button[data-testid="baseButton-primary"],
-.stButton > button[kind="primary"] * {
+button[data-testid="stBaseButton-primary"],
+button[data-testid="baseButton-primary"] {
     background: #CFB991 !important;
-    color: #0f0f0f !important;
     border-color: #CFB991 !important;
-    font-weight: 700 !important;
+}
+.stButton > button[kind="primary"],
+.stButton > button[kind="primary"] *,
+button[data-testid="stBaseButton-primary"],
+button[data-testid="stBaseButton-primary"] *,
+button[data-testid="baseButton-primary"],
+button[data-testid="baseButton-primary"] * {
+    color: #0f0f0f !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
 }
 .stButton > button[kind="primary"]:hover,
+button[data-testid="stBaseButton-primary"]:hover,
 button[data-testid="baseButton-primary"]:hover {
     background: #b8a37e !important;
     color: #0f0f0f !important;
