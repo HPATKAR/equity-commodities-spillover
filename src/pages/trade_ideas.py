@@ -2252,17 +2252,15 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False, ttl=3600, max_entries=8)
-def _live_generated_cached(regime: int, _start: str, _end: str) -> tuple[list, list]:
-    """Conflict-driven + signal-ranked candidates for THIS regime, cached so the
-    ~16s scoring/generation (score_all_assets + score_all_conflicts, both cold)
-    runs ONCE per regime per hour — not on every Streamlit rerun (risk-appetite
-    slider, holding changes). _start/_end key the cache to the active window."""
-    from src.analysis.trade_generator import (
-        generate_conflict_trades, generate_signal_trades,
-    )
-    conflict = generate_conflict_trades(regime=regime)
-    signal = generate_signal_trades(regime=regime, max_trades=90)
-    return conflict, signal
+def _live_generated_cached(regime: int, _start: str, _end: str) -> list:
+    """Signal-ranked single-name candidates for THIS regime, cached so the ~8s
+    cold scoring (score_all_assets) runs ONCE per regime per hour, not on every
+    Streamlit rerun. Conflict-driven generation was dropped: it cost ~73s (LP-IRF
+    Stage-3 on 9 theses) to contribute at most one redundant gold position — the
+    signal universe already maps stocks to their conflict/macro drivers, and the
+    static library carries the conflict-themed regime theses."""
+    from src.analysis.trade_generator import generate_signal_trades
+    return generate_signal_trades(regime=regime, max_trades=90)
 
 
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
@@ -2442,25 +2440,15 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _n_generated = 0
     try:
         import copy as _copy_gen
-        # Conflict-driven + signal-ranked candidates for this regime, cached so
-        # the ~16s cold scoring runs once, not on every rerun. Deep-copy before
-        # mutating/appending — later steps stamp eligibility/weights in place and
-        # must never touch the cached objects.
-        with st.spinner("Generating live conflict-driven ideas…"):
-            _gen_conflict, _gen_signal = _live_generated_cached(current, start, end)
-        _gen_conflict = _copy_gen.deepcopy(_gen_conflict)
-        _gen_signal = _copy_gen.deepcopy(_gen_signal)
+        # Signal-ranked single-name candidates for this regime (directional +
+        # safe-haven, US/India/China + macro), cached so the ~8s cold scoring
+        # runs once, not on every rerun. Deep-copy before mutating/appending —
+        # later steps stamp eligibility/weights in place and must never touch
+        # the cached objects. Each runs the SAME eligibility → Stage-3 → sizing
+        # gate; the wider search raises the deflated-Sharpe trial penalty.
+        with st.spinner("Generating live single-name ideas…"):
+            _gen_signal = _copy_gen.deepcopy(_live_generated_cached(current, start, end))
         _existing = {t.get("name") for t in _TRADE_LIBRARY}
-        for _g in _gen_conflict:
-            if _g.get("name") and _g["name"] not in _existing:
-                _g["generated"] = True
-                _TRADE_LIBRARY.append(_g)
-                _existing.add(_g["name"])
-                _n_generated += 1
-        # Signal-ranked candidate universe — directional single-name signals +
-        # safe-haven hedges across the scored universe. Broadens the book to
-        # 100+ candidates; each runs the SAME eligibility → Stage-3 → sizing
-        # gate, and the wider search raises the deflated-Sharpe trial penalty.
         for _g in _gen_signal:
             if _g.get("name") and _g["name"] not in _existing:
                 _TRADE_LIBRARY.append(_g)
@@ -2503,42 +2491,19 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     from src.analysis.trade_allocator import (
         APPETITE_STOPS, effective_deploy_bar, DSR_DEPLOY_BAR, DEPLOY_BAR_FLOOR,
     )
-    _appetite_names = list(APPETITE_STOPS.keys())
-    _appetite_label = st.select_slider(
-        "Risk appetite",
-        options=_appetite_names,
-        value=st.session_state.get("ti_risk_appetite", _appetite_names[0]),
-        key="ti_risk_appetite",
-        help=("Concentration of the fully-invested equity sleeve. Defensive "
-              "spreads capital broadly across every positive-edge idea; "
-              "Aggressive concentrates it into the strongest few. The book stays "
-              "100% invested at every setting — appetite changes the shape of the "
-              "book, never the cash level (cash and hedging are the parent "
-              "portfolio's job)."),
-    )
-    _appetite = float(APPETITE_STOPS.get(_appetite_label, 0.0))
-    # Retained only for the dsr_factor transparency column; sizing no longer
-    # gates on it (the sleeve is fully invested).
-    _eff_bar = effective_deploy_bar(_appetite)
-    # Return-forward sizing: concentration sharpens the edge tilt and top_n caps
-    # the book to the strongest N names. Defensive ~20 names / Aggressive ~11.
-    _concentration = 1.5 + 1.25 * _appetite
-    _top_n = int(round(20 - 9 * _appetite))
-    _app_col = "#27ae60" if _appetite == 0 else "#e67e22" if _appetite < 1 else "#c0392b"
-    _conc_note = (
-        '<span style="color:#27ae60">(broadly diversified across the top names)'
-        '</span>' if _appetite <= 0.34
-        else '<span style="color:#c0392b">(tightly concentrated in the '
-        'highest-return ideas)</span>' if _appetite >= 0.67
-        else '<span style="color:#e67e22">(balanced concentration)</span>'
-    )
+    # Risk-appetite slider removed — the sleeve runs the AGGRESSIVE (concentrated,
+    # return-forward) profile as standard: sized into the strongest ~11 names.
+    _appetite_label = "Aggressive"
+    _appetite = 1.0
+    _eff_bar = effective_deploy_bar(_appetite)   # dsr_factor transparency only
+    _concentration = 2.75
+    _top_n = 11
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:.55rem;'
-        f'color:#8890a1;margin:-.2rem 0 .5rem">RISK APPETITE · '
-        f'<b style="color:{_app_col}">{_appetite_label.upper()}</b> · '
+        f'color:#8890a1;margin:-.2rem 0 .5rem">BOOK PROFILE · '
+        f'<b style="color:#c0392b">CONCENTRATED · RETURN-FORWARD</b> · '
         f'100% invested · &le;<b style="color:#e8e9ed">{_top_n}</b> positions · '
-        f'concentration <b style="color:#e8e9ed">{_concentration:.1f}&times;</b> '
-        f'{_conc_note}</p>',
+        f'sized into the highest-conviction names</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -2596,7 +2561,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                   f'(no data source — excluded from the live count)'
                   if _n_dead else '')
     _gen_note = (f' · <b style="color:#2980b9">{_n_generated} LIVE-GENERATED</b> '
-                 f'(conflict-driven, this regime)' if _n_generated else '')
+                 f'(signal-ranked, this regime)' if _n_generated else '')
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;'
         f'border-left:3px solid {"#27ae60" if _n_elig else "#c0392b"};'
@@ -2643,8 +2608,6 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
         else:
-            _conc_word = ("broadly diversified" if _appetite <= 0.34
-                          else "concentrated" if _appetite >= 0.67 else "balanced")
             st.markdown(
                 f'<div style="border:1px solid #27ae60;background:#07120b;'
                 f'padding:.65rem 1rem;margin:.2rem 0 .6rem">'
@@ -2655,18 +2618,17 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'color:#27ae60">EQUITY SLEEVE — 100% INVESTED · '
                 f'{_n_deployed} POSITIONS</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                f'font-size:.52rem;color:#8890a1">{_appetite_label.upper()} · '
-                f'{_conc_word}</span></div>'
+                f'font-size:.52rem;color:#8890a1">CONCENTRATED · '
+                f'RETURN-FORWARD</span></div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
                 f'color:#8890a1;margin-top:4px">The equity component of a larger '
                 f'portfolio — always fully invested; the cash / hedge overlay is the '
                 f'parent allocation&rsquo;s call, not this sleeve&rsquo;s. Capital is '
-                f'sized by <b>risk-adjusted expected edge</b> (direction-aware '
-                f'backtested Sharpe, shrunk by the deflated-Sharpe luck penalty) and '
-                f'concentrated in the strongest {_n_deployed} of {_n_elig} eligible '
-                f'ideas; the rest rank below as a zero-weight watchlist. '
-                f'<b>{_appetite_label}</b> appetite sets how tightly capital '
-                f'concentrates — it never moves the book to cash.</div>'
+                f'sized by <b>risk-adjusted expected return</b> (each idea&rsquo;s '
+                f'own direction-aware backtested edge, shrunk by the deflated-Sharpe '
+                f'luck penalty) and concentrated in the strongest {_n_deployed} of '
+                f'{_n_elig} eligible ideas; the rest rank below as a zero-weight '
+                f'watchlist.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
