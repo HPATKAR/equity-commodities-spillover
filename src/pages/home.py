@@ -1067,6 +1067,32 @@ def _render_command_hero(
         f'color:{_vel_col};margin-left:4px">{vel_txt}</span>'
     )
 
+    # ── "Changed since yesterday" slot — top day-over-day movers from the daily
+    # snapshot (GRS / CIS / TPS / per-conflict CIS), colour-coded: red = risk
+    # rose, green = risk fell. Fills what used to be the reserved placeholder.
+    def _chg_tag(_it):
+        _k = _it.get("key", "")
+        if _k == "geo_risk_score": return "GRS"
+        if _k == "portfolio_cis":  return "CIS"
+        if _k == "portfolio_tps":  return "TPS"
+        return ((_it.get("label", "") or _k).replace(" · ", " "))[:11]
+    if yday_deltas is None:
+        _chg_content = (f'<span style="{_M}font-size:.5rem;color:{_C["muted"]};'
+                        f'margin-left:7px">baseline set · &Delta; from tomorrow</span>')
+    elif not yday_deltas:
+        _chg_content = (f'<span style="{_M}font-size:.5rem;color:{_C["safe"]};'
+                        f'margin-left:7px">flat vs yesterday</span>')
+    else:
+        _chg_content = ""
+        for _it in yday_deltas[:2]:
+            _d  = float(_it.get("delta", 0.0))
+            _cc = _C["danger"] if _d > 0 else _C["safe"]
+            _ar = "▲︎" if _d > 0 else "▼︎"
+            _chg_content += (
+                f'<span style="{_M}font-size:.5rem;font-weight:700;color:{_cc};'
+                f'margin-left:7px;white-space:nowrap">{_chg_tag(_it)} {_ar}{_d:+.1f}</span>'
+            )
+
     _hb_ts = datetime.datetime.now().strftime("%H:%M:%S")
     st.markdown(
         f'<div class="cc-hero">'
@@ -1079,10 +1105,10 @@ def _render_command_hero(
         f'color:{_C["safe"]}">LIVE</span>'
         f'<span class="cc-clip" style="{_M}font-size:.48rem;color:{_C["muted"]}">'
         f'· refreshed {_hb_ts} · auto 60s</span></div>'
-        f'<div class="cc-cell cc-thin" style="grid-column:span 2;border-style:dashed;opacity:.6">'
-        f'<span class="cc-clip" style="{_M}font-size:.48rem;font-weight:700;letter-spacing:.1em;'
-        f'color:{_C["label"]}">CHANGED SINCE YESTERDAY</span>'
-        f'<span style="{_M}font-size:.5rem;color:{_C["label"]};margin-left:6px">reserved</span></div>'
+        f'<div class="cc-cell cc-thin" style="grid-column:span 2;overflow:hidden" '
+        f'title="Largest moves since {yday_date or "prior snapshot"}">'
+        f'<span style="{_M}font-size:.46rem;font-weight:700;letter-spacing:.08em;'
+        f'color:{_C["label"]};flex-shrink:0">SINCE YDAY</span>{_chg_content}</div>'
         f'<div class="cc-cell cc-thin" style="grid-column:span 4;justify-content:space-between">'
         f'<span style="{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
         f'color:{_C["label"]}">ALERTS · {len(alerts)}</span>{alerts_line}'
