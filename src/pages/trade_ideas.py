@@ -3069,13 +3069,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(
         '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:#8890a1;padding:6px 0 4px 0">'
         'The desk report contains only the <b>invested book</b> (deployed positions), each anchored to '
-        'recent third-party coverage per name. Also available from the button at the top of the page.'
+        'recent third-party coverage per name. Generate it from the button at the top of the page.'
         '</div>',
         unsafe_allow_html=True,
     )
-    _pdf_pending = bool(st.session_state.pop("_ti_pdf_pending", False))
-    if st.button("Generate Desk Report (PDF) — invested book only",
-                 key="gen_report", type="primary") or _pdf_pending:
+    # Generation runs here (where the book exists), triggered by the top button's
+    # flag — the redundant bottom "Generate" button was removed.
+    if bool(st.session_state.pop("_ti_pdf_pending", False)):
         _pdf_ok = False
         try:
             from src.reports.report_generator import generate_report
