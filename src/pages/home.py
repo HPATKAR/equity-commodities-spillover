@@ -315,10 +315,12 @@ section[data-testid="stMain"] .nx-intel-row{padding:.3rem 0!important}
 section[data-testid="stMain"] [data-testid="stExpander"] summary{padding:.4rem .8rem!important}
 .cc-tape{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;
     grid-column:span 12;padding:0;background:transparent;border:none}
-.cc-tape > span{display:flex;align-items:baseline;gap:0 4px;min-width:0;
-    white-space:nowrap;overflow:hidden;padding:.3rem .5rem;
-    background:#0a0a0a;border:1px solid #1e1e1e}
-.cc-tape > span > *{flex-shrink:0}
+.cc-tape-card{display:flex;flex-direction:column;min-width:0;
+    background:#0a0a0a;border:1px solid #1e1e1e;padding:.16rem .45rem}
+.cc-tape-row{display:flex;align-items:baseline;gap:0 4px;min-width:0;
+    white-space:nowrap;overflow:hidden;padding:.1rem 0}
+.cc-tape-row+.cc-tape-row{border-top:1px solid #161616}
+.cc-tape-row > *{flex-shrink:0}
 .cc-tape .cc-clip{flex-shrink:1;overflow:hidden;text-overflow:ellipsis;min-width:0}
 /* Hero interior grids — pack cells with columns, not padding */
 .cc-grs{display:grid;grid-template-columns:270px 1fr;gap:0 20px;align-items:start}
@@ -620,23 +622,37 @@ def _render_command_hero(
     d_tps = next((d["delta"] for d in (yday_deltas or []) if d.get("key") == "portfolio_tps"), None)
     peak_cis = max((float(r.get("cis", 0)) for r in conflict_results.values()), default=0.0)
     news_gpr = risk.get("news_gpr")
+    # Semantic shading + a level arrow (▲ elevated / ▼ benign) so each number
+    # reads good/bad at a glance. Risk layers: high = bad (green<45<amber<65<red).
+    # Confidence is INVERTED — high confidence is good (green).
+    def _risk_ct(v: float | None, inverted: bool = False) -> tuple[str, str]:
+        if v is None:
+            return _C["label"], ""
+        if inverted:
+            col = _C["safe"] if v >= 65 else _C["warn"] if v >= 45 else _C["danger"]
+        else:
+            col = _C["danger"] if v >= 65 else _C["warn"] if v >= 45 else _C["safe"]
+        # ︎ = text-presentation selector — forces the triangle to render as
+        # a text glyph (which takes the CSS color) instead of a monochrome emoji.
+        return col, ("▲︎" if v >= 50 else "▼︎")
     comp_rows = ""
-    for lbl, val, dd in (
-        ("CIS · conflict ×35%", float(risk.get("cis", 0)), d_cis),
-        ("TPS · transmission ×30%", float(risk.get("tps", 0)), d_tps),
-        ("MCS · market ×35%", float(risk.get("mcs", 0)), None),
-        ("News GPR", float(news_gpr) if news_gpr is not None else None, None),
-        ("Peak conflict CIS", peak_cis, None),
-        ("Confidence %", float(risk.get("confidence", 0)) * 100, None),
+    for lbl, val, dd, inv in (
+        ("CIS · conflict ×35%", float(risk.get("cis", 0)), d_cis, False),
+        ("TPS · transmission ×30%", float(risk.get("tps", 0)), d_tps, False),
+        ("MCS · market ×35%", float(risk.get("mcs", 0)), None, False),
+        ("News GPR", float(news_gpr) if news_gpr is not None else None, None, False),
+        ("Peak conflict CIS", peak_cis, None, False),
+        ("Confidence %", float(risk.get("confidence", 0)) * 100, None, True),
     ):
         v_txt = "    —" if val is None else f"{val:5.1f}"
+        _vc, _tri = _risk_ct(val, inv)
         dd_txt = "" if dd is None else f"{dd:+5.1f}"
         dd_col = _C["danger"] if (dd or 0) > 0 else _C["safe"]
         comp_rows += (
             f'<div class="cc-row"><span style="{_M}font-size:.56rem;'
             f'color:{_C["text"]}">{lbl}</span>'
             f'<span><span class="cc-num" style="font-size:.64rem;font-weight:700;'
-            f'color:{_C["text"]}">{v_txt}</span>'
+            f'color:{_vc}"><span style="font-size:.5rem;color:{_vc}">{_tri}</span> {v_txt}</span>'
             + (f'<span class="cc-num" style="font-size:.56rem;color:{dd_col};'
                f'margin-left:6px">{dd_txt}</span>' if dd_txt else '')
             + f'</span></div>'
@@ -876,7 +892,7 @@ def _render_command_hero(
     # so risk-off reads red everywhere); labels and figures stay neutral.
     tape_html = ""
     try:
-        cells = ""
+        cells_list: list[str] = []
         # Drop VIX here (shown in the §1.5 pulse strip + vol trio); leaves a
         # deterministic 5 price cells (DXY, S&P, WTI, Gold, 10Y) so the tape is
         # an even 12 with the 7 derived cells below → clean 6×2 grid.
@@ -888,8 +904,8 @@ def _render_command_hero(
             ser = d.get("series") or []
             lo, hi = (min(ser), max(ser)) if ser else (d["val"], d["val"])
             fmt = lambda v: f"{v:,.2f}" if v < 10000 else f"{v:,.0f}"
-            cells += (
-                f'<span><span style="{_M}font-size:.5rem;font-weight:700;'
+            cells_list.append(
+                f'<div class="cc-tape-row"><span style="{_M}font-size:.5rem;font-weight:700;'
                 f'letter-spacing:.08em;color:{_C["text"]}">{d["label"]}</span>'
                 f'<span class="cc-num" style="font-size:.64rem;font-weight:700;'
                 f'color:{_C["text"]};margin-left:5px">{fmt(d["val"])}</span>'
@@ -898,7 +914,7 @@ def _render_command_hero(
                 f'<span class="cc-num cc-clip" style="font-size:.48rem;color:{_C["label"]};'
                 f'margin-left:5px">{fmt(lo)}–{fmt(hi)}</span>'
                 f'<span style="margin-left:4px">{_spark_bare(ser, width=44, height=12, color=p_col)}</span>'
-                f'</span>'
+                f'</div>'
             )
         # Computed cells from already-loaded frames (display arithmetic only).
         # Sparklines colored by their own 5-observation direction — rising vol
@@ -948,8 +964,8 @@ def _render_command_hero(
                     sc = _C["danger"]
                 else:
                     sc = _C["safe"]
-                cells += (
-                    f'<span><span style="{_M}font-size:.5rem;font-weight:700;'
+                cells_list.append(
+                    f'<div class="cc-tape-row"><span style="{_M}font-size:.5rem;font-weight:700;'
                     f'letter-spacing:.08em;color:{_C["text"]}">{lbl}</span>'
                     f'<span class="cc-num" style="font-size:.64rem;font-weight:700;'
                     f'color:{_C["text"]};margin-left:5px">{_fmt.format(v)}</span>'
@@ -959,12 +975,22 @@ def _render_command_hero(
                     f'color:{_C["label"]};margin-left:5px">'
                     f'30d {_fmt.format(lo30).strip()}–{_fmt.format(hi30).strip()}</span>'
                     f'<span style="margin-left:5px">'
-                    f'{_spark_bare(tail_v, width=44, height=12, color=sc)}</span></span>'
+                    f'{_spark_bare(tail_v, width=44, height=12, color=sc)}</span></div>'
                 )
         except Exception:
             pass
-        if cells:
-            tape_html = f'<div class="cc-tape">{cells}</div>'
+        if cells_list:
+            # Merge vertically: each column's top cell pairs with the one below
+            # it into a single card with two stacked rows → 6 cards, 2 rows each
+            # (was 12 separate cells in a 6×2 grid). e.g. DXY over CMD VOL 20D.
+            _half = (len(cells_list) + 1) // 2
+            _cards = "".join(
+                f'<div class="cc-tape-card">{cells_list[k]}'
+                + (cells_list[k + _half] if k + _half < len(cells_list) else "")
+                + '</div>'
+                for k in range(_half)
+            )
+            tape_html = f'<div class="cc-tape">{_cards}</div>'
     except Exception:
         pass
 
@@ -1948,34 +1974,37 @@ def _render_intelligence_feed(
     color = risk["color"]
     label = risk["label"]
 
-    # Header
+    # Header — "Intelligence Feed" + a compact News GPR chip folded inline
+    # (between the title and LIVE), replacing the old standalone GPR card.
+    _gpr = risk.get("news_gpr")
+    _gpr_chip = ""
+    if _gpr is not None:
+        _gc = _C["danger"] if _gpr >= 65 else _C["warn"] if _gpr >= 45 else _C["label"]
+        _gpr_chip = (
+            f'<span title="News-derived geopolitical risk · '
+            f'{risk.get("n_threat", 0)} threat / {risk.get("n_act", 0)} act headlines, last 24h" '
+            f'style="display:inline-flex;align-items:baseline;gap:4px;padding-left:8px;'
+            f'border-left:1px solid {_C["border"]}">'
+            f'<span style="{_M}font-size:0.5rem;font-weight:700;letter-spacing:.1em;'
+            f'color:{_C["label"]}">NEWS GPR</span>'
+            f'<span class="cc-num" style="font-size:0.62rem;font-weight:700;'
+            f'color:{_gc}">{_gpr:.0f}</span>'
+            f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]}">'
+            f'{risk.get("n_threat", 0)}T · {risk.get("n_act", 0)}A · 24h</span>'
+            f'</span>'
+        )
     st.markdown(
         f'<div style="display:flex;align-items:center;justify-content:space-between;'
         f'padding-bottom:.4rem;border-bottom:1px solid {_C["border"]};margin-bottom:.55rem">'
+        f'<span style="display:inline-flex;align-items:baseline;gap:8px;flex-wrap:wrap">'
         f'<span style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.18em;'
         f'text-transform:uppercase;color:{_C["text"]}">Intelligence Feed</span>'
+        f'{_gpr_chip}'
+        f'</span>'
         f'<span class="nx-badge nx-badge-live">LIVE</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
-
-    # News GPR pulse — media-derived geopolitical risk, threat/act headline mix
-    _gpr = risk.get("news_gpr")
-    if _gpr is not None:
-        _gc = _C["danger"] if _gpr >= 65 else _C["warn"] if _gpr >= 45 else _C["label"]
-        st.markdown(
-            f'<div style="display:flex;align-items:baseline;gap:8px;background:{_C["card"]};'
-            f'border:1px solid {_C["border"]};border-left:2px solid {_gc};'
-            f'padding:.3rem .55rem;margin-bottom:.5rem">'
-            f'<span style="{_M}font-size:0.5rem;font-weight:700;letter-spacing:.12em;'
-            f'color:{_C["label"]}">NEWS GPR</span>'
-            f'<span class="cc-num" style="font-size:0.72rem;font-weight:700;'
-            f'color:{_gc}">{_gpr:.0f}</span>'
-            f'<span style="{_M}font-size:0.52rem;color:{_C["muted"]}">'
-            f'{risk.get("n_threat", 0)} threat · {risk.get("n_act", 0)} act headlines · 24h</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
 
     # Alert cards (CRITICAL → ELEVATED → NORMAL)
     all_alerts = sorted(
