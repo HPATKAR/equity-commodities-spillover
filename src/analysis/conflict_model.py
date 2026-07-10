@@ -664,15 +664,34 @@ def score_all_conflicts() -> dict[str, dict]:
     # Conflicts are independent (distinct cache keys), so this is safe; falls
     # back to serial if the pool errors for any reason.
     results: dict[str, dict] = {}
+    # Bounded, non-blocking GDELT scoring. Each _score_one fires GDELT requests,
+    # and GDELT can stall the TLS handshake PAST the socket timeout — a plain
+    # `with ThreadPoolExecutor` would then block forever joining the hung sockets
+    # on exit ("loads for eternity"). So we (a) cap the whole batch with a
+    # wall-clock map() timeout and (b) shut the pool down with wait=False so hung
+    # sockets are ABANDONED as daemon threads instead of blocking the page. On
+    # timeout we trip the GDELT circuit breaker, then re-score any unfinished
+    # conflict — now instant because the breaker makes GDELT skip the network.
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FutTimeout
+    _ex = ThreadPoolExecutor(max_workers=max(1, len(CONFLICTS)))
     try:
-        from concurrent.futures import ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=max(1, len(CONFLICTS))) as _ex:
-            for cid, res in _ex.map(_score_one, CONFLICTS):
-                results[cid] = res
-    except Exception:
-        for c in CONFLICTS:
-            cid, res = _score_one(c)
+        for cid, res in _ex.map(_score_one, CONFLICTS, timeout=12):
             results[cid] = res
+    except BaseException:
+        try:
+            from src.data.gdelt import disable_gdelt
+            disable_gdelt(600)
+        except Exception:
+            pass
+    finally:
+        _ex.shutdown(wait=False)
+    for c in CONFLICTS:
+        if c["id"] not in results:
+            try:
+                cid, res = _score_one(c)
+                results[cid] = res
+            except Exception:
+                pass
     # GAP 17 fix: freshness of conflict_manual should reflect when the CONFLICTS dict
     # was last edited, not when this function ran. We check the most recent
     # last_updated field across all conflicts rather than calling record_fetch()

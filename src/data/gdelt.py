@@ -42,6 +42,25 @@ import streamlit as st
 
 _GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
 
+# ── Circuit breaker ──────────────────────────────────────────────────────────
+# GDELT can accept the TCP connection but STALL the TLS handshake, which does not
+# reliably honour requests' socket timeout — a stalled fetch hangs its worker
+# thread indefinitely (page "loads for eternity"). Once any fetch fails or is
+# detected stalled, we disable live GDELT for a cool-off window so every later
+# call returns the static fallback INSTANTLY instead of re-hanging.
+_GDELT_DISABLED_UNTIL = 0.0
+
+
+def disable_gdelt(seconds: float = 600.0) -> None:
+    """Trip the breaker: skip all live GDELT fetches for `seconds`."""
+    global _GDELT_DISABLED_UNTIL
+    _GDELT_DISABLED_UNTIL = time.time() + float(seconds)
+
+
+def gdelt_disabled() -> bool:
+    return time.time() < _GDELT_DISABLED_UNTIL
+
+
 # Browser-like UA — Python's default "python-requests/x.x" is commonly blocked by CDN rules
 _HEADERS = {
     "User-Agent": (
@@ -136,6 +155,11 @@ def fetch_gdelt_escalation(
 
     if conflict_id not in _GDELT_CONFLICT_QUERIES:
         return {**_empty, "source": f"Unknown conflict_id: {conflict_id}"}
+
+    # Circuit breaker: a recent failure/stall disables live fetches so we never
+    # re-hang the page waiting on an unreachable GDELT.
+    if gdelt_disabled():
+        return {**_empty, "source": "GDELT: skipped (circuit breaker open)"}
 
     # Check success-only manual cache before hitting the network
     _cache_key = (conflict_id, timespan)
@@ -276,6 +300,9 @@ def fetch_gdelt_escalation(
         return {**_empty, "source": _msg}
 
       except Exception as e:
+        # Connection error / timeout / unreachable host — trip the breaker so the
+        # rest of this session's conflicts skip the network instead of re-hanging.
+        disable_gdelt(600)
         _msg = f"GDELT {type(e).__name__}"
         try:
             from src.analysis.freshness import record_failure

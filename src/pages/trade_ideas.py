@@ -2251,14 +2251,18 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(show_spinner=False, ttl=3600, max_entries=8)
 def _live_generated_cached(regime: int, _start: str, _end: str) -> list:
-    """Signal-ranked single-name candidates for THIS regime, cached so the ~8s
-    cold scoring (score_all_assets) runs ONCE per regime per hour, not on every
-    Streamlit rerun. Conflict-driven generation was dropped: it cost ~73s (LP-IRF
-    Stage-3 on 9 theses) to contribute at most one redundant gold position — the
-    signal universe already maps stocks to their conflict/macro drivers, and the
-    static library carries the conflict-themed regime theses."""
+    """Signal-ranked single-name candidates for THIS regime.
+
+    NOT @st.cache_data on purpose: generate_signal_trades → score_all_assets
+    spawns a ThreadPoolExecutor, and wrapping a threaded cached function inside
+    another cached function DEADLOCKS on Streamlit's cache lock (0% CPU, loads
+    forever). The heavy work (score_all_assets) carries its OWN cache, so reruns
+    are still fast — only the ~0.6s trade construction repeats. Conflict-driven
+    generation was dropped: it cost ~73s (LP-IRF Stage-3 on 9 theses) for at
+    most one redundant gold position; the signal universe already maps stocks to
+    their conflict/macro drivers, and the static library carries the conflict
+    theses."""
     from src.analysis.trade_generator import generate_signal_trades
     return generate_signal_trades(regime=regime, max_trades=90)
 
