@@ -354,6 +354,14 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
       _is_eod       : True when latest data is from a prior close (not intraday)
       _data_date    : str date of the latest available market close
     """
+    # Cold-start / TTL-expiry fast path: read the last risk result from disk
+    # (~ms) instead of reloading returns + recomputing the 3-layer score (~3-5s).
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _ac_key = f"market_risk__{end}__{scenario_id}"
+    _hit = read_artifact(_ac_key, max_age_s=1800)
+    if _hit is not None:
+        return _hit
+
     from src.analysis.risk_score import compute_risk_score
     computed_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # Clamp to 3 years — rolling corr needs 60 days, charts need ~2y.
@@ -382,6 +390,7 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
         risk["_data_date"]       = str(last_date) if last_date else None
 
         record_fetch("risk_score")
+        write_artifact(_ac_key, risk)   # only the successful result is persisted
         return risk
 
     except Exception:
@@ -4909,6 +4918,13 @@ def _load_hot_stocks() -> list[dict]:
     Fetch Yahoo Finance RSS news per ticker; rank by 24h article count.
     Uses feedparser RSS (same infra as geo_rss) — more reliable than yfinance .news scraping.
     """
+    # Cold-start fast path: the RSS + price fetch is the home page's slowest call
+    # (it sits behind a .result(timeout=25) on the render path). Read the last
+    # result from disk (~ms) so a cold process doesn't stall the Command Center.
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _hit = read_artifact("hot_stocks", max_age_s=1800)
+    if _hit is not None:
+        return _hit
     import time, calendar
     import yfinance as yf
     import feedparser
@@ -4976,6 +4992,8 @@ def _load_hot_stocks() -> list[dict]:
                 pass
 
     results.sort(key=lambda x: x["score"], reverse=True)
+    if results:
+        write_artifact("hot_stocks", results[:7])
     return results[:7]
 
 
