@@ -161,13 +161,21 @@ def build_allocation_inputs(
         tr = [float(x) for x in (bt.get("trade_returns") or [])]
         n_tr = len(tr)
         sharpe_raw = float(bt.get("sharpe") or 0.0)
+        hold_days = _parse_holding_days(t, default=20)
+
+        # Direction-aware, regime-conditional P&L stats — the honest per-name
+        # expected return + dispersion for this signal over ONE holding window.
+        # These drive the scenario-free profit projection (a Short's negative
+        # realised edge shows as negative, not a flat zero).
+        arr = np.asarray(tr, dtype=float) if n_tr else np.asarray([0.0])
+        avg_return = float(arr.mean()) if n_tr else 0.0
+        ret_std = float(arr.std(ddof=1)) if n_tr >= 2 else 0.0
 
         if n_tr < MIN_TRADES_FOR_DSR:
             dsr = 0.0                      # stale: too few signals to trust
         else:
-            arr = np.asarray(tr, dtype=float)
-            sd = float(arr.std(ddof=1))
-            sr_trade = float(arr.mean() / sd) if sd > 1e-12 else 0.0
+            sd = ret_std
+            sr_trade = float(avg_return / sd) if sd > 1e-12 else 0.0
             skew = float(pd.Series(arr).skew()) if n_tr >= 3 else 0.0
             ekurt = float(pd.Series(arr).kurt()) if n_tr >= 4 else 0.0
             dsr, _sr_star = deflated_sharpe_probability(
@@ -187,6 +195,10 @@ def build_allocation_inputs(
             "sharpe_raw": sharpe_raw,      # reported for transparency, never sized on
             "n_trades": n_tr,
             "deploy_bar": bar,
+            # backtest projection inputs (per holding window, %)
+            "avg_return": avg_return,
+            "ret_std": ret_std,
+            "holding_days": hold_days,
         }
     return metrics
 
@@ -195,6 +207,7 @@ def allocate_weights(
     trades: list[dict],
     metrics: dict[str, dict],
     cap: float = MAX_SINGLE_WEIGHT,
+    concentration: float = 1.0,
 ) -> list[dict]:
     """
     Pure allocator. Stamps every trade with:
@@ -203,8 +216,27 @@ def allocate_weights(
 
     Every assignment routes through enforce_weight(); a non-allocatable trade
     receives 0.0 no matter what its metrics say.
+
+    EQUITY-SLEEVE MODEL. This book is the EQUITY COMPONENT of a larger
+    portfolio, so it stays FULLY INVESTED — the cash / hedge overlay is the
+    parent portfolio's decision, not this sleeve's. Capital is sized by each
+    trade's RISK-ADJUSTED EXPECTED EDGE: the direction-aware realised Sharpe
+    (backtest mean ÷ σ per holding window), shrunk by deflated-Sharpe
+    confidence. A historically money-LOSING signal earns ~no capital — that
+    capital is reallocated to the winners, never parked in cash — so the book's
+    expected return actually reflects its best ideas rather than washing out
+    across every eligible name. If literally nothing has a positive edge, the
+    sleeve falls back to an inverse-vol spread (still fully invested, never
+    cash). Raw weights normalize to 100% gross.
+
+    `concentration` (driven by risk appetite) sharpens the edge tilt: 1.0
+    spreads capital broadly across positive-edge ideas; higher values
+    concentrate into the strongest. It never changes gross deployment — only
+    the shape.
     """
+    conc = float(np.clip(concentration, 0.5, 6.0))
     raw: dict[str, float] = {}
+    inv_vol_fallback: dict[str, float] = {}
     for t in trades:
         name = t.get("name", "")
         m = metrics.get(name)
@@ -212,13 +244,22 @@ def allocate_weights(
             continue
         vol = m.get("vol", float("nan"))
         inv_vol = (1.0 / vol) if (vol and np.isfinite(vol) and vol > 1e-9) else 0.0
-        raw[name] = (
-            max(m.get("conviction", 0.0), 0.0)
-            * m.get("dsr_factor", 0.0)
-            * inv_vol
-            * max(m.get("liquidity", 0.0), 0.0)
-        )
+        inv_vol_fallback[name] = inv_vol
+        mu   = float(m.get("avg_return", 0.0))        # realised mean P&L / window
+        sd   = max(float(m.get("ret_std", 0.0)), 1e-6)
+        dsr  = max(m.get("dsr", 0.0), 0.0)            # deflated-Sharpe prob
+        liq  = max(m.get("liquidity", 0.0), 0.0)
+        # Risk-adjusted expected edge (direction-aware realised Sharpe), shrunk
+        # by deflated-Sharpe confidence. max(...,0) starves historically
+        # losing signals so capital flows to the winners, not to cash.
+        edge = max(mu / sd, 0.0) * (0.35 + 0.65 * dsr)
+        raw[name] = (edge ** conc) * (0.40 + 0.60 * liq)
 
+    total = sum(raw.values())
+    if total <= 1e-12:
+        # No positive-edge trade in this regime — keep the sleeve fully invested
+        # by spreading over eligible names inverse to volatility (never cash).
+        raw = dict(inv_vol_fallback)
     total = sum(raw.values())
     weights = {n: (w / total if total > 1e-12 else 0.0) for n, w in raw.items()}
 
@@ -252,6 +293,10 @@ def allocate_weights(
             "liquidity": round(m.get("liquidity", 0.0), 3),
             "sharpe_raw": round(m.get("sharpe_raw", 0.0), 3),
             "n_trades": m.get("n_trades", 0),
+            # backtest projection inputs (per holding window, %)
+            "avg_return": round(m.get("avg_return", 0.0), 4),
+            "ret_std": round(m.get("ret_std", 0.0), 4),
+            "holding_days": m.get("holding_days", 0),
             "locked": not t.get("is_eligible", False),
         }
     return trades

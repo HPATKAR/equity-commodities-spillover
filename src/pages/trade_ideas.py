@@ -1142,7 +1142,7 @@ def _backtest_trade(
     }
 
 
-@st.cache_data(show_spinner=False, max_entries=1, ttl=3600)
+@st.cache_data(show_spinner=False, max_entries=400, ttl=3600)
 def _thesis_stage3_cached(
     strat_name: str,
     conflict_id: str | None,
@@ -2161,35 +2161,56 @@ def _weight_earn_condition(alloc_detail: dict) -> str:
 
 
 def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
-    """Aggregate targeted upside for the CONSTRUCTED portfolio (deployed trades
-    only), reusing the existing scenario projection (project_trade). Each trade's
-    projected P&L is weighted by its allocation, so figures are returns on TOTAL
-    book capital (the un-deployed cash portion contributes 0). This is
-    scenario-projected upside IF theses play out — deliberately distinct from the
-    deflated-Sharpe confidence that drives sizing. None when the book is cash."""
+    """Targeted upside for the CONSTRUCTED book (deployed trades only). Each
+    trade's expected P&L and dispersion come from its OWN regime-conditional,
+    direction-aware backtest — the mean and σ of realised returns per holding
+    window — so the number is honest and per-name (a Short whose realised edge
+    was negative shows negative, not a flat zero). Figures are returns on TOTAL
+    book capital: a trade's weight is its share of the fully-invested equity
+    sleeve. The bull/bear cone is a ±1.28σ (10th/90th-pctile) band on the BOOK
+    return, using a disclosed average intra-book correlation so diversification
+    is credited rather than assuming every leg moves together. Curated theses
+    without a backtest sample fall back to the scenario projection. None when no
+    trade is deployed."""
+    import math
     deployed = [t for t in book if float(t.get("alloc_weight", 0.0)) > 0]
     if not deployed:
         return None
     from src.analysis.profit_projection import project_trade
-    exp = best = worst = be_w = 0.0
-    horizons: list[int] = []
+    RHO = 0.35        # assumed average intra-book return correlation (disclosed)
+    Z = 1.2816        # 10th / 90th percentile of the standard normal
     gross = sum(float(t["alloc_weight"]) for t in deployed)
+    exp = be_w = 0.0
+    ws_indep = 0.0    # Σ (w·σ)²  — idiosyncratic-risk term
+    ws_sum = 0.0      # Σ (w·σ)   — common-factor term
+    horizons: list[int] = []
     for t in deployed:
         w = float(t["alloc_weight"])
-        # Project over the trade's OWN stated horizon, not a fixed 3-month
-        # default — a 12-month thesis's target upside should reflect 12 months.
-        hy = max(_parse_holding_days(t, default=63) / 252.0, 0.02)
-        try:
-            p = project_trade(t, holding_years=hy, current_regime=current_regime)
-        except Exception:
-            continue
-        exp   += w * float(p.get("expected_pnl", 0.0))
-        best  += w * float(p.get("best_case_pnl", 0.0))
-        worst += w * float(p.get("worst_case_pnl", 0.0))
-        be_w  += w * float(p.get("breakeven_prob", 0.0))
-        horizons.append(int(round(hy * 12)))
+        det = t.get("alloc_detail") or {}
+        hd = int(det.get("holding_days") or _parse_holding_days(t, default=63))
+        if "avg_return" in det and int(det.get("n_trades", 0)) >= 1:
+            mu = float(det.get("avg_return", 0.0))
+            sd = max(float(det.get("ret_std", 0.0)), 0.0)
+        else:
+            # curated thesis without a backtest sample — scenario fallback
+            try:
+                p = project_trade(t, holding_years=max(hd / 252.0, 0.02),
+                                  current_regime=current_regime)
+                mu = float(p.get("expected_pnl", 0.0))
+                sd = abs(float(p.get("best_case_pnl", 0.0)) - mu) / Z if Z else 0.0
+            except Exception:
+                continue
+        exp += w * mu
+        ws_indep += (w * sd) ** 2
+        ws_sum += w * sd
+        be_w += w * (0.5 * (1.0 + math.erf(mu / (sd * math.sqrt(2.0))))
+                     if sd > 1e-9 else (1.0 if mu > 0 else 0.0))
+        horizons.append(max(1, round(hd / 21.0)))
+    port_vol = math.sqrt(max((1.0 - RHO) * ws_indep + RHO * ws_sum ** 2, 0.0))
     return {
-        "expected": exp, "best": best, "worst": worst,
+        "expected": exp,
+        "best": exp + Z * port_vol,
+        "worst": exp - Z * port_vol,
         "breakeven": (be_w / gross if gross > 1e-9 else 0.0),
         "months_lo": min(horizons) if horizons else 0,
         "months_hi": max(horizons) if horizons else 0,
@@ -2226,6 +2247,20 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=8)
+def _live_generated_cached(regime: int, _start: str, _end: str) -> tuple[list, list]:
+    """Conflict-driven + signal-ranked candidates for THIS regime, cached so the
+    ~16s scoring/generation (score_all_assets + score_all_conflicts, both cold)
+    runs ONCE per regime per hour — not on every Streamlit rerun (risk-appetite
+    slider, holding changes). _start/_end key the cache to the active window."""
+    from src.analysis.trade_generator import (
+        generate_conflict_trades, generate_signal_trades,
+    )
+    conflict = generate_conflict_trades(regime=regime)
+    signal = generate_signal_trades(regime=regime, max_trades=90)
+    return conflict, signal
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -2250,8 +2285,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         "Spillover analysis is most useful when it connects to positioning hypotheses. "
         "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
         "Static library theses fire when the current regime matches their structural trigger. "
-        "The five-stage pipeline (Signal → Prior Validation → Sizing → DSR gate) "
-        "is walk-forward validated — the pipeline's admit/reject decisions are the deliverable, not individual trade grades."
+        "The five-stage pipeline (Signal → Prior Validation → Confidence-weighted sizing) "
+        "is walk-forward validated — the pipeline's admit/reject decisions are the deliverable, not individual trade grades. "
+        "<strong>The constructed book is a fully-invested equity sleeve</strong> (the cash / hedge overlay is the parent portfolio's decision), sized by risk-adjusted expected edge."
     )
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
@@ -2401,22 +2437,27 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # the deflated Sharpe. Generated ideas only deploy if they earn it.
     _n_generated = 0
     try:
-        from src.analysis.trade_generator import generate_conflict_trades
+        import copy as _copy_gen
+        # Conflict-driven + signal-ranked candidates for this regime, cached so
+        # the ~16s cold scoring runs once, not on every rerun. Deep-copy before
+        # mutating/appending — later steps stamp eligibility/weights in place and
+        # must never touch the cached objects.
         with st.spinner("Generating live conflict-driven ideas…"):
-            _gen = generate_conflict_trades(regime=current)
+            _gen_conflict, _gen_signal = _live_generated_cached(current, start, end)
+        _gen_conflict = _copy_gen.deepcopy(_gen_conflict)
+        _gen_signal = _copy_gen.deepcopy(_gen_signal)
         _existing = {t.get("name") for t in _TRADE_LIBRARY}
-        for _g in _gen:
+        for _g in _gen_conflict:
             if _g.get("name") and _g["name"] not in _existing:
                 _g["generated"] = True
                 _TRADE_LIBRARY.append(_g)
                 _existing.add(_g["name"])
                 _n_generated += 1
-        # Signal-ranked candidate universe — relative-value pairs + directional
-        # signals + safe-haven hedges across the scored universe. Broadens the
-        # book to 100+ candidates; each runs the SAME eligibility → Stage-3 → DSR
+        # Signal-ranked candidate universe — directional single-name signals +
+        # safe-haven hedges across the scored universe. Broadens the book to
+        # 100+ candidates; each runs the SAME eligibility → Stage-3 → sizing
         # gate, and the wider search raises the deflated-Sharpe trial penalty.
-        from src.analysis.trade_generator import generate_signal_trades
-        for _g in generate_signal_trades(regime=current, max_trades=90):
+        for _g in _gen_signal:
             if _g.get("name") and _g["name"] not in _existing:
                 _TRADE_LIBRARY.append(_g)
                 _existing.add(_g["name"])
@@ -2449,13 +2490,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _loadable = (set(_all_r_gate.columns) | set(FIXED_INCOME_TICKERS)
                  | set(FX_TICKERS) | set(_PC_LEG_MAP.values()))
 
-    # ── Risk appetite ──────────────────────────────────────────────────────
-    # Explicit, disclosed control over how far BELOW the deflated-Sharpe 0.50
-    # confidence bar the desk will deploy. Defensive (default) keeps the strict
-    # bar — honest cash when nothing clears it. Higher appetite lowers the
-    # EFFECTIVE bar toward 0.15, deploying the strongest relative ideas as
-    # speculative bets (labelled as such). The strict bar is never silently
-    # moved; the raw DSR and ranking are unaffected — only sizing responds.
+    # ── Risk appetite → concentration ──────────────────────────────────────
+    # This equity sleeve is ALWAYS fully invested; appetite controls how tightly
+    # capital concentrates into the strongest risk-adjusted ideas, not a cash
+    # level. Defensive spreads broadly across positive-edge names; Aggressive
+    # concentrates into the best few. Ranking and the raw DSR are unaffected —
+    # only the shape of the book responds.
     from src.analysis.trade_allocator import (
         APPETITE_STOPS, effective_deploy_bar, DSR_DEPLOY_BAR, DEPLOY_BAR_FLOOR,
     )
@@ -2465,25 +2505,32 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         options=_appetite_names,
         value=st.session_state.get("ti_risk_appetite", _appetite_names[0]),
         key="ti_risk_appetite",
-        help=("How far below the deflated-Sharpe 0.50 confidence bar the book "
-              "will deploy. Defensive holds the strict bar (cash when no thesis "
-              "clears it); Aggressive lowers it to 0.15, deploying the strongest "
-              "relative ideas as disclosed speculative bets. Ranking is "
-              "unaffected — only position sizing responds."),
+        help=("Concentration of the fully-invested equity sleeve. Defensive "
+              "spreads capital broadly across every positive-edge idea; "
+              "Aggressive concentrates it into the strongest few. The book stays "
+              "100% invested at every setting — appetite changes the shape of the "
+              "book, never the cash level (cash and hedging are the parent "
+              "portfolio's job)."),
     )
     _appetite = float(APPETITE_STOPS.get(_appetite_label, 0.0))
+    # Retained only for the dsr_factor transparency column; sizing no longer
+    # gates on it (the sleeve is fully invested).
     _eff_bar = effective_deploy_bar(_appetite)
+    _concentration = 1.0 + 2.0 * _appetite
     _app_col = "#27ae60" if _appetite == 0 else "#e67e22" if _appetite < 1 else "#c0392b"
-    _bar_note = (
-        '<span style="color:#c0392b">(below the 0.50 confidence bar — deploying '
-        'speculative relative bets)</span>' if _eff_bar < DSR_DEPLOY_BAR - 1e-9
-        else '<span style="color:#8890a1">(strict deflated-Sharpe gate)</span>'
+    _conc_note = (
+        '<span style="color:#27ae60">(broadly diversified — every positive-edge '
+        'idea carries weight)</span>' if _appetite <= 0.34
+        else '<span style="color:#c0392b">(tightly concentrated in the strongest '
+        'ideas)</span>' if _appetite >= 0.67
+        else '<span style="color:#e67e22">(balanced concentration)</span>'
     )
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:.55rem;'
         f'color:#8890a1;margin:-.2rem 0 .5rem">RISK APPETITE · '
         f'<b style="color:{_app_col}">{_appetite_label.upper()}</b> · '
-        f'effective deploy bar <b style="color:#e8e9ed">{_eff_bar:.2f}</b> {_bar_note}</p>',
+        f'100% invested · concentration '
+        f'<b style="color:#e8e9ed">{_concentration:.1f}&times;</b> {_conc_note}</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -2510,7 +2557,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _TRADE_LIBRARY, _all_r_gate, regimes, _s3_results,
             n_strategies=_n_trials, deploy_bar=_eff_bar,
         )
-        allocate_weights(_TRADE_LIBRARY, _alloc_metrics)
+        # Equity sleeve: always 100% invested; risk appetite now sharpens the
+        # confidence tilt (Defensive spreads broadly, Aggressive concentrates in
+        # the highest-DSR ideas) rather than moving capital to cash.
+        allocate_weights(_TRADE_LIBRARY, _alloc_metrics,
+                         concentration=_concentration)
         # ── STEP 3 OF 4 — PORTFOLIO CONSTRAINTS (silent) ────────────────────
         # Conflict cap 40% / correlation-cluster cap 45% of gross, iterative
         # re-normalization; runtime-asserted, stamps constraint_detail.
@@ -2553,24 +2604,16 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     if _ranked_book:
         _gross_bk = sum(t.get("alloc_weight", 0.0) for t in _ranked_book)
-        # Cash is a position, not an absence: when no eligible thesis clears
-        # the (appetite-adjusted) deploy bar the book is 100% cash BY DECISION.
+        # Equity sleeve: fully invested by design. The book is 100% cash ONLY in
+        # the STRUCTURAL case where nothing is eligible this regime (no legs in
+        # data / no Stage-3 confirmation) — never as a deploy-bar risk decision.
         _is_cash_book = _gross_bk <= 1e-9
-        _speculative = _eff_bar < _DSR_DEPLOY_BAR - 1e-9   # risk-on: below the confidence bar
+        _speculative = False
         _best_dsr = max(
             (float((t.get("alloc_detail") or {}).get("dsr", 0.0))
              for t in _ranked_book), default=0.0)
         _n_deployed = sum(1 for t in _ranked_book if t.get("alloc_weight", 0.0) > 0)
         if _is_cash_book:
-            _reason = (
-                f'All {len(_ranked_book)} eligible theses sit below the '
-                f'{_eff_bar:.2f} deploy bar (best {_best_dsr:.2f})'
-                + (f' — even at your lowered <b>{_appetite_label}</b> risk bar '
-                   f'nothing clears it.' if _speculative else
-                   f' — no confirmed edge clears the deflated-Sharpe luck '
-                   f'benchmark, so nothing earns weight.')
-                + ' Ranked ideas below are a watchlist, not an allocation.'
-            )
             st.markdown(
                 f'<div style="border:1px solid #CFB991;background:#0d0b06;'
                 f'padding:.65rem 1rem;margin:.2rem 0 .6rem">'
@@ -2578,37 +2621,44 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'align-items:baseline;flex-wrap:wrap">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
-                f'color:#CFB991">DESK CALL — 0% DEPLOYED · 100% CASH</span>'
+                f'color:#CFB991">EQUITY SLEEVE — NO ELIGIBLE POSITIONS</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                f'font-size:.52rem;color:#8890a1">{_appetite_label.upper()} · '
-                f'cash is a position — held, not defaulted</span></div>'
+                f'font-size:.52rem;color:#8890a1">{_appetite_label.upper()}</span></div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
-                f'color:#8890a1;margin-top:4px">{_reason}</div>'
+                f'color:#8890a1;margin-top:4px">No thesis is eligible this regime — '
+                f'every candidate is missing return data or failed Stage-3 '
+                f'confirmation, so there is nothing to invest in. Ranked ideas below '
+                f'are a watchlist. This sleeve holds cash only when it structurally '
+                f'cannot invest — never as a risk call; that overlay lives at the '
+                f'parent-portfolio level.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
-        elif _speculative:
-            # Deployed BELOW the confidence bar — disclose it prominently.
+        else:
+            _conc_word = ("broadly diversified" if _appetite <= 0.34
+                          else "concentrated" if _appetite >= 0.67 else "balanced")
             st.markdown(
-                f'<div style="border:1px solid #c0392b;background:#120707;'
+                f'<div style="border:1px solid #27ae60;background:#07120b;'
                 f'padding:.65rem 1rem;margin:.2rem 0 .6rem">'
                 f'<div style="display:flex;justify-content:space-between;'
                 f'align-items:baseline;flex-wrap:wrap">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
-                f'color:#e67e22">DESK CALL — RISK-ON · {_gross_bk*100:.0f}% DEPLOYED '
-                f'· {_appetite_label.upper()}</span>'
+                f'color:#27ae60">EQUITY SLEEVE — 100% INVESTED · '
+                f'{_n_deployed} POSITIONS</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
-                f'font-size:.52rem;color:#c0392b">SPECULATIVE — BELOW '
-                f'DEFLATED-SHARPE BAR</span></div>'
+                f'font-size:.52rem;color:#8890a1">{_appetite_label.upper()} · '
+                f'{_conc_word}</span></div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
-                f'color:#8890a1;margin-top:4px">'
-                f'{_n_deployed} of {len(_ranked_book)} ideas sized at a lowered '
-                f'<b>{_eff_bar:.2f}</b> deploy bar — below the 0.50 deflated-Sharpe '
-                f'confidence threshold. These are best-available <b>relative</b> '
-                f'bets, not statistically confirmed edges; each is sized by how far '
-                f'it clears your risk bar. Drop to Defensive for the strict '
-                f'evidence-gated book.</div>'
+                f'color:#8890a1;margin-top:4px">The equity component of a larger '
+                f'portfolio — always fully invested; the cash / hedge overlay is the '
+                f'parent allocation&rsquo;s call, not this sleeve&rsquo;s. Capital is '
+                f'sized by <b>risk-adjusted expected edge</b> (direction-aware '
+                f'backtested Sharpe, shrunk by the deflated-Sharpe luck penalty) and '
+                f'concentrated in the strongest {_n_deployed} of {_n_elig} eligible '
+                f'ideas; the rest rank below as a zero-weight watchlist. '
+                f'<b>{_appetite_label}</b> appetite sets how tightly capital '
+                f'concentrates — it never moves the book to cash.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -2644,12 +2694,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'{_up["gross"]*100:.0f}% DEPLOYED</div>'
                 f'<div style="display:flex;flex-wrap:wrap;gap:6px 4px">{_tiles}</div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.55rem;'
-                f'color:#555960;margin-top:6px">Scenario-projected P&amp;L if the '
-                f'theses play out, weighted by allocation (cash portion earns 0). '
-                f'This is <b>potential upside</b>, distinct from the deflated-Sharpe '
-                f'confidence that sizes the book — high appetite buys more upside '
-                f'AND more downside. Not a forecast; scenario payoff assumptions '
-                f'are disclosed in each trade card.</div>'
+                f'color:#555960;margin-top:6px">Projected from each position&rsquo;s '
+                f'own regime-conditional, direction-aware <b>backtest</b> (mean and '
+                f'dispersion of realised returns per holding window), weighted by '
+                f'allocation on a fully-invested book. Expected is the sleeve&rsquo;s '
+                f'targeted return; the bull/bear cone is a &plusmn;1.28&sigma; band '
+                f'using a disclosed 0.35 intra-book correlation so diversification is '
+                f'credited. Potential upside, not a forecast.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
