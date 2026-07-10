@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time as _time
 import numpy as np
 import pandas as pd
@@ -140,6 +141,30 @@ from src.data.config import (
     EQUITY_TICKERS, COMMODITY_TICKERS, FRED_SERIES,
     DEFAULT_START, DEFAULT_END,
 )
+
+
+# ── yfinance serialisation ────────────────────────────────────────────────────
+# yfinance's multi-ticker download writes to a MODULE-GLOBAL `shared._DFS` dict
+# that is NOT safe for concurrent yf.download() calls. Pages fan their loaders
+# out across a ThreadPoolExecutor, so several downloads can run at once and
+# corrupt that dict ("RuntimeError: dictionary changed size during iteration").
+# Serialise every download through one process-wide lock — correctness over the
+# small parallelism loss (yfinance already threads ticker fetches WITHIN a call).
+_YF_LOCK = threading.Lock()
+_orig_yf_download = yf.download
+
+
+def _yf_download(*args, **kwargs):
+    with _YF_LOCK:
+        return _orig_yf_download(*args, **kwargs)
+
+
+# Monkey-patch yfinance so EVERY yf.download() call app-wide (any module, any
+# import alias) is serialised — the shared._DFS race can fire from ANY two
+# concurrent downloads, not just the loader's. Idempotent: only patch once.
+if not getattr(yf.download, "_serialised", False):
+    _yf_download._serialised = True
+    yf.download = _yf_download
 
 
 # ── Pandera schema validation ─────────────────────────────────────────────────
@@ -377,7 +402,7 @@ def _fetch_yf(tickers: dict[str, str], start, end) -> pd.DataFrame:
         end = date.fromisoformat(end)
     end_exclusive = str(end + timedelta(days=1))
     try:
-        raw = yf.download(
+        raw = _yf_download(
             list(tickers.values()),
             start=str(start),
             end=end_exclusive,
@@ -557,7 +582,7 @@ def _clamp_hourly_start(start: str) -> str:
 def _fetch_yf_hourly(tickers: dict[str, str], start: str, end: str) -> pd.DataFrame:
     """Download hourly close prices. Drops timezone info, returns UTC-naive index."""
     reverse = {v: k for k, v in tickers.items()}
-    raw = yf.download(
+    raw = _yf_download(
         list(tickers.values()),
         start=start,
         end=end,
@@ -754,7 +779,7 @@ def load_sp500_prices(
     """
     if not tickers_tuple:
         return pd.DataFrame()
-    raw = yf.download(
+    raw = _yf_download(
         list(tickers_tuple),
         start=start,
         end=end,

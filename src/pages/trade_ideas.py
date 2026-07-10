@@ -768,7 +768,7 @@ def _fetch_stock_prices(sectors: tuple[str, ...] = ()) -> dict[str, float]:
     Cached 15 min.
     """
     try:
-        import yfinance as yf
+        from src.data.loader import _yf_download   # process-wide yfinance lock
         sector_set = set(sectors)
         tickers = [
             t for t, (_, s) in _SP500_UNIVERSE.items()
@@ -776,7 +776,7 @@ def _fetch_stock_prices(sectors: tuple[str, ...] = ()) -> dict[str, float]:
         ]
         if not tickers:
             return {}
-        raw = yf.download(tickers, period="5d", progress=False, auto_adjust=True)["Close"]
+        raw = _yf_download(tickers, period="5d", progress=False, auto_adjust=True)["Close"]
         if raw.empty:
             return {}
         latest = raw.ffill().iloc[-1]
@@ -2234,12 +2234,13 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
         if not uni:
             return pd.DataFrame()
         name_by_ticker = {tk: disp for disp, (tk, _s, _r) in uni.items()}
-        import yfinance as yf, datetime as _dt
+        import datetime as _dt
+        from src.data.loader import _yf_download   # process-wide yfinance lock
         # Clamp to ~5y — backtest windows are ≤252d, so deeper history just
         # slows the 184-ticker fetch. Recent 5y is plenty for these signals.
         _floor = str(_dt.date.today() - _dt.timedelta(days=5 * 365))
         _s = _floor if start < _floor else start
-        raw = yf.download(list(name_by_ticker.keys()), start=_s, end=end,
+        raw = _yf_download(list(name_by_ticker.keys()), start=_s, end=end,
                           auto_adjust=True, progress=False, threads=True)
         if raw.empty:
             return pd.DataFrame()
