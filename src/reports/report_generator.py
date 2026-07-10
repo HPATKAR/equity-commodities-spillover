@@ -1149,33 +1149,149 @@ def generate_report(
     ]
 
     # ── 9. DISCLAIMER ────────────────────────────────────────────────────────
-    story += _section_header("Disclaimer")
+    story += [PageBreak()]
+    story += _section_header("Important Disclaimer & Legal Notices")
+
+    _disc_lead = (
+        "PLEASE READ THESE NOTICES CAREFULLY. By accessing, reading, or otherwise using this "
+        "report (the \"Report\") you acknowledge that you have read, understood, and agreed to "
+        "the terms, limitations, and disclaimers set out below. If you do not agree, you should "
+        "not rely on this Report in any way and should disregard its contents in their entirety."
+    )
+
+    _disc = [
+        ("Nature and Purpose of this Report",
+         "This Report is prepared by graduate students of Purdue University's Daniels School of "
+         "Business solely for academic, research, and educational purposes in connection with a "
+         "Master of Science in Finance course of study. It is an illustrative demonstration of "
+         "quantitative, statistical, and econometric techniques applied to cross-asset equity and "
+         "commodity spillover analysis. It is not a commercial research product, has not been "
+         "prepared in accordance with any legal or regulatory requirements designed to promote the "
+         "independence of investment research, and is not subject to any prohibition on dealing "
+         "ahead of the dissemination of investment research."),
+        ("No Investment, Financial, Legal, or Tax Advice",
+         "Nothing contained in this Report constitutes, or should be construed as, investment, "
+         "financial, trading, legal, tax, accounting, or any other form of professional advice, nor "
+         "a personal recommendation. No content herein has been prepared with regard to the specific "
+         "investment objectives, financial situation, risk tolerance, time horizon, or particular "
+         "needs of any person who may read it. You must not treat any content in this Report as a "
+         "substitute for the exercise of your own judgement or for advice from a licensed and "
+         "qualified professional authorised in your jurisdiction."),
+        ("No Offer, Solicitation, or Recommendation",
+         "This Report does not constitute and shall not be construed as an offer, invitation, "
+         "inducement, advertisement, or solicitation to buy, sell, subscribe for, hold, or otherwise "
+         "transact in any security, commodity, future, option, derivative, fund interest, digital "
+         "asset, or other financial instrument, nor to adopt any particular trading, hedging, or "
+         "investment strategy, in any jurisdiction in which such an offer, solicitation, or "
+         "recommendation would be unlawful or unauthorised. No security or instrument referenced "
+         "herein is being offered or sold by the authors."),
+        ("No Fiduciary or Advisory Relationship",
+         "The authors, Purdue University, and the Daniels School of Business are not registered or "
+         "licensed as investment advisers, broker-dealers, commodity trading advisors, futures "
+         "commission merchants, financial planners, or in any similar capacity with any securities or "
+         "commodities regulator, and are not acting in any fiduciary or advisory capacity toward any "
+         "reader. No advisory, fiduciary, agency, or client relationship of any kind is created by "
+         "the preparation, distribution of, or any reader's access to, this Report."),
+        ("Illustrative and Hypothetical Trade Ideas",
+         "All \"trade ideas,\" positions, directions, portfolio weights, targets, entry and exit "
+         "levels, holding periods, and constructed books shown are hypothetical, mechanical outputs "
+         "of research models and are presented purely to illustrate an analytical framework. They are "
+         "not, and must not be read as, actionable trade recommendations or a model portfolio for any "
+         "person. They have not been executed in any live account. No representation is made that any "
+         "account has achieved, or is likely to achieve, profits, losses, or risk characteristics "
+         "similar to those depicted."),
+        ("Hypothetical and Back-Tested Performance",
+         "Any performance, return, expected-edge, or upside figures are hypothetical and derived from "
+         "back-tests, simulations, or model estimates. Hypothetical and back-tested performance has "
+         "numerous inherent and material limitations: it is prepared with the benefit of hindsight; "
+         "it does not involve or reflect actual financial risk, capital, or the effects of emotion, "
+         "discipline, liquidity, or funding constraints on real-world decision-making; and, unless "
+         "expressly stated otherwise, it does not reflect the impact of commissions, transaction "
+         "costs, financing and borrowing costs, market impact, slippage, bid-offer spreads, taxes, or "
+         "fees, each of which would reduce actual returns. Results are further subject to survivorship "
+         "bias, look-ahead bias, selection bias, and data-mining and over-fitting risk. Small changes "
+         "in data, assumptions, parameters, or sample periods can produce materially different "
+         "outcomes. PAST, HYPOTHETICAL, AND BACK-TESTED PERFORMANCE IS NOT A RELIABLE INDICATOR OF, "
+         "AND IS NOT INDICATIVE OR A GUARANTEE OF, FUTURE RESULTS."),
+        ("Forward-Looking Statements, Projections, and Scenarios",
+         "Statements regarding expected or targeted returns, annualised figures, bull and bear cases, "
+         "scenario payoffs, breakeven probabilities, confidence measures, regime forecasts, and any "
+         "other forward-looking content represent estimates, assumptions, and opinions only, are "
+         "subject to significant business, economic, market, and model uncertainty, and may prove to "
+         "be incorrect. They are not guarantees, promises, or assurances of any future outcome. Actual "
+         "events, conditions, and results may differ materially from those expressed or implied, and "
+         "the authors undertake no obligation to update any forward-looking statement."),
+        ("Model, Methodological, and Regime Risk",
+         "The analysis relies on statistical and econometric models, including correlation-regime "
+         "detection, deflated-Sharpe screening, spillover, transmission, and connectedness measures, "
+         "conflict-intensity scoring, and scenario engines, all of which are simplifications of a "
+         "complex and evolving reality. Such models may contain errors, may be mis-specified or "
+         "mis-calibrated, and can fail, particularly during structural breaks, regime shifts, policy "
+         "shocks, liquidity crises, and extreme or tail events, precisely when reliable guidance is "
+         "most needed. Statistical relationships and correlations estimated from historical data may "
+         "weaken, reverse, or break down entirely without notice."),
+        ("Third-Party Data, News, and Analyst Commentary",
+         "Market data, prices, fundamentals, macroeconomic series, and any recent news headlines, "
+         "articles, or analyst-commentary items reproduced or summarised in this Report are obtained "
+         "from third-party sources, which may include Yahoo Finance, the yfinance library, FRED, and "
+         "a variety of news publishers and aggregators, believed to be reliable but which have not "
+         "been independently verified. Such third-party content is provided for background and context "
+         "only. It is not endorsed, adopted, verified, or warranted by the authors; it may be "
+         "inaccurate, incomplete, out of date, mis-attributed, or associated with a company or ticker "
+         "only by automated matching; and its inclusion does not imply that the authors agree with, or "
+         "vouch for the accuracy of, any statement, rating, price target, or opinion it contains. The "
+         "authors make no representation or warranty, express or implied, as to the accuracy, "
+         "completeness, timeliness, reliability, or fitness for any purpose of any data, headline, or "
+         "content in this Report, and disclaim any duty to update it."),
+        ("General Risk Warning",
+         "All investing, trading, and speculation involves substantial risk, including the risk of "
+         "losing some, all, or (where leverage or derivatives are used) more than the amount invested. "
+         "The value of investments and any income from them can fall as well as rise, is not "
+         "guaranteed, and you may not get back the amount originally invested. Commodities, futures, "
+         "derivatives, leveraged and short strategies, and instruments exposed to geopolitical, "
+         "energy, currency, and cross-border risk can be exceptionally volatile and illiquid and may "
+         "result in rapid, substantial, or total loss of capital. Diversification, hedging, and "
+         "risk-management models do not assure a profit and do not protect against loss in declining "
+         "or dislocated markets."),
+        ("No Reliance and Independent Due Diligence",
+         "You should not use or rely upon this Report as the sole or primary basis for any investment "
+         "or trading decision. Any person considering any transaction should conduct their own "
+         "independent research, analysis, and due diligence, form their own independent view, and "
+         "obtain specific and appropriate professional advice relevant to their own circumstances, "
+         "objectives, and jurisdiction before acting or refraining from acting."),
+        ("Limitation of Liability",
+         "To the fullest extent permitted by applicable law, the authors, Purdue University, the "
+         "Daniels School of Business, and their respective trustees, faculty, staff, students, and "
+         "affiliates expressly disclaim and accept no responsibility or liability whatsoever, whether "
+         "in contract, tort (including negligence), breach of statutory duty, or otherwise, for any "
+         "direct, indirect, incidental, special, punitive, or consequential loss or damage of any "
+         "kind, including loss of profit, loss of capital, or loss of opportunity, arising out of or "
+         "in connection with the access to, use of, or reliance on this Report, its contents, or any "
+         "data or third-party content referenced herein, even if advised of the possibility of such "
+         "loss."),
+        ("Intellectual Property, Confidentiality, and Distribution",
+         "This Report is the academic work product of its named authors and is intended for internal "
+         "coursework, faculty review, and educational use only. It may not be reproduced, "
+         "redistributed, published, quoted, or relied upon by any third party, in whole or in part, "
+         "for any commercial purpose, without the authors' prior written consent. All third-party "
+         "trademarks, service marks, trade names, and content remain the property of their respective "
+         "owners, and their use here is for identification and educational purposes only."),
+        ("Jurisdiction and Governing Terms",
+         "This Report and these notices are provided from an academic setting within the United States "
+         "and are intended for a limited academic audience. The Report may not be lawful or appropriate "
+         "for use in all jurisdictions, and it is the responsibility of any reader to inform themselves "
+         "about, and to observe, any applicable laws and regulations. Nothing in these notices excludes "
+         "or limits any liability that cannot lawfully be excluded or limited."),
+    ]
+
+    story += [Paragraph(_disc_lead, S["disclaimer"]), Spacer(1, 5)]
+    for _lbl, _txt in _disc:
+        story += [Paragraph(f"<b>{_lbl}.</b>&nbsp; {_txt}", S["disclaimer"]),
+                  Spacer(1, 4)]
     story += [
-        Table(
-            [[Paragraph(
-                "This report is produced for research and educational purposes at "
-                "Purdue University's Daniels School of Business. "
-                "It does not constitute investment advice, a solicitation, or a recommendation "
-                "to buy or sell any security or financial instrument. Past performance is not "
-                "indicative of future results. All trade ideas are illustrative examples of "
-                "equity-commodities analytical frameworks and must not be implemented without independent "
-                "professional due diligence, risk assessment, and regulatory review. "
-                "The authors accept no liability for any financial loss arising from reliance on "
-                "this material. Market data is sourced from public providers and may contain "
-                "errors or omissions.",
-                S["disclaimer"],
-            )]],
-            colWidths=[cw],
-            style=TableStyle([
-                ("BACKGROUND",    (0,0), (-1,-1), colors.HexColor("#fffdf5")),
-                ("BOX",           (0,0), (-1,-1), 0.5, GOLD),
-                ("TOPPADDING",    (0,0), (-1,-1), 11),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 11),
-                ("LEFTPADDING",   (0,0), (-1,-1), 11),
-                ("RIGHTPADDING",  (0,0), (-1,-1), 11),
-            ]),
-        ),
-        Spacer(1, 10),
+        Spacer(1, 8),
+        HRFlowable(width="100%", thickness=0.5, color=GOLD),
+        Spacer(1, 6),
         Paragraph(
             f"© {datetime.now().year} Purdue University · Daniels School of Business · "
             f"MSF Research Terminal",
