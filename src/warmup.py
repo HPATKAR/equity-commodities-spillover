@@ -23,8 +23,12 @@ _timer: threading.Timer | None = None
 
 # ── Core warm-up logic ────────────────────────────────────────────────────────
 
-def _run() -> None:
-    """Execute all pre-warm calls. Never raises — errors are logged and swallowed."""
+def _run(reschedule: bool = True) -> None:
+    """Execute all pre-warm calls. Never raises — errors are logged and swallowed.
+
+    reschedule=True (default) re-arms the background timer for the in-process
+    daemon. The standalone precompute entrypoint calls _run(reschedule=False):
+    it warms + persists the artifact cache once and exits (no daemon timer)."""
     t0 = time.monotonic()
     try:
         import pandas as pd
@@ -84,6 +88,16 @@ def _run() -> None:
         except Exception:
             pass
 
+        # Full Command Center render essentials — the 3-layer risk score and the
+        # hot-stocks RSS feed, the two remaining home cold calls (both disk-backed
+        # now, so this also persists their artifacts for a cold web process).
+        try:
+            from src.pages.home import _load_market_risk, _load_hot_stocks
+            _warm(_load_market_risk, _app_start, _today, "base")
+            _warm(_load_hot_stocks)
+        except Exception:
+            pass
+
         # 4. Walk-forward backtests for every static trade card, cached 3600 s
         from src.pages.trade_ideas import (
             _TRADE_LIBRARY_BASE as _TRADE_LIBRARY,   # read-only warmup pass
@@ -128,7 +142,8 @@ def _run() -> None:
     except Exception as exc:
         _log.warning("warmup: failed after %.1f s: %s", time.monotonic() - t0, exc)
 
-    _reschedule()
+    if reschedule:
+        _reschedule()
 
 
 def _reschedule() -> None:
