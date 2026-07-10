@@ -610,6 +610,14 @@ def score_all_conflicts() -> dict[str, dict]:
     market_freshness is initialised to 1.0 here; callers with live market
     data should call apply_market_freshness() to update it before ranking.
     """
+    # Cold-start fast path: read the last conflict scores from disk (~ms) so a
+    # fresh process doesn't re-run the GDELT executor (~6-8s, or a full timeout
+    # if GDELT is unreachable).
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _hit = read_artifact("conflict_scores", max_age_s=7200)
+    if _hit is not None:
+        return _hit
+
     def _score_one(c: dict) -> tuple[str, dict]:
         cid = c["id"]
         cis, cis_source = compute_cis(c)          # makes the (slow) GDELT call
@@ -730,6 +738,7 @@ def score_all_conflicts() -> dict[str, dict]:
             record_failure("conflict_manual", "No last_updated dates found in CONFLICTS registry")
     except Exception:
         pass
+    write_artifact("conflict_scores", results)
     return results
 
 

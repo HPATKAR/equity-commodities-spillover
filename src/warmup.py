@@ -109,6 +109,12 @@ def _run() -> None:
         from src.pages.trade_ideas import _fetch_stock_prices
         _fetch_stock_prices(sectors=())
 
+        # 5b. Single-stock log-returns (184-ticker fetch) — the heaviest Trade-
+        # Ideas cold cost. _warm both hydrates the in-memory cache AND persists
+        # the frame to the artifact cache, so a cold process reads it from disk.
+        from src.pages.trade_ideas import _load_stock_returns
+        _warm(_load_stock_returns, _app_start, _today)
+
         # 6. Trade Ideas extra legs (fixed income / FX / private credit) so the
         # ALERTS → Trade Ideas shortcut lands on warm caches too.
         from src.data.loader import (

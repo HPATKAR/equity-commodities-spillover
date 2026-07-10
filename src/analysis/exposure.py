@@ -177,6 +177,14 @@ def score_all_assets(
     (itself cached). Passing a dict here was removed — dicts are unhashable and
     would break @st.cache_data.
     """
+    # Cold-start fast path: a fresh process reads the last computed scores from
+    # disk (~ms) instead of re-running the conflict/exposure aggregation (~8s).
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _ac_key = f"asset_scores__{scenario_id or 'base'}"
+    _hit = read_artifact(_ac_key, max_age_s=1800)
+    if _hit is not None:
+        return _hit
+
     from src.analysis.conflict_model import (
         score_all_conflicts, aggregate_portfolio_scores,
     )
@@ -241,6 +249,7 @@ def score_all_assets(
             "scenario_mult": round(geo_mult, 2),
         }
 
+    write_artifact(_ac_key, results)
     return results
 
 

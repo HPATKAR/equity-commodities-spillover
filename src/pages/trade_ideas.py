@@ -2228,6 +2228,11 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
     NSE + top China HK), columns keyed by DISPLAY NAME so they line up with the
     generated single-name trades' legs. Merged into the gate frame so those
     trades are eligible, backtestable and deployable — not just candidates."""
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _ac_key = f"stock_returns__{end}"          # end=today, so it refreshes daily
+    _hit = read_artifact(_ac_key, max_age_s=3600)
+    if _hit is not None:
+        return _hit
     try:
         from src.analysis.trade_generator import all_stock_universe
         uni = all_stock_universe()
@@ -2247,6 +2252,8 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
         close = raw["Close"] if "Close" in raw.columns else raw
         close = close.rename(columns=name_by_ticker)
         ret = np.log(close / close.shift(1)).dropna(how="all")
+        if not ret.empty:
+            write_artifact(_ac_key, ret)
         return ret
     except Exception:
         return pd.DataFrame()
