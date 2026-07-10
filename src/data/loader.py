@@ -167,6 +167,79 @@ if not getattr(yf.download, "_serialised", False):
     yf.download = _yf_download
 
 
+_NEWS_REPUTABLE = {
+    "reuters", "bloomberg", "zacks", "barchart", "marketwatch", "the motley fool",
+    "motley fool", "simply wall st.", "seeking alpha", "benzinga", "morningstar",
+    "cnbc", "forbes", "trefis", "gurufocus", "insider monkey", "24/7 wall st.",
+    "investing.com", "the globe and mail", "investor's business daily",
+    "the wall street journal", "financial times", "yahoo finance",
+}
+
+
+_NEWS_STOP = {"the", "and", "for", "inc", "ltd", "plc", "corp", "llc", "co",
+              "group", "holdings", "company", "international", "limited"}
+
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=96)
+def fetch_ticker_news(ticker: str, max_items: int = 3, max_age_days: int = 35,
+                      keywords: tuple = ()) -> list[dict]:
+    """Recent REAL news for one ticker via yfinance (Reuters / Zacks / Barchart /
+    Bloomberg / …). Returns [{title, publisher, date, url}] no older than
+    max_age_days, reputable financial sources first, then newest. Empty on any
+    failure — never raises. NOT fabricated: these are live third-party headlines
+    carrying source, date and link, fetched at report time.
+
+    `keywords` (lowercase tokens) filters out off-topic / wrong-company noise:
+    yfinance's per-ticker feed can surface sector items about OTHER names, so a
+    headline is kept only if its title mentions one of the keywords. Empty result
+    is preferred over irrelevant coverage."""
+    import datetime as _dt
+    try:
+        raw = yf.Ticker(ticker).news or []
+    except Exception:
+        return []
+    cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=max_age_days)
+    out: list[dict] = []
+    for it in raw:
+        c = it.get("content") if isinstance(it.get("content"), dict) else it
+        if not isinstance(c, dict):
+            continue
+        title = (c.get("title") or "").strip()
+        if not title:
+            continue
+        prov = c.get("provider")
+        publisher = ((prov.get("displayName") if isinstance(prov, dict) else prov)
+                     or it.get("publisher") or "")
+        ts = c.get("pubDate") or it.get("providerPublishTime")
+        when = None
+        if isinstance(ts, (int, float)):
+            when = _dt.datetime.fromtimestamp(ts, _dt.timezone.utc)
+        elif isinstance(ts, str) and ts:
+            try:
+                when = _dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except Exception:
+                when = None
+        if when is not None and when < cutoff:
+            continue
+        cu = c.get("canonicalUrl") or c.get("clickThroughUrl")
+        url = cu.get("url", "") if isinstance(cu, dict) else (it.get("link") or "")
+        out.append({
+            "title": title, "publisher": str(publisher),
+            "date": when.date().isoformat() if when else "",
+            "url": url,
+        })
+    # Relevance filter — keep only headlines that actually mention the name/ticker,
+    # dropping the sector-level noise yfinance mixes in (empty > wrong-company).
+    if keywords:
+        kws = tuple(k for k in keywords if k)
+        out = [o for o in out if any(k in o["title"].lower() for k in kws)]
+    rep  = sorted((o for o in out if o["publisher"].lower() in _NEWS_REPUTABLE),
+                  key=lambda x: x["date"], reverse=True)
+    rest = sorted((o for o in out if o["publisher"].lower() not in _NEWS_REPUTABLE),
+                  key=lambda x: x["date"], reverse=True)
+    return (rep + rest)[:max_items]
+
+
 # ── Pandera schema validation ─────────────────────────────────────────────────
 # Validates loader outputs at system boundary (external data → our pipeline).
 # Failures emit warnings — never crash the dashboard. Schema checks:

@@ -2268,6 +2268,48 @@ def _live_generated_cached(regime: int, _start: str, _end: str) -> list:
     return generate_signal_trades(regime=regime, max_trades=90)
 
 
+def _attach_recent_news(feed: list[dict]) -> None:
+    """Enrich each deployed trade card with recent REAL third-party coverage
+    (last ~30d, source + date + link) so the desk report anchors every idea to
+    live market context. Best-effort — silently skips names with no ticker or
+    no recent news. Never fabricates: headlines come straight from yfinance."""
+    try:
+        from src.data.loader import fetch_ticker_news
+        from src.analysis.trade_generator import all_stock_universe
+        from src.data.config import COMMODITY_TICKERS, EQUITY_TICKERS
+    except Exception:
+        return
+    _disp2tk = {disp: tk for disp, (tk, *_r) in all_stock_universe().items()}
+    _disp2tk.update(COMMODITY_TICKERS)
+    _disp2tk.update(EQUITY_TICKERS)
+    # Commodities / indices → liquid ETF proxies that actually carry news.
+    _NEWS_PROXY = {"Gold": "GLD", "WTI Crude Oil": "USO", "Brent Crude": "BNO",
+                   "Silver": "SLV", "Copper": "CPER", "Natural Gas": "UNG",
+                   "S&P 500": "SPY", "Nasdaq 100": "QQQ", "Gold Mining": "GDX",
+                   "Corn": "CORN", "Wheat": "WEAT", "Soybeans": "SOYB"}
+    import re as _re
+    _STOP = {"the", "and", "for", "inc", "ltd", "plc", "corp", "llc", "co",
+             "group", "holdings", "company", "international", "limited"}
+    for _t in feed:
+        try:
+            _a = (_t.get("assets") or [None])[0]
+            if not _a:
+                continue
+            _tk = _NEWS_PROXY.get(_a) or _disp2tk.get(_a)
+            if not _tk:
+                continue
+            # Keywords for the relevance filter: distinctive name tokens + ticker
+            # root, so only headlines actually about THIS name survive.
+            _toks = [w.lower() for w in _re.split(r"[^A-Za-z0-9]+", _a)
+                     if len(w) >= 3 and w.lower() not in _STOP]
+            _tkroot = _re.split(r"[.\-]", _tk)[0].lower()
+            _kw = tuple(dict.fromkeys(_toks + [_tkroot]))
+            _t["recent_news"] = fetch_ticker_news(_tk, max_items=3,
+                                                  max_age_days=35, keywords=_kw)
+        except Exception:
+            continue
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -2288,14 +2330,31 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     st.markdown(_TI_STYLE, unsafe_allow_html=True)
     _page_header("Structured Trade Ideas",
                  "Step 6 of 7 · Regime-driven · Conflict-linked · 5-Stage Pipeline Validation")
-    _page_intro(
-        "Spillover analysis is most useful when it connects to positioning hypotheses. "
-        "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
-        "Static library theses fire when the current regime matches their structural trigger. "
-        "The five-stage pipeline (Signal → Prior Validation → Confidence-weighted sizing) "
-        "is walk-forward validated — the pipeline's admit/reject decisions are the deliverable, not individual trade grades. "
-        "<strong>The constructed book is a fully-invested equity sleeve</strong> (the cash / hedge overlay is the parent portfolio's decision), sized by risk-adjusted expected edge."
-    )
+    _ti_intro_col, _ti_pdf_col = st.columns([4, 1.2], gap="medium")
+    with _ti_intro_col:
+        _page_intro(
+            "Spillover analysis is most useful when it connects to positioning hypotheses. "
+            "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
+            "Static library theses fire when the current regime matches their structural trigger. "
+            "The five-stage pipeline (Signal → Prior Validation → Confidence-weighted sizing) "
+            "is walk-forward validated — the pipeline's admit/reject decisions are the deliverable, not individual trade grades. "
+            "<strong>The constructed book is a fully-invested equity sleeve</strong> (the cash / hedge overlay is the parent portfolio's decision), sized by risk-adjusted expected edge."
+        )
+    with _ti_pdf_col:
+        # Desk-report PDF — fills the blank space beside the intro. The book is
+        # built lower on the page, so this sets a flag and generation runs below
+        # (guarded); the finished PDF is stashed and the download surfaces here.
+        st.markdown('<div style="height:.2rem"></div>', unsafe_allow_html=True)
+        if st.button("Generate Desk Report (PDF)", key="gen_report_top",
+                     type="primary", use_container_width=True,
+                     help="Invested book only · with recent third-party coverage per name"):
+            st.session_state["_ti_pdf_pending"] = True
+        if st.session_state.get("_ti_pdf_bytes"):
+            st.download_button(
+                "⬇  Download Desk Report", data=st.session_state["_ti_pdf_bytes"],
+                file_name=st.session_state.get("_ti_pdf_name", "desk_report.pdf"),
+                mime="application/pdf", key="dl_report_top",
+                use_container_width=True)
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
@@ -3009,53 +3068,64 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
     st.markdown(
         '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:#8890a1;padding:6px 0 4px 0">'
-        'The PDF includes all 18 theses as a reference catalogue. '
-        'Active trade cards are regime-filtered through the pipeline — no active trades are pre-selected.'
+        'The desk report contains only the <b>invested book</b> (deployed positions), each anchored to '
+        'recent third-party coverage per name. Also available from the button at the top of the page.'
         '</div>',
         unsafe_allow_html=True,
     )
+    _pdf_pending = bool(st.session_state.pop("_ti_pdf_pending", False))
     if st.button("Generate Desk Report (PDF) — invested book only",
-                 key="gen_report", type="primary"):
+                 key="gen_report", type="primary") or _pdf_pending:
+        _pdf_ok = False
         try:
             from src.reports.report_generator import generate_report
-            with st.spinner("Building report - generating charts…"):
+            with st.spinner("Building report — invested book + recent coverage + charts…"):
                 stress = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
                 from src.analysis.trade_allocator import desk_report_feed
+                # Invested book only — desk_report_feed keeps just the deployed
+                # positions (alloc_weight > 0). Enrich each with recent REAL
+                # third-party coverage (source + date + link, last ~30d) so the
+                # report anchors every idea to live market context.
+                _feed = desk_report_feed(_ranked_book)
+                _attach_recent_news(_feed)
                 pdf_bytes = generate_report(
                     start=start,
                     end=end,
                     avg_corr_series=avg_corr,
                     current_regime=current,
                     regimes=regimes,
-                    # Invested book only — desk_report_feed keeps just the
-                    # deployed positions (alloc_weight > 0). all_trades=[] so the
-                    # "other regimes" reference section stays empty (no 80-card
-                    # candidate dump — the report is the book we hold).
-                    active_trades=desk_report_feed(_ranked_book),
+                    # all_trades=[] so the "other regimes" reference section stays
+                    # empty (no 80-card candidate dump — the report is the book).
+                    active_trades=_feed,
                     all_trades=[],
                     eq_r=eq_r,
                     cmd_r=cmd_r,
                     stress_series=stress,
                     geopolitical_events=GEOPOLITICAL_EVENTS,
                 )
-            filename = (
+            st.session_state["_ti_pdf_bytes"] = pdf_bytes
+            st.session_state["_ti_pdf_name"] = (
                 f"desk_report_{datetime.date.today().isoformat()}_"
                 f"regime_{r_name.lower()}.pdf"
             )
-            st.download_button(
-                label="Download PDF",
-                data=pdf_bytes,
-                file_name=filename,
-                mime="application/pdf",
-                key="download_report",
-            )
+            _pdf_ok = True
         except ImportError:
             st.error(
                 "reportlab is required for PDF generation. "
                 "Run: `pip install reportlab>=4.2.0`"
             )
-        except Exception as exc:
+        except Exception:
             st.error("Report generation failed.")
+        if _pdf_ok:
+            st.rerun()   # surface the download at the top-right immediately
+    if st.session_state.get("_ti_pdf_bytes"):
+        st.download_button(
+            label="Download PDF",
+            data=st.session_state["_ti_pdf_bytes"],
+            file_name=st.session_state.get("_ti_pdf_name", "desk_report.pdf"),
+            mime="application/pdf",
+            key="download_report",
+        )
 
     # ── Data Integrity Audit ────────────────────────────────────────────────
     with st.expander("Data Integrity Audit — Leg Coverage & Strategy Correlation", expanded=False):

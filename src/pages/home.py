@@ -293,7 +293,8 @@ section[data-testid="stMain"] .stButton > button:hover{
     background:#1a1a1a!important;color:#e8e9ed!important;border-color:#3a3a3a!important}
 section[data-testid="stMain"] .stButton > button[kind="primary"],
 section[data-testid="stMain"] button[data-testid="baseButton-primary"]{
-    background:#CFB991!important;color:#000!important;border-color:#CFB991!important}
+    background:#CFB991!important;color:#000!important;border-color:#CFB991!important;
+    font-weight:800!important}
 
 /* ── DENSITY: Streamlit defaults to ~1rem between every element — on a
    terminal that is dead air. Compress inter-element gaps page-wide and

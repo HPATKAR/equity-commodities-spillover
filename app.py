@@ -130,6 +130,14 @@ h3 { font-size: 0.82rem !important; font-weight: 600 !important; margin-top: 1re
     padding: 0.45rem 1.4rem !important; transition: all 0.2s !important;
 }
 .stButton > button:hover { background: var(--gold) !important; color: #000 !important; border-color: var(--gold) !important; }
+/* Primary = filled gold box with BLACK BOLD text */
+.stButton > button[kind="primary"], button[data-testid="baseButton-primary"] {
+    background: var(--gold) !important; color: #000 !important;
+    border-color: var(--gold) !important; font-weight: 800 !important;
+}
+.stButton > button[kind="primary"]:hover, button[data-testid="baseButton-primary"]:hover {
+    background: #dcc9a3 !important; color: #000 !important; border-color: #dcc9a3 !important;
+}
 
 /* ── Form controls ── */
 [data-testid="stSelectbox"] label, [data-testid="stMultiSelect"] label,

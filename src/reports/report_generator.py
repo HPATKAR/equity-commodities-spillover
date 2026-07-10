@@ -37,10 +37,19 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate,
-    Paragraph, Spacer, Table, TableStyle,
+    Paragraph as _RLParagraph, Spacer, Table, TableStyle,
     HRFlowable, NextPageTemplate, PageBreak, KeepTogether,
     Image as RLImage,
 )
+
+
+def Paragraph(text=None, *args, **kwargs):
+    """reportlab Paragraph with em-dashes stripped from ALL rendered text — "—"
+    becomes a spaced hyphen so the report reads cleanly (en-dashes in ranges like
+    3–8 weeks are preserved). Shadows the import so every call is sanitised."""
+    if isinstance(text, str):
+        text = text.replace("—", " - ").replace("&mdash;", " - ")
+    return _RLParagraph(text, *args, **kwargs)
 
 # ── Purdue palette ──────────────────────────────────────────────────────────
 GOLD   = colors.HexColor("#CFB991")
@@ -676,8 +685,41 @@ def _trade_card(trade: dict) -> list:
             )
         )
 
+    # Recent third-party coverage — real, dated, sourced headlines (last ~30d)
+    # attached at report time (yfinance) to anchor the thesis to live market
+    # context. Two-row band: label, then one line per headline.
+    def _esc(s: str) -> str:
+        return (str(s) or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    news = trade.get("recent_news") or []
+    news_rows: list = []
+    if news:
+        _items = "<br/>".join(
+            f'<font color="#1a56a0"><b>{_esc(n.get("date", ""))}</b></font>  '
+            f'<i>{_esc((n.get("publisher") or "")[:24])}</i> &nbsp;&mdash;&nbsp; '
+            f'{_esc((n.get("title") or "")[:118])}'
+            for n in news[:3]
+        )
+        news_rows.append(Table(
+            [[Paragraph("RECENT COVERAGE  ·  THIRD-PARTY NEWS &amp; ANALYST COMMENTARY (LAST ~30 DAYS)",
+                        _ps("nl", fontName="Helvetica-Bold", fontSize=6.5,
+                            textColor=BLUE, leading=9))],
+             [Paragraph(_items, _ps("nv", fontName="Helvetica", fontSize=7.5,
+                                    textColor=DARK, leading=12))]],
+            colWidths=[col_w],
+            style=TableStyle([
+                ("BACKGROUND",    (0,0), (-1,-1), colors.HexColor("#f3f6fc")),
+                ("LINEABOVE",     (0,0), (-1,0),  0.5, LGRAY),
+                ("TOPPADDING",    (0,0), (0,0),   6),
+                ("BOTTOMPADDING", (0,0), (0,0),   2),
+                ("TOPPADDING",    (0,1), (0,1),   1),
+                ("BOTTOMPADDING", (0,1), (0,1),   7),
+                ("LEFTPADDING",   (0,0), (-1,-1), 9),
+                ("RIGHTPADDING",  (0,0), (-1,-1), 9),
+            ]),
+        ))
+
     return [KeepTogether([header_row, name_row, rationale_row,
-                          eer_row, *extra_rows, Spacer(1, 14)])]
+                          eer_row, *extra_rows, *news_rows, Spacer(1, 14)])]
 
 
 # ── Main generator ──────────────────────────────────────────────────────────
@@ -1052,6 +1094,21 @@ def generate_report(
         ("Trade Idea Framework",
          "Regime-triggered library covering Crisis Hedge, Geopolitical, Macro, and Growth "
          "categories. Each idea has quantitative entry/exit conditions and key risks."),
+        ("How Trade Ideas Are Decided",
+         "Every candidate — single-name equities (US / India / China) and macro / commodity "
+         "expressions — is mapped to the active regime's spillover and conflict signals, then "
+         "run through a five-stage gate: (1) SIGNAL from the regime and structural-exposure "
+         "model; (2) PRIOR-ALIGNED Stage-3 confirmation, where the leg must historically move "
+         "in the predicted direction in the triggering regime; (3) a DIRECTION-AWARE, "
+         "regime-conditional BACKTEST; (4) a DEFLATED-SHARPE screen whose trial count scales "
+         "with the size of the candidate universe, so a wider search faces a strictly harder "
+         "bar (no data-mining free lunch); and (5) RISK-ADJUSTED SIZING. The constructed book "
+         "is a FULLY-INVESTED EQUITY SLEEVE: capital is sized by each idea's risk-adjusted "
+         "expected edge (backtest mean ÷ volatility, shrunk by deflated-Sharpe confidence) "
+         "and concentrated in the strongest names, with historically money-losing signals "
+         "earning no weight. Cash and hedging are the parent portfolio's decision, not this "
+         "sleeve's. Each card is anchored to recent third-party coverage (last ~30 days) so the "
+         "quantitative signal can be cross-checked against the current market narrative."),
         ("DCC-GARCH",
          "Dynamic Conditional Correlation (Engle 2002), DCC(1,1) with a=0.05, b=0.90 "
          "(stationarity: a+b<1). Captures time-varying correlation structure."),
