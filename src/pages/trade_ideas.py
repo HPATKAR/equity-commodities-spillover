@@ -3013,7 +3013,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         '</div>',
         unsafe_allow_html=True,
     )
-    if st.button("Generate Desk Report (PDF) — current ranked book",
+    if st.button("Generate Desk Report (PDF) — invested book only",
                  key="gen_report", type="primary"):
         try:
             from src.reports.report_generator import generate_report
@@ -3026,8 +3026,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     avg_corr_series=avg_corr,
                     current_regime=current,
                     regimes=regimes,
+                    # Invested book only — desk_report_feed keeps just the
+                    # deployed positions (alloc_weight > 0). all_trades=[] so the
+                    # "other regimes" reference section stays empty (no 80-card
+                    # candidate dump — the report is the book we hold).
                     active_trades=desk_report_feed(_ranked_book),
-                    all_trades=_TRADE_LIBRARY,
+                    all_trades=[],
                     eq_r=eq_r,
                     cmd_r=cmd_r,
                     stress_series=stress,

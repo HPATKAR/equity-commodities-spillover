@@ -542,54 +542,55 @@ def rank_trades(
 
 def desk_report_feed(ranked: list[dict]) -> list[dict]:
     """
-    Adapt the ranked book to the EXISTING generate_report() trade-card schema
-    — the adaptation lives in the fed data, never in the generator. Rank and
-    weight ride in `name`; attractiveness components ride in `trigger`; the
+    Adapt the CONSTRUCTED BOOK to the existing generate_report() trade-card
+    schema — the adaptation lives in the fed data, never in the generator.
+
+    Only the DEPLOYED positions (alloc_weight > 0) are fed: the desk report
+    documents the equity sleeve we actually hold, not the full candidate
+    watchlist. Positions are ordered by weight (largest first). Rank and weight
+    ride in `name`; attractiveness components ride in `trigger`; the
     invalidation condition is prepended to `risk`.
 
-    The feed mirrors the screen's cash state: a zero-gross book prepends a
-    synthetic lead card — "DESK CALL — 0% DEPLOYED · 100% CASH" plus the
-    one-line reason — and labels every trade card WATCHLIST / NOT YET
-    ALLOCATABLE. A deployed book feeds exactly as before.
+    If nothing is deployed — a fully-invested equity sleeve only holds cash when
+    it structurally cannot invest (no eligible thesis this regime) — a single
+    lead card explains the empty book and no positions follow.
     """
-    gross = sum(float(t.get("alloc_weight", 0.0)) for t in ranked)
-    cash_book = bool(ranked) and gross <= 1e-9
+    invest = sorted(
+        (t for t in ranked if float(t.get("alloc_weight", 0.0)) > 1e-9),
+        key=lambda t: float(t.get("alloc_weight", 0.0)), reverse=True,
+    )
 
-    feed = []
-    if cash_book:
-        best_dsr = max(float((t.get("alloc_detail") or {}).get("dsr", 0.0))
-                       for t in ranked)
-        # effective bar in force (appetite-adjusted); falls back to the strict
-        # reference bar if unstamped
-        bar = min((float((t.get("alloc_detail") or {}).get("deploy_bar",
-                          DSR_DEPLOY_BAR)) for t in ranked),
-                  default=DSR_DEPLOY_BAR)
-        _appetite_note = ("" if bar >= DSR_DEPLOY_BAR - 1e-9 else
-                          f" even at your lowered {bar:.2f} risk bar")
+    feed: list[dict] = []
+    if not invest:
+        n = len(ranked)
         feed.append({
-            "name": "DESK CALL — 0% DEPLOYED · 100% CASH",
+            "name": "DESK CALL — NO POSITIONS · 100% CASH",
             "category": "Desk Call",
-            "trigger": "CASH IS THE POSITION — HELD, NOT DEFAULTED",
+            "trigger": "EQUITY SLEEVE — NOTHING ELIGIBLE THIS REGIME",
             "rationale": (
-                f"All {len(ranked)} eligible theses sit below the "
-                f"{bar:.2f} deploy bar{_appetite_note} (best {best_dsr:.2f}) "
-                "— no thesis clears it, so nothing earns weight. The ranked "
-                "ideas that follow are a watchlist, not an allocation."
+                "No thesis is eligible this regime"
+                + (f" — all {n} candidates are missing return data or failed "
+                   f"Stage-3 confirmation" if n else "")
+                + ", so the sleeve holds cash. This equity component stays fully "
+                "invested whenever it can; the cash / hedge overlay is the "
+                "parent portfolio's decision, not this sleeve's."
             ),
             "regime": [], "assets": [], "direction": [],
             "entry": "—", "exit": "—",
-            "risk": (f"INVALIDATED IF: any eligible thesis clears the "
-                     f"{bar:.2f} deploy bar — the book redeploys on reload"),
+            "risk": ("INVALIDATED IF: any thesis becomes eligible — the sleeve "
+                     "deploys on reload"),
         })
+        return feed
 
-    for t in ranked:
+    for i, t in enumerate(invest, 1):
         c = dict(t)
         ad = t.get("attr_detail") or {}
         inval = (t.get("invalidation") or t.get("invalidation_condition")
                  or t.get("exit") or t.get("risk") or "—")
-        c["name"] = ((f"WATCHLIST #{t.get('rank', '?')} — NOT YET ALLOCATABLE"
-                      if cash_book else f"#{t.get('rank', '?')}") +
-                     f" · {t.get('alloc_weight', 0.0) * 100:.1f}% wt · "
+        # Number positions 1..N by weight (largest first) — a holdings report,
+        # not the full-universe attractiveness rank.
+        c["name"] = (f"#{i} · "
+                     f"{t.get('alloc_weight', 0.0) * 100:.1f}% wt · "
                      f"{t.get('name', '')}")
         c["trigger"] = (f"ATTR {t.get('attractiveness', 0.0):.2f} · "
                         f"DSR {ad.get('dsr', 0.0):.2f} · "
