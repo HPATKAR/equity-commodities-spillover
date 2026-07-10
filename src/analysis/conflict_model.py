@@ -675,7 +675,7 @@ def score_all_conflicts() -> dict[str, dict]:
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FutTimeout
     _ex = ThreadPoolExecutor(max_workers=max(1, len(CONFLICTS)))
     try:
-        for cid, res in _ex.map(_score_one, CONFLICTS, timeout=12):
+        for cid, res in _ex.map(_score_one, CONFLICTS, timeout=6):
             results[cid] = res
     except BaseException:
         try:
