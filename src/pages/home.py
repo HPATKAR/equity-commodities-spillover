@@ -2905,6 +2905,10 @@ _PULSE_TICKERS = [
 @st.cache_data(ttl=900, show_spinner=False, max_entries=3)
 def _load_market_pulse() -> list[dict]:
     """Fetch last 2 closes for macro pulse tickers. Returns list of dicts."""
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _hit = read_artifact("market_pulse", max_age_s=900)
+    if _hit is not None:
+        return _hit
     try:
         import yfinance as yf
         syms = [t[0] for t in _PULSE_TICKERS]
@@ -2928,6 +2932,8 @@ def _load_market_pulse() -> list[dict]:
                 "val": val, "chg": chg, "pct": pct,
                 "series": [float(v) for v in s.tolist()],  # up to 5 days for sparkline
             })
+        if results:
+            write_artifact("market_pulse", results)
         return results
     except Exception:
         return []
