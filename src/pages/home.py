@@ -4132,10 +4132,33 @@ def _load_credit_signal(_fred_key: str, start: str, end: str) -> dict:
     return res or {}
 
 
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=4)
+def _load_energy_signal() -> dict:
+    """EIA physical crude-inventory summary (draw / build / neutral) for the
+    Cross-Asset Signals cell. Reuses the Intelligence Briefing's EIA builder
+    (single source of truth); disk-backed so a cold render doesn't pay the EIA
+    fetch. Only a REAL (non-zero) snapshot is persisted, so a rate-limited empty
+    DEMO_KEY fetch doesn't stick for 6h."""
+    import datetime as _dt
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    ekey = f"energy_signal__{_dt.date.today()}"
+    hit = read_artifact(ekey, 6 * 3600)
+    if hit is not None:
+        return hit
+    try:
+        from src.pages.insights import _build_eia_signal
+        res = _build_eia_signal()
+    except Exception:
+        res = None
+    if res and res.get("_level"):
+        write_artifact(ekey, res)
+    return res or {}
+
+
 def _render_cross_asset_signals(fred_key: str, start: str, end: str) -> None:
     """Compact right-rail cell for cross-asset risk reads the rest of the
-    Command Center does not cover. Currently: Credit stress. Links to the full
-    verdict + evidence on the Intelligence Briefing."""
+    Command Center does not cover: Credit stress and physical energy inventories.
+    Links to the full verdicts + evidence on the Intelligence Briefing."""
     rows = []
 
     # ── Credit stress (HY OAS + BKLN / BDC basket) ───────────────────────────
@@ -4164,6 +4187,41 @@ def _render_cross_asset_signals(fred_key: str, start: str, end: str) -> None:
             f'</div>'
             f'<div style="{_F}font-size:.52rem;color:{_C["muted"]};line-height:1.4;margin-top:1px">'
             f'PC bubble score {_score}/100 · leveraged loans + BDC vs S&P</div>'
+            f'</div>'
+        )
+
+    # ── Energy (EIA physical crude inventories) ──────────────────────────────
+    e = _load_energy_signal()
+    if e:
+        _elvl = e.get("_level") or 0
+        if _elvl:
+            _esig, _ecol = e.get("_sig", "NEUTRAL"), e.get("color", _C["label"])
+            _wow, _v5 = e.get("_wow", 0.0), e.get("_vs5yr", 0.0)
+            _n_conf = max(e.get("_n_draw", 0), e.get("_n_build", 0))
+            _eval = f"Crude {_wow:+.1f}% WoW"
+            _v5c = _C["danger"] if _v5 < 0 else _C["safe"] if _v5 > 0 else _C["muted"]
+            _edelta = (f'<span style="{_M}font-size:.56rem;font-weight:700;color:{_v5c};'
+                       f'margin-left:6px">{_v5:+.1f}% vs5yr</span>')
+            _esub = f'Physical crude stocks · {_n_conf}/3 products confirming'
+        else:
+            _esig, _ecol = "N/A", _C["label"]
+            _eval, _edelta = "EIA data unavailable", ""
+            _esub = "Physical crude inventories · awaiting EIA weekly update"
+        rows.append(
+            f'<div style="padding:2px 0;border-bottom:1px solid {_C["border"]}">'
+            f'<div style="display:flex;align-items:baseline;justify-content:space-between;'
+            f'gap:6px;white-space:nowrap">'
+            f'<span style="flex:0 0 auto">'
+            f'<span style="{_M}font-size:.56rem;font-weight:700;letter-spacing:.06em;'
+            f'color:{_C["text"]}">ENERGY</span>'
+            f'<span style="{_M}font-size:.5rem;font-weight:700;letter-spacing:.06em;color:{_ecol};'
+            f'background:{_ecol}1a;border:1px solid {_ecol}55;padding:0 4px;margin-left:5px">{_esig}</span>'
+            f'</span>'
+            f'<span style="flex:0 0 auto;text-align:right">'
+            f'<span style="{_M}font-size:.58rem;color:{_C["text"]}">{_eval}</span>{_edelta}</span>'
+            f'</div>'
+            f'<div style="{_F}font-size:.52rem;color:{_C["muted"]};line-height:1.4;margin-top:1px">'
+            f'{_esub}</div>'
             f'</div>'
         )
 

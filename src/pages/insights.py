@@ -40,6 +40,7 @@ def _insight_card(
     confidence_label: str,
     geo_driver: str = "",      # optional conflict/geo tag e.g. "UA/RU" or "Red Sea"
     delta: str = "",           # optional what-changed label e.g. "+4.2 pts"
+    **_summary,                # ignore compact-summary keys (_sig/_score/_wow…) the CC reads
 ) -> None:
     conf_color = _GREEN if confidence >= 70 else (_AMBER if confidence >= 45 else _GREY)
 
@@ -863,98 +864,11 @@ def _build_insights(
         pass
 
     # ── 12. EIA physical inventory signal ─────────────────────────────────
+    # (logic extracted to _build_eia_signal so the Command Center can reuse it)
     _n_attempted += 1
-    try:
-        from src.data.eia import eia_snapshot
-        _eia = eia_snapshot()
-
-        _crude  = _eia.get("crude_stocks", {})
-        _gas    = _eia.get("gasoline_stocks", {})
-        _dist   = _eia.get("distillate_stocks", {})
-
-        # Primary signal driven by crude; gas and distillate as corroboration
-        if _crude:
-            _wow      = _crude.get("wow_pct", 0.0) or 0.0
-            _vs5yr    = _crude.get("vs_5yr_pct", 0.0) or 0.0
-            _signal   = _crude.get("signal", "neutral")
-            _level    = _crude.get("level", 0.0) or 0.0
-            _units    = _crude.get("units", "Thousand Barrels")
-            _gas_sig  = _gas.get("signal", "neutral")
-            _dist_sig = _dist.get("signal", "neutral")
-
-            # Count corroborating signals
-            _sigs = [_signal, _gas_sig, _dist_sig]
-            _n_draw  = _sigs.count("draw")
-            _n_build = _sigs.count("build")
-
-            if _signal == "draw" and _vs5yr < -3.0:
-                color, emoji = _RED, "■"
-                headline = (
-                    f"EIA crude draw: stocks {_wow:+.1f}% WoW, "
-                    f"{abs(_vs5yr):.1f}% below 5yr avg - bullish crude supply signal"
-                )
-                action = (
-                    f"Physical crude inventories are drawing down faster than seasonal norms. "
-                    f"With stocks {abs(_vs5yr):.1f}% below the 5-year average, "
-                    f"the market is in structural deficit - supports Brent/WTI upside. "
-                    f"{'Gasoline and distillate also in draw - broad petroleum deficit confirmed.' if _n_draw >= 2 else ''}"
-                )
-                detail = (
-                    f"EIA weekly petroleum status report. "
-                    f"Crude oil stocks: <b>{_level:,.0f} {_units}</b>, "
-                    f"change <b>{_wow:+.1f}%</b> WoW, <b>{_vs5yr:+.1f}%</b> vs. 5yr seasonal avg. "
-                    f"<br><br>Corroboration: gasoline <b>{_gas_sig}</b>, distillate <b>{_dist_sig}</b>. "
-                    f"{'All three product categories in draw - strong bullish supply signal.' if _n_draw == 3 else f'{_n_draw}/3 categories in draw.' }"
-                    f"<br><br>Signal definition: draw = stocks below 5yr average (bullish). "
-                    f"Build = stocks above 5yr average (bearish). EIA data updates weekly (Wednesdays)."
-                )
-                conf = min(55 + _n_draw * 8, 80)
-                conf_lbl = f"{_n_draw}/3 petroleum categories confirming draw signal"
-            elif _signal == "build" and _vs5yr > 3.0:
-                color, emoji = _GREEN, "●"
-                headline = (
-                    f"EIA crude build: stocks {_wow:+.1f}% WoW, "
-                    f"{_vs5yr:.1f}% above 5yr avg - bearish crude supply signal"
-                )
-                action = (
-                    f"Physical crude inventories are building above seasonal norms. "
-                    f"Bearish for Brent/WTI - suggests demand is running below supply. "
-                    f"Watch for OPEC+ production response if builds persist 3+ consecutive weeks."
-                )
-                detail = (
-                    f"EIA weekly: crude stocks <b>{_level:,.0f} {_units}</b>, "
-                    f"change <b>{_wow:+.1f}%</b> WoW, <b>{_vs5yr:+.1f}%</b> vs. 5yr avg. "
-                    f"<br><br>Corroboration: gasoline <b>{_gas_sig}</b>, distillate <b>{_dist_sig}</b>. "
-                    f"{_n_build}/3 categories building. "
-                    f"<br><br>Historical pattern: sustained builds (&ge;3 weeks) precede WTI corrections of 5-10% ~60% of the time."
-                )
-                conf = min(50 + _n_build * 8, 75)
-                conf_lbl = f"{_n_build}/3 petroleum categories confirming build signal"
-            else:
-                color, emoji = _AMBER, "●"
-                headline = (
-                    f"EIA crude inventories neutral: {_wow:+.1f}% WoW, "
-                    f"{_vs5yr:+.1f}% vs. 5yr avg - no directional supply signal"
-                )
-                action = (
-                    "Physical inventory levels are within seasonal norms. "
-                    "Crude direction likely driven by demand signals and OPEC+ policy rather than U.S. stock levels."
-                )
-                detail = (
-                    f"EIA weekly: crude stocks <b>{_level:,.0f} {_units}</b>, "
-                    f"WoW <b>{_wow:+.1f}%</b>, vs. 5yr avg <b>{_vs5yr:+.1f}%</b>. "
-                    f"<br><br>Neutral range: within +/-3% of 5yr seasonal average. "
-                    f"Watch for directional break as geopolitical supply disruption signals "
-                    f"(Iran/Hormuz PortWatch data) interact with physical stock levels."
-                )
-                conf, conf_lbl = 40, "Inventory neutral - no directional conviction"
-
-            cards.append(dict(
-                emoji=emoji, headline=headline, action=action, color=color,
-                detail_html=detail, confidence=conf, confidence_label=conf_lbl,
-            ))
-    except Exception:
-        pass
+    _eia_card = _build_eia_signal()
+    if _eia_card:
+        cards.append(_eia_card)
 
     # ── 13. PortWatch chokepoint disruption signal ────────────────────────
     _n_attempted += 1
@@ -1312,6 +1226,105 @@ def _build_private_credit_insight(
         _hy_oas=hy_current,
         _hy_chg=hy_90d_chg,
         _sig=_sig,
+    )
+
+
+def _build_eia_signal() -> dict | None:
+    """EIA physical crude-inventory signal (draw / build / neutral) with gasoline
+    and distillate corroboration. Returns _insight_card kwargs plus a compact
+    summary for the Command Center Cross-Asset Signals cell (single source of
+    truth). Returns None when EIA data is unavailable."""
+    try:
+        from src.data.eia import eia_snapshot
+        _eia = eia_snapshot()
+    except Exception:
+        return None
+
+    _crude = _eia.get("crude_stocks", {}) or {}
+    _gas   = _eia.get("gasoline_stocks", {}) or {}
+    _dist  = _eia.get("distillate_stocks", {}) or {}
+    if not _crude:
+        return None
+
+    _wow    = _crude.get("wow_pct", 0.0) or 0.0
+    _vs5yr  = _crude.get("vs_5yr_pct", 0.0) or 0.0
+    _signal = _crude.get("signal", "neutral")
+    _level  = _crude.get("level", 0.0) or 0.0
+    _units  = _crude.get("units", "Thousand Barrels")
+    _gas_sig  = _gas.get("signal", "neutral")
+    _dist_sig = _dist.get("signal", "neutral")
+    _sigs = [_signal, _gas_sig, _dist_sig]
+    _n_draw  = _sigs.count("draw")
+    _n_build = _sigs.count("build")
+
+    if _signal == "draw" and _vs5yr < -3.0:
+        color, emoji, _sig = _RED, "■", "DRAW"
+        headline = (
+            f"EIA crude draw: stocks {_wow:+.1f}% WoW, "
+            f"{abs(_vs5yr):.1f}% below 5yr avg - bullish crude supply signal"
+        )
+        action = (
+            f"Physical crude inventories are drawing down faster than seasonal norms. "
+            f"With stocks {abs(_vs5yr):.1f}% below the 5-year average, "
+            f"the market is in structural deficit - supports Brent/WTI upside. "
+            f"{'Gasoline and distillate also in draw - broad petroleum deficit confirmed.' if _n_draw >= 2 else ''}"
+        )
+        detail = (
+            f"EIA weekly petroleum status report. "
+            f"Crude oil stocks: <b>{_level:,.0f} {_units}</b>, "
+            f"change <b>{_wow:+.1f}%</b> WoW, <b>{_vs5yr:+.1f}%</b> vs. 5yr seasonal avg. "
+            f"<br><br>Corroboration: gasoline <b>{_gas_sig}</b>, distillate <b>{_dist_sig}</b>. "
+            f"{'All three product categories in draw - strong bullish supply signal.' if _n_draw == 3 else f'{_n_draw}/3 categories in draw.' }"
+            f"<br><br>Signal definition: draw = stocks below 5yr average (bullish). "
+            f"Build = stocks above 5yr average (bearish). EIA data updates weekly (Wednesdays)."
+        )
+        conf = min(55 + _n_draw * 8, 80)
+        conf_lbl = f"{_n_draw}/3 petroleum categories confirming draw signal"
+    elif _signal == "build" and _vs5yr > 3.0:
+        color, emoji, _sig = _GREEN, "●", "BUILD"
+        headline = (
+            f"EIA crude build: stocks {_wow:+.1f}% WoW, "
+            f"{_vs5yr:.1f}% above 5yr avg - bearish crude supply signal"
+        )
+        action = (
+            f"Physical crude inventories are building above seasonal norms. "
+            f"Bearish for Brent/WTI - suggests demand is running below supply. "
+            f"Watch for OPEC+ production response if builds persist 3+ consecutive weeks."
+        )
+        detail = (
+            f"EIA weekly: crude stocks <b>{_level:,.0f} {_units}</b>, "
+            f"change <b>{_wow:+.1f}%</b> WoW, <b>{_vs5yr:+.1f}%</b> vs. 5yr avg. "
+            f"<br><br>Corroboration: gasoline <b>{_gas_sig}</b>, distillate <b>{_dist_sig}</b>. "
+            f"{_n_build}/3 categories building. "
+            f"<br><br>Historical pattern: sustained builds (&ge;3 weeks) precede WTI corrections of 5-10% ~60% of the time."
+        )
+        conf = min(50 + _n_build * 8, 75)
+        conf_lbl = f"{_n_build}/3 petroleum categories confirming build signal"
+    else:
+        color, emoji, _sig = _AMBER, "●", "NEUTRAL"
+        headline = (
+            f"EIA crude inventories neutral: {_wow:+.1f}% WoW, "
+            f"{_vs5yr:+.1f}% vs. 5yr avg - no directional supply signal"
+        )
+        action = (
+            "Physical inventory levels are within seasonal norms. "
+            "Crude direction likely driven by demand signals and OPEC+ policy rather than U.S. stock levels."
+        )
+        detail = (
+            f"EIA weekly: crude stocks <b>{_level:,.0f} {_units}</b>, "
+            f"WoW <b>{_wow:+.1f}%</b>, vs. 5yr avg <b>{_vs5yr:+.1f}%</b>. "
+            f"<br><br>Neutral range: within +/-3% of 5yr seasonal average. "
+            f"Watch for directional break as geopolitical supply disruption signals "
+            f"(Iran/Hormuz PortWatch data) interact with physical stock levels."
+        )
+        conf, conf_lbl = 40, "Inventory neutral - no directional conviction"
+
+    return dict(
+        emoji=emoji, headline=headline, action=action, color=color,
+        detail_html=detail, confidence=conf, confidence_label=conf_lbl,
+        # Compact summary for the Command Center Cross-Asset Signals cell.
+        _sig=_sig, _wow=_wow, _vs5yr=_vs5yr, _level=_level, _units=_units,
+        _n_draw=_n_draw, _n_build=_n_build,
     )
 
 
