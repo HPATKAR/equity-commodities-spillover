@@ -2146,14 +2146,14 @@ def _render_intelligence_feed(
     active = sorted(
         [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"],
         key=lambda x: x[1]["cis"], reverse=True,
-    )[:4]
+    )[:5]
     if active:
         st.markdown(
             f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
             f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
             f'margin-top:.7rem;border-top:1px solid {_C["border"]}">Active Conflicts '
             f'<span style="{_M}font-size:0.48rem;color:{_C["muted"]};letter-spacing:.06em;'
-            f'text-transform:none">· bar+left CIS · right TPS · trend</span></div>',
+            f'text-transform:none">· CIS bar · TPS · conf · trend</span></div>',
             unsafe_allow_html=True,
         )
         _CH_LBL = {"oil_gas": "oil/gas", "metals": "metals", "agriculture": "agri",
@@ -2164,39 +2164,60 @@ def _render_intelligence_feed(
         for ci, (cid, r) in enumerate(active):
             cv    = r["cis"]
             tv    = float(r.get("tps", 0))
+            cfv   = float(r.get("confidence", 0)) * 100.0
             bar_c = _C["danger"] if cv >= 65 else _C["warn"] if cv >= 45 else _C["label"]
             esc   = r.get("escalation") == "escalating"
+            # Arrow = trend DIRECTION; its colour/pulse = escalation SEVERITY.
+            _tr   = str(r.get("trend", "")).lower()
+            arw   = "▲" if _tr == "rising" else "▼" if _tr == "falling" else "→"
+            a_col = (bar_c if esc else _C["warn"] if _tr == "rising"
+                     else _C["safe"] if _tr == "falling" else _C["label"])
+            # Confidence is reliability — neutral brightness, never risk red/green.
+            cf_col = _C["text"] if cfv >= 80 else _C["label"]
             tx    = r.get("transmission", {}) or {}
             top_ch = max(tx, key=tx.get) if tx else ""
             cmds  = ", ".join((r.get("affected_commodities") or [])[:2])
             sub   = " · ".join(x for x in (
                 r.get("region", ""),
-                f"top channel: {_CH_LBL.get(top_ch, top_ch)} {tx.get(top_ch, 0):.0%}" if top_ch else "",
+                f"{_CH_LBL.get(top_ch, top_ch)} {tx.get(top_ch, 0):.0%}" if top_ch else "",
                 cmds,
             ) if x)
             st.markdown(
+                # Card styling lives on the <a> itself, and every field is an
+                # inline-block column (label · bar · CIS · TPS · CNF · trend).
+                # Streamlit's markdown reparents block <div> wrappers out of an
+                # <a>, which collapsed the old flex row and jammed the numbers;
+                # inline-block spans honour width + text-align with no wrapper,
+                # so each number keeps its own right-aligned box — never touching.
                 f'<a href="?page=conflict_intelligence" target="_self" '
                 f'title="Open Conflict Intelligence · {r["label"]}" '
-                f'style="text-decoration:none;display:block;cursor:pointer">'
-                f'<div style="padding:3px .5rem;border-left:2px solid {bar_c};'
-                f'background:{_C["card"]};border-bottom:1px solid {_C["border"]};margin-bottom:4px">'
-                f'<div style="display:flex;align-items:center;gap:6px">'
+                f'style="text-decoration:none;cursor:pointer;display:block;'
+                f'padding:2px .5rem;border-left:2px solid {bar_c};background:{_C["card"]};'
+                f'border-bottom:1px solid {_C["border"]};margin-bottom:3px;'
+                f'white-space:nowrap;overflow:hidden">'
                 f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{r["color"]};'
-                f'min-width:52px;white-space:nowrap">{r["label"][:10]}</span>'
-                f'<div style="flex:1;background:{_C["card2"]};height:4px">'
-                f'<div style="width:{min(cv,100):.0f}%;height:4px;background:{bar_c}"></div></div>'
-                f'<span class="cc-num" style="{_M}font-size:0.63rem;font-weight:700;color:{bar_c};'
-                f'min-width:22px">{cv:.0f}</span>'
+                f'display:inline-block;width:72px;vertical-align:middle;overflow:hidden;'
+                f'text-overflow:ellipsis">{r["label"][:12]}</span>'
+                f'<span style="display:inline-block;width:60px;height:4px;margin:0 6px;'
+                f'vertical-align:middle;background:{_C["card2"]};line-height:0;font-size:0">'
+                f'<span style="display:inline-block;width:{min(cv,100):.0f}%;height:4px;'
+                f'vertical-align:top;background:{bar_c}"></span></span>'
+                f'<span class="cc-num" style="{_M}font-size:0.63rem;font-weight:700;'
+                f'color:{bar_c};display:inline-block;width:22px;text-align:right;'
+                f'vertical-align:middle">{cv:.0f}</span>'
                 f'<span class="cc-num" style="{_M}font-size:0.56rem;color:{_C["text"]};'
-                f'min-width:22px">{tv:.0f}</span>'
+                f'display:inline-block;width:24px;text-align:right;'
+                f'vertical-align:middle">{tv:.0f}</span>'
+                f'<span class="cc-num" style="{_M}font-size:0.52rem;color:{cf_col};'
+                f'display:inline-block;width:22px;text-align:right;'
+                f'vertical-align:middle">{cfv:.0f}</span>'
                 f'<span class="{"cc-state-pulse" if esc else ""}" '
-                f'style="{_M}font-size:0.52rem;min-width:10px;'
-                f'color:{bar_c if esc else _C["label"]}">{"▲" if esc else "→"}</span>'
-                f'</div>'
-                + (f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:1px;'
-                   f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{sub}</div>'
-                   if sub else "")
-                + f'</div></a>',
+                f'style="{_M}font-size:0.52rem;display:inline-block;width:14px;'
+                f'text-align:right;vertical-align:middle;color:{a_col}">{arw}</span>'
+                + (f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]};display:block;'
+                   f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+                   f'margin-top:1px">{sub}</span>' if sub else "")
+                + f'</a>',
                 unsafe_allow_html=True,
             )
 
