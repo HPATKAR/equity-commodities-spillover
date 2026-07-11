@@ -6714,9 +6714,16 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     with _col_right:
         _section_header("03", "Market Signals", "returns · channels · risk arc",
                         link_page="transmission_matrix", link_label="Transmission")
-        # Ordered by morning priority: the routing recommendation + the credit
-        # read + GRS decomposition first, then the market-data panels, then the
-        # Stocks-to-Watch news block (lower priority) grouped at the end.
+        # Stocks to Watch pinned at the top of the rail (user preference); the
+        # rest ordered by morning priority — routing + credit + GRS decomposition,
+        # then the market-data panels.
+        # § R2a Stocks to Watch — top mega-caps by 24h news activity
+        _section_header("", "Stocks to Watch", "most active by news · click to read",
+                        link_page="watchlist", link_label="Watchlist")
+        try:
+            _render_hot_stocks()
+        except Exception:
+            pass
         # § R4  Next action — routing recommendation based on dominant risk driver
         _render_next_action(conflict_agg, conflict_results, compact=True)
         # § R1c Cross-asset signals — credit-stress read absent elsewhere on the CC
@@ -6752,13 +6759,6 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             else None
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
-        # § R2a Hot stocks — top mega-caps by 24h news activity (lower priority → end)
-        _section_header("", "Stocks to Watch", "most active by news · click to read",
-                        link_page="watchlist", link_label="Watchlist")
-        try:
-            _render_hot_stocks()
-        except Exception:
-            pass
 
     # ── § 04  Market Detail — full-width 3-across row (layout pass) ──────────
     # Hosts the panels moved out of the over-long side columns so all three
