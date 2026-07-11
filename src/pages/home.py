@@ -5634,23 +5634,35 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
     """60-day rolling correlation heatmap for top equity + commodity pairs."""
     try:
     
-        _EQ_LABELS  = {"^GSPC": "SPX", "^IXIC": "NDX", "^DJI": "DOW",
-                       "^RUT": "RUT", "EEM": "EEM", "GLD": "GLD"}
-        _CMD_LABELS = {"CL=F": "WTI", "GC=F": "Gold", "SI=F": "Silver",
-                       "NG=F": "NatGas", "ZW=F": "Wheat", "ZC=F": "Corn"}
+        # Keyed on the ACTUAL return-frame column names (full instrument names),
+        # not tickers — otherwise the lookup misses and labels fall back to an
+        # ugly 5-char chop ("S&P 5", "Nasda", "WTI C", "Gasol").
+        _ABBR = {
+            "S&P 500": "SPX", "Nasdaq 100": "NDX", "DJIA": "DJIA",
+            "Russell 2000": "RUT", "Eurostoxx 50": "SX5E", "DAX": "DAX",
+            "CAC 40": "CAC", "FTSE 100": "FTSE", "Nikkei 225": "NKY",
+            "TOPIX": "TPX", "Hang Seng": "HSI", "Shanghai Comp": "SHCMP",
+            "CSI 300": "CSI", "Sensex": "SNSX", "Nifty 50": "NFTY",
+            "WTI Crude Oil": "WTI", "Brent Crude": "Brent", "Natural Gas": "NatGas",
+            "Gasoline (RBOB)": "RBOB", "Heating Oil": "HeatOil", "Gold": "Gold",
+            "Silver": "Silver", "Platinum": "Plat", "Copper": "Copper",
+            "Aluminum": "Alum", "Wheat": "Wheat", "Corn": "Corn",
+            "Soybeans": "Soy", "Sugar #11": "Sugar", "Coffee": "Coffee",
+            "Cotton": "Cotton",
+        }
 
         frames: list["pd.DataFrame"] = []
         labels: list[str] = []
 
         if eq_r is not None and not eq_r.empty:
             for col in eq_r.columns[:4]:
-                lbl = _EQ_LABELS.get(col, col[:5])
+                lbl = _ABBR.get(col, col[:6])
                 frames.append(eq_r[col].rename(lbl))
                 labels.append(lbl)
 
         if cmd_r is not None and not cmd_r.empty:
             for col in cmd_r.columns[:4]:
-                lbl = _CMD_LABELS.get(col, col[:5])
+                lbl = _ABBR.get(col, col[:6])
                 frames.append(cmd_r[col].rename(lbl))
                 labels.append(lbl)
 
@@ -5663,10 +5675,14 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         corr = combined.corr()
         n    = len(corr)
 
-        CELL = 28
-        PAD  = 52
-        W    = PAD + n * CELL
-        H    = PAD + n * CELL
+        # Column labels sit just above the grid (small top pad); row labels need
+        # horizontal room (larger left pad). One shared PAD left a big empty band
+        # under the title — split them so the grid starts right below the header.
+        CELL     = 28
+        PAD_TOP  = 16
+        PAD_LEFT = 46
+        W        = PAD_LEFT + n * CELL
+        H        = PAD_TOP + n * CELL
 
         def _corr_color(v: float) -> str:
             if v >= 0.7:  return _C["danger"]
@@ -5681,8 +5697,8 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
             for j, ci in enumerate(corr.columns):
                 v   = corr.loc[ri, ci]
                 col = _corr_color(v)
-                x   = PAD + j * CELL
-                y   = PAD + i * CELL
+                x   = PAD_LEFT + j * CELL
+                y   = PAD_TOP + i * CELL
                 op  = 0.25 if i == j else max(0.3, abs(v) * 0.9)
                 txt = "1.0" if i == j else f"{v:+.2f}"[1:] if abs(v) >= 0.1 else f"{v:+.2f}"
                 delay = f"{(i * n + j) * 0.018:.3f}s"
@@ -5698,12 +5714,12 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         col_labels = ""
         for i, lbl in enumerate(corr.index):
             row_labels += (
-                f'<text x="{PAD - 4}" y="{PAD + i * CELL + CELL//2 + 4}" '
+                f'<text x="{PAD_LEFT - 4}" y="{PAD_TOP + i * CELL + CELL//2 + 4}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
                 f'fill="{_C["label"]}" text-anchor="end">{lbl}</text>'
             )
             col_labels += (
-                f'<text x="{PAD + i * CELL + CELL//2}" y="{PAD - 6}" '
+                f'<text x="{PAD_LEFT + i * CELL + CELL//2}" y="{PAD_TOP - 5}" '
                 f'font-family="JetBrains Mono,monospace" font-size="8" '
                 f'fill="{_C["label"]}" text-anchor="middle">{lbl}</text>'
             )
