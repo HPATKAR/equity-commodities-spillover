@@ -3421,6 +3421,40 @@ def _render_correlation_pulse(
     )
 
     _corr_num_cls = "hm-glow-pulse" if regime_lbl == "HIGH COUPLING" else "hm-num-pop"
+
+    # ── Readout — turns the sparkline into numbers (regime tenure, 60d average,
+    #    10-day drift, range position, distance to the coupling threshold). Being
+    #    fixed-height, it also squares the left column with its taller neighbours.
+    _avg = float(np.mean(series))
+    _lo, _hi = float(min(series)), float(max(series))
+    _chg = (cur - series[-11]) if len(series) >= 11 else 0.0
+    _pos = (cur - _lo) / (_hi - _lo) * 100 if _hi > _lo else 50.0
+    _days = 0
+    if regimes is not None and len(regimes.dropna()) > 0:
+        _rr = regimes.dropna().tolist()
+        for _v in reversed(_rr):
+            if _v == _rr[-1]: _days += 1
+            else: break
+    _chg_c = _C["danger"] if _chg > 0 else _C["safe"] if _chg < 0 else _C["muted"]
+    _thr_d = cur - 0.35
+    _thr_c = _C["danger"] if _thr_d >= 0 else _C["safe"] if cur < 0 else _C["muted"]
+    _thr_t = f'{abs(_thr_d):.2f} {"above" if _thr_d >= 0 else "below"} the 0.35 coupling line'
+    _readout = (
+        f'<div style="margin-top:6px;padding-top:6px;border-top:1px solid {_C["border"]};'
+        f'{_M}font-size:.54rem;line-height:1.75">'
+        f'<div style="color:{_C["label"]};letter-spacing:.1em;font-weight:700;'
+        f'margin-bottom:2px">READOUT</div>'
+        f'<div style="color:{_C["muted"]}">regime <b style="color:{regime_c}">{regime_lbl}</b> · '
+        f'held <b style="color:{_C["text"]}">{_days}d</b></div>'
+        f'<div style="color:{_C["muted"]}">now <b style="color:{_C["text"]}">{cur_sign}{cur:.2f}</b> · '
+        f'60d avg <b style="color:{_C["text"]}">{_avg:+.2f}</b> · Δ10d '
+        f'<b style="color:{_chg_c}">{_chg:+.2f}</b></div>'
+        f'<div style="color:{_C["muted"]}">band <b style="color:{_C["text"]}">{_lo:+.2f}</b>…'
+        f'<b style="color:{_C["text"]}">{_hi:+.2f}</b> · '
+        f'<b style="color:{_C["text"]}">{_pos:.0f}%</b> of range</div>'
+        f'<div style="color:{_thr_c}">{_thr_t}</div>'
+        f'</div>'
+    )
     _card("CORRELATION PULSE",
         f'<div style="border-left:3px solid {cur_c};padding-left:.4rem;margin-bottom:4px">'
         f'<div style="display:flex;justify-content:space-between;'
@@ -3439,7 +3473,8 @@ def _render_correlation_pulse(
         f'<div style="{_M}font-size:0.50rem;color:{_C["muted"]};margin-top:.4rem">'
         f'<span style="color:{_C["danger"]}55;border-bottom:1px dashed {_C["danger"]}55">·</span>'
         f'&nbsp;0.35 coupling threshold'
-        f'</div>',
+        f'</div>'
+        + _readout,
     )
 
 
