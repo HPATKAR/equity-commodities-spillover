@@ -5840,6 +5840,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
                 frames.append(eq_r[col].rename(lbl))
                 labels.append(lbl)
 
+        n_eq = len(labels)  # first n_eq labels are equities, the rest commodities
         if cmd_r is not None and not cmd_r.empty:
             for col in cmd_r.columns[:4]:
                 lbl = _ABBR.get(col, col[:6])
@@ -5923,13 +5924,51 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
             + "</div>"
         )
 
+        # ── Readout — turns the grid into a decision: the EQ↔CMD cross-block
+        #    average is the coupling / spillover number this desk cares about,
+        #    plus the equity- and commodity-block internals and the strongest /
+        #    weakest pairs. Also squares the panel with its taller neighbour so
+        #    the centre-left column ends flush.
+        cv = corr.values
+        _cross = cv[:n_eq, n_eq:] if 0 < n_eq < n else None
+        _cx = float(_cross.mean()) if _cross is not None and _cross.size else float("nan")
+        def _offdiag_mean(m):
+            k = m.shape[0]
+            return float((m.sum() - np.trace(m)) / (k * k - k)) if k >= 2 else float("nan")
+        _eqb = _offdiag_mean(cv[:n_eq, :n_eq]) if n_eq >= 2 else float("nan")
+        _cmb = _offdiag_mean(cv[n_eq:, n_eq:]) if (n - n_eq) >= 2 else float("nan")
+        _bv, _wv, _bi, _bj, _wi, _wj = -2.0, 2.0, 0, 0, 0, 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                if cv[i, j] > _bv: _bv, _bi, _bj = cv[i, j], i, j
+                if cv[i, j] < _wv: _wv, _wi, _wj = cv[i, j], i, j
+        _cxc = _C["danger"] if _cx >= 0.4 else _C["warn"] if _cx >= 0.2 else _C["safe"]
+        _cxw = ("tight coupling" if _cx >= 0.4 else
+                "moderate coupling" if _cx >= 0.2 else "diversified")
+        _fn = lambda v: "n/a" if v != v else f"{v:+.2f}"
+        readout = (
+            f'<div style="margin-top:6px;padding-top:6px;border-top:1px solid {_C["border"]};'
+            f'{_M}font-size:.54rem;line-height:1.7">'
+            f'<div style="color:{_C["label"]};letter-spacing:.1em;font-weight:700;'
+            f'margin-bottom:2px">READOUT</div>'
+            f'<div style="color:{_C["muted"]}">EQ↔CMD cross-corr '
+            f'<b style="color:{_cxc}">{_fn(_cx)}</b> · {_cxw}</div>'
+            f'<div style="color:{_C["muted"]}">EQ block '
+            f'<b style="color:{_C["text"]}">{_fn(_eqb)}</b> · CMD block '
+            f'<b style="color:{_C["text"]}">{_fn(_cmb)}</b></div>'
+            f'<div style="color:{_C["muted"]}">strongest '
+            f'<b style="color:{_C["text"]}">{labels[_bi]}↔{labels[_bj]} {_bv:+.2f}</b> · weakest '
+            f'<b style="color:{_C["text"]}">{labels[_wi]}↔{labels[_wj]} {_wv:+.2f}</b></div>'
+            f'</div>'
+        )
+
         svg = (
             f'<svg width="100%" viewBox="0 0 {W} {H}" '
             f'xmlns="http://www.w3.org/2000/svg">'
             f'{cells}{row_labels}{col_labels}'
             f'</svg>'
         )
-        _card("ASSET CORRELATION MATRIX · 60D", svg + legend)
+        _card("ASSET CORRELATION MATRIX · 60D", svg + legend + readout)
     except Exception:
         _card("ASSET CORRELATION MATRIX · 60D",
               f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">Insufficient data</span>')
