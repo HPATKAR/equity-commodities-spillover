@@ -482,28 +482,56 @@ def page_strait_watch(start: str, end: str) -> None:
         chg_sym  = "▲" if chg_24h > 0 else "▼" if chg_24h < 0 else "-"
         pct_col  = "#27ae60" if pct_chg >= 0 else "#e67e22" if pct_chg > -30 else "#c0392b"
         is_live  = s.get("_live", False)
-        src_badge = (
-            f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
-            f'background:#0d2a0d;border:1px solid #27ae6066;color:#27ae60;'
-            f'padding:1px 5px;border-radius:2px;margin-left:5px">● LIVE</span>'
-            if is_live else
-            f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
-            f'background:#1e1a0a;border:1px solid #6b708055;color:#6b7280;'
-            f'padding:1px 5px;border-radius:2px;margin-left:5px">EST.</span>'
-        )
+
+        # Data-age freshness. PortWatch publishes with a lag and occasionally
+        # stalls (the newest date stops advancing). Rather than badge any
+        # PortWatch data as "LIVE", show its true age so a days-old print is
+        # never mistaken for a current count: <=1d -> green LIVE, a few days ->
+        # amber "Nd old", a week or more -> red. Flips back to green on its own
+        # when PortWatch catches up.
+        _age_days = None
+        if is_live:
+            _ld = pd.to_datetime(str(s.get("_live_date", "")), errors="coerce")
+            if pd.notna(_ld):
+                _age_days = (pd.Timestamp(today) - _ld.normalize()).days
+        is_stale = is_live and _age_days is not None and _age_days >= 2
+
+        if is_live and _age_days is not None and _age_days <= 1:
+            src_badge = (
+                f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
+                f'background:#0d2a0d;border:1px solid #27ae6066;color:#27ae60;'
+                f'padding:1px 5px;border-radius:2px;margin-left:5px">● LIVE</span>'
+            )
+        elif is_live:
+            _stale_c = "#c0392b" if (_age_days or 0) >= 7 else "#e67e22"
+            _age_txt = f"{_age_days}D OLD" if _age_days is not None else "LAGGED"
+            src_badge = (
+                f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
+                f'background:{_stale_c}1a;border:1px solid {_stale_c}66;color:{_stale_c};'
+                f'padding:1px 5px;border-radius:2px;margin-left:5px">● {_age_txt}</span>'
+            )
+        else:
+            src_badge = (
+                f'<span style="{_F}font-size:0.50rem;font-weight:700;letter-spacing:0.08em;'
+                f'background:#1e1a0a;border:1px solid #6b708055;color:#6b7280;'
+                f'padding:1px 5px;border-radius:2px;margin-left:5px">EST.</span>'
+            )
         src_line = (
-            f'IMF PortWatch · {s["_live_date"]}' if is_live
+            f'IMF PortWatch · as of {s["_live_date"]}' if is_live
             else "AIS density · BIMCO / Lloyd's · Est. weekly"
         )
 
-        # 24h change: only show a number when data is genuinely live.
-        # Hardcoded _STRAITS deltas are rough quarterly estimates — showing
-        # them as a precise "▼2" number is misleading for non-live straits.
+        # Delta label: "24h change" only when the latest point is genuinely
+        # recent. When the data is days old the day-over-day delta is the last
+        # AVAILABLE change, not a live 24h move, so label it "latest Δ". For
+        # non-live straits the hardcoded _STRAITS deltas are rough quarterly
+        # estimates — shown as "—" rather than a misleading precise number.
         if is_live:
+            _delta_lbl = "latest Δ" if is_stale else "24h change"
             chg_html = (
                 f'<span style="{_M}font-size:0.72rem;font-weight:700;color:{chg_col}">'
                 f'{chg_sym}{abs(chg_24h)}</span>'
-                f'<span style="{_F}font-size:0.52rem;color:#555960;margin-left:4px">24h change</span>'
+                f'<span style="{_F}font-size:0.52rem;color:#555960;margin-left:4px">{_delta_lbl}</span>'
             )
         else:
             chg_html = (
