@@ -2062,7 +2062,7 @@ def _render_intelligence_feed(
         title  = getattr(a, "title", str(a))[:68]
         # Alert dataclass carries body/category/page_hint/data — .detail and
         # .message never existed, so card bodies silently rendered empty.
-        body   = getattr(a, "body", "")[:150]
+        body   = getattr(a, "body", "")[:240]
         cat    = getattr(a, "category", "")
         hint   = getattr(a, "page_hint", "")
         ts_str = datetime.datetime.now().strftime("%H:%M")
@@ -2102,16 +2102,16 @@ def _render_intelligence_feed(
             f'border-top:1px solid {_C["border"]};border-right:1px solid {_C["border"]};'
             f'border-bottom:1px solid {_C["border"]};padding:.4rem .6rem;margin-bottom:.35rem">'
             f'<div style="display:flex;justify-content:space-between;'
-            f'align-items:center;margin-bottom:3px">'
-            f'<span><span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.14em;'
+            f'align-items:center;margin-bottom:2px">'
+            f'<span><span style="{_M}font-size:0.52rem;font-weight:700;letter-spacing:.14em;'
             f'background:{badge_bg};color:{badge_c};padding:2px 6px">{badge_lbl}</span>'
             f'{cat_html}</span>'
-            f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{ts_str}</span>'
+            f'<span style="{_M}font-size:0.58rem;color:{_C["muted"]}">{ts_str}</span>'
             f'</div>'
-            f'<div style="{_M}font-size:0.69rem;font-weight:700;color:{_C["text"]};'
-            f'line-height:1.3;margin-bottom:3px">{title}</div>'
-            + (f'<div style="{_F}font-size:0.66rem;color:{_C["label"]};line-height:1.45;'
-               f'margin-bottom:3px">{body}</div>' if body else "")
+            f'<div style="{_M}font-size:0.75rem;font-weight:700;color:{_C["text"]};'
+            f'line-height:1.28;margin-bottom:2px">{title}</div>'
+            + (f'<div style="{_F}font-size:0.72rem;color:{_C["label"]};line-height:1.4;'
+               f'margin-bottom:2px">{body}</div>' if body else "")
             + f'<div style="display:flex;justify-content:space-between;align-items:baseline">'
               f'{hint_html}<span>{kv_html}</span></div>'
             + f'</div>',
