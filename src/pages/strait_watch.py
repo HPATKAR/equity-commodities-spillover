@@ -470,6 +470,15 @@ def page_strait_watch(start: str, end: str) -> None:
 
     # ── Vessel traffic cards ──────────────────────────────────────────────────
     _section_label("Active Vessel Traffic - Ships / Day (AIS Estimates)")
+    st.markdown(
+        '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.62rem;color:#8890a1;'
+        'line-height:1.55;margin:-2px 0 9px;padding-left:8px;border-left:2px solid #e67e2255">'
+        'IMF PortWatch publishes with a multi-day lag; each count is tagged with its data age '
+        'and reflects the most recent published value, not a live count. Integration of a '
+        'lower-latency vessel-tracking feed is in progress.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     vt_cols = st.columns(5, gap="small")
     for col, s in zip(vt_cols, _straits):
         sc       = _STATUS_COLOR[s["status"]]
