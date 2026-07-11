@@ -67,7 +67,7 @@ _C = {
 # Panel header — consistent across every SVG/HTML panel.
 def _ph(title: str, accent: str = "") -> str:
     """Render a standardised panel header label."""
-    color = accent if accent else _C["label"]
+    color = accent if accent else _C["text"]
     return (
         f'<div style="{_M}font-size:0.60rem;font-weight:700;letter-spacing:.12em;'
         f'text-transform:uppercase;color:{color};margin-bottom:8px;'
@@ -258,7 +258,7 @@ section[data-testid="stMain"] *{border-radius:0!important;box-shadow:none!import
 .cc-cell{background:#0a0a0a;border:1px solid #1e1e1e;padding:.4rem .65rem;min-width:0}
 .cc-thin{display:flex;align-items:center;padding:.3rem .65rem;overflow:hidden}
 .cc-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;
-    letter-spacing:.14em;text-transform:uppercase;color:#8890a1;margin-bottom:4px}
+    letter-spacing:.14em;text-transform:uppercase;color:#e8e9ed;margin-bottom:4px}
 .cc-num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;
     text-align:right;white-space:pre}
 .cc-row{display:flex;align-items:baseline;justify-content:space-between;
@@ -1869,7 +1869,7 @@ def _render_geo_risk_block(
             f'<div style="padding:.5rem .75rem;background:{_C["card"]};'
             f'border:1px solid {_C["border"]};border-top:3px solid {vc}">'
             f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.16em;'
-            f'text-transform:uppercase;color:{_C["label"]};margin-bottom:3px">{lbl}</div>'
+            f'text-transform:uppercase;color:{_C["text"]};margin-bottom:3px">{lbl}</div>'
             f'<div style="{_M}font-size:1.0rem;font-weight:700;color:{vc};line-height:1.1">{val}</div>'
             + (f'<div style="{_M}font-size:0.69rem;color:{_C["text"]};margin-top:2px">{sub}</div>' if sub else "")
             + f'</div>'
