@@ -2073,7 +2073,7 @@ def _render_intelligence_feed(
         (alerts or []),
         key=lambda a: 0 if getattr(a, "severity", "") == "critical"
                    else 1 if getattr(a, "severity", "") == "warning" else 2,
-    )[:6]
+    )[:7]  # 7 (was 6): fills the left-column tail on busy mornings, balances height
 
     for a in all_alerts:
         sev = getattr(a, "severity", "warning")
