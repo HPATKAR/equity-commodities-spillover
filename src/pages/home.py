@@ -3757,6 +3757,74 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# § L3b  GEOPOLITICAL RISK BY REGION — conflict clusters rolled up by region
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_regional_conflict_risk(conflict_results: dict) -> None:
+    """Centre-left column: geopolitical risk concentration by region — ranked
+    bars of aggregate conflict intensity across each region's active fronts.
+
+    The Conflict Landscape above plots individual conflicts on CIS×TPS; this
+    rolls them up so you see WHERE risk clusters (e.g. a multi-front Middle East
+    vs a single-front theatre). Bar = summed CIS across the region's fronts."""
+    try:
+        regions: dict[str, list] = {}
+        for r in conflict_results.values():
+            regions.setdefault(r.get("region") or "Other", []).append(r)
+        if not regions:
+            raise ValueError("no regions")
+
+        agg = []
+        for reg, rs in regions.items():
+            sum_cis = sum(float(x.get("cis", 0)) for x in rs)
+            lead    = max(rs, key=lambda x: float(x.get("cis", 0)))
+            n_esc   = sum(1 for x in rs if x.get("escalation") == "escalating")
+            agg.append((reg, sum_cis, len(rs), lead, n_esc))
+        agg.sort(key=lambda t: t[1], reverse=True)
+        max_sum = max(a[1] for a in agg) or 1.0
+
+        n_fronts = sum(a[2] for a in agg)
+        n_esc_all = sum(a[4] for a in agg)
+
+        rows = (
+            f'<div style="{_M}font-size:.5rem;color:{_C["muted"]};letter-spacing:.04em;'
+            f'margin-bottom:5px">bar = summed CIS across a region\'s active fronts</div>'
+        )
+        for reg, sum_cis, n, lead, n_esc in agg:
+            lead_cis = float(lead.get("cis", 0))
+            bar_c = (_C["danger"] if lead_cis >= 65 else
+                     _C["warn"] if lead_cis >= 45 else _C["muted"])
+            w = sum_cis / max_sum * 100
+            esc_tag = (f'<span style="color:{_C["danger"]};font-weight:700"> · {n_esc}▲</span>'
+                       if n_esc else "")
+            rows += (
+                f'<div style="padding:3px 0 5px;border-bottom:1px solid {_C["border"]}">'
+                f'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">'
+                f'<span style="{_M}font-size:.6rem;font-weight:700;color:{_C["text"]};'
+                f'white-space:nowrap">{reg}</span>'
+                f'<span style="{_M}font-size:.52rem;color:{_C["muted"]};white-space:nowrap">'
+                f'{n} front{"s" if n > 1 else ""}{esc_tag}</span></div>'
+                f'<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'
+                f'<div style="flex:1;height:6px;background:{_C["card2"]}">'
+                f'<div style="width:{w:.0f}%;height:6px;background:{bar_c}"></div></div>'
+                f'<span style="{_M}font-size:.52rem;color:{_C["muted"]};white-space:nowrap">'
+                f'{lead["label"]} {lead_cis:.0f}</span></div>'
+                f'</div>'
+            )
+        rows += (
+            f'<div style="{_M}font-size:.52rem;color:{_C["label"]};margin-top:5px">'
+            f'{len(agg)} regions · {n_fronts} active fronts'
+            + (f' · <span style="color:{_C["danger"]};font-weight:700">{n_esc_all} escalating</span>'
+               if n_esc_all else "")
+            + '</div>'
+        )
+        _card("GEOPOLITICAL RISK BY REGION", rows)
+    except Exception:
+        _card("GEOPOLITICAL RISK BY REGION",
+              f'<span style="{_M}font-size:.56rem;color:{_C["muted"]}">Insufficient data</span>')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # § R3  RISK COMPASS  (right column — 5-axis radar)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -6549,6 +6617,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _err_slot("transmission beta")
             # § C12 Conflict landscape — CIS×TPS scatter (moved from the left column)
             _render_conflict_landscape(conflict_results)
+            # § C12b Geopolitical risk by region — conflict clusters (fills the
+            #        empty tail of the centre-left column, balances the regime map)
+            try:
+                _render_regional_conflict_risk(conflict_results)
+            except Exception:
+                _err_slot("regional conflict risk")
         with _cc_r:
             # § C2  Cross-Model Signal Waterfall
             try:
