@@ -1003,6 +1003,14 @@ def _render_command_hero(
                 )
         except Exception:
             pass
+        # Lead the tape with the S&P/WTI spillover pair while preserving each
+        # card's price↔derived pairing (S&P↔EQ-CMD corr, WTI↔OIL→SPX β, DXY↔CMD
+        # vol, ...). Reorder cards to [S&P, WTI, DXY, Gold, 10Y, EQ VOL]; the
+        # index map moves both halves of each pair together. Guarded to the full
+        # deterministic 12-cell set so a skipped derived cell falls back cleanly.
+        if len(cells_list) == 12:
+            _tape_order = [1, 2, 0, 3, 4, 5, 7, 8, 6, 9, 10, 11]
+            cells_list = [cells_list[i] for i in _tape_order]
         if cells_list:
             # Merge vertically: each column's top cell pairs with the one below
             # it into a single card with two stacked rows → 6 cards, 2 rows each
