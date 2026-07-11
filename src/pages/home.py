@@ -5696,18 +5696,21 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         for i, ri in enumerate(corr.index):
             for j, ci in enumerate(corr.columns):
                 v   = corr.loc[ri, ci]
-                col = _corr_color(v)
+                # Solid, uniform fills — the bucket colour already encodes
+                # strength, so the old magnitude-scaled opacity just made weak
+                # cells look washed-out and patchy. Diagonal = inert neutral.
+                col = "#2b2b2b" if i == j else _corr_color(v)
                 x   = PAD_LEFT + j * CELL
                 y   = PAD_TOP + i * CELL
-                op  = 0.25 if i == j else max(0.3, abs(v) * 0.9)
                 txt = "1.0" if i == j else f"{v:+.2f}"[1:] if abs(v) >= 0.1 else f"{v:+.2f}"
+                tf  = "#0a0a0a" if col == "#f1c40f" else "white"  # dark text on the yellow band
                 delay = f"{(i * n + j) * 0.018:.3f}s"
                 cells += (
                     f'<rect class="hm-cell-in" x="{x}" y="{y}" width="{CELL}" height="{CELL}" '
-                    f'fill="{col}" opacity="{op:.2f}" rx="2" style="animation-delay:{delay}"/>'
+                    f'fill="{col}" rx="2" style="animation-delay:{delay}"/>'
                     f'<text x="{x + CELL//2}" y="{y + CELL//2 + 4}" '
                     f'font-family="JetBrains Mono,monospace" font-size="7.5" '
-                    f'fill="white" text-anchor="middle" style="animation:hm-card-in .4s {delay} both">{txt}</text>'
+                    f'fill="{tf}" text-anchor="middle" style="animation:hm-card-in .4s {delay} both">{txt}</text>'
                 )
 
         row_labels = ""
