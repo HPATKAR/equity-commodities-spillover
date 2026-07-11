@@ -1177,12 +1177,15 @@ def _render_command_hero(
         f'</div>'
         f'{stack_bar}{zone_strip}{trail_stats}</div>'
 
-        f'<div class="cc-cell" style="grid-column:span 3">'
-        f'<div class="cc-lbl">Theaters · channel / CIS / TPS / age</div>{roster_rows}</div>'
-
+        # Morning-priority order: Global Risk Score (headline) → What Moved
+        # (freshest overnight market read) → Theaters (slower-moving geo detail,
+        # covered in depth in the columns below).
         f'<div class="cc-cell" style="grid-column:span 4">'
         f'<div class="cc-lbl">What Moved · 1d / 5d · top 20</div>'
         f'<div class="cc-mv2">{mover_items}</div>{breadth_html}</div>'
+
+        f'<div class="cc-cell" style="grid-column:span 3">'
+        f'<div class="cc-lbl">Theaters · channel / CIS / TPS / age</div>{roster_rows}</div>'
 
         f'{tape_html}'
 
