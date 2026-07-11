@@ -6597,38 +6597,42 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         # a single split lets heights average out and the sides end together.
         _cc_l, _cc_r = st.columns(2, gap="small")
         with _cc_l:
-            # § C1  Asset Correlation Heatmap
+            # Ordered by morning priority: what's escalating and where risk sits
+            # first, then conflict detail / transmission, reference grid last.
+            # § C5  Escalation tracker
+            _render_escalation_tracker(conflict_results)
+            # § C12b Geopolitical risk by region — conflict clusters rolled up
             try:
-                _render_corr_heatmap(_al_eq_r, _al_cmd_r)
+                _render_regional_conflict_risk(conflict_results)
             except Exception:
-                _err_slot("correlation heatmap")
+                _err_slot("regional conflict risk")
+            # § C12 Conflict landscape — CIS×TPS scatter
+            _render_conflict_landscape(conflict_results)
             # § C3  Conflict × Commodity Impact Matrix
             try:
                 _render_conflict_commodity_matrix(conflict_results)
             except Exception:
                 _err_slot("conflict × commodity matrix")
-            # § C5  Escalation tracker
-            _render_escalation_tracker(conflict_results)
-            # (§ C7 regime history → left column end; balance.)
-            # § C10 Transmission beta — WTI→S&P rolling 60d (new visual)
+            # § C10 Transmission beta — WTI→S&P rolling 60d
             try:
                 _render_transmission_beta(_al_eq_r, _al_cmd_r)
             except Exception:
                 _err_slot("transmission beta")
-            # § C12 Conflict landscape — CIS×TPS scatter (moved from the left column)
-            _render_conflict_landscape(conflict_results)
-            # § C12b Geopolitical risk by region — conflict clusters (fills the
-            #        empty tail of the centre-left column, balances the regime map)
+            # § C1  Asset Correlation Heatmap — reference correlation grid
             try:
-                _render_regional_conflict_risk(conflict_results)
+                _render_corr_heatmap(_al_eq_r, _al_cmd_r)
             except Exception:
-                _err_slot("regional conflict risk")
+                _err_slot("correlation heatmap")
         with _cc_r:
+            # Ordered by morning priority: model synthesis + alerts + conflict
+            # severity first, then exposure, then regime vizzes, reference last.
             # § C2  Cross-Model Signal Waterfall
             try:
                 _render_risk_signal_waterfall(risk, conflict_results, _al_regimes, _cached_alerts)
             except Exception:
                 _err_slot("signal waterfall")
+            # § C8  Alert summary
+            _render_alert_summary(_cached_alerts)
             # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per conflict
             try:
                 _render_geo_event_timeline(conflict_results)
@@ -6636,107 +6640,97 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _err_slot("severity timeline")
             # § C6  Commodity exposure ranking
             _render_top_commodities(conflict_results)
-            # § C8  Alert summary
-            _render_alert_summary(_cached_alerts)
-            # § C9  Regional equity performance — new visual (fills the tail)
+            # § C13b Risk regime map — corr × vol quadrant with 60d trail
             try:
-                _render_regional_performance(_al_eq_r)
+                _render_regime_map(_al_corr, _al_eq_r)
             except Exception:
-                _err_slot("regional performance")
-            # § C11 Correlation distribution — regime shape (new visual)
-            try:
-                _render_corr_distribution(_al_eq_r, _al_cmd_r)
-            except Exception:
-                _err_slot("correlation distribution")
+                _err_slot("regime map")
             # § C13 Risk signal convergence — GRS / coupling / VIX 60d overlay
             try:
                 _render_risk_convergence(_score_hist, _al_corr)
             except Exception:
                 _err_slot("risk convergence")
-            # § C13b Risk regime map — corr × vol quadrant with 60d trail
-            #        (fills the empty tail of the centre column)
+            # § C9  Regional equity performance
             try:
-                _render_regime_map(_al_corr, _al_eq_r)
+                _render_regional_performance(_al_eq_r)
             except Exception:
-                _err_slot("regime map")
+                _err_slot("regional performance")
+            # § C11 Correlation distribution — regime shape (reference)
+            try:
+                _render_corr_distribution(_al_eq_r, _al_cmd_r)
+            except Exception:
+                _err_slot("correlation distribution")
 
     with _col_right:
         _section_header("03", "Market Signals", "returns · channels · risk arc",
                         link_page="transmission_matrix", link_label="Transmission")
-        # (§ R1 pulse cards removed — the hero tape row shows the same six
-        #  instruments in one line each; density pass.)
-        # § R1  Returns heatmap — 5-day day-over-day asset return grid
-        _render_returns_heatmap()
-        # § R1b Transmission channels — CIS-weighted channel pressure breakdown
-        _render_transmission_channels(conflict_results, risk)
+        # Ordered by morning priority: the routing recommendation + the credit
+        # read + GRS decomposition first, then the market-data panels, then the
+        # Stocks-to-Watch news block (lower priority) grouped at the end.
+        # § R4  Next action — routing recommendation based on dominant risk driver
+        _render_next_action(conflict_agg, conflict_results, compact=True)
         # § R1c Cross-asset signals — credit-stress read absent elsewhere on the CC
         try:
             _render_cross_asset_signals(fred_key, start, end)
         except Exception:
             _err_slot("cross-asset signals")
-        # § R2a Hot stocks — top mega-caps by 24h news activity, clickable headlines
-        _section_header("", "Stocks to Watch", "most active by news · click to read",
-                        link_page="watchlist", link_label="Watchlist")
-        try:
-            _render_hot_stocks()
-        except Exception:
-            pass
         # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
         _render_risk_arc(risk)
-        # (§ R3 risk convergence → center-right sub-stack; balance after the
-        #  compass landed here.)
-        # § R4  Next action — routing recommendation based on dominant risk driver
-        _render_next_action(conflict_agg, conflict_results, compact=True)
-        # § R5  Drawdown monitor — distance from 60d highs (new visual)
+        # § R1  Returns heatmap — 5-day day-over-day asset return grid
+        _render_returns_heatmap()
+        # § R1b Transmission channels — CIS-weighted channel pressure breakdown
+        _render_transmission_channels(conflict_results, risk)
+        # § R5  Drawdown monitor — distance from 60d highs
         try:
             _render_drawdown_monitor(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("drawdown monitor")
-        # § R6  Risk appetite dial — S&P vs Gold spread (new visual)
+        # § R6  Risk appetite dial — S&P vs Gold spread
         try:
             _render_risk_appetite(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("risk appetite")
-        # § R7  120d range position strip (new visual)
+        # § R7  120d range position strip
         try:
             _render_range_position(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("range position")
-        # § R8  Risk compass — 5-axis radar (moved from the left column)
+        # § R8  Risk compass — 5-axis radar
         _corr_cur = (
             float(_al_corr.dropna().iloc[-1])
             if _al_corr is not None and len(_al_corr.dropna()) >= 1
             else None
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
-        # (§ R5 risk compass moved to the left column for balance.)
-        # (§ R6–R11 layout pass: returns heatmap, transmission channels, yield
-        #  curve, and vol trio moved to the § 04 bottom row to balance column
-        #  heights. GRS trend and macro snapshot REMOVED — the trend repeated
-        #  the hero sparkline + fear-index chart, the snapshot repeated the
-        #  pulse cards above.)
+        # § R2a Hot stocks — top mega-caps by 24h news activity (lower priority → end)
+        _section_header("", "Stocks to Watch", "most active by news · click to read",
+                        link_page="watchlist", link_label="Watchlist")
+        try:
+            _render_hot_stocks()
+        except Exception:
+            pass
 
     # ── § 04  Market Detail — full-width 3-across row (layout pass) ──────────
     # Hosts the panels moved out of the over-long side columns so all three
     # columns above end together instead of leaving a center void.
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
-    _section_header("04", "Market Detail", "sectors · lead-lag · rates · vol",
+    _section_header("04", "Market Detail", "lead-lag · vol · sectors · rates",
                     link_page="macro_dashboard", link_label="Macro Lens")
     _md1, _md2, _md3, _md4 = st.columns([3, 3, 3, 3], gap="small")
     with _md1:
         try:
-            _render_commodity_sector_returns(_al_cmd_r)
-        except Exception:
-            _err_slot("commodity sector returns")
-    with _md2:
-        try:
             _render_cross_corr_lag(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("cross-corr lag")
-    with _md3:
-        _render_yield_curve_snap()
-    with _md4:
+    with _md2:
         _render_vol_trio()
+    with _md3:
+        try:
+            _render_commodity_sector_returns(_al_cmd_r)
+        except Exception:
+            _err_slot("commodity sector returns")
+    with _md4:
+        _render_yield_curve_snap()
 
     # ── Full-width below ──────────────────────────────────────────────────────
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
