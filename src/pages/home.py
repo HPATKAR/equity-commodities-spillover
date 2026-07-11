@@ -783,44 +783,56 @@ def _render_command_hero(
     roster_rows = (
         f'<div class="cc-row" style="border-bottom:1px solid #1e1e1e">'
         f'<span style="{_M}font-size:.48rem;color:{_C["label"]};letter-spacing:.1em">THEATER</span>'
-        f'<span style="{_M}font-size:.48rem;color:{_C["label"]};letter-spacing:.06em">'
-        f'<span style="{_col(26)}">CH</span><span style="{_col(28)}">CIS</span>'
-        f'<span style="{_col(28)}">TPS</span><span style="{_col(34)}">AGE</span>'
-        f'<span style="{_col(14)}"></span></span></div>'
+        f'<span style="{_M}font-size:.48rem;color:{_C["label"]};letter-spacing:.06em;flex:0 0 auto">'
+        f'<span style="{_col(24)}">CH</span><span style="{_col(26)}">CIS</span>'
+        f'<span style="{_col(26)}">TPS</span><span style="{_col(24)}">CNF</span>'
+        f'<span style="{_col(30)}">AGE</span><span style="{_col(12)}"></span></span></div>'
     )
     for r in roster:
         esc = r.get("escalation") == "escalating"
         cis_v = float(r.get("cis", 0))
         tps_v = float(r.get("tps", 0))
+        conf_v = float(r.get("confidence", 0)) * 100.0
         c_col = _C["danger"] if esc else _C["text"]
+        # Confidence is reliability, not good/bad — a neutral brightness ramp,
+        # never the risk red/green (which would misread as a risk signal).
+        cf_col = _C["text"] if conf_v >= 80 else _C["muted"] if conf_v >= 65 else _C["label"]
         bar_c = _C["danger"] if cis_v >= 65 else _C["warn"] if cis_v >= 45 else "#3a3a3a"
         state_dim = "opacity:.45" if r.get("state") != "active" else ""
         tx = r.get("transmission", {}) or {}
         top_ch = _CH_CODE.get(max(tx, key=tx.get), "—") if tx else "—"
+        # Arrow = trend DIRECTION; its colour/pulse = escalation SEVERITY.
+        _tr = str(r.get("trend", "")).lower()
+        arw = "▲" if _tr == "rising" else "▼" if _tr == "falling" else "→"
+        a_col = (c_col if esc else _C["warn"] if _tr == "rising"
+                 else _C["safe"] if _tr == "falling" else _C["label"])
         roster_rows += (
             f'<div class="cc-row" style="position:relative;{state_dim}">'
             f'<div style="position:absolute;left:0;bottom:0;height:1.5px;'
             f'width:{cis_v:.0f}%;background:{bar_c};opacity:.6"></div>'
-            f'<span style="{_M}font-size:.56rem;color:{_C["text"]};'
-            f'white-space:nowrap">{r["label"]}</span>'
-            f'<span style="white-space:nowrap">'
+            f'<span style="{_M}font-size:.56rem;color:{_C["text"]};white-space:nowrap;'
+            f'overflow:hidden;text-overflow:ellipsis;min-width:0">{r["label"]}</span>'
+            f'<span style="white-space:nowrap;flex:0 0 auto">'
             f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
-            f'{_col(26)}">{top_ch}</span>'
+            f'{_col(24)}">{top_ch}</span>'
             f'<span class="cc-num" style="font-size:.6rem;font-weight:700;'
-            f'color:{c_col};{_col(28)}">{cis_v:3.0f}</span>'
+            f'color:{c_col};{_col(26)}">{cis_v:3.0f}</span>'
             f'<span class="cc-num" style="font-size:.6rem;color:{_C["text"]};'
-            f'{_col(28)}">{tps_v:3.0f}</span>'
+            f'{_col(26)}">{tps_v:3.0f}</span>'
+            f'<span class="cc-num" style="font-size:.52rem;color:{cf_col};'
+            f'{_col(24)}">{conf_v:2.0f}</span>'
             f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
-            f'{_col(34)}">{_age_txt(r["id"])}</span>'
+            f'{_col(30)}">{_age_txt(r["id"])}</span>'
             f'<span class="{"cc-state-pulse" if esc else ""}" '
-            f'style="{_M}font-size:.52rem;{_col(14)};'
-            f'color:{c_col if esc else _C["label"]}">{"▲" if esc else "→"}</span>'
+            f'style="{_M}font-size:.52rem;{_col(12)};color:{a_col}">{arw}</span>'
             f'</span></div>'
         )
 
     # Portfolio aggregate + composition footers
     _p_cis = float(conflict_agg.get("portfolio_cis", conflict_agg.get("cis", 0)))
     _p_tps = float(conflict_agg.get("portfolio_tps", conflict_agg.get("tps", 0)))
+    _confs = [float(r.get("confidence", 0)) for r in conflict_results.values()]
+    _p_conf = (sum(_confs) / len(_confs) * 100.0) if _confs else 0.0
     _n_act = sum(1 for r in conflict_results.values() if r.get("state") == "active")
     _n_lat = len(conflict_results) - _n_act
     _n_esc = sum(1 for r in conflict_results.values()
@@ -835,13 +847,15 @@ def _render_command_hero(
         f'<div class="cc-row" style="border-top:1px solid #1e1e1e;margin-top:2px">'
         f'<span style="{_M}font-size:.48rem;font-weight:700;letter-spacing:.1em;'
         f'color:{_GOLD}">PORTFOLIO</span>'
-        f'<span style="white-space:nowrap">'
+        f'<span style="white-space:nowrap;flex:0 0 auto">'
         f'<span class="cc-num" style="font-size:.6rem;font-weight:700;'
-        f'color:{_C["text"]};{_col(54)}">{_p_cis:3.0f}</span>'
+        f'color:{_C["text"]};{_col(50)}">{_p_cis:3.0f}</span>'
         f'<span class="cc-num" style="font-size:.6rem;font-weight:700;'
-        f'color:{_C["text"]};{_col(28)}">{_p_tps:3.0f}</span>'
+        f'color:{_C["text"]};{_col(26)}">{_p_tps:3.0f}</span>'
         f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
-        f'{_col(48)}">{_n_act}A {_n_lat}L</span></span></div>'
+        f'{_col(24)}">{_p_conf:2.0f}</span>'
+        f'<span class="cc-num" style="font-size:.52rem;color:{_C["muted"]};'
+        f'{_col(42)}">{_n_act}A {_n_lat}L</span></span></div>'
         f'<div class="cc-row">'
         f'<span style="{_M}font-size:.48rem;color:{_C["muted"]};'
         f'letter-spacing:.04em">{_reg_txt}</span>'
@@ -4191,18 +4205,32 @@ def _render_transmission_beta(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame 
     span = (vmax - vmin) or 1.0
     def _y(v): return 4 + (vmax - v) / span * (H - MB - 8)
     n = len(beta)
-    pts = " L ".join(f"{ML + i / (n - 1) * (W - ML - 6):.1f},{_y(float(v)):.1f}"
-                     for i, v in enumerate(beta))
+    _bvals = [float(v) for v in beta]
+    _xs = [ML + i / (n - 1) * (W - ML - 6) for i in range(n)]
+    _ys = [_y(v) for v in _bvals]
     zero_y = _y(0.0)
     cur = float(beta.iloc[-1])
-    cur_c = _C["warn"] if cur > 0.15 else _C["label"]
+    # Colour the line by transmission regime: muted / absorbing (green), elevated
+    # (amber — oil shocks feeding through), strong (red) — so you see WHEN the
+    # dial ran hot across the window, not just its current level.
+    def _beta_col(v: float) -> str:
+        if v >= 0.40: return _C["danger"]
+        if v >= 0.15: return _C["warn"]
+        return _C["safe"]
+    cur_c = _beta_col(cur)
+    _segs = "".join(
+        f'<line x1="{_xs[i]:.1f}" y1="{_ys[i]:.1f}" x2="{_xs[i + 1]:.1f}" '
+        f'y2="{_ys[i + 1]:.1f}" stroke="{_beta_col(_bvals[i + 1])}" '
+        f'stroke-width="1.5" stroke-linecap="round"/>'
+        for i in range(n - 1)
+    )
     svg = (
         f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block">'
         f'<line x1="{ML}" y1="{zero_y:.1f}" x2="{W - 6}" y2="{zero_y:.1f}" '
         f'stroke="#2a2a2a" stroke-width="0.8"/>'
         f'<text x="{ML - 3}" y="{zero_y + 2:.1f}" font-size="7" fill="{_C["label"]}" '
         f'text-anchor="end" font-family="JetBrains Mono,monospace">0</text>'
-        f'<path d="M {pts}" fill="none" stroke="{cur_c}" stroke-width="1.4"/>'
+        f'{_segs}'
         f'<circle class="hm-dot-live" cx="{W - 6}" cy="{_y(cur):.1f}" r="2.5" fill="{cur_c}"/>'
         f'<text x="{W - 10}" y="{_y(cur) - 5:.1f}" font-size="8" fill="{cur_c}" '
         f'text-anchor="end" font-weight="700" '
@@ -4238,10 +4266,18 @@ def _render_corr_distribution(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame 
     mean_v = float(np.mean(vals))
     W, H, MB = 320, 92, 16
     bw = W / nb
+    # Colour each bar by its correlation regime so the shape reads at a glance:
+    # negative = decoupled / hedging (green), mild positive = neutral, rising
+    # coupling = amber, strong coupling = red (the "right-shifted mass" = stress).
+    def _bar_col(bc: float) -> str:
+        if bc >= 0.60: return _C["danger"]
+        if bc >= 0.30: return _C["warn"]
+        if bc >= 0.0:  return "#5b6472"
+        return _C["safe"]
     bars = "".join(
         f'<rect x="{i * bw + 1:.1f}" y="{4 + (1 - c / mx) * (H - MB - 6):.1f}" '
         f'width="{bw - 2:.1f}" height="{c / mx * (H - MB - 6):.1f}" '
-        f'fill="#4b5563" opacity=".8"/>'
+        f'fill="{_bar_col(lo + (i + 0.5) * (hi - lo) / nb)}" opacity=".85"/>'
         for i, c in enumerate(counts)
     )
     mean_x = (mean_v - lo) / (hi - lo) * W
