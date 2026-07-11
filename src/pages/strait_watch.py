@@ -225,7 +225,7 @@ _TIMELINE = [
 def _section_label(txt: str) -> None:
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 8px 0">{txt}</p>',
+        f'letter-spacing:0.14em;color:#e8e9ed;margin:0 0 5px 0">{txt}</p>',
         unsafe_allow_html=True,
     )
 
@@ -244,12 +244,12 @@ def page_strait_watch(start: str, end: str) -> None:
     _page_header("Strait Watch",
                  "5 maritime corridors · ~51% of global oil transit · Disruption risk assessment")
     _page_intro(
-        "Twenty-one percent of global oil supply transits a single 33-kilometre channel. "
-        "This tracker monitors disruption severity at five critical maritime chokepoints - "
-        "Hormuz, Red Sea/Suez, Bab-el-Mandeb, Malacca, and the Turkish Straits. "
-        "Elevated disruption scores at these nodes are among the earliest quantitative signals "
-        "of supply-side commodity shocks, and feed directly into the equity-commodities "
-        "spillover channel analysed throughout this dashboard. Watch these before watching price."
+        "Approximately 21% of global oil supply transits the Strait of Hormuz, a single "
+        "33-kilometre channel. This module quantifies disruption severity across five critical "
+        "maritime chokepoints - Hormuz, Red Sea/Suez, Bab-el-Mandeb, Malacca, and the Turkish "
+        "Straits. Elevated disruption scores at these nodes rank among the earliest quantitative "
+        "signals of supply-side commodity shocks and feed directly into the equity-commodity "
+        "spillover channel examined throughout this terminal."
     )
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
@@ -462,11 +462,10 @@ def page_strait_watch(start: str, end: str) -> None:
          sub_color="#27ae60" if brent_chg and brent_chg < 0 else "#c0392b",
          accent="#CFB991")
 
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     _thread(
-        "The KPIs above summarise aggregate exposure. "
-        "The vessel traffic cards below show the most direct measure of disruption - "
-        "how many ships are actually transiting each corridor, and how that has changed."
+        "Vessel transit counts are the most direct measure of disruption. The cards below "
+        "report current AIS-estimated throughput per corridor against baseline and historical norms."
     )
 
     # ── Vessel traffic cards ──────────────────────────────────────────────────
@@ -554,11 +553,10 @@ def page_strait_watch(start: str, end: str) -> None:
                 unsafe_allow_html=True,
             )
 
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     _thread(
-        "Vessel traffic gives you the volume. "
-        "The detailed chokepoint cards below add the threat profile, "
-        "disruption score, and active risk factors behind each number."
+        "The chokepoint cards below decompose each corridor into its threat profile, "
+        "composite disruption score, and the active risk factors underlying it."
     )
 
     # ── Chokepoint cards ──────────────────────────────────────────────────────
@@ -631,7 +629,7 @@ def page_strait_watch(start: str, end: str) -> None:
         )
 
     # ── Oil price charts ───────────────────────────────────────────────────────
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     _thread(
         "Chokepoint disruption shows up fastest in oil prices. "
         "Brent (the seaborne benchmark) moves first - "
@@ -713,7 +711,7 @@ def page_strait_watch(start: str, end: str) -> None:
 
     # ── Natural Gas (Hormuz LNG link) ──────────────────────────────────────────
     if not natgas.empty:
-        _divider("1.0rem", "0.5rem")
+        _divider("0.55rem", "0.3rem")
         _section_label("Natural Gas - LNG Transit Context")
         ng_now  = float(natgas.iloc[-1])
         ng_30d  = float(natgas.iloc[-22]) if len(natgas) > 22 else None
@@ -750,7 +748,7 @@ def page_strait_watch(start: str, end: str) -> None:
 
     # ── Crisis timeline ────────────────────────────────────────────────────────
     # ── War-Risk Insurance Premium Panel (GAP 23) ─────────────────────────────
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     _section_label("War-Risk Insurance Premium — Lloyd's Surcharge Tiers")
 
     # Lloyd's JWC (Joint War Committee) designated areas and surcharge ranges.
@@ -861,11 +859,10 @@ def page_strait_watch(start: str, end: str) -> None:
     except Exception:
         pass
 
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     _thread(
-        "Disruption scores tell you where we stand today. "
-        "The timeline below tells you what comes next - "
-        "the scheduled events most likely to reprice risk in the coming months."
+        "Disruption scores describe present conditions; the timeline below identifies the "
+        "scheduled catalysts most likely to reprice supply risk over the coming months."
     )
 
     _section_label("Crisis Timeline - Upcoming Catalysts")
@@ -906,11 +903,10 @@ def page_strait_watch(start: str, end: str) -> None:
         )
 
     # ── Historical vessel traffic charts ──────────────────────────────────────
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     _thread(
-        "Current numbers tell you the state; history tells you the story. "
-        "The charts below show how vessel traffic at each strait has evolved - "
-        "with key geopolitical events annotated to explain the inflection points."
+        "The series below trace how vessel traffic at each strait has evolved, with major "
+        "geopolitical events annotated at the corresponding inflection points."
     )
     _section_label("Historical Vessel Traffic - Weekly Ships / Day per Strait")
 
@@ -1028,7 +1024,7 @@ def page_strait_watch(start: str, end: str) -> None:
         _insight_note(s["ships_context"])
 
     # ── Vessel Traffic History Charts (always visible) ────────────────────────
-    _divider("1.2rem", "0.5rem")
+    _divider("0.6rem", "0.3rem")
     _section_label("Vessel Traffic History - Ships / Day (AIS Estimates, 2021–Present)")
 
     # Row 1: Hormuz (full width - most strategically important)
@@ -1068,7 +1064,7 @@ def page_strait_watch(start: str, end: str) -> None:
             _hist_chart(s3, height=240)
 
     # ── IMF PortWatch – Live Hormuz Tanker Data ───────────────────────────────
-    _divider("1.2rem", "0.5rem")
+    _divider("0.6rem", "0.3rem")
     _thread(
         "The vessel traffic numbers above are AIS estimates. "
         "IMF PortWatch provides verified daily transit counts directly from satellite AIS signals — "
@@ -1158,7 +1154,7 @@ def page_strait_watch(start: str, end: str) -> None:
         )
 
     # ── Brent Disruption Sensitivity Table ────────────────────────────────────
-    _divider("1.2rem", "0.5rem")
+    _divider("0.6rem", "0.3rem")
     _thread(
         "The sensitivity table below translates tanker disruption scenarios directly into "
         "estimated Brent prices — using both the empirical OLS elasticity from IMF PortWatch + "
@@ -1179,7 +1175,7 @@ def page_strait_watch(start: str, end: str) -> None:
         sens_df = pd.DataFrame()
 
     if not sens_df.empty:
-        # ── Render HTML color-coded table matching the friend's format ─────────
+        # ── Render HTML color-coded Brent disruption-sensitivity table ─────────
         disruption_cols = ["-10%", "-25%", "-50%", "-75%", "-100%"]
         row_labels = {
             0.004:  ("0.004", "Empirical — 2026 blockade only",       "#2980b9"),
@@ -1317,7 +1313,7 @@ def page_strait_watch(start: str, end: str) -> None:
         )
 
     # ── Methodology ────────────────────────────────────────────────────────────
-    _divider("1.0rem", "0.5rem")
+    _divider("0.55rem", "0.3rem")
     st.markdown(
         f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
         f'border-radius:0;padding:0.6rem 1.0rem">'
@@ -1376,7 +1372,7 @@ def page_strait_watch(start: str, end: str) -> None:
         pass
 
     # ── EIA Weekly Energy Inventories ─────────────────────────────────────────
-    _divider("1.2rem", "0.5rem")
+    _divider("0.6rem", "0.3rem")
     _section_label("EIA Weekly Energy Inventories — Physical Supply Signal")
     _thread(
         "Disruption risk is only half the picture. The physical supply buffer determines how fast "
