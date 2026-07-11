@@ -41,7 +41,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     _page_intro(
         "<strong>Research question for this page: which market is statistically leading the other — "
         "are equity returns Granger-preceding commodity returns, or the reverse?</strong> "
-        "Correlation (on the previous page) tells you <em>that</em> two markets move together. "
+        "Correlation (on the previous page) establishes <em>that</em> two markets move together. "
         "Spillover analysis tests <em>which direction the statistical lead runs</em>. "
         "Granger causality tests whether past equity returns statistically precede future commodity returns. "
         "Transfer entropy measures directional information flow without assuming linearity. "
@@ -556,8 +556,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     # ── Panel 4: Spillover Network ─────────────────────────────────────────
     _thread(
         "The three methods above each illuminate a different facet. The network graph synthesises "
-        "them: transmitters (thick outgoing edges, large nodes) are the price-setters you need "
-        "to monitor; receivers are the assets most vulnerable when those price-setters move."
+        "them: transmitters (thick outgoing edges, large nodes) are the price-setters to "
+        "monitor; receivers are the assets most vulnerable when those price-setters move."
     )
     with col_net:
         _label("Spillover Network Graph")
@@ -1361,8 +1361,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     _page_conclusion(
         "Transmission Map",
         "Assets identified as strong transmitters across all three methods - Granger, Transfer "
-        "Entropy, and Diebold-Yilmaz - are your first-order risk factors. A price move in a "
-        "high-transmitter commodity is not isolated; it will propagate. Use this map to identify "
+        "Entropy, and Diebold-Yilmaz - are the first-order risk factors. A price move in a "
+        "high-transmitter commodity is not isolated; it propagates. The map identifies "
         "which equity markets to hedge when a key commodity breaks out."
     )
 
