@@ -5503,6 +5503,107 @@ def _render_risk_convergence(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# §C13b  RISK REGIME MAP — correlation × volatility quadrant with 60d trail
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_regime_map(corr_series: "pd.Series | None", eq_r: "pd.DataFrame | None") -> None:
+    """Centre column: a 2-D risk-regime map — cross-asset correlation (x) against
+    equity volatility (y), with the last 60 sessions drawn as a fading trail.
+
+    Distinct from the correlation / convergence panels (those are 1-D time
+    series): this places the market in the joint corr×vol plane so the *regime*
+    and its recent path read at a glance. Four quadrants —
+      low corr / low vol  → CALM        low corr / high vol → CHOPPY
+      high corr / low vol → COMPLACENT   high corr / high vol → CONTAGION
+    High correlation collapsing diversification while vol rises is the classic
+    equity-commodity contagion corner this dashboard watches for."""
+    try:
+        if corr_series is None or eq_r is None or eq_r.empty:
+            raise ValueError("no data")
+        corr    = corr_series.dropna()
+        idx_ret = eq_r.mean(axis=1).dropna()                       # equal-weight equity index
+        vol     = idx_ret.rolling(20).std() * (252 ** 0.5) * 100.0  # annualised %
+        df = pd.concat([corr.rename("c"), vol.rename("v")], axis=1).dropna()
+        if len(df) < 20:
+            raise ValueError("insufficient overlap")
+        df = df.iloc[-60:]
+        cs, vs       = df["c"].tolist(), df["v"].tolist()
+        c_now, v_now = cs[-1], vs[-1]
+        # Fixed, interpretable axes (not min-max) so a single early vol spike
+        # can't distort the scale or the quadrant boundaries, and "calm" always
+        # means calm in absolute terms. Points outside the range clip to the edge.
+        C_LO, C_HI, C_DIV = 0.0, 0.60, 0.30          # cross-asset correlation
+        V_LO, V_HI, V_DIV = 6.0, 40.0, 18.0          # annualised equity vol %
+
+        W, H = 240, 185
+        ML, MR, MT, MB = 34, 12, 12, 24
+        PW, PH = W - ML - MR, H - MT - MB
+        _clip = lambda t: 0.0 if t < 0.0 else 1.0 if t > 1.0 else t
+        _px = lambda c: ML + _clip((c - C_LO) / (C_HI - C_LO)) * PW
+        _py = lambda v: MT + (1 - _clip((v - V_LO) / (V_HI - V_LO))) * PH  # high vol on top
+        xm, ym = _px(C_DIV), _py(V_DIV)
+
+        hi_c, hi_v = c_now >= C_DIV, v_now >= V_DIV
+        if   hi_c and hi_v:     reg, rcol = "CONTAGION",  _C["danger"]
+        elif hi_c and not hi_v: reg, rcol = "COMPLACENT", _C["warn"]
+        elif hi_v:              reg, rcol = "CHOPPY",     _C["warn"]
+        else:                   reg, rcol = "CALM",       _C["safe"]
+
+        grid = (
+            f'<rect x="{ML}" y="{MT}" width="{PW}" height="{PH}" fill="none" stroke="{_C["border"]}"/>'
+            f'<line x1="{xm:.1f}" y1="{MT}" x2="{xm:.1f}" y2="{MT + PH}" '
+            f'stroke="{_C["border"]}" stroke-dasharray="2 3"/>'
+            f'<line x1="{ML}" y1="{ym:.1f}" x2="{ML + PW}" y2="{ym:.1f}" '
+            f'stroke="{_C["border"]}" stroke-dasharray="2 3"/>'
+        )
+        _ql = lambda x, y, t, c, a: (
+            f'<text x="{x:.0f}" y="{y:.0f}" font-family="JetBrains Mono,monospace" '
+            f'font-size="6.5" fill="{c}" opacity="0.5" text-anchor="{a}">{t}</text>'
+        )
+        qlabels = (
+            _ql(ML + 3, MT + 9, "CHOPPY", _C["warn"], "start")
+            + _ql(ML + PW - 3, MT + 9, "CONTAGION", _C["danger"], "end")
+            + _ql(ML + 3, MT + PH - 4, "CALM", _C["safe"], "start")
+            + _ql(ML + PW - 3, MT + PH - 4, "COMPLACENT", _C["warn"], "end")
+        )
+        trail_pts = " ".join(f"{_px(c):.1f},{_py(v):.1f}" for c, v in zip(cs, vs))
+        trail = (
+            f'<polyline points="{trail_pts}" fill="none" stroke="{_C["muted"]}" '
+            f'stroke-width="1" opacity="0.45"/>'
+        )
+        dots = "".join(
+            f'<circle cx="{_px(c):.1f}" cy="{_py(v):.1f}" r="1.3" fill="{_C["muted"]}" '
+            f'opacity="{0.12 + 0.38 * (k / max(len(cs) - 1, 1)):.2f}"/>'
+            for k, (c, v) in enumerate(zip(cs, vs)) if k < len(cs) - 1
+        )
+        cur = (
+            f'<circle cx="{_px(c_now):.1f}" cy="{_py(v_now):.1f}" r="4.5" fill="{rcol}"/>'
+            f'<circle cx="{_px(c_now):.1f}" cy="{_py(v_now):.1f}" r="4.5" fill="none" '
+            f'stroke="#fff" stroke-width="1" opacity="0.65"/>'
+        )
+        axes = (
+            f'<text x="{ML + PW / 2:.0f}" y="{H - 4}" font-family="JetBrains Mono,monospace" '
+            f'font-size="7" fill="{_C["label"]}" text-anchor="middle">CORRELATION →</text>'
+            f'<text x="9" y="{MT + PH / 2:.0f}" font-family="JetBrains Mono,monospace" '
+            f'font-size="7" fill="{_C["label"]}" text-anchor="middle" '
+            f'transform="rotate(-90 9 {MT + PH / 2:.0f})">VOLATILITY →</text>'
+        )
+        svg = (
+            f'<svg width="100%" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">'
+            f'{grid}{qlabels}{trail}{dots}{cur}{axes}</svg>'
+        )
+        foot = (
+            f'<div style="{_M}font-size:.56rem;color:{_C["label"]};margin-top:2px">'
+            f'NOW <span style="color:{rcol};font-weight:700">{reg}</span> · '
+            f'corr {c_now:.2f} · vol {v_now:.0f}% · dot = today, trail = 60d</div>'
+        )
+        _card("RISK REGIME MAP · CORR × VOL · 60D", svg + foot)
+    except Exception:
+        _card("RISK REGIME MAP · CORR × VOL · 60D",
+              f'<span style="{_M}font-size:.56rem;color:{_C["muted"]}">Insufficient data</span>')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # §C0  Top Cross-Asset Correlation Pairs — full-width ranked bar panel
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -6478,6 +6579,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _render_risk_convergence(_score_hist, _al_corr)
             except Exception:
                 _err_slot("risk convergence")
+            # § C13b Risk regime map — corr × vol quadrant with 60d trail
+            #        (fills the empty tail of the centre column)
+            try:
+                _render_regime_map(_al_corr, _al_eq_r)
+            except Exception:
+                _err_slot("regime map")
 
     with _col_right:
         _section_header("03", "Market Signals", "returns · channels · risk arc",
