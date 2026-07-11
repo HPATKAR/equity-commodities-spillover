@@ -3995,6 +3995,76 @@ _CHANNEL_GROUPS = {
     "Equity / Infl": ("equity_sector", "credit", "inflation"),
 }
 
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=4)
+def _load_credit_signal(_fred_key: str, start: str, end: str) -> dict:
+    """Credit-stress summary (HY OAS + leveraged-loan / BDC basket) for the
+    Cross-Asset Signals cell. Wraps the Intelligence Briefing's private-credit
+    builder — same computation, single source of truth — and disk-backs it so a
+    cold Command Center render never pays the FRED + yfinance cost. Leading
+    underscore on _fred_key keeps the secret out of the cache signature."""
+    import datetime as _dt
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    ckey = f"credit_signal__{_dt.date.today()}"
+    hit = read_artifact(ckey, 6 * 3600)
+    if hit is not None:
+        return hit
+    try:
+        from src.pages.insights import _build_private_credit_insight
+        res = _build_private_credit_insight(_fred_key, start, end, pd.DataFrame())
+    except Exception:
+        res = {}
+    if res and res.get("_score") is not None:
+        write_artifact(ckey, res)
+    return res or {}
+
+
+def _render_cross_asset_signals(fred_key: str, start: str, end: str) -> None:
+    """Compact right-rail cell for cross-asset risk reads the rest of the
+    Command Center does not cover. Currently: Credit stress. Links to the full
+    verdict + evidence on the Intelligence Briefing."""
+    rows = []
+
+    # ── Credit stress (HY OAS + BKLN / BDC basket) ───────────────────────────
+    c = _load_credit_signal(fred_key, start, end)
+    if c and c.get("_score") is not None:
+        _sig, _col = c.get("_sig", "NORMAL"), c.get("color", _C["label"])
+        _score, _oas, _chg = c.get("_score"), c.get("_hy_oas"), c.get("_hy_chg")
+        _val = f"HY OAS {_oas * 100:.0f}bp" if _oas is not None else f"PC score {_score}"
+        _delta = ""
+        if _chg is not None and abs(_chg) >= 0.01:
+            _dc = _C["danger"] if _chg > 0 else _C["safe"]
+            _delta = (f'<span style="{_M}font-size:.56rem;font-weight:700;color:{_dc};'
+                      f'margin-left:6px">{"▲" if _chg > 0 else "▼"}{abs(_chg) * 100:.0f}bp/90d</span>')
+        rows.append(
+            f'<div style="padding:2px 0;border-bottom:1px solid {_C["border"]}">'
+            f'<div style="display:flex;align-items:baseline;justify-content:space-between;'
+            f'gap:6px;white-space:nowrap">'
+            f'<span style="flex:0 0 auto">'
+            f'<span style="{_M}font-size:.56rem;font-weight:700;letter-spacing:.06em;'
+            f'color:{_C["text"]}">CREDIT</span>'
+            f'<span style="{_M}font-size:.5rem;font-weight:700;letter-spacing:.06em;color:{_col};'
+            f'background:{_col}1a;border:1px solid {_col}55;padding:0 4px;margin-left:5px">{_sig}</span>'
+            f'</span>'
+            f'<span style="flex:0 0 auto;text-align:right">'
+            f'<span style="{_M}font-size:.58rem;color:{_C["text"]}">{_val}</span>{_delta}</span>'
+            f'</div>'
+            f'<div style="{_F}font-size:.52rem;color:{_C["muted"]};line-height:1.4;margin-top:1px">'
+            f'PC bubble score {_score}/100 · leveraged loans + BDC vs S&P</div>'
+            f'</div>'
+        )
+
+    if not rows:
+        return  # no data (e.g. no FRED key and fetch failed) — hide silently
+
+    body = (
+        "".join(rows)
+        + f'<a href="?page=insights" target="_self" style="text-decoration:none">'
+          f'<span style="{_M}font-size:.48rem;color:{_C["label"]};letter-spacing:.08em;'
+          f'display:block;margin-top:4px">FULL VERDICTS → INTELLIGENCE BRIEFING</span></a>'
+    )
+    _card("Cross-Asset Signals", body)
+
+
 def _render_transmission_channels(conflict_results: dict, risk: dict) -> None:
     """Right column: aggregate transmission pressure by channel group."""
     active = [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"]
@@ -6399,6 +6469,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _render_returns_heatmap()
         # § R1b Transmission channels — CIS-weighted channel pressure breakdown
         _render_transmission_channels(conflict_results, risk)
+        # § R1c Cross-asset signals — credit-stress read absent elsewhere on the CC
+        try:
+            _render_cross_asset_signals(fred_key, start, end)
+        except Exception:
+            _err_slot("cross-asset signals")
         # § R2a Hot stocks — top mega-caps by 24h news activity, clickable headlines
         _section_header("", "Stocks to Watch", "most active by news · click to read",
                         link_page="watchlist", link_label="Watchlist")

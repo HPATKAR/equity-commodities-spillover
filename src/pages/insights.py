@@ -1191,6 +1191,7 @@ def _build_private_credit_insight(
             ),
             confidence=0,
             confidence_label="No Data",
+            _score=None, _hy_oas=None, _hy_chg=None, _sig="N/A",
         )
 
     # ── Composite score ──────────────────────────────────────────────────
@@ -1292,6 +1293,10 @@ def _build_private_credit_insight(
         f"institutional redemptions gated (interval fund lockups mask stress for 12–18 months)."
     )
 
+    _sig = ("UNWIND" if (composite >= 65 and _spreading)
+            else "BUBBLE" if composite >= 65
+            else "CAUTION" if composite >= 40
+            else "NORMAL")
     return dict(
         emoji=emoji,
         headline=headline,
@@ -1300,6 +1305,13 @@ def _build_private_credit_insight(
         detail_html="".join(_d),
         confidence=conf,
         confidence_label=conf_lbl,
+        # Compact summary for the Command Center "Cross-Asset Signals" cell —
+        # same computation, terse projection (single source of truth).
+        # HY OAS is FRED percent units (3.42 = 342 bps); keep raw, format at render.
+        _score=round(composite),
+        _hy_oas=hy_current,
+        _hy_chg=hy_90d_chg,
+        _sig=_sig,
     )
 
 
