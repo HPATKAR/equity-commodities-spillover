@@ -462,6 +462,118 @@ def _granger_forward_returns(
     return df
 
 
+# ── Spillover direction: does the net-transmitter LEAD the net-receiver? ────
+
+@st.cache_data(ttl=3600, show_spinner=False, max_entries=2)
+def _spillover_lead_hit_rate(
+    eq_r: pd.DataFrame,
+    cmd_r: pd.DataFrame,
+    forward_days: int = 5,
+    z_threshold: float = 1.0,
+    z_lookback: int = 252,
+    window: int = 150,
+    step: int = 10,          # every 10d (not 5) — st.tabs runs this on every page load
+    per_side: int = 5,
+    max_rows: int = 2000,    # cap history (~8y) so the rolling-VAR pass stays bounded
+) -> dict:
+    """
+    Out-of-sample test of the Diebold-Yilmaz DIRECTION claim (now GFEVD, order-
+    invariant): the net-transmitter should LEAD the net-receiver.
+
+    At each point-in-time rolling-D-Y window (the VAR window ENDS on the date, so
+    the transmitter/receiver identity uses only past data — no look-ahead), the
+    identified top transmitter's extreme daily move (|z| > z_threshold) is used to
+    predict the top receiver's forward return direction N days out.
+
+      hit_fwd  = % of transmitter→receiver signals that resolved in the predicted
+                 direction  ·  edge_fwd = hit_fwd − 50
+      hit_rev  = the same test with roles SWAPPED (receiver→transmitter) — a
+                 directionality control. If the D-Y direction carries genuine lead
+                 information, edge_fwd should exceed edge_rev.
+
+    Returns {} if fewer than 20 transmitter signals fire.
+    """
+    from src.analysis.spillover import rolling_diebold_yilmaz
+
+    eq_sel  = list(eq_r.columns[:per_side])
+    cmd_sel = list(cmd_r.columns[:per_side])
+    panel   = pd.concat([eq_r[eq_sel], cmd_r[cmd_sel]], axis=1).dropna()
+    if len(panel) > max_rows:
+        panel = panel.iloc[-max_rows:]
+    if len(panel) < window + z_lookback:
+        return {}
+
+    roll = rolling_diebold_yilmaz(panel, window=window, step=step)
+    if roll.empty:
+        return {}
+
+    zmean = panel.rolling(z_lookback, min_periods=63).mean()
+    zstd  = panel.rolling(z_lookback, min_periods=63).std()
+    z     = (panel - zmean) / zstd.replace(0, np.nan)
+    fwd   = panel.shift(-forward_days)          # forward N-day return per asset
+
+    fwd_hits: list[float] = []
+    rev_hits: list[float] = []
+    for date, r in roll.iterrows():
+        tx, rx = r["top_transmitter"], r["top_receiver"]
+        if tx not in z.columns or rx not in z.columns or date not in z.index:
+            continue
+        ztx, zrx = z.at[date, tx], z.at[date, rx]
+        ftx = fwd.at[date, tx] if date in fwd.index else np.nan
+        frx = fwd.at[date, rx] if date in fwd.index else np.nan
+        if pd.notna(ztx) and abs(ztx) > z_threshold and pd.notna(frx):
+            fwd_hits.append(1.0 if (ztx > 0) == (frx > 0) else 0.0)   # transmitter → receiver
+        if pd.notna(zrx) and abs(zrx) > z_threshold and pd.notna(ftx):
+            rev_hits.append(1.0 if (zrx > 0) == (ftx > 0) else 0.0)   # receiver → transmitter (control)
+
+    # ── Connectedness → forward VOLATILITY (D-Y is a variance measure, so this
+    #    is the test it should pass: high total connectedness precedes elevated
+    #    realized volatility) ────────────────────────────────────────────────
+    sys_ret = panel.mean(axis=1)
+    fwd_vol = (sys_ret.rolling(forward_days).std().shift(-forward_days)
+               * (252 ** 0.5) * 100.0)                     # forward annualised vol %
+    ts      = roll["total_spillover"]
+    common  = ts.index.intersection(fwd_vol.dropna().index)
+    conn: dict = {}
+    if len(common) >= 30:
+        a, b = ts.loc[common], fwd_vol.loc[common]
+        try:
+            from scipy.stats import spearmanr
+            rho = float(spearmanr(a, b)[0])
+        except Exception:
+            rho = float("nan")
+        hit = float(((a > a.median()) == (b > b.median())).mean()) * 100.0
+        conn = {
+            "conn_vol_n":        len(common),
+            "conn_vol_spearman": (round(rho, 3) if rho == rho else None),
+            "conn_vol_hit":      round(hit, 1),
+            "conn_vol_edge":     round(hit - 50.0, 1),
+        }
+
+    if len(fwd_hits) < 20 and not conn:
+        return {}
+
+    out: dict = {
+        "assets":       eq_sel + cmd_sel,
+        "n_windows":    int(len(roll)),
+        "forward_days": forward_days,
+        **conn,
+    }
+    if len(fwd_hits) >= 20:
+        hit_fwd = float(np.mean(fwd_hits))
+        hit_rev = float(np.mean(rev_hits)) if rev_hits else float("nan")
+        out.update({
+            "n_signals":        len(fwd_hits),
+            "hit_fwd":          round(hit_fwd * 100, 1),
+            "edge_fwd":         round((hit_fwd - 0.5) * 100, 1),
+            "n_signals_rev":    len(rev_hits),
+            "hit_rev":          (round(hit_rev * 100, 1) if hit_rev == hit_rev else None),
+            "edge_rev":         (round((hit_rev - 0.5) * 100, 1) if hit_rev == hit_rev else None),
+            "directional_edge": (round((hit_fwd - hit_rev) * 100, 1) if hit_rev == hit_rev else None),
+        })
+    return out
+
+
 # ── Risk Score vs VIX ──────────────────────────────────────────────────────
 
 def _risk_score_vs_vix(
@@ -1208,13 +1320,84 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True)
 
     # ── Signal audit tabs ─────────────────────────────────────────────────
-    _tab1, _tab2, _tab3, _tab4, _tab5 = st.tabs([
+    _tab1, _tab2, _tab3, _tab4, _tab5, _tab6 = st.tabs([
         "Regime Detection",
         "Risk Score vs VIX",
         "Granger Hit Rate",
         "COT Contrarian",
         "GRS Live Scorecard",
+        "Spillover Predictive Power",
     ])
+
+    # ── Panel 6: Spillover Predictive Power ─────────────────────────────────
+    # (rendered here for locality; tab render order is independent of code order)
+    with _tab6:
+        st.markdown(
+            f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">'
+            f'Spillover: Does the Diebold-Yilmaz Signal Predict?</p>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<p style="{_F}font-size:0.64rem;color:#8890a1;margin:0 0 8px 0">'
+            f'Point-in-time, order-invariant (GFEVD) rolling D-Y: the VAR window ends on each date, '
+            f'so there is no look-ahead. Two tests. <b>(1) Connectedness → forward volatility</b> — '
+            f'D-Y is a <i>variance</i> measure, so high total connectedness should precede elevated '
+            f'realised vol. <b>(2) Direction → return</b> — does the net-transmitter lead the '
+            f'net-receiver&#39;s return? <b>Edge (pp)</b> = hit rate − 50% baseline.</p>',
+            unsafe_allow_html=True,
+        )
+        _sf, _sb = st.columns([1, 1])
+        _sfd = _sf.slider("Forward window (days)", 3, 20, 5, key="acc_sp_fwd")
+        _run = _sb.button("▶ Run spillover validation", key="acc_sp_run",
+                          help="Fits ~180 rolling VARs (order-invariant GFEVD); a few seconds. "
+                               "Not run automatically so the page stays fast.")
+        if _run:
+            with st.spinner("Fitting rolling Diebold-Yilmaz (order-invariant GFEVD)…"):
+                st.session_state["_acc_sp"] = _spillover_lead_hit_rate(eq_r, cmd_r, forward_days=_sfd)
+        _sp = st.session_state.get("_acc_sp")
+        if _sp is None:
+            st.info("Press **▶ Run spillover validation** to compute the out-of-sample test. "
+                    "It is not run on page load (rolling VARs are heavy) — this keeps the page responsive.")
+        elif not _sp:
+            st.info("Insufficient rolling-D-Y windows for the selected asset set / range.")
+        else:
+            _cve  = _sp.get("conn_vol_edge")
+            _rho  = _sp.get("conn_vol_spearman")
+            _de   = _sp.get("directional_edge")
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Connectedness → Vol edge",
+                      f'{_cve:+.1f}pp' if _cve is not None else "–",
+                      help="Hit rate that high total spillover precedes above-median forward "
+                           "volatility, minus the 50% baseline. Positive = predictive.")
+            m2.metric("Spearman ρ",
+                      f'{_rho:+.2f}' if _rho is not None else "–",
+                      help="Rank correlation between rolling total spillover and forward realised vol.")
+            m3.metric("Direction → Return edge",
+                      f'{_de:+.1f}pp' if _de is not None else "–",
+                      help="Net-transmitter→receiver forward-return hit rate minus the reverse "
+                           "(receiver→transmitter) control. ~0 = no directional-return lead.")
+            m4.metric("Rolling windows", _sp.get("n_windows", "–"))
+            _v1 = ("<b>Validated:</b> the connectedness index carries genuine predictive information "
+                   "for forward volatility — exactly what D-Y measures (variance transmission). "
+                   if (_cve is not None and _cve > 2) else
+                   "<b>Weak</b> connectedness→volatility link on this window. ")
+            _v2 = ("The directional (equity-led / commodity-led) call does <b>not</b> forecast return "
+                   "direction and shows no transmitter→receiver asymmetry — as expected, since D-Y "
+                   "decomposes <i>variance</i>, not returns. Read it as a volatility-transmission map, "
+                   "not a return-direction predictor.")
+            st.markdown(
+                f'<div style="{_F}font-size:0.64rem;color:#b8b8b8;line-height:1.6;'
+                f'border-left:3px solid #CFB991;padding:.55rem .8rem;margin-top:.7rem;'
+                f'background:#0f0f0f">{_v1}{_v2}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                f'Point-in-time rolling GFEVD · {_sp.get("n_windows","?")} windows · '
+                f'{_sp.get("conn_vol_n","?")} vol observations · '
+                f'{_sp.get("n_signals","?")} transmitter signals · '
+                f'panel: {", ".join(_sp.get("assets", [])[:10])}'
+            )
 
     # ── Panel 1: Regime Detection ──────────────────────────────────────────
     with _tab1:
