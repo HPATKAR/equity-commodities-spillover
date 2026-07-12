@@ -5399,6 +5399,16 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     if not active:
         return
 
+    # ── telemetry: locked (highest-CIS) contact + fleet stats ────────────────
+    top_cid = max(active, key=lambda x: x[1].get("cis", 0))[0]
+    _tr     = conflict_results[top_cid]
+    top_lbl = (_tr.get("label") or top_cid).replace("_", " ")
+    top_cis = float(_tr.get("cis", 0))
+    top_tps = float(_tr.get("tps", 0))
+    top_brg = int(round(top_tps / 100.0 * 360.0)) % 360   # TPS-angle as a compass bearing
+    n_esc   = sum(1 for _, r in active if r.get("escalation") == "escalating")
+    n_ct    = len(active)
+
     # Responsive viewBox — fills column width, square aspect ratio
     VW, VH  = 260, 260
     CX, CY  = 130, 130
@@ -5457,10 +5467,45 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         f'text-anchor="end" font-family="JetBrains Mono,monospace">270</text>'
     )
 
+    # ── fine graticule: perimeter ticks every 15° (major every 45°) ──────────
+    graticule = ""
+    for _d in range(0, 360, 15):
+        _maj     = (_d % 45 == 0)
+        _ra      = math.radians(_d - 90)
+        _t1, _t2 = R + 2, R + (7 if _maj else 3)
+        graticule += (
+            f'<line x1="{CX + _t1 * math.cos(_ra):.1f}" y1="{CY + _t1 * math.sin(_ra):.1f}" '
+            f'x2="{CX + _t2 * math.cos(_ra):.1f}" y2="{CY + _t2 * math.sin(_ra):.1f}" '
+            f'stroke="#3a3a3a" stroke-width="{1.0 if _maj else 0.6}"/>'
+        )
+
+    # ── rotating radar sweep — flat trailing wedge + bright leading edge ──────
+    _sw = _C["safe"]
+    _a0 = math.radians(-90)          # leading edge at 12 o'clock
+    _a1 = math.radians(-90 - 40)     # 40° trailing fade
+    sweep = (
+        f'<g class="radar-sweep" style="transform-box:view-box;transform-origin:{CX}px {CY}px">'
+        f'<path d="M {CX} {CY} L {CX + R * math.cos(_a0):.1f} {CY + R * math.sin(_a0):.1f} '
+        f'A {R} {R} 0 0 0 {CX + R * math.cos(_a1):.1f} {CY + R * math.sin(_a1):.1f} Z" '
+        f'fill="{_sw}" opacity="0.10"/>'
+        f'<line x1="{CX}" y1="{CY}" x2="{CX + R * math.cos(_a0):.1f}" '
+        f'y2="{CY + R * math.sin(_a0):.1f}" stroke="{_sw}" stroke-width="1.4" opacity="0.7"/>'
+        f'</g>'
+    )
+
+    # ── defs: centre vignette for depth ──────────────────────────────────────
+    defs = (
+        f'<defs><radialGradient id="tr-vig" cx="50%" cy="50%" r="50%">'
+        f'<stop offset="52%" stop-color="#000" stop-opacity="0"/>'
+        f'<stop offset="100%" stop-color="#000" stop-opacity="0.5"/>'
+        f'</radialGradient></defs>'
+    )
+    vignette = f'<circle cx="{CX}" cy="{CY}" r="{R}" fill="url(#tr-vig)" pointer-events="none"/>'
+
     # ── conflict blips — low CIS painted first so high-CIS renders on top ─────
-    top_cid = max(active, key=lambda x: x[1].get("cis", 0))[0]
     pulse_rings = ""
-    blips = ""
+    reticle     = ""
+    blips       = ""
 
     for cid, r in sorted(active, key=lambda x: x[1].get("cis", 0)):
         cis   = float(r.get("cis", 50))
@@ -5476,7 +5521,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         by = CY + rad_r * math.sin(theta)
         dot_r = 5.5 + cis / 100.0 * 4.5  # 5.5–10 px range
 
-        # pulse rings for highest-CIS conflict only
+        # pulse rings + targeting reticle for the highest-CIS ("locked") contact
         if cid == top_cid:
             pulse_rings += (
                 f'<circle class="rp1" cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r + 7:.1f}" '
@@ -5484,6 +5529,16 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
                 f'<circle class="rp2" cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r + 16:.1f}" '
                 f'fill="none" stroke="{color}" stroke-width=".7" opacity=".2"/>'
             )
+            _br, _bl = dot_r + 9, 5.0            # bracket offset, arm length
+            for _sx in (-1, 1):
+                for _sy in (-1, 1):
+                    _cxx, _cyy = bx + _sx * _br, by + _sy * _br
+                    reticle += (
+                        f'<line x1="{_cxx:.1f}" y1="{_cyy:.1f}" x2="{_cxx - _sx * _bl:.1f}" '
+                        f'y2="{_cyy:.1f}" stroke="{color}" stroke-width="1.3"/>'
+                        f'<line x1="{_cxx:.1f}" y1="{_cyy:.1f}" x2="{_cxx:.1f}" '
+                        f'y2="{_cyy - _sy * _bl:.1f}" stroke="{color}" stroke-width="1.3"/>'
+                    )
 
         blips += (
             f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{dot_r:.1f}" '
@@ -5527,28 +5582,37 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         "@keyframes rp2{0%,100%{transform:scale(1);opacity:.2}50%{transform:scale(2.0);opacity:.02}}"
         ".rp1{transform-box:fill-box;transform-origin:center;animation:rp1 2.4s ease-in-out infinite}"
         ".rp2{transform-box:fill-box;transform-origin:center;animation:rp2 2.4s ease-in-out infinite .5s}"
+        "@keyframes radar-sweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}"
+        ".radar-sweep{animation:radar-sweep 4.5s linear infinite}"
         "</style>"
     )
 
     svg = (
         f'<svg viewBox="0 0 {VW} {VH}" '
         f'style="width:100%;height:auto;display:block;overflow:visible">'
-        f'{anim}'
-        f'{bg}{spokes}{ring_labels}{compass}'
-        f'{pulse_rings}{blips}{centre}'
+        f'{defs}{anim}'
+        f'{bg}{vignette}{spokes}{graticule}{ring_labels}{compass}'
+        f'{sweep}{pulse_rings}{blips}{reticle}{centre}'
         f'</svg>'
     )
 
-    legend = (
-        f'<div style="display:flex;justify-content:center;gap:14px;'
-        f'margin-top:.3rem;padding-top:.25rem;border-top:1px solid {_C["border"]}">'
-        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">radius = CIS intensity</span>'
-        f'<span style="{_M}font-size:0.50rem;color:{_C["muted"]}">angle = TPS pressure</span>'
+    _lock_col = _tr.get("color", _C["warn"])
+    telemetry = (
+        f'<div style="margin-top:.3rem;padding-top:.3rem;border-top:1px solid {_C["border"]};'
+        f'{_M}font-size:.5rem;line-height:1.65">'
+        f'<div style="display:flex;justify-content:space-between;color:{_C["label"]}">'
+        f'<span>◈ {n_ct} CONTACTS'
+        + (f' · <span style="color:{_C["danger"]};font-weight:700">{n_esc} ESC</span>' if n_esc else '')
+        + f'</span><span style="color:{_C["muted"]}">SWEEP 4.5s</span></div>'
+        f'<div style="color:{_lock_col};font-weight:700;letter-spacing:.03em;margin-top:1px">'
+        f'▣ LOCK {top_lbl[:13].upper()} · CIS {top_cis:.0f} · TPS {top_tps:.0f} · BRG {top_brg:03d}°</div>'
+        f'<div style="color:{_C["muted"]};margin-top:1px">'
+        f'radius = CIS intensity · angle = TPS pressure</div>'
         f'</div>'
     )
 
     _card("THREAT RADAR · CIS × TPS",
-        f'<div style="padding:.1rem 0">{svg}{legend}</div>',
+        f'<div style="padding:.1rem 0">{svg}{telemetry}</div>',
     )
 
 
