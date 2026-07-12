@@ -5233,19 +5233,23 @@ def _load_hot_stocks() -> list[dict]:
 
     # Batch price fetch — one yf.download call for all tickers
     try:
-        raw_px = yf.download(tickers, period="2d", auto_adjust=True, progress=False, threads=True)
+        raw_px = yf.download(tickers, period="7d", auto_adjust=True, progress=False, threads=True)
         closes = raw_px["Close"] if isinstance(raw_px.columns, pd.MultiIndex) else pd.DataFrame()
     except Exception:
         closes = pd.DataFrame()
 
-    def _day_ret(ticker: str) -> float | None:
+    def _price_stats(ticker: str) -> tuple:
+        """(last price, 1-day return %, ~5-day return %) — Nones if unavailable."""
         try:
             col = closes[ticker].dropna()
             if len(col) >= 2:
-                return round((col.iloc[-1] / col.iloc[-2] - 1) * 100, 2)
+                price = float(col.iloc[-1])
+                d1    = round((col.iloc[-1] / col.iloc[-2] - 1) * 100, 2)
+                d5    = round((col.iloc[-1] / col.iloc[0]  - 1) * 100, 1) if len(col) >= 3 else None
+                return price, d1, d5
         except Exception:
             pass
-        return None
+        return None, None, None
 
     def _fetch_rss(ticker: str) -> dict | None:
         try:
@@ -5265,11 +5269,14 @@ def _load_hot_stocks() -> list[dict]:
                 return None
             score = sum(max(0.0, 1.0 - (now - a["ts"]) / 86400.0) for a in recent)
             top   = recent[0]
+            _price, _d1, _d5 = _price_stats(ticker)
             return {
                 "ticker":   ticker,
                 "score":    score,
                 "n_recent": len(recent),
-                "day_ret":  _day_ret(ticker),
+                "day_ret":  _d1,
+                "ret_5d":   _d5,
+                "price":    _price,
                 "headline": top["title"],
                 "url":      top["url"],
                 "source":   top["source"] or "Yahoo Finance",
@@ -5317,6 +5324,8 @@ def _render_hot_stocks() -> None:
         source   = item["source"]
         n        = item["n_recent"]
         pub_ts   = item["pub_ts"]
+        price    = item.get("price")
+        ret_5d   = item.get("ret_5d")
 
         if day_ret is None:
             ret_str, ret_col = "—", _C["label"]
@@ -5329,6 +5338,20 @@ def _render_hot_stocks() -> None:
         age_str = (f"{int(age_h*60)}m" if age_h < 1 else f"{int(age_h)}h") + " ago"
 
         hl = (headline[:90] + "…") if len(headline) > 90 else headline
+
+        # Extra detail: last price + 5-day momentum (colour-coded)
+        _price_str = f"${price:,.2f}" if price is not None else ""
+        if ret_5d is None:
+            _d5_html = ""
+        else:
+            _d5c = _C.get("green", "#27ae60") if ret_5d >= 0 else _C["danger"]
+            _d5_html = f'<span style="color:{_d5c};font-weight:600">5d {ret_5d:+.1f}%</span>'
+        _stats = " · ".join(x for x in [_price_str, _d5_html] if x)
+        stats_html = (
+            f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
+            f'color:#c8c8c8;margin-bottom:3px">{_stats}</div>'
+        ) if _stats else ""
+
         link_open  = f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:block">' if url else "<div>"
         link_close = "</a>" if url else "</div>"
 
@@ -5346,6 +5369,7 @@ def _render_hot_stocks() -> None:
             f'<div style="flex:1;min-width:0">'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:{_C["muted"]};margin-bottom:3px">'
             f'{n} article{"s" if n!=1 else ""} · {age_str}</div>'
+            f'{stats_html}'
             f'{link_open}'
             f'<div style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;color:#dde0e8;line-height:1.4">{hl}</div>'
             f'{link_close}'
