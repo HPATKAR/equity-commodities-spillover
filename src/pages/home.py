@@ -4346,6 +4346,47 @@ def _load_vol_trio() -> dict[str, dict]:
 # § L6  REGIME HISTORY — 60-day colour-coded regime strip
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _render_hedge_basket(conflict_results: dict) -> None:
+    """Left column (tail): aggregate geopolitical hedge basket — the assets the
+    active conflicts point to as hedges, CIS-weighted across fronts. The
+    actionable 'so what' of the conflict intelligence, ranked."""
+    active = [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"]
+    if not active:
+        return
+    _ABBR = {"US 20Y+ Treasury (TLT)": "TLT · 20Y+", "US 1-3Y Treasury (SHY)": "SHY · 1-3Y",
+             "US Dollar Index": "DXY"}
+    agg: dict = {}
+    for _cid, r in active:
+        cis = float(r.get("cis", 0))
+        for h in (r.get("hedge_assets") or []):
+            d = agg.setdefault(h, {"w": 0.0, "n": 0})
+            d["w"] += cis
+            d["n"] += 1
+    if not agg:
+        return
+    ranked = sorted(agg.items(), key=lambda x: -x[1]["w"])[:4]
+    max_w  = ranked[0][1]["w"] or 1.0
+    rows = (
+        f'<div style="{_M}font-size:.5rem;color:{_C["muted"]};letter-spacing:.04em;'
+        f'margin-bottom:5px">CIS-weighted across {len(active)} active fronts</div>'
+    )
+    for name, d in ranked:
+        lbl = _ABBR.get(name, name)
+        w   = d["w"] / max_w * 100
+        col = _C["safe"] if d["n"] >= 3 else _C["warn"] if d["n"] >= 2 else _C["muted"]
+        rows += (
+            f'<div style="display:flex;align-items:center;gap:6px;padding:2px 0">'
+            f'<span style="{_M}font-size:.56rem;font-weight:700;color:{_C["text"]};'
+            f'min-width:74px;white-space:nowrap">{lbl}</span>'
+            f'<div style="flex:1;height:5px;background:{_C["card2"]}">'
+            f'<div style="width:{w:.0f}%;height:5px;background:{col}"></div></div>'
+            f'<span style="{_M}font-size:.52rem;color:{_C["muted"]};white-space:nowrap;'
+            f'min-width:42px;text-align:right">{d["n"]} front{"s" if d["n"] > 1 else ""}</span>'
+            f'</div>'
+        )
+    _card("GEOPOLITICAL HEDGE BASKET", rows)
+
+
 def _render_regime_history(regimes: "pd.Series | None") -> None:
     """Left column: 60-day day-by-day correlation-regime strip."""
     _REG_COL = {1: _C["safe"], 2: _C["warn"], 3: _C["danger"]}
@@ -6770,6 +6811,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         #  neighbours; the two chart panels re-level the trio.)
         # § L4  Regime history strip — 60d day-by-day coupling regime
         _render_regime_history(_al_regimes)
+        # § L5  Geopolitical hedge basket — fills the tail below Regime History
+        try:
+            _render_hedge_basket(conflict_results)
+        except Exception:
+            _err_slot("hedge basket")
 
     with _col_ctr:
         _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals",
