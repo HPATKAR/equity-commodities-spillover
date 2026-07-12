@@ -2036,6 +2036,72 @@ def _render_intelligence_feed(
     color = risk["color"]
     label = risk["label"]
 
+    # ── Chokepoint Strait Watch — pinned to the TOP of the feed ───────────────
+    scenario = get_scenario()
+    tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
+    st.markdown(
+        f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
+        f'text-transform:uppercase;color:{_GOLD};padding:0 0 .35rem">Chokepoint Watch</div>',
+        unsafe_allow_html=True,
+    )
+    strait_rows = ""
+    for si, s in enumerate(_STRAITS):
+        s_risk  = min(int(s["base_risk"] * tps_mult), 100)
+        tc      = _C["danger"] if s_risk >= 70 else _C["warn"] if s_risk >= 45 else _C["safe"]
+        tier    = "HIGH" if s_risk >= 70 else "ELEV" if s_risk >= 45 else "MOD"
+        s_delay = f"{si * 0.06:.2f}s"
+        pulse_dot = (
+            f'<span class="hm-dot" style="background:{tc};flex-shrink:0"></span>'
+            if s_risk >= 70 else
+            f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
+            f'background:{tc};opacity:.7;flex-shrink:0"></span>'
+        )
+        strait_rows += (
+            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:2px 0;'
+            f'border-bottom:1px solid {_C["border"]};animation-delay:{s_delay}">'
+            f'{pulse_dot}'
+            f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{tc};min-width:66px;'
+            f'white-space:nowrap">{s["name"][:16]}</span>'
+            f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
+            f'<div class="hm-bar-grow" style="width:{s_risk}%;height:4px;background:{tc};border-radius:1px;animation-delay:{s_delay}"></div></div>'
+            f'<span style="{_M}font-size:0.63rem;color:{tc};font-weight:700;min-width:20px;'
+            f'text-align:right">{s_risk}</span>'
+            f'<span style="background:{tc};color:#000;{_M}font-size:0.50rem;font-weight:700;'
+            f'padding:1px 4px;letter-spacing:.06em;min-width:32px;text-align:center">{tier}</span>'
+            f'</div>'
+        )
+    st.markdown(
+        f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
+        f'padding:.35rem .55rem">{strait_rows}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── What-changed delta strip (under Chokepoint Watch) ─────────────────────
+    _dg  = st.session_state.get("_delta_geo_score")
+    _dc  = st.session_state.get("_delta_cis")
+    _dt  = st.session_state.get("_delta_tps")
+    if any(v is not None for v in [_dg, _dc, _dt]):
+        def _dchip(label, delta):
+            if delta is None:
+                return f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;—</span>'
+            col  = _C["danger"] if delta > 0.3 else _C["safe"] if delta < -0.3 else _C["muted"]
+            sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else "— flat"
+            return (
+                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;</span>'
+                f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{sign}</span>'
+            )
+        st.markdown(
+            f'<div style="margin:.5rem 0 .2rem;padding:.4rem .55rem;background:{_C["card"]};'
+            f'border:1px solid {_C["border"]};display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+            f'<span style="{_M}font-size:0.56rem;letter-spacing:.10em;text-transform:uppercase;'
+            f'color:{_C["label"]}">Δ vs last load</span>'
+            f'{_dchip("GRS", _dg)}'
+            f'{_dchip("CIS", _dc)}'
+            f'{_dchip("TPS", _dt)}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     # Header — "Intelligence Feed" + a compact News GPR chip folded inline
     # (between the title and LIVE), replacing the old standalone GPR card.
     _gpr = risk.get("news_gpr")
@@ -2292,73 +2358,6 @@ def _render_intelligence_feed(
                 f'</div>',
                 unsafe_allow_html=True,
             )
-
-    # ── Chokepoint Strait Watch (fills remaining left-col space) ─────────────
-    scenario = get_scenario()
-    tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
-    st.markdown(
-        f'<div style="{_M}font-size:0.63rem;font-weight:700;letter-spacing:.10em;'
-        f'text-transform:uppercase;color:{_GOLD};padding:.5rem 0 .35rem;'
-        f'margin-top:.8rem;border-top:1px solid {_C["border"]}">Chokepoint Watch</div>',
-        unsafe_allow_html=True,
-    )
-    strait_rows = ""
-    for si, s in enumerate(_STRAITS):
-        s_risk  = min(int(s["base_risk"] * tps_mult), 100)
-        tc      = _C["danger"] if s_risk >= 70 else _C["warn"] if s_risk >= 45 else _C["safe"]
-        tier    = "HIGH" if s_risk >= 70 else "ELEV" if s_risk >= 45 else "MOD"
-        s_delay = f"{si * 0.06:.2f}s"
-        pulse_dot = (
-            f'<span class="hm-dot" style="background:{tc};flex-shrink:0"></span>'
-            if s_risk >= 70 else
-            f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
-            f'background:{tc};opacity:.7;flex-shrink:0"></span>'
-        )
-        strait_rows += (
-            f'<div class="hm-row-in" style="display:flex;align-items:center;gap:6px;padding:2px 0;'
-            f'border-bottom:1px solid {_C["border"]};animation-delay:{s_delay}">'
-            f'{pulse_dot}'
-            f'<span style="{_M}font-size:0.63rem;font-weight:700;color:{tc};min-width:66px;'
-            f'white-space:nowrap">{s["name"][:16]}</span>'
-            f'<div style="flex:1;background:{_C["card2"]};height:4px;border-radius:1px">'
-            f'<div class="hm-bar-grow" style="width:{s_risk}%;height:4px;background:{tc};border-radius:1px;animation-delay:{s_delay}"></div></div>'
-            f'<span style="{_M}font-size:0.63rem;color:{tc};font-weight:700;min-width:20px;'
-            f'text-align:right">{s_risk}</span>'
-            f'<span style="background:{tc};color:#000;{_M}font-size:0.50rem;font-weight:700;'
-            f'padding:1px 4px;letter-spacing:.06em;min-width:32px;text-align:center">{tier}</span>'
-            f'</div>'
-        )
-    st.markdown(
-        f'<div style="background:{_C["card"]};border:1px solid {_C["border"]};'
-        f'padding:.35rem .55rem">{strait_rows}</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── What-changed delta strip ──────────────────────────────────────────────
-    _dg  = st.session_state.get("_delta_geo_score")
-    _dc  = st.session_state.get("_delta_cis")
-    _dt  = st.session_state.get("_delta_tps")
-    if any(v is not None for v in [_dg, _dc, _dt]):
-        def _dchip(label, delta):
-            if delta is None:
-                return f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;—</span>'
-            col  = _C["danger"] if delta > 0.3 else _C["safe"] if delta < -0.3 else _C["muted"]
-            sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else "— flat"
-            return (
-                f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;</span>'
-                f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{sign}</span>'
-            )
-        st.markdown(
-            f'<div style="margin-top:.65rem;padding:.4rem .55rem;background:{_C["card"]};'
-            f'border:1px solid {_C["border"]};display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-            f'<span style="{_M}font-size:0.56rem;letter-spacing:.10em;text-transform:uppercase;'
-            f'color:{_C["label"]}">Δ vs last load</span>'
-            f'{_dchip("GRS", _dg)}'
-            f'{_dchip("CIS", _dc)}'
-            f'{_dchip("TPS", _dt)}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
 
     # ── Regime-transition radar chip (critical slowing down) ──────────────────
     # Runs the early-warning engine on the already-loaded avg_corr driver — no
