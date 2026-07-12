@@ -541,6 +541,41 @@ def _bk_all_bands(
     return out
 
 
+# ── Generalized FEVD (order-invariant) ────────────────────────────────────
+
+def _gfevd_decomp(result, horizon: int) -> "np.ndarray | None":
+    """Generalized forecast-error variance decomposition (Pesaran & Shin 1998;
+    Koop-Pesaran-Potter), the variant Diebold-Yilmaz (2012) §2.2 formally
+    specifies. Unlike the Cholesky FEVD it is INVARIANT to the ordering of the
+    VAR columns, so FROM/TO/NET (and the equity-led vs commodity-led call) do not
+    shift when assets are reordered.
+
+        θ^g_ij(H) = σ_jj^{-1} Σ_{h=0}^{H-1} (e_i' Ψ_h Σ e_j)²  /  Σ_{h=0}^{H-1} (Ψ_h Σ Ψ_h')_ii
+
+    Ψ_h are the VAR MA(∞) coefficients (Ψ_0 = I), Σ the innovation covariance.
+    Rows are then normalised to sum to 1 (D-Y 2012), matching the semantics of
+    statsmodels' ``fevd.decomp[:, -1, :]``. Returns an (n, n) array, or None on
+    failure (caller falls back / discards the window)."""
+    try:
+        Sigma = np.asarray(result.sigma_u, dtype=float)             # (n, n)
+        Psi   = np.asarray(result.ma_rep(horizon), dtype=float)     # (H+1, n, n), Ψ_0 = I
+        sig_jj = np.diag(Sigma)
+        n     = Sigma.shape[0]
+        num = np.zeros((n, n))     # Σ_h (Ψ_h Σ)_ij²
+        den = np.zeros(n)          # Σ_h (Ψ_h Σ Ψ_h')_ii
+        for h in range(min(horizon, Psi.shape[0])):
+            PS   = Psi[h] @ Sigma                                   # (n, n)
+            num += PS * PS
+            den += (PS * Psi[h]).sum(axis=1)
+        den   = np.where(den <= 0.0, np.nan, den)
+        theta = (num / sig_jj[np.newaxis, :]) / den[:, np.newaxis]  # (n, n)
+        rows  = theta.sum(axis=1, keepdims=True)
+        theta = theta / np.where(rows == 0.0, np.nan, rows)         # normalise rows → 1
+        return theta if np.all(np.isfinite(theta)) else None
+    except Exception:
+        return None
+
+
 # ── Diebold-Yilmaz spillover index ────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
@@ -553,11 +588,12 @@ def diebold_yilmaz(
     """
     Diebold-Yilmaz (2012) forecast error variance decomposition spillover index.
 
-    Implementation note: uses statsmodels Cholesky FEVD, not the generalized FEVD
-    (Pesaran & Shin 1998) that D-Y (2012) §2.2 formally specifies. Cholesky FEVD
-    is column-order-dependent; FROM/TO/NET values shift if assets are reordered.
-    The column order here is: equities first, then commodities (set by callers).
-    This is a documented approximation — GFEVD requires a custom implementation.
+    Uses the generalized FEVD (Pesaran & Shin 1998), which D-Y (2012) §2.2 formally
+    specifies. Unlike the Cholesky FEVD it is INVARIANT to VAR column ordering, so
+    FROM/TO/NET — and the equity-led vs commodity-led conclusion — do not depend on
+    whether equities or commodities happen to be listed first. (The Cholesky FEVD
+    attributes contemporaneous covariance to the first-ordered assets, which biased
+    the direction toward whichever class led the column order.) See _gfevd_decomp.
 
     Returns full FROM/TO/NET decomposition per asset plus total spillover index.
 
@@ -631,23 +667,14 @@ def diebold_yilmaz(
                 result = model.fit(1)
         except Exception:
             result = model.fit(1)
-        fevd   = result.fevd(horizon)
-        # Validate FEVD rows sum to 1 — fixed-lag fallback can produce mis-scaled
-        # decompositions that look valid but corrupt FROM/TO/NET figures.
-        if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
+        # Generalized FEVD (order-invariant). Rows normalise to 1, same semantics
+        # as statsmodels' fevd.decomp[:, -1, :]; a malformed VAR fit that produces
+        # a mis-scaled decomposition is rejected below rather than corrupting
+        # FROM/TO/NET.
+        gf = _gfevd_decomp(result, horizon)
+        if gf is None or not np.allclose(gf.sum(axis=1), 1.0, atol=0.02):
             return _empty
-
-        # fevd.decomp shape: (n_vars, n_steps, n_vars) in statsmodels ≥ 0.14
-        # decomp[i, h, j] = fraction of variable i's forecast variance at horizon h
-        #                    attributable to shocks from variable j.
-        # We want the full matrix at the terminal horizon: decomp[:, -1, :]
-        # (Not decomp[-1], which is the last *variable's* row over all horizons —
-        # accidentally square only when n_vars == horizon, but semantically wrong.)
-        table = pd.DataFrame(
-            fevd.decomp[:, -1, :] * 100,
-            index=data.columns,
-            columns=data.columns,
-        )
+        table = pd.DataFrame(gf * 100, index=data.columns, columns=data.columns)
 
         # Zero the diagonal for off-diagonal sums
         tbl_offdiag = table.copy()
@@ -704,7 +731,7 @@ def diebold_yilmaz(
                 "band_sum":      round(_bk_sum, 2),
                 "full_gfevd_tc": _bk_full_tc,
                 "gap":           round(abs(_bk_sum - _bk_full_tc), 4),
-                "dy_cholesky_tc": round(total_sp, 2),
+                "dy_gfevd_tc": round(total_sp, 2),
             }
         except Exception:
             bk_bands = {}
@@ -787,10 +814,10 @@ def bootstrap_dy_ci(
                     result = model.fit(1)
             except Exception:
                 result = model.fit(1)
-            fevd = result.fevd(horizon)
-            if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
+            gf = _gfevd_decomp(result, horizon)          # order-invariant GFEVD
+            if gf is None or not np.allclose(gf.sum(axis=1), 1.0, atol=0.02):
                 continue
-            tbl = fevd.decomp[:, -1, :] * 100  # (N, N)
+            tbl = gf * 100  # (N, N)
             np.fill_diagonal(tbl, 0.0)
             from_sp = tbl.sum(axis=1)           # (N,)
             to_sp   = tbl.sum(axis=0)
@@ -861,12 +888,12 @@ def rolling_diebold_yilmaz(
                     result = model.fit(1)
             except Exception:
                 result = model.fit(1)
-            fevd   = result.fevd(horizon)
-            if not np.allclose(fevd.decomp[:, -1, :].sum(axis=1), 1.0, atol=0.05):
-                continue  # discard window with mis-scaled FEVD rather than corrupt the series
+            gf = _gfevd_decomp(result, horizon)          # order-invariant GFEVD
+            if gf is None or not np.allclose(gf.sum(axis=1), 1.0, atol=0.02):
+                continue  # discard window with mis-scaled decomposition rather than corrupt the series
             n      = len(chunk.columns)
             tbl    = pd.DataFrame(
-                fevd.decomp[:, -1, :] * 100,
+                gf * 100,
                 index=chunk.columns, columns=chunk.columns,
             )
             np.fill_diagonal(tbl.values, 0.0)
@@ -990,9 +1017,11 @@ def regime_conditional_spillover(
                     result = model.fit(1)
             except Exception:
                 result = model.fit(1)
-            fevd   = result.fevd(horizon)
+            gf = _gfevd_decomp(result, horizon)          # order-invariant GFEVD
+            if gf is None:
+                raise ValueError("GFEVD computation failed")
             tbl    = pd.DataFrame(
-                fevd.decomp[:, -1, :] * 100,
+                gf * 100,
                 index=subset.columns, columns=subset.columns,
             )
             np.fill_diagonal(tbl.values, 0.0)
