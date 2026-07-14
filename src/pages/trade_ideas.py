@@ -2339,6 +2339,19 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         except Exception:
             pass
 
+    # Staleness of the currently-loaded book (from the session timestamp, which
+    # survives reruns). Computed once here so the top-of-page banner and the
+    # validation section below always agree. Book older than the threshold ⇒ STALE.
+    _pv_saved_at = st.session_state.get(_PV_SAVED_KEY)
+    _pv_has_book = bool(st.session_state.get(_PV_SESSION_KEY))
+    try:
+        from src.utils.page_cache import age_hours as _age_h, age_str as _age_s
+        _pv_age_h   = _age_h(_pv_saved_at)
+        _pv_age_lbl = _age_s(_pv_saved_at) if _pv_saved_at else ""
+    except Exception:
+        _pv_age_h, _pv_age_lbl = None, ""
+    _pv_stale = _pv_has_book and _pv_age_h is not None and _pv_age_h > _PV_STALE_HOURS
+
     st.markdown(_TI_STYLE, unsafe_allow_html=True)
     _page_header("Structured Trade Ideas",
                  "Step 6 of 7 · Regime-driven · Conflict-linked · 5-Stage Pipeline Validation")
@@ -2367,6 +2380,24 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 file_name=st.session_state.get("_ti_pdf_name", "desk_report.pdf"),
                 mime="application/pdf", key="dl_report_top",
                 width="stretch")
+        # Staleness of the validated book, surfaced right under the report action
+        # (not buried in the validation expander far below) so an outdated book is
+        # seen on landing. The button flags the deep 5-stage validation to recompute.
+        if _pv_stale:
+            st.markdown(
+                "<div style=\"font-family:'JetBrains Mono',monospace;border:1px solid #c0392b;"
+                "border-left:3px solid #c0392b;border-radius:4px;padding:6px 10px;"
+                "background:#1a0808;margin:.4rem 0 .3rem\">"
+                "<div style=\"font-size:0.6rem;color:#e05241;font-weight:700;"
+                "letter-spacing:.08em\">⚠ STALE BOOK</div>"
+                f"<div style=\"font-size:0.54rem;color:#c98b86;margin-top:2px;line-height:1.35\">"
+                f"Validated {_pv_age_lbl} (&gt; {_PV_STALE_HOURS}h). Rerun before trusting "
+                "the weights below.</div></div>",
+                unsafe_allow_html=True,
+            )
+            if st.button("⚠ Rerun Validation", key="ti_stale_rerun_top",
+                         type="primary", width="stretch"):
+                st.session_state["_ti_force_pv"] = True
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
@@ -3641,25 +3672,15 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
-        # Staleness gate: age of the currently-shown book, from the session
-        # timestamp (survives reruns). Book older than _PV_STALE_HOURS ⇒ STALE.
-        _pv_saved_at = st.session_state.get(_PV_SAVED_KEY)
-        _pv_has = bool(st.session_state.get(_pv_key))
-        try:
-            from src.utils.page_cache import age_hours as _age_h, age_str as _age_s
-            _pv_age_h = _age_h(_pv_saved_at)
-            _pv_age_lbl = _age_s(_pv_saved_at) if _pv_saved_at else ""
-        except Exception:
-            _pv_age_h, _pv_age_lbl = None, ""
-        _pv_stale = _pv_has and _pv_age_h is not None and _pv_age_h > _PV_STALE_HOURS
-
+        # Staleness (_pv_stale / _pv_age_lbl) is computed once at the top of the
+        # page; the top banner's "Rerun Validation" sets _ti_force_pv, honoured here.
         _pv_col1, _pv_col2 = st.columns([1, 4])
         with _pv_col1:
             _run_pv = st.button(
                 ("⚠ Rerun — Book Stale" if _pv_stale else "Refresh Validation"),
                 key="run_pipeline_val", type="primary",
                 help="Re-runs walk-forward validation (~2-4 min). Saves result to disk for next session.",
-            )
+            ) or st.session_state.pop("_ti_force_pv", False)
         with _pv_col2:
             if _run_pv:
                 st.markdown(
