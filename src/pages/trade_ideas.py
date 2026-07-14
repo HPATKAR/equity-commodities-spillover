@@ -2380,9 +2380,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 file_name=st.session_state.get("_ti_pdf_name", "desk_report.pdf"),
                 mime="application/pdf", key="dl_report_top",
                 width="stretch")
-        # Staleness of the validated book, surfaced right under the report action
-        # (not buried in the validation expander far below) so an outdated book is
-        # seen on landing. The button flags the deep 5-stage validation to recompute.
+        # Refresh/rerun of the validated book, right under the report action so it
+        # is ALWAYS reachable (never gated away). When the book is > threshold old a
+        # red STALE banner sits above it; otherwise a subtle "validated ago" note.
+        # The button flags the deep 5-stage validation to recompute on this pass.
         if _pv_stale:
             st.markdown(
                 "<div style=\"font-family:'JetBrains Mono',monospace;border:1px solid #c0392b;"
@@ -2395,9 +2396,18 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 "the weights below.</div></div>",
                 unsafe_allow_html=True,
             )
-            if st.button("⚠ Rerun Validation", key="ti_stale_rerun_top",
-                         type="primary", width="stretch"):
-                st.session_state["_ti_force_pv"] = True
+        elif _pv_has_book and _pv_age_lbl:
+            st.markdown(
+                "<div style=\"font-family:'JetBrains Mono',monospace;font-size:0.54rem;"
+                f"color:#8890a1;margin:.4rem 0 .28rem\">Book validated {_pv_age_lbl}.</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown('<div style="height:.4rem"></div>', unsafe_allow_html=True)
+        if st.button(("⚠ Rerun Validation" if _pv_stale else "Refresh Validation"),
+                     key="ti_stale_rerun_top", type="primary", width="stretch",
+                     help="Re-runs the 5-Stage Pipeline Validation (~2-4 min)."):
+            st.session_state["_ti_force_pv"] = True
     st.markdown(
         '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;'
