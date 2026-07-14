@@ -814,9 +814,22 @@ def _header_status_html() -> str:
         agg = aggregate_portfolio_scores(cr)
         cis = float(agg.get("portfolio_cis", agg.get("cis", 50.0)))
         n_act = sum(1 for v in cr.values() if v.get("state") == "active")
+        tps   = float(agg.get("portfolio_tps", agg.get("tps", 50.0)))
+        n_esc = sum(1 for v in cr.values() if v.get("escalation") == "escalating")
+        # Lead front = highest freshness-weighted CIS among active conflicts,
+        # matching how aggregate_portfolio_scores selects its top_conflict.
+        _act  = [v for v in cr.values() if v.get("state") == "active"]
+        _lead = (max(_act, key=lambda v: v["cis"] * v.get("market_freshness", 1.0))
+                 if _act else None)
+        lead_lbl = (_lead.get("label") or _lead.get("name")) if _lead else None
+        # US equity cash session: 08:30-15:00 CT (NYSE 09:30-16:00 ET), Mon-Fri.
+        # Weekday+time heuristic (ignores exchange holidays); pure datetime, no fetch.
+        _mins = now.hour * 60 + now.minute
+        mkt_open = now.weekday() < 5 and (8 * 60 + 30) <= _mins < (15 * 60)
         if cis >= 70:   sc, sl = "#c0392b", "CRITICAL"
         elif cis >= 50: sc, sl = "#e67e22", "ELEVATED"
         else:           sc, sl = "#27ae60", "MODERATE"
+        tc = "#c0392b" if tps >= 70 else "#e67e22" if tps >= 50 else "#27ae60"
         rgb = {"#c0392b": "192,57,43", "#e67e22": "230,126,34",
                "#27ae60": "39,174,96"}[sc]
         try:
@@ -827,20 +840,39 @@ def _header_status_html() -> str:
                        else 'SCENARIO: <span style="color:#e8e9ed">BASE</span>')
         except Exception:
             sc_note = 'SCENARIO: <span style="color:#e8e9ed">BASE</span>'
+        # Extra live chips (all from cr/agg already computed above — no new cost)
+        mkt_col  = "#27ae60" if mkt_open else "#6b7280"
+        mkt_chip = (f'<span style="{_M}font-size:0.56rem;font-weight:700;'
+                    f'letter-spacing:.10em;white-space:nowrap;color:{mkt_col}">'
+                    f'{"●" if mkt_open else "○"} MKT '
+                    f'{"OPEN" if mkt_open else "CLOSED"}</span>')
+        esc_chip = (f'<span style="{_M}font-size:0.56rem;font-weight:700;'
+                    f'letter-spacing:.10em;white-space:nowrap;'
+                    f'color:{"#c0392b" if n_esc >= 3 else "#e67e22"}">'
+                    f'▲ {n_esc} ESC</span>') if n_esc else ""
+        lead_chip = (f'<span style="{_M}font-size:0.6rem;color:#8890a1;'
+                     f'white-space:nowrap">LEAD&nbsp;'
+                     f'<b style="color:#e8e9ed">{lead_lbl}</b></span>'
+                     ) if lead_lbl else ""
         return (
             f'<div style="display:flex;align-items:center;justify-content:flex-end;'
-            f'gap:7px 11px;flex-wrap:wrap;max-width:540px;margin-left:auto">'
+            f'gap:7px 11px;flex-wrap:wrap;max-width:660px;margin-left:auto">'
             f'<span style="{_M}font-size:0.6rem;color:#e8e9ed;white-space:nowrap">'
             f'{now.strftime("%a %d %b %Y")}&nbsp;<span style="color:#3a3f4a">│</span>'
             f'&nbsp;{now.strftime("%H:%M")} {CT_LABEL}</span>'
+            f'{mkt_chip}'
             f'<span style="background:rgba({rgb},0.15);color:{sc};'
             f'border:1px solid rgba({rgb},0.35);{_M}font-size:0.54rem;font-weight:700;'
             f'padding:2px 8px;letter-spacing:.12em;white-space:nowrap">'
             f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE</span>'
+            f'{esc_chip}'
+            f'{lead_chip}'
             f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
             f'{sc_note}</span>'
             f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
             f'CIS&nbsp;<b style="color:{sc}">{cis:.0f}</b></span>'
+            f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
+            f'TPS&nbsp;<b style="color:{tc}">{tps:.0f}</b></span>'
             f'<span style="background:{sc};color:#000;{_M}font-size:0.56rem;'
             f'font-weight:700;padding:3px 11px;letter-spacing:.16em;'
             f'white-space:nowrap">{sl}</span>'
