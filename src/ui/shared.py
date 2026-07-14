@@ -813,23 +813,42 @@ def _header_status_html() -> str:
                 pass
         agg = aggregate_portfolio_scores(cr)
         cis = float(agg.get("portfolio_cis", agg.get("cis", 50.0)))
-        n_act = sum(1 for v in cr.values() if v.get("state") == "active")
-        tps   = float(agg.get("portfolio_tps", agg.get("tps", 50.0)))
-        n_esc = sum(1 for v in cr.values() if v.get("escalation") == "escalating")
+        n_act    = sum(1 for v in cr.values() if v.get("state") == "active")
+        n_latent = sum(1 for v in cr.values() if v.get("state") == "latent")
+        n_track  = len(cr)
+        tps      = float(agg.get("portfolio_tps", agg.get("tps", 50.0)))
+        conf     = float(agg.get("confidence", 0.0)) * 100.0
+        n_esc    = sum(1 for v in cr.values() if v.get("escalation") == "escalating")
+        n_deesc  = sum(1 for v in cr.values() if v.get("escalation") == "de-escalating")
         # Lead front = highest freshness-weighted CIS among active conflicts,
         # matching how aggregate_portfolio_scores selects its top_conflict.
         _act  = [v for v in cr.values() if v.get("state") == "active"]
         _lead = (max(_act, key=lambda v: v["cis"] * v.get("market_freshness", 1.0))
                  if _act else None)
         lead_lbl = (_lead.get("label") or _lead.get("name")) if _lead else None
+        lead_cis = float(_lead.get("cis", 0)) if _lead else 0.0
+        # Top hedge = CIS-weighted most-cited hedge asset across active fronts.
+        _hagg: dict = {}
+        for v in _act:
+            for h in (v.get("hedge_assets") or []):
+                _hagg[h] = _hagg.get(h, 0.0) + float(v.get("cis", 0))
+        _HED_ABBR = {"US 20Y+ Treasury (TLT)": "TLT", "US 1-3Y Treasury (SHY)": "SHY",
+                     "US Dollar Index": "DXY", "Swiss Franc (CHF)": "CHF",
+                     "Japanese Yen (JPY)": "JPY", "Crude Oil (WTI)": "WTI"}
+        _top_h = max(_hagg, key=_hagg.get) if _hagg else None
+        hedge_lbl = (_HED_ABBR.get(_top_h)
+                     or (_top_h.split("(")[-1].rstrip(")") if _top_h and "(" in _top_h
+                         else _top_h)) if _top_h else None
         # US equity cash session: 08:30-15:00 CT (NYSE 09:30-16:00 ET), Mon-Fri.
         # Weekday+time heuristic (ignores exchange holidays); pure datetime, no fetch.
         _mins = now.hour * 60 + now.minute
         mkt_open = now.weekday() < 5 and (8 * 60 + 30) <= _mins < (15 * 60)
+        _band    = lambda x: ("#c0392b" if x >= 70 else "#e67e22" if x >= 50 else "#27ae60")
         if cis >= 70:   sc, sl = "#c0392b", "CRITICAL"
         elif cis >= 50: sc, sl = "#e67e22", "ELEVATED"
         else:           sc, sl = "#27ae60", "MODERATE"
-        tc = "#c0392b" if tps >= 70 else "#e67e22" if tps >= 50 else "#27ae60"
+        tc, lc = _band(tps), _band(lead_cis)
+        cc = "#27ae60" if conf >= 70 else "#e67e22" if conf >= 50 else "#c0392b"
         rgb = {"#c0392b": "192,57,43", "#e67e22": "230,126,34",
                "#27ae60": "39,174,96"}[sc]
         try:
@@ -841,22 +860,30 @@ def _header_status_html() -> str:
         except Exception:
             sc_note = 'SCENARIO: <span style="color:#e8e9ed">BASE</span>'
         # Extra live chips (all from cr/agg already computed above — no new cost)
+        _m6  = f'{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap'
         mkt_col  = "#27ae60" if mkt_open else "#6b7280"
         mkt_chip = (f'<span style="{_M}font-size:0.56rem;font-weight:700;'
                     f'letter-spacing:.10em;white-space:nowrap;color:{mkt_col}">'
                     f'{"●" if mkt_open else "○"} MKT '
                     f'{"OPEN" if mkt_open else "CLOSED"}</span>')
-        esc_chip = (f'<span style="{_M}font-size:0.56rem;font-weight:700;'
-                    f'letter-spacing:.10em;white-space:nowrap;'
-                    f'color:{"#c0392b" if n_esc >= 3 else "#e67e22"}">'
-                    f'▲ {n_esc} ESC</span>') if n_esc else ""
-        lead_chip = (f'<span style="{_M}font-size:0.6rem;color:#8890a1;'
-                     f'white-space:nowrap">LEAD&nbsp;'
-                     f'<b style="color:#e8e9ed">{lead_lbl}</b></span>'
-                     ) if lead_lbl else ""
+        # Two-sided escalation momentum: ▲ escalating (red) · ▼ de-escalating (green)
+        mom_chip = (f'<span style="{_M}font-size:0.56rem;font-weight:700;'
+                    f'white-space:nowrap" title="fronts escalating / de-escalating">'
+                    f'<span style="color:{"#c0392b" if n_esc else "#5b616b"}">▲{n_esc}</span>'
+                    f'&nbsp;<span style="color:{"#27ae60" if n_deesc else "#5b616b"}">'
+                    f'▼{n_deesc}</span></span>')
+        lat_chip = (f'<span style="{_M}font-size:0.54rem;color:#6b7280;'
+                    f'white-space:nowrap">+{n_latent} LATENT</span>') if n_latent else ""
+        lead_chip = (f'<span style="{_m6}">LEAD&nbsp;'
+                     f'<b style="color:#e8e9ed">{lead_lbl}</b>&nbsp;'
+                     f'<b style="color:{lc}">{lead_cis:.0f}</b></span>') if lead_lbl else ""
+        conf_chip = (f'<span style="{_m6}">CONF&nbsp;'
+                     f'<b style="color:{cc}">{conf:.0f}%</b></span>') if conf else ""
+        hedge_chip = (f'<span style="{_m6}">HEDGE&nbsp;'
+                      f'<b style="color:#e8e9ed">{hedge_lbl}</b></span>') if hedge_lbl else ""
         return (
             f'<div style="display:flex;align-items:center;justify-content:flex-end;'
-            f'gap:7px 11px;flex-wrap:wrap;max-width:660px;margin-left:auto">'
+            f'gap:6px 10px;flex-wrap:wrap;max-width:760px;margin-left:auto">'
             f'<span style="{_M}font-size:0.6rem;color:#e8e9ed;white-space:nowrap">'
             f'{now.strftime("%a %d %b %Y")}&nbsp;<span style="color:#3a3f4a">│</span>'
             f'&nbsp;{now.strftime("%H:%M")} {CT_LABEL}</span>'
@@ -864,15 +891,15 @@ def _header_status_html() -> str:
             f'<span style="background:rgba({rgb},0.15);color:{sc};'
             f'border:1px solid rgba({rgb},0.35);{_M}font-size:0.54rem;font-weight:700;'
             f'padding:2px 8px;letter-spacing:.12em;white-space:nowrap">'
-            f'■ {n_act} CONFLICT{"S" if n_act != 1 else ""} ACTIVE</span>'
-            f'{esc_chip}'
+            f'■ {n_act}/{n_track} ACTIVE</span>'
+            f'{lat_chip}'
+            f'{mom_chip}'
             f'{lead_chip}'
-            f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
-            f'{sc_note}</span>'
-            f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
-            f'CIS&nbsp;<b style="color:{sc}">{cis:.0f}</b></span>'
-            f'<span style="{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap">'
-            f'TPS&nbsp;<b style="color:{tc}">{tps:.0f}</b></span>'
+            f'<span style="{_m6}">{sc_note}</span>'
+            f'<span style="{_m6}">CIS&nbsp;<b style="color:{sc}">{cis:.0f}</b></span>'
+            f'<span style="{_m6}">TPS&nbsp;<b style="color:{tc}">{tps:.0f}</b></span>'
+            f'{conf_chip}'
+            f'{hedge_chip}'
             f'<span style="background:{sc};color:#000;{_M}font-size:0.56rem;'
             f'font-weight:700;padding:3px 11px;letter-spacing:.16em;'
             f'white-space:nowrap">{sl}</span>'
