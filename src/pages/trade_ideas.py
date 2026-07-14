@@ -3826,6 +3826,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
   <div class="_pv_bar_track"><div class="_pv_bar_fill"></div></div>
 </div>
 """, unsafe_allow_html=True)
+            _pv_ok = False
             try:
                 _pv = _run_pipeline_validator_cached(
                     all_r_concat, regimes,
@@ -3836,7 +3837,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 st.session_state[_pv_key] = _pv
                 # Mark fresh: reset the staleness clock (survives reruns).
                 from datetime import datetime as _dt2, timezone as _tz2
-                st.session_state[_PV_SAVED_KEY] = _dt2.now(_tz2)
+                st.session_state[_PV_SAVED_KEY] = _dt2.now(_tz2.utc)
                 # Persist to disk so the next session loads instantly
                 try:
                     from src.utils.page_cache import save_cache as _sv
@@ -3844,11 +3845,20 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     _pv_disk_age = None  # now fresh
                 except Exception:
                     pass
+                _pv_ok = True
             except Exception as _pv_exc:
-                st.error("Validation error.")
+                import traceback as _tb
+                _tb.print_exc()
+                st.error(f"Validation error: {type(_pv_exc).__name__}: {_pv_exc}")
                 _pv = None
             finally:
                 _anim.empty()
+            # The STALE banner at the top of the page was computed BEFORE this run
+            # reset the clock, so on this pass it still reads stale. Re-render once
+            # so the top banner + button recompute against the now-fresh timestamp.
+            # Cheap: the validator is cached, so this rerun does NOT recompute it.
+            if _pv_ok:
+                st.rerun()
         else:
             _pv = st.session_state.get(_pv_key)
 
