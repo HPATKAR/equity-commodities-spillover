@@ -35,7 +35,8 @@ from src.analysis.freshness import record_fetch
 from src.data.loader import load_returns
 from src.analysis.correlations import average_cross_corr_series
 from src.analysis.risk_score import market_fear_index, plot_risk_history
-from src.ui.shared import _page_header, _page_footer, _section_header
+from src.ui.shared import (_page_header, _page_footer, _section_header,
+                           _header_status_html)
 from src.ui.palette import (
     GOLD, DANGER, WARN, SAFE, INFO, NAVY,
     BG, CARD, CARD2, CARD3, BORDER, BORDER2, TEXT, LABEL,
@@ -430,29 +431,12 @@ def _err_slot(label: str) -> None:
 
 
 def _render_masthead(conflict_agg: dict) -> None:
-    from src.utils.timeutil import now_ct
-    now      = now_ct()   # America/Chicago — correct once deployed off a CT box
-    cis      = conflict_agg.get("portfolio_cis", conflict_agg.get("cis",  50.0))
-    n_act    = conflict_agg.get("n_active", sum(
-        1 for v in st.session_state.get("_conflict_results_cache", {}).values()
-        if v.get("state") == "active"
-    ))
-
-    if cis >= 70:
-        sit_color, sit_label = _C["danger"], "CRITICAL"
-    elif cis >= 50:
-        sit_color, sit_label = _C["warn"], "ELEVATED"
-    else:
-        sit_color, sit_label = _C["safe"], "MODERATE"
-
-    scenario    = get_scenario()
-    scenario_id = get_scenario_id()
-    sc_note     = (
-        f'SCENARIO: <b style="color:{scenario["color"]}">{scenario["label"].upper()}</b>'
-        if scenario_id != "base"
-        else f'SCENARIO: <span style="color:{_C["text"]}">BASE</span>'
-    )
-
+    # The right-side status cluster is the shared, dense one
+    # (src/ui/shared._header_status_html) so the Command Center masthead stays
+    # byte-identical to the cold-load placeholder (_page_header) and to every
+    # other page — one source of truth, no more two-copies-drift. conflict_agg
+    # is retained for signature compatibility; the shared cluster recomputes
+    # (cached) so its CIS matches this page's.
     _logo = _home_logo_b64()
     _logo_img = (
         f'<img src="{_logo}" alt="" '
@@ -471,8 +455,6 @@ def _render_masthead(conflict_agg: dict) -> None:
 </style>""", unsafe_allow_html=True)
     _eye = ("Cross-Asset Spillover Monitor · Purdue Daniels School of Business "
             "· MSF Research Terminal")
-    _sit_rgb = {_C["danger"]: "192,57,43", _C["warn"]: "230,126,34",
-                _C["safe"]: "39,174,96"}.get(sit_color, "207,185,145")
     st.markdown(
         f'<div style="border-left:2px solid #CFB991;padding-left:12px;'
         f'margin-bottom:.6rem;display:flex;align-items:flex-end;'
@@ -487,26 +469,8 @@ def _render_masthead(conflict_agg: dict) -> None:
         f'<p style="{_F}font-size:0.72rem;color:#8890a1;margin:0">'
         f'Geopolitical &amp; Cross-Asset Intelligence · Equity · Commodity · FX '
         f'· Fixed Income</p></div>'
-        # right: one wrap-friendly status cluster, right-aligned
-        f'<div style="display:flex;align-items:center;justify-content:flex-end;'
-        f'gap:8px 12px;flex-wrap:wrap;max-width:520px">'
-        f'<span class="nx-live-dot"></span>'
-        f'<span style="{_M}font-size:0.62rem;color:{_C["text"]};white-space:nowrap">'
-        f'{now.strftime("%a %d %b %Y")}&nbsp;'
-        f'<span style="color:{_C["border2"]}">│</span>&nbsp;'
-        f'{now.strftime("%H:%M")} CT</span>'
-        f'<span style="background:rgba({_sit_rgb},0.15);color:{sit_color};'
-        f'border:1px solid rgba({_sit_rgb},0.35);{_M}font-size:0.54rem;font-weight:700;'
-        f'padding:2px 8px;letter-spacing:.12em;white-space:nowrap">■ {n_act} CONFLICT'
-        f'{"S" if n_act != 1 else ""} ACTIVE</span>'
-        f'<span style="{_M}font-size:0.6rem;color:{_C["label"]};'
-        f'white-space:nowrap">{sc_note}</span>'
-        f'<span style="{_M}font-size:0.6rem;color:{_C["label"]};white-space:nowrap">'
-        f'CIS&nbsp;<b class="cc-num" style="color:{sit_color}">{cis:.0f}</b></span>'
-        f'<span style="background:{sit_color};color:#000;{_M}font-size:0.56rem;'
-        f'font-weight:700;padding:3px 11px;letter-spacing:.16em;'
-        f'white-space:nowrap">{sit_label}</span>'
-        f'</div>'
+        # right: shared dense status cluster (identical on every page)
+        f'{_header_status_html()}'
         f'</div>',
         unsafe_allow_html=True,
     )
