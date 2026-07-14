@@ -2323,6 +2323,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # sees them immediately without clicking "Run Validation".
     _PV_DISK_KEY = "pipeline_validation"
     _PV_SESSION_KEY = "pipeline_validation_result"
+    _PV_SAVED_KEY = "pipeline_validation_saved_at"   # raw UTC ts, survives reruns
+    _PV_STALE_HOURS = 24                             # book older than this ⇒ STALE
     _pv_disk_age: "str | None" = None
     if _PV_SESSION_KEY not in st.session_state:
         try:
@@ -2330,6 +2332,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _disk_data, _disk_saved_at = load_cache(_PV_DISK_KEY)
             if _disk_data is not None:
                 st.session_state[_PV_SESSION_KEY] = _disk_data
+                # Keep the raw timestamp so the STALE gate can survive reruns
+                # (without it, a rerun mislabels the disk book as 'this session').
+                st.session_state[_PV_SAVED_KEY] = _disk_saved_at
                 _pv_disk_age = _age_str(_disk_saved_at)
         except Exception:
             pass
@@ -3636,25 +3641,48 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True,
             )
 
+        # Staleness gate: age of the currently-shown book, from the session
+        # timestamp (survives reruns). Book older than _PV_STALE_HOURS ⇒ STALE.
+        _pv_saved_at = st.session_state.get(_PV_SAVED_KEY)
+        _pv_has = bool(st.session_state.get(_pv_key))
+        try:
+            from src.utils.page_cache import age_hours as _age_h, age_str as _age_s
+            _pv_age_h = _age_h(_pv_saved_at)
+            _pv_age_lbl = _age_s(_pv_saved_at) if _pv_saved_at else ""
+        except Exception:
+            _pv_age_h, _pv_age_lbl = None, ""
+        _pv_stale = _pv_has and _pv_age_h is not None and _pv_age_h > _PV_STALE_HOURS
+
         _pv_col1, _pv_col2 = st.columns([1, 4])
         with _pv_col1:
             _run_pv = st.button(
-                "Refresh Validation", key="run_pipeline_val", type="primary",
+                ("⚠ Rerun — Book Stale" if _pv_stale else "Refresh Validation"),
+                key="run_pipeline_val", type="primary",
                 help="Re-runs walk-forward validation (~2-4 min). Saves result to disk for next session.",
             )
         with _pv_col2:
-            # Show staleness banner if showing data from a previous session
-            if _pv_disk_age and not _run_pv:
-                st.markdown(
-                    f'<span style="{_TP_M}font-size:0.57rem;color:#e67e22">'
-                    f'Showing cached results from {_pv_disk_age}. '
-                    f'Click Refresh Validation to recompute.</span>',
-                    unsafe_allow_html=True,
-                )
-            elif st.session_state.get(_pv_key) and not _run_pv:
+            if _run_pv:
                 st.markdown(
                     f'<span style="{_TP_M}font-size:0.57rem;color:#555960">'
-                    f'Results from this session. Click Refresh to recompute.</span>',
+                    f'Running walk-forward validation (~2-4 min)…</span>',
+                    unsafe_allow_html=True,
+                )
+            elif _pv_stale:
+                # Hard staleness flag: book past the threshold — loud, not a note.
+                st.markdown(
+                    f'<div style="{_TP_M}border:1px solid #c0392b;border-radius:4px;'
+                    f'padding:6px 12px;background:#1a0808;display:inline-block">'
+                    f'<span style="font-size:0.6rem;color:#e05241;font-weight:700;'
+                    f'letter-spacing:.08em">⚠ STALE BOOK</span>'
+                    f'<span style="font-size:0.57rem;color:#c98b86"> — validated '
+                    f'{_pv_age_lbl} (&gt; {_PV_STALE_HOURS}h). Rerun before trusting '
+                    f'these weights.</span></div>',
+                    unsafe_allow_html=True,
+                )
+            elif _pv_age_lbl:
+                st.markdown(
+                    f'<span style="{_TP_M}font-size:0.57rem;color:#8890a1">'
+                    f'Validated {_pv_age_lbl}. Click Refresh to recompute.</span>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -3785,6 +3813,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     n_random_trials=500,
                 )
                 st.session_state[_pv_key] = _pv
+                # Mark fresh: reset the staleness clock (survives reruns).
+                from datetime import datetime as _dt2, timezone as _tz2
+                st.session_state[_PV_SAVED_KEY] = _dt2.now(_tz2)
                 # Persist to disk so the next session loads instantly
                 try:
                     from src.utils.page_cache import save_cache as _sv

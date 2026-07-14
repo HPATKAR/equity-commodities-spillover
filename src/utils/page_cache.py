@@ -69,6 +69,19 @@ def load_cache(key: str) -> tuple[dict | None, datetime | None]:
         return None, None
 
 
+def age_hours(saved_at: datetime | None) -> float | None:
+    """Age of a cached result in fractional hours, or None if unknown.
+
+    Mirrors age_str's tz handling (saved_at is stored UTC; naive is treated as
+    UTC). Used to gate a hard 'STALE' flag on the trade book once it exceeds a
+    threshold, since load_cache itself enforces no expiry."""
+    if saved_at is None:
+        return None
+    if saved_at.tzinfo is None:
+        saved_at = saved_at.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - saved_at).total_seconds() / 3600.0
+
+
 def age_str(saved_at: datetime | None) -> str:
     """Human-readable staleness: '2h 15m ago', '3d ago', etc."""
     if saved_at is None:
