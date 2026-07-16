@@ -565,16 +565,59 @@ def _chart_caption(text: str, S: dict) -> Paragraph:
     return Paragraph(text, S["caption"])
 
 
+def _prep_logo_png(logo_png):
+    """The card header is a light band, so a predominantly-white logo (a light
+    mark on transparency, e.g. BlackRock / Nike) would be invisible. Detect that
+    case and composite the mark onto a dark rounded tile so it stays legible;
+    leave dark or self-contained (opaque-background) logos untouched. Best-effort
+    — returns the original bytes on any failure."""
+    try:
+        from PIL import Image, ImageDraw
+        im = Image.open(io.BytesIO(logo_png)).convert("RGBA")
+        # Luminance + transparency on a small downsample (fast, good enough).
+        small = im.resize((40, 40))
+        lum_sum = opaque = transparent = 0
+        for (r, g, b, a) in small.getdata():
+            if a < 24:
+                transparent += 1
+                continue
+            opaque += 1
+            lum_sum += 0.299 * r + 0.587 * g + 0.114 * b
+        if not opaque:
+            return logo_png
+        mean_lum = lum_sum / opaque
+        has_transparency = transparent > 0.06 * 1600
+        if not (has_transparency and mean_lum > 182):
+            return logo_png                       # visible on a light header → keep
+        # Light mark → dark rounded tile with padding so it reads cleanly.
+        w, h = im.size
+        pad = int(round(0.20 * max(w, h)))
+        side = max(w, h) + 2 * pad                # square tile
+        tile = Image.new("RGBA", (side, side), (24, 27, 33, 255))   # slate #181b21
+        tile.paste(im, ((side - w) // 2, (side - h) // 2), im)      # alpha as mask
+        mask = Image.new("L", (side, side), 0)
+        ImageDraw.Draw(mask).rounded_rectangle(
+            [0, 0, side - 1, side - 1], radius=int(0.16 * side), fill=255)
+        tile.putalpha(mask)                       # rounded transparent corners
+        out = io.BytesIO()
+        tile.save(out, "PNG")
+        return out.getvalue()
+    except Exception:
+        return logo_png
+
+
 def _logo_flowable(logo_png, height_mm: float = 6.5, max_w_mm: float = 11.0):
     """Small, aspect-correct company logo for a trade-card header, or None.
 
     Height is fixed; width derives from the image's aspect ratio and is capped so
-    a wide wordmark can't blow out the column. Any missing/corrupt/undecodable
-    image returns None so the card renders logo-less — never raises."""
+    a wide wordmark can't blow out the column. White logos are put on a dark tile
+    (_prep_logo_png) so they stay visible on the light header. Any missing/corrupt/
+    undecodable image returns None so the card renders logo-less — never raises."""
     if not logo_png:
         return None
     try:
         from reportlab.lib.utils import ImageReader
+        logo_png = _prep_logo_png(logo_png)
         iw, ih = ImageReader(io.BytesIO(logo_png)).getSize()
         if not iw or not ih:
             return None
