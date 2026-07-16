@@ -2317,6 +2317,70 @@ def _attach_recent_news(feed: list[dict]) -> None:
             continue
 
 
+@st.cache_data(show_spinner=False, ttl=7 * 86400, max_entries=400)
+def _fetch_company_logo(ticker: str) -> "bytes | None":
+    """Square company-logo PNG for a ticker via Financial Modeling Prep (no API
+    key). Disk-cached, since logos rarely change. A genuine 404 is negatively
+    cached (b'') so a logo-less name isn't refetched every report; transient
+    network failures are NOT cached, so they retry next time. Returns None on any
+    failure so the desk report silently degrades to no-logo."""
+    if not ticker:
+        return None
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _key = f"logo_{ticker.upper()}"
+    _hit = read_artifact(_key, max_age_s=30 * 86400)
+    if _hit is not None:
+        return _hit or None                       # b'' sentinel = known-missing
+    _png, _known_missing = None, False
+    try:
+        import requests
+        _r = requests.get(
+            f"https://financialmodelingprep.com/image-stock/{ticker.upper()}.png",
+            timeout=5)
+        _c = _r.content or b""
+        if (_r.status_code == 200 and _c[:8] == b"\x89PNG\r\n\x1a\n"
+                and len(_c) > 400):
+            _png = _c
+        elif _r.status_code == 404:
+            _known_missing = True                 # really has no logo → cache it
+    except Exception:
+        _png = None                               # transient → do not cache, retry
+    try:
+        if _png is not None:
+            write_artifact(_key, _png)
+        elif _known_missing:
+            write_artifact(_key, b"")
+    except Exception:
+        pass
+    return _png
+
+
+def _attach_logos(feed: list[dict]) -> None:
+    """Attach a small company-logo PNG (bytes, under key 'logo_png') to each
+    deployed trade whose primary leg is a single-name company, for the desk
+    report. Only real companies from the single-name universe get a mark —
+    commodities, ETFs and indices are intentionally left logo-less (a company
+    logo there would misrepresent the exposure). Best-effort and never raises."""
+    try:
+        from src.analysis.trade_generator import all_stock_universe
+    except Exception:
+        return
+    _disp2tk = {disp: tk for disp, (tk, *_r) in all_stock_universe().items()}
+    for _t in feed:
+        try:
+            _a = (_t.get("assets") or [None])[0]
+            _tk = _disp2tk.get(_a) if _a else None
+            if not _tk:
+                continue
+            # FMP keys most names by base symbol; try full ticker then stripped.
+            _logo = _fetch_company_logo(_tk) or (
+                _fetch_company_logo(_tk.split(".")[0]) if "." in _tk else None)
+            if _logo:
+                _t["logo_png"] = _logo
+        except Exception:
+            continue
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -3141,6 +3205,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 # report anchors every idea to live market context.
                 _feed = desk_report_feed(_ranked_book)
                 _attach_recent_news(_feed)
+                _attach_logos(_feed)   # company marks for single-name legs
                 pdf_bytes = generate_report(
                     start=start,
                     end=end,

@@ -565,6 +565,26 @@ def _chart_caption(text: str, S: dict) -> Paragraph:
     return Paragraph(text, S["caption"])
 
 
+def _logo_flowable(logo_png, height_mm: float = 6.5, max_w_mm: float = 11.0):
+    """Small, aspect-correct company logo for a trade-card header, or None.
+
+    Height is fixed; width derives from the image's aspect ratio and is capped so
+    a wide wordmark can't blow out the column. Any missing/corrupt/undecodable
+    image returns None so the card renders logo-less — never raises."""
+    if not logo_png:
+        return None
+    try:
+        from reportlab.lib.utils import ImageReader
+        iw, ih = ImageReader(io.BytesIO(logo_png)).getSize()
+        if not iw or not ih:
+            return None
+        w_mm = min(height_mm * (iw / ih), max_w_mm)
+        # Fresh BytesIO for the flowable (ImageReader above consumed its own).
+        return RLImage(io.BytesIO(logo_png), width=w_mm * mm, height=height_mm * mm)
+    except Exception:
+        return None
+
+
 def _trade_card(trade: dict) -> list:
     cat_col   = CAT_COLORS.get(trade["category"], GOLD)
     reg_names = " · ".join(REGIME_NAMES[r] for r in trade["regime"])
@@ -593,25 +613,44 @@ def _trade_card(trade: dict) -> list:
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
         ]),
     )
-    name_row = Table(
-        [[
-            Paragraph(trade["name"], _ps(
-                "tn", fontName="Helvetica-Bold", fontSize=11,
-                textColor=BLACK, leading=14)),
-            Paragraph(dir_text, _ps(
-                "dr", fontName="Helvetica", fontSize=7.5,
-                textColor=GRAY, alignment=TA_RIGHT, leading=11)),
-        ]],
-        colWidths=[col_w * 0.60, col_w * 0.40],
-        style=TableStyle([
-            ("BACKGROUND",    (0,0), (-1,-1), BGWARM),
-            ("TOPPADDING",    (0,0), (-1,-1), 9),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 5),
-            ("LEFTPADDING",   (0,0), (-1,-1), 9),
-            ("RIGHTPADDING",  (0,0), (-1,-1), 9),
-            ("VALIGN",        (0,0), (-1,-1), "TOP"),
-        ]),
-    )
+    _name_para = Paragraph(trade["name"], _ps(
+        "tn", fontName="Helvetica-Bold", fontSize=11,
+        textColor=BLACK, leading=14))
+    _dir_para = Paragraph(dir_text, _ps(
+        "dr", fontName="Helvetica", fontSize=7.5,
+        textColor=GRAY, alignment=TA_RIGHT, leading=11))
+    _logo = _logo_flowable(trade.get("logo_png"))
+    if _logo is not None:
+        # [ logo | thesis name | direction ] — logo in a fixed left slot, vertically
+        # centred with the name. Falls back to the 2-col layout below if no logo.
+        _LOGO_SLOT = 13 * mm
+        name_row = Table(
+            [[_logo, _name_para, _dir_para]],
+            colWidths=[_LOGO_SLOT, col_w * 0.60 - _LOGO_SLOT, col_w * 0.40],
+            style=TableStyle([
+                ("BACKGROUND",    (0,0), (-1,-1), BGWARM),
+                ("TOPPADDING",    (0,0), (-1,-1), 9),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+                ("LEFTPADDING",   (0,0), (-1,-1), 9),
+                ("RIGHTPADDING",  (0,0), (-1,-1), 9),
+                ("VALIGN",        (1,0), (-1,-1), "TOP"),
+                ("VALIGN",        (0,0), (0,0),   "MIDDLE"),
+                ("RIGHTPADDING",  (0,0), (0,0),   4),
+            ]),
+        )
+    else:
+        name_row = Table(
+            [[_name_para, _dir_para]],
+            colWidths=[col_w * 0.60, col_w * 0.40],
+            style=TableStyle([
+                ("BACKGROUND",    (0,0), (-1,-1), BGWARM),
+                ("TOPPADDING",    (0,0), (-1,-1), 9),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+                ("LEFTPADDING",   (0,0), (-1,-1), 9),
+                ("RIGHTPADDING",  (0,0), (-1,-1), 9),
+                ("VALIGN",        (0,0), (-1,-1), "TOP"),
+            ]),
+        )
     rationale_row = Table(
         [[Paragraph(trade["rationale"], _ps(
             "rat", fontName="Helvetica", fontSize=8.5,
