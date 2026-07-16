@@ -2381,6 +2381,273 @@ def _attach_logos(feed: list[dict]) -> None:
             continue
 
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Book factor & alpha decomposition
+# Answers the buy-side question the pipeline validation does NOT: is the deployed
+# book alpha or beta? Regresses the weight-normalised book return on a market
+# factor plus market-orthogonalised thematic factors (HAC/Newey-West errors), so
+# market beta, sector tilts and genuine idiosyncratic return are separated — and
+# reports an effective-number-of-bets concentration read (are 8 ideas really 8?).
+# ═════════════════════════════════════════════════════════════════════════════
+
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=8)
+def _load_etf_returns(ticker: str, start: str, end: str) -> "pd.Series | None":
+    """Daily log-returns for one ETF factor proxy via yfinance, disk-cached.
+    None on failure so the factor panel degrades to whatever loads."""
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _key = f"etf_ret_{ticker}_{end}"
+    _hit = read_artifact(_key, max_age_s=3600)
+    if _hit is not None:
+        return _hit if len(_hit) else None
+    try:
+        import datetime as _dt
+        from src.data.loader import _yf_download
+        _floor = str(_dt.date.today() - _dt.timedelta(days=6 * 365))
+        _s = _floor if start < _floor else start
+        raw = _yf_download([ticker], start=_s, end=end, auto_adjust=True, progress=False)
+        if raw is None or raw.empty:
+            return None
+        close = raw["Close"] if "Close" in raw.columns else raw
+        if hasattr(close, "columns"):
+            close = close.iloc[:, 0]
+        ret = np.log(close / close.shift(1)).dropna()
+        ret.name = ticker
+        if len(ret):
+            write_artifact(_key, ret)
+        return ret if len(ret) else None
+    except Exception:
+        return None
+
+
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=2)
+def _load_factor_panel(start: str, end: str) -> pd.DataFrame:
+    """Daily log-return factor panel for book attribution: MKT (S&P 500), Defense
+    (ITA), Energy (WTI), Gold, Rates (TLT), USD (DXY). MKT is always the first
+    column. Returns whatever subset loads (empty frame if MKT is unavailable)."""
+    cols: dict = {}
+    try:
+        from src.data.loader import load_returns as _lr
+        eq, cmd = _lr()
+        if "S&P 500" in eq.columns:        cols["MKT·S&P 500"] = eq["S&P 500"]
+        if "WTI Crude Oil" in cmd.columns: cols["Energy·WTI"]  = cmd["WTI Crude Oil"]
+        if "Gold" in cmd.columns:          cols["Gold"]        = cmd["Gold"]
+    except Exception:
+        pass
+    try:
+        from src.data.loader import (load_fixed_income_returns as _fi,
+                                      load_fx_returns as _fx)
+        fi = _fi()
+        if "US 20Y+ Treasury (TLT)" in fi.columns:
+            cols["Rates·TLT"] = fi["US 20Y+ Treasury (TLT)"]
+        fx = _fx()
+        if "DXY (Dollar Index)" in fx.columns:
+            cols["USD·DXY"] = fx["DXY (Dollar Index)"]
+    except Exception:
+        pass
+    _ita = _load_etf_returns("ITA", start, end)
+    if _ita is not None:
+        cols["Defense·ITA"] = _ita
+    if "MKT·S&P 500" not in cols or len(cols) < 2:
+        return pd.DataFrame()
+    F = pd.concat(cols, axis=1)
+    _order = ["MKT·S&P 500"] + [c for c in F.columns if c != "MKT·S&P 500"]
+    return F[_order].dropna(how="all")
+
+
+def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
+                               start: str, end: str) -> None:
+    """Factor & alpha attribution for the deployed book (see section banner)."""
+    try:
+        import statsmodels.api as sm
+        from src.analysis.trade_allocator import trade_leg_series
+    except Exception:
+        return
+
+    deployed = [t for t in book if float(t.get("alloc_weight", 0.0)) > 0]
+    if len(deployed) < 2:
+        return
+
+    # Weight-normalised daily book return from the signed leg series.
+    gross = sum(float(t["alloc_weight"]) for t in deployed) or 1.0
+    legs: dict = {}
+    wts: dict = {}
+    for t in deployed:
+        s = trade_leg_series(all_r_gate, t.get("assets", []), t.get("direction", []))
+        if s is not None and len(s) > 120:
+            nm = t.get("name", f"pos{len(legs)}")
+            legs[nm] = s
+            wts[nm] = float(t["alloc_weight"]) / gross
+    if len(legs) < 2:
+        return
+    L = pd.concat(legs, axis=1).dropna()
+    if len(L) < 250:
+        return
+    w = np.array([wts[c] for c in L.columns], dtype=float)
+    w = w / w.sum()
+    book_r = pd.Series(L.values @ w, index=L.index, name="book")
+
+    F = _load_factor_panel(start, end)
+    if F.empty:
+        return
+    df = pd.concat([book_r, F], axis=1).dropna()
+    if len(df) < 250:
+        return
+    y = df["book"]
+    mkt = F.columns[0]
+    sectors = [c for c in F.columns if c != mkt]
+    _HAC = dict(cov_type="HAC", cov_kwds={"maxlags": 5})
+
+    # CAPM / market model
+    cm = sm.OLS(y, sm.add_constant(df[[mkt]])).fit(**_HAC)
+    beta_mkt   = float(cm.params[mkt])
+    alpha_capm = float(cm.params["const"]) * 252 * 100        # %/yr
+    alpha_t    = float(cm.tvalues["const"])
+    r2_mkt     = float(cm.rsquared)
+    # benchmark-relative (vs S&P)
+    active = y - df[mkt]
+    te = float(active.std() * np.sqrt(252) * 100)             # %/yr
+    ir = float((active.mean() * 252 * 100) / te) if te > 0 else float("nan")
+
+    # Multi-factor with market-orthogonalised sector factors
+    orth = {mkt: df[mkt]}
+    for c in sectors:
+        orth[c] = sm.OLS(df[c], sm.add_constant(df[[mkt]])).fit().resid
+    XF = pd.concat([orth[mkt].rename(mkt)] +
+                   [orth[c].rename(c) for c in sectors], axis=1)
+    fm = sm.OLS(y, sm.add_constant(XF)).fit(**_HAC)
+    r2_full    = float(fm.rsquared)
+    alpha_mf   = float(fm.params["const"]) * 252 * 100
+    alpha_mf_t = float(fm.tvalues["const"])
+    load = {c: (float(fm.params[c]), float(fm.tvalues[c])) for c in XF.columns}
+
+    # Effective number of bets from the correlation spectrum
+    eig = np.linalg.eigvalsh(L.corr().values)
+    eig = eig[eig > 1e-9]
+    enb = float((eig.sum() ** 2) / np.square(eig).sum()) if eig.size else float(L.shape[1])
+
+    # Variance ladder
+    sect_share = max(0.0, r2_full - r2_mkt) * 100
+    mkt_share  = r2_mkt * 100
+    idio_share = max(0.0, 1.0 - r2_full) * 100
+
+    # Verdict
+    _sig = abs(alpha_mf_t) >= 2.0
+    if _sig and alpha_mf > 0:
+        verdict, vcol = "ALPHA PRESENT", "#27ae60"
+    elif r2_full >= 0.60:
+        verdict, vcol = "BETA BOOK", "#c0392b"
+    elif sect_share >= 15:
+        verdict, vcol = "SECTOR-TILT BOOK", "#e67e22"
+    else:
+        verdict, vcol = "INCONCLUSIVE", "#8890a1"
+
+    # Dominant sector tilts (by |t|), significant only
+    _sig_sectors = sorted(
+        [(c, load[c][0], load[c][1]) for c in sectors if abs(load[c][1]) >= 2.0],
+        key=lambda x: -abs(x[2]))
+    _lead_txt = ", ".join(
+        f'{c.split("·")[0]} (β{v:+.2f}, t{tt:.1f})' for c, v, tt in _sig_sectors[:2]
+    ) or "no sector loading clears t≥2"
+
+    _M = "font-family:'JetBrains Mono',monospace;"
+    _lbl = f"{_M}font-size:.5rem;letter-spacing:.1em;color:#8890a1"
+
+    def _stat(lbl, val, sub, col="#e8e9ed"):
+        return (f'<div style="flex:1;padding:.45rem .7rem;border-right:1px solid #1e1e1e">'
+                f'<div style="{_lbl}">{lbl}</div>'
+                f'<div style="{_M}font-size:1.05rem;font-weight:700;color:{col};'
+                f'margin:1px 0">{val}</div>'
+                f'<div style="{_M}font-size:.48rem;color:#555960">{sub}</div></div>')
+
+    _acol = "#27ae60" if (alpha_mf > 0 and _sig) else ("#e8e9ed" if alpha_mf >= 0 else "#c0392b")
+    stats = (
+        f'<div style="display:flex;border-bottom:1px solid #1e1e1e">'
+        + _stat("MARKET β", f"{beta_mkt:.2f}",
+                f"vs S&P · R²&nbsp;{r2_mkt*100:.0f}%")
+        + _stat("JENSEN α", f"{alpha_mf:+.1f}%<span style='font-size:.5rem'>/yr</span>",
+                f"t&nbsp;{alpha_mf_t:.1f} · {'sig' if _sig else 'not sig'}", _acol)
+        + _stat("INFO RATIO", f"{ir:.2f}",
+                f"TE&nbsp;{te:.1f}%/yr vs S&P")
+        + _stat("EFF. BETS", f"{enb:.1f}",
+                f"of&nbsp;{L.shape[1]} positions")
+        + f'</div>')
+
+    # factor loading bars (market + sectors), scaled to the largest |β|
+    _all_f = [mkt] + sectors
+    _bmax = max((abs(load[c][0]) for c in _all_f), default=1.0) or 1.0
+    rows = ""
+    for c in _all_f:
+        b, tt = load[c]
+        _w = abs(b) / _bmax * 100
+        _bc = "#3a6ea5" if c == mkt else ("#27ae60" if b >= 0 else "#c0392b")
+        _sg = "" if abs(tt) >= 2 else "opacity:.45;"
+        rows += (
+            f'<div style="display:flex;align-items:center;gap:8px;padding:1.5px 0;{_sg}">'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:104px">{c}</span>'
+            f'<div style="flex:1;height:9px;background:#141414;position:relative">'
+            f'<div style="width:{_w:.0f}%;height:9px;background:{_bc}"></div></div>'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:52px;'
+            f'text-align:right">β&nbsp;{b:+.2f}</span>'
+            f'<span style="{_M}font-size:.5rem;color:#8890a1;min-width:44px;'
+            f'text-align:right">t&nbsp;{tt:+.1f}</span></div>')
+
+    # variance ladder (stacked bar)
+    ladder = (
+        f'<div style="display:flex;height:16px;border:1px solid #1e1e1e;margin:.15rem 0 .3rem">'
+        f'<div style="width:{mkt_share:.0f}%;background:#3a6ea5" title="market"></div>'
+        f'<div style="width:{sect_share:.0f}%;background:#e67e22" title="sector tilts"></div>'
+        f'<div style="width:{idio_share:.0f}%;background:#2b2b2b" title="idiosyncratic"></div>'
+        f'</div>'
+        f'<div style="{_M}font-size:.5rem;color:#8890a1;display:flex;gap:14px">'
+        f'<span><span style="color:#3a6ea5">■</span> market {mkt_share:.0f}%</span>'
+        f'<span><span style="color:#e67e22">■</span> sector tilts {sect_share:.0f}%</span>'
+        f'<span><span style="color:#8890a1">■</span> idiosyncratic {idio_share:.0f}%</span>'
+        f'</div>')
+
+    _sig_word = "significant" if _sig else "not statistically significant"
+    _skill_txt = ("evidence of selection skill beyond the factor tilts."
+                  if (_sig and alpha_mf > 0) else
+                  "so the book is a factor tilt, not demonstrated stock-selection alpha.")
+    read = (
+        f'This {L.shape[1]}-position book carries <b style="color:#e8e9ed">'
+        f'{beta_mkt:.2f} market beta</b>; <b style="color:#e8e9ed">'
+        f'{r2_full*100:.0f}%</b> of its daily variance is market + sector beta '
+        f'(dominated by {_lead_txt}). Jensen alpha is <b style="color:{_acol}">'
+        f'{alpha_mf:+.1f}%/yr</b> and is <b>{_sig_word}</b> '
+        f'(t&nbsp;{alpha_mf_t:.1f}) — {_skill_txt}'
+        f' The {L.shape[1]} positions span ~<b style="color:#e8e9ed">{enb:.1f}</b> '
+        f'independent bets.')
+
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;margin:.2rem 0 .8rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+        f'padding:.4rem .8rem;border-bottom:1px solid #1e1e1e">'
+        f'<span style="{_M}font-size:.6rem;font-weight:700;letter-spacing:.14em;'
+        f'color:#e8e9ed">BOOK FACTOR &amp; ALPHA DECOMPOSITION</span>'
+        f'<span style="{_M}font-size:.5rem;color:#8890a1">'
+        f'HAC/Newey-West · {len(df)} obs · alpha vs {len(sectors)+1} factors '
+        f'<span style="background:{vcol};color:#000;font-weight:700;padding:1px 7px;'
+        f'margin-left:6px;letter-spacing:.08em">{verdict}</span></span></div>'
+        f'{stats}'
+        f'<div style="display:flex;gap:16px;padding:.55rem .8rem;flex-wrap:wrap">'
+        f'<div style="flex:1.3;min-width:280px">'
+        f'<div style="{_lbl};margin-bottom:3px">FACTOR LOADINGS · market-orthogonalised · '
+        f'faded = t&lt;2</div>{rows}</div>'
+        f'<div style="flex:1;min-width:210px">'
+        f'<div style="{_lbl};margin-bottom:3px">VARIANCE EXPLAINED</div>{ladder}'
+        f'<div style="{_M}font-size:.56rem;color:#c9ccd4;line-height:1.5;'
+        f'margin-top:.5rem">{read}</div></div>'
+        f'</div>'
+        f'<div style="padding:.3rem .8rem;border-top:1px solid #1e1e1e;{_M}'
+        f'font-size:.48rem;color:#555960">Ex-post attribution of the current book '
+        f'over the sample window · β from HAC-robust OLS · Jensen α = multi-factor '
+        f'intercept (annualised) · eff. bets = participation ratio of the position '
+        f'correlation spectrum · not a forward forecast</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -2918,6 +3185,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'</div>',
             unsafe_allow_html=True,
         )
+
+        # Is this book alpha or beta? Factor & alpha attribution of the deployed
+        # positions — the buy-side question the pipeline validation doesn't answer.
+        try:
+            _render_book_factor_decomp(_ranked_book, _all_r_gate, start, end)
+        except Exception:
+            pass
 
     # ── Download report ─────────────────────────────────────────────────────
     _n_theses  = len(_TRADE_LIBRARY)
