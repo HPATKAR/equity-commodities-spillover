@@ -692,6 +692,12 @@ def _trade_card(trade: dict) -> list:
                colors.HexColor("#fff8f8"), RED)]],
         colWidths=[col_w/3, col_w/3, col_w/3],
         style=TableStyle([
+            # Paint the colour on the OUTER cell so it fills the full cell height
+            # and width even when a column's text is shorter than its neighbours
+            # (the inner _sub table only paints its own content box).
+            ("BACKGROUND",    (0,0), (0,0), colors.HexColor("#f9f8f6")),
+            ("BACKGROUND",    (1,0), (1,0), colors.HexColor("#f9f8f6")),
+            ("BACKGROUND",    (2,0), (2,0), colors.HexColor("#fff8f8")),
             ("TOPPADDING",    (0,0), (-1,-1), 0),
             ("BOTTOMPADDING", (0,0), (-1,-1), 0),
             ("LEFTPADDING",   (0,0), (-1,-1), 0),
@@ -714,6 +720,11 @@ def _trade_card(trade: dict) -> list:
                         colors.HexColor("#f9f8f6"), GRAY)]],
                 colWidths=[col_w/3, col_w/3, col_w/3],
                 style=TableStyle([
+                    # Colour on the OUTER cell → fills the whole cell regardless
+                    # of which column's text is tallest (see eer_row note above).
+                    ("BACKGROUND",    (0,0), (0,0), colors.HexColor("#f3faf3")),
+                    ("BACKGROUND",    (1,0), (1,0), colors.HexColor("#f5f5ff")),
+                    ("BACKGROUND",    (2,0), (2,0), colors.HexColor("#f9f8f6")),
                     ("TOPPADDING",    (0,0), (-1,-1), 0),
                     ("BOTTOMPADDING", (0,0), (-1,-1), 0),
                     ("LEFTPADDING",   (0,0), (-1,-1), 0),
