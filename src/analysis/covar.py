@@ -1,5 +1,5 @@
 """
-ΔCoVaR — Adrian and Brunnermeier (2016) systemic risk measure.
+ΔCoVaR - Adrian and Brunnermeier (2016) systemic risk measure.
 
 ONE quantile regression of the system return on each asset's return at τ=0.05.
 The regression is then evaluated at two asset states:
@@ -9,7 +9,7 @@ The regression is then evaluated at two asset states:
 ΔCoVaR_i = CoVaR(5% | asset distressed) − CoVaR(5% | asset at median)
            = β_{5%}^{system|i} × (VaR^i_{5%} − Median^i)
 
-Both CoVaR terms are the 5th percentile of the SYSTEM distribution —
+Both CoVaR terms are the 5th percentile of the SYSTEM distribution - 
 only the conditioning asset state differs. This is the correct AB convention:
 a single τ=5% regression evaluated at two points on the asset's return axis.
 
@@ -98,13 +98,13 @@ def compute_covar(
     System return: equal-weighted mean of all columns in _all_r.
 
     Returns DataFrame indexed by asset with columns:
-      var5         — asset VaR at 5th percentile (%, negative)
-      median_r     — asset median return (%, near zero)
-      covar5       — system 5th-pctile when asset is distressed (%, negative)
-      covar_med    — system 5th-pctile when asset is at median  (%, negative)
-      delta_covar  — covar5 − covar_med  (%, always negative; more-negative = more systemic)
-      beta         — QuantReg slope at τ=q_sys
-      n_obs        — overlapping observations used
+      var5 - asset VaR at 5th percentile (%, negative)
+      median_r - asset median return (%, near zero)
+      covar5 - system 5th-pctile when asset is distressed (%, negative)
+      covar_med - system 5th-pctile when asset is at median  (%, negative)
+      delta_covar - covar5 − covar_med  (%, always negative; more-negative = more systemic)
+      beta - QuantReg slope at τ=q_sys
+      n_obs - overlapping observations used
     Sorted ascending by delta_covar (most systemic first).
     """
     if not _HAS_QR:

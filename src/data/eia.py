@@ -5,10 +5,10 @@ No API key required for the series used here.
 API documentation: https://www.eia.gov/opendata/
 
 Key series:
-  PET.WCRSTUS1.W   — US crude oil stocks (weekly, thousand barrels)
-  PET.WGTSTUS1.W   — US total gasoline stocks
-  NG.NW2_EPG0_SWO_R48_BCF.W — US natural gas working storage (BCF)
-  PET.WDIMUSTAL1.W — US crude oil imports (weekly, mb/d)
+  PET.WCRSTUS1.W - US crude oil stocks (weekly, thousand barrels)
+  PET.WGTSTUS1.W - US total gasoline stocks
+  NG.NW2_EPG0_SWO_R48_BCF.W - US natural gas working storage (BCF)
+  PET.WDIMUSTAL1.W - US crude oil imports (weekly, mb/d)
 
 Endpoint: https://api.eia.gov/v2/seriesid/{series_id}?api_key=DEMO_KEY
   DEMO_KEY works for ~30 req/min from non-Streamlit Cloud environments.
@@ -85,8 +85,8 @@ def fetch_eia_series(series_key: str, weeks: int = 260) -> pd.DataFrame:
 
     Parameters
     ----------
-    series_key : str — key from _SERIES dict (e.g., "crude_stocks")
-    weeks      : int — number of weeks to fetch (default 260 = 5 years)
+    series_key : str - key from _SERIES dict (e.g., "crude_stocks")
+    weeks      : int - number of weeks to fetch (default 260 = 5 years)
 
     Returns
     -------
@@ -145,7 +145,7 @@ def fetch_eia_series(series_key: str, weeks: int = 260) -> pd.DataFrame:
 
 def fetch_all_eia_inventory(weeks: int = 260) -> dict[str, pd.DataFrame]:
     """Fetch all tracked EIA series. Returns {series_key: DataFrame}.
-    Not cached — delegates to cached leaf fetch_eia_series()."""
+    Not cached - delegates to cached leaf fetch_eia_series()."""
     return {k: fetch_eia_series(k, weeks=weeks) for k in _SERIES}
 
 

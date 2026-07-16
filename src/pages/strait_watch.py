@@ -294,14 +294,14 @@ def page_strait_watch(start: str, end: str) -> None:
                 _live_straits = _f_live.result()
                 _pw_loaded    = not _pw_df.empty
             except Exception as _pw_err:
-                st.caption("PortWatch live counts unavailable — showing last-known estimates.")
+                st.caption("PortWatch live counts unavailable - showing last-known estimates.")
 
         try:
             _, cmd_px = _f_prices.result()
         except Exception:
             cmd_px = pd.DataFrame()
 
-    # ── Enrich _straits with live data (serial — touches session_state) ──────
+    # ── Enrich _straits with live data (serial - touches session_state) ──────
     if _portwatch_ok and _live_straits:
         try:
             for s in _straits:
@@ -336,7 +336,7 @@ def page_strait_watch(start: str, end: str) -> None:
                         if not _pw_df.empty:
                             s["_live_total"] = _live_total
         except Exception as _pw_err:
-            st.caption("PortWatch live counts unavailable — showing last-known estimates.")
+            st.caption("PortWatch live counts unavailable - showing last-known estimates.")
 
     def _safe_series(name: str) -> pd.Series:
         if not cmd_px.empty and name in cmd_px.columns:
@@ -353,7 +353,7 @@ def page_strait_watch(start: str, end: str) -> None:
     brent_chg  = ((brent_now / brent_30d) - 1) * 100 if brent_now and brent_30d else None
     spread_now = (brent_now - wti_now) if brent_now and wti_now else None
 
-    # ── Live disruption scoring — recomputed every session ────────────────────
+    # ── Live disruption scoring - recomputed every session ────────────────────
     # Disruption scores in _STRAITS are quarterly research estimates (static).
     # Here we adjust them using live 20-day commodity z-scores so the displayed
     # scores change with actual market signals each session, not quarterly.
@@ -414,7 +414,7 @@ def page_strait_watch(start: str, end: str) -> None:
             _adj = _base * _oil_mult
         elif _sid == "turkish":
             _adj = _base * _gas_mult
-        else:  # malacca — minimal signal, near-static
+        else:  # malacca - minimal signal, near-static
             _adj = _base * float(np.clip(1.0 + _oil_z * 0.03, 0.97, 1.05))
 
         _s["disruption_score"] = int(np.clip(round(_adj), 0, 100))
@@ -534,7 +534,7 @@ def page_strait_watch(start: str, end: str) -> None:
         # recent. When the data is days old the day-over-day delta is the last
         # AVAILABLE change, not a live 24h move, so label it "latest Δ". For
         # non-live straits the hardcoded _STRAITS deltas are rough quarterly
-        # estimates — shown as "—" rather than a misleading precise number.
+        # estimates - shown as " - " rather than a misleading precise number.
         if is_live:
             _delta_lbl = "latest Δ" if is_stale else "24h change"
             chg_html = (
@@ -544,7 +544,7 @@ def page_strait_watch(start: str, end: str) -> None:
             )
         else:
             chg_html = (
-                f'<span style="{_M}font-size:0.72rem;font-weight:700;color:#555960">—</span>'
+                f'<span style="{_M}font-size:0.72rem;font-weight:700;color:#555960"> - </span>'
                 f'<span style="{_F}font-size:0.52rem;color:#555960;margin-left:4px">24h (est. only)</span>'
             )
 
@@ -786,7 +786,7 @@ def page_strait_watch(start: str, end: str) -> None:
     # ── Crisis timeline ────────────────────────────────────────────────────────
     # ── War-Risk Insurance Premium Panel (GAP 23) ─────────────────────────────
     _divider("0.55rem", "0.3rem")
-    _section_label("War-Risk Insurance Premium — Lloyd's Surcharge Tiers")
+    _section_label("War-Risk Insurance Premium - Lloyd's Surcharge Tiers")
 
     # Lloyd's JWC (Joint War Committee) designated areas and surcharge ranges.
     # These are updated manually based on Lloyd's published Additional Premium notices.
@@ -1104,11 +1104,11 @@ def page_strait_watch(start: str, end: str) -> None:
     _divider("0.6rem", "0.3rem")
     _thread(
         "The vessel traffic numbers above are AIS estimates. "
-        "IMF PortWatch provides verified daily transit counts directly from satellite AIS signals — "
+        "IMF PortWatch provides verified daily transit counts directly from satellite AIS signals - "
         "the most authoritative public source for chokepoint throughput. "
         "Fetching live data for Strait of Hormuz…"
     )
-    _section_label("IMF PortWatch — Strait of Hormuz Daily Tanker Transits (Live)")
+    _section_label("IMF PortWatch - Strait of Hormuz Daily Tanker Transits (Live)")
 
     pw_df = _pw_df  # reuse data already fetched at page top
 
@@ -1171,7 +1171,7 @@ def page_strait_watch(start: str, end: str) -> None:
             f"Updated daily · {len(pw_df)} observations loaded."
         )
     else:
-        # Graceful degradation — show config instructions
+        # Graceful degradation - show config instructions
         st.markdown(
             f'<div style="background:#131313;border:1px solid #2a2a2a;border-radius:0;'
             f'padding:0.9rem 1.1rem">'
@@ -1194,13 +1194,13 @@ def page_strait_watch(start: str, end: str) -> None:
     _divider("0.6rem", "0.3rem")
     _thread(
         "The sensitivity table below translates tanker disruption scenarios directly into "
-        "estimated Brent prices — using both the empirical OLS elasticity from IMF PortWatch + "
+        "estimated Brent prices - using both the empirical OLS elasticity from IMF PortWatch + "
         "FRED data and the structural elasticity range applied by EIA/IEA forecasters. "
         "The empirical elasticity appears counterintuitive because a simple regression cannot "
         "untangle war-risk premia, insurance costs, Cape rerouting, and OPEC responses. "
-        "Structural models — which embed supply-demand accounting — are the right tool for extreme scenarios."
+        "Structural models - which embed supply-demand accounting - are the right tool for extreme scenarios."
     )
-    _section_label("Brent Crude — Disruption Sensitivity Analysis (USD/bbl)")
+    _section_label("Brent Crude - Disruption Sensitivity Analysis (USD/bbl)")
 
     # Live base price from loaded Brent series, fallback $99
     _base = round(float(brent.iloc[-1]), 2) if not brent.empty else 99.0
@@ -1215,8 +1215,8 @@ def page_strait_watch(start: str, end: str) -> None:
         # ── Render HTML color-coded Brent disruption-sensitivity table ─────────
         disruption_cols = ["-10%", "-25%", "-50%", "-75%", "-100%"]
         row_labels = {
-            0.004:  ("0.004", "Empirical — 2026 blockade only",       "#2980b9"),
-            0.014:  ("0.014", "Empirical — 2019–2026 full dataset",   "#2980b9"),
+            0.004:  ("0.004", "Empirical - 2026 blockade only",       "#2980b9"),
+            0.014:  ("0.014", "Empirical - 2019–2026 full dataset",   "#2980b9"),
             -0.25:  ("−0.25", "Forecaster structural (EIA/IEA low)",  "#CFB991"),
             -0.35:  ("−0.35", "Forecaster structural (mid-range)",    "#CFB991"),
             -0.50:  ("−0.50", "Forecaster structural (IEA high-end)", "#c0392b"),
@@ -1326,7 +1326,7 @@ def page_strait_watch(start: str, end: str) -> None:
             f'<div style="{_M}font-size:0.82rem;font-weight:700;color:#e8e9ed">ε = 0.014 (2019–2026)</div>'
             f'<div style="{_M}font-size:0.72rem;color:#8890a1;margin-top:2px">ε = 0.004 (2026 crisis only)</div>'
             f'<div style="{_F}font-size:0.58rem;color:#555960;margin-top:6px;line-height:1.6">'
-            f'Small positive ε reflects demand co-movement dominating the regression — '
+            f'Small positive ε reflects demand co-movement dominating the regression - '
             f'both oil price and tanker count fell during COVID/demand shocks, '
             f'creating a spurious positive relationship. The war-risk premium, '
             f'insurance costs, and Cape rerouting channels are left in the residual.'
@@ -1362,7 +1362,7 @@ def page_strait_watch(start: str, end: str) -> None:
         f'war-risk insurance tier (Lloyd\'s), AIS vessel density (BIMCO), and conflict event '
         f'data (ACLED). Scores are updated quarterly or on material incidents. '
         f'Price data: Yahoo Finance (BZ=F, CL=F, NG=F) · FRED (DCOILBRENTEU). '
-        f'Live tanker transit data: IMF PortWatch (portwatch.imf.org) via ArcGIS Feature Service — '
+        f'Live tanker transit data: IMF PortWatch (portwatch.imf.org) via ArcGIS Feature Service - '
         f'verified daily AIS-derived chokepoint counts. '
         f'Brent disruption sensitivity: OLS elasticity from IMF PortWatch n_tanker (60% oil proxy) '
         f'vs FRED Brent 2019–2026; structural elasticity range from EIA/IEA scenario analysis. '
@@ -1410,7 +1410,7 @@ def page_strait_watch(start: str, end: str) -> None:
 
     # ── EIA Weekly Energy Inventories ─────────────────────────────────────────
     _divider("0.6rem", "0.3rem")
-    _section_label("EIA Weekly Energy Inventories — Physical Supply Signal")
+    _section_label("EIA Weekly Energy Inventories - Physical Supply Signal")
     _thread(
         "Disruption risk is only half the picture. The physical supply buffer determines how fast "
         "a chokepoint disruption translates to a price spike. US crude stocks below the seasonal "
@@ -1424,22 +1424,22 @@ def page_strait_watch(start: str, end: str) -> None:
             _eia_snap = eia_snapshot(weeks=260)
 
         _sig_color = {"draw": "#c0392b", "build": "#27ae60", "neutral": "#8E9AAA"}
-        _sig_label = {"draw": "DRAW — BULLISH", "build": "BUILD — BEARISH", "neutral": "NEUTRAL"}
+        _sig_label = {"draw": "DRAW - BULLISH", "build": "BUILD - BEARISH", "neutral": "NEUTRAL"}
 
         _eia_avail = {k: v for k, v in _eia_snap.items() if v.get("data_available")}
 
         if not _eia_avail:
-            st.caption("EIA inventory data unavailable — DEMO_KEY rate limit or network error.")
+            st.caption("EIA inventory data unavailable - DEMO_KEY rate limit or network error.")
         else:
             eia_cols = st.columns(len(_eia_avail), gap="small")
             for col, (key, snap) in zip(eia_cols, _eia_avail.items()):
                 sc    = _sig_color[snap["signal"]]
                 sl    = _sig_label[snap["signal"]]
                 wow   = snap["wow_change"]
-                wow_s = f"{'▲' if wow > 0 else '▼' if wow < 0 else '—'}{abs(wow):,}"
+                wow_s = f"{'▲' if wow > 0 else '▼' if wow < 0 else ' - '}{abs(wow):,}"
                 wow_c = "#27ae60" if wow > 0 else "#c0392b" if wow < 0 else "#8E9AAA"
                 p5yr  = snap.get("vs_5yr_pct")
-                p5yr_str = f"{p5yr:+.1f}% vs 5yr avg" if p5yr is not None else "—"
+                p5yr_str = f"{p5yr:+.1f}% vs 5yr avg" if p5yr is not None else " - "
                 p5yr_c   = "#c0392b" if p5yr and p5yr < 0 else "#27ae60" if p5yr and p5yr > 0 else "#8E9AAA"
                 col.markdown(
                     f'<div style="background:#0f0f0f;border:1px solid #1e1e1e;'
@@ -1473,7 +1473,7 @@ def page_strait_watch(start: str, end: str) -> None:
                 "low stocks + high disruption = maximum price shock risk."
             )
     except Exception as _eia_err:
-        st.caption("EIA data unavailable — DEMO_KEY may be rate-limited.")
+        st.caption("EIA data unavailable - DEMO_KEY may be rate-limited.")
 
     # ── SHIPPING → CRUDE LEAD-LAG SIGNAL ──────────────────────────────────────
     st.markdown(
@@ -1487,7 +1487,7 @@ def page_strait_watch(start: str, end: str) -> None:
         f'Cross-correlation of daily ship-count changes vs WTI returns at lags −10 to +10 days. '
         f'Positive lag = shipping leads price. Negative lag = price leads rerouting. '
         f'95% CI: ±2/√n (white-noise null). '
-        f'<b style="color:#e67e22">PortWatch has ~7-day publication lag — lags 0–6 may reflect '
+        f'<b style="color:#e67e22">PortWatch has ~7-day publication lag - lags 0–6 may reflect '
         f'reporting delay, not true predictive lead.</b> No forward-filling applied.</p>',
         unsafe_allow_html=True,
     )
@@ -1509,7 +1509,7 @@ def page_strait_watch(start: str, end: str) -> None:
             _price_label  = "WTI"
 
         if _price_for_ll.empty:
-            st.caption("Crude price series unavailable — cannot compute lead-lag.")
+            st.caption("Crude price series unavailable - cannot compute lead-lag.")
         else:
             with st.spinner("Computing chokepoint lead-lag correlations…"):
                 _ll_results = _cached_lead_lag(_price_for_ll, len(_price_for_ll))
@@ -1529,10 +1529,10 @@ def page_strait_watch(start: str, end: str) -> None:
             _rows = ""
             for _res in _ll_results:
                 _dc    = _dir_color.get(_res["direction"], "#555960")
-                _sig   = "✓" if _res["significant"] else "—"
+                _sig   = "✓" if _res["significant"] else " - "
                 _sig_c = "#27ae60" if _res["significant"] else "#555960"
                 _lag_s = f"+{_res['peak_lag']}d" if (_res["peak_lag"] or 0) > 0 else (
-                    f"{_res['peak_lag']}d" if _res["peak_lag"] is not None else "—"
+                    f"{_res['peak_lag']}d" if _res["peak_lag"] is not None else " - "
                 )
                 _pub_warn = (
                     f'<span style="color:#e67e22;font-size:0.50rem"> ⚠ pub.lag</span>'
@@ -1598,7 +1598,7 @@ def page_strait_watch(start: str, end: str) -> None:
                     layer="below", line_width=0,
                 )
                 _fig_ccf.update_layout(
-                    title=f"Hormuz ship-count Δ vs {_price_label} return — CCF by lag (days)",
+                    title=f"Hormuz ship-count Δ vs {_price_label} return - CCF by lag (days)",
                     height=260,
                     margin=dict(l=40, r=10, t=40, b=50),
                     paper_bgcolor="#080808",
@@ -1606,7 +1606,7 @@ def page_strait_watch(start: str, end: str) -> None:
                     font=dict(family="JetBrains Mono", size=10, color="#c8c8c8"),
                     title_font=dict(size=10, color="#8890a1"),
                     xaxis=dict(
-                        title="Lag (days) — positive = shipping leads price",
+                        title="Lag (days) - positive = shipping leads price",
                         tickfont=dict(size=9, color="#c8c8c8"),
                         gridcolor="#1a1a1a",
                         dtick=1,
@@ -1630,6 +1630,6 @@ def page_strait_watch(start: str, end: str) -> None:
                 )
 
     except Exception as _ll_err:
-        st.caption("Lead-lag analysis unavailable — see logs.")
+        st.caption("Lead-lag analysis unavailable - see logs.")
 
     _page_footer()

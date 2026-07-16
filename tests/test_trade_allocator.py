@@ -1,5 +1,5 @@
 """
-Step 2 of 4 — weight allocator.
+Step 2 of 4 - weight allocator.
 
 Pins: the zero-weight lock survives allocation; sizing is DSR-aware and never
 raw-Sharpe; low-DSR and stale trades size to zero; inverse-vol and liquidity
@@ -109,7 +109,7 @@ def test_cap_redistributes_and_preserves_total():
 
 def test_cap_binding_everywhere_leaves_cash_remainder():
     # Concentration cap is a hard risk limit: with only two eligible trades,
-    # 2 × 35% = 70% gross and the remainder is cash — never force-fill to 100%.
+    # 2 × 35% = 70% gross and the remainder is cash - never force-fill to 100%.
     trades = [_t("A"), _t("B")]
     metrics = {"A": _m(), "B": _m()}
     allocate_weights(trades, metrics)

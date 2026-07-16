@@ -27,6 +27,6 @@ def now_ct() -> datetime:
 
 
 def today_ct() -> date:
-    """Current calendar date in America/Chicago — the correct 'today' for
+    """Current calendar date in America/Chicago - the correct 'today' for
     day-over-day rollovers and market-date logic."""
     return now_ct().date()

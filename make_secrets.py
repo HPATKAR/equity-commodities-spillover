@@ -36,4 +36,4 @@ if any(lseg_vals.values()):
             found += 1
 
 (out / "secrets.toml").write_text("".join(lines))
-print(f"secrets.toml written — {found} key(s) configured")
+print(f"secrets.toml written - {found} key(s) configured")

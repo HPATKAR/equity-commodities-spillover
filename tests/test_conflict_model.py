@@ -4,7 +4,7 @@ Unit tests for src/analysis/conflict_model.py.
 Tests focus on pure-math scoring functions that don't require API keys,
 network calls, or Streamlit state. ACLED/GDELT calls fail silently in test
 mode (no API key configured), so compute_cis falls back to the static
-registry values — which is the path we care about testing.
+registry values - which is the path we care about testing.
 
 Run with: python -m pytest tests/test_conflict_model.py -v
 """
@@ -240,7 +240,7 @@ class TestComputeTrend:
 
 class TestAggregatePortfolioScores:
     def test_returns_dict_with_required_keys(self):
-        """Call with static registry conflicts — no network needed."""
+        """Call with static registry conflicts - no network needed."""
         result = aggregate_portfolio_scores()
         required = {"cis", "tps", "confidence", "portfolio_cis", "portfolio_tps"}
         assert required.issubset(result.keys()), (
@@ -267,7 +267,7 @@ class TestAggregatePortfolioScores:
 
     def test_single_active_conflict_scores_positive(self):
         # aggregate_portfolio_scores expects the OUTPUT of score_all_conflicts:
-        # {conflict_id: {"cis": float, "tps": float, ...}} — not raw conflict dicts.
+        # {conflict_id: {"cis": float, "tps": float, ...}} - not raw conflict dicts.
         pre_scored = {
             "test_conflict": {
                 "name":            "Test Conflict",

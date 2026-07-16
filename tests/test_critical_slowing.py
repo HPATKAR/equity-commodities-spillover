@@ -1,12 +1,12 @@
 """
-Critical Slowing Down — early-warning signal tests.
+Critical Slowing Down - early-warning signal tests.
 
 Two things must hold for the science to be honest:
   1. Causality: an indicator at day t must not move when future data is deleted
      (no look-ahead beyond the documented in-sample standardization).
   2. Detection: on a synthetic series engineered to critically slow down before a
      jump, AR(1) and variance must rise ahead of it, and the composite must fire
-     before the break — while a flat control series must NOT fire.
+     before the break - while a flat control series must NOT fire.
 """
 
 import sys
@@ -63,7 +63,7 @@ def test_kendall_tau_signs():
 
 def test_indicator_at_t_ignores_future():
     """Deleting data after a cutoff must not change indicator values at/just before
-    it — the only permitted full-sample step is expanding standardization, which
+    it - the only permitted full-sample step is expanding standardization, which
     is monotone in history length, so we compare the raw ar1/variance columns."""
     s = _slowing_series()
     cutoff = s.index[400]

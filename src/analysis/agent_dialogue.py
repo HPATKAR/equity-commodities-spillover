@@ -439,7 +439,7 @@ def run_morning_briefing_protocol(ctx: dict) -> str:
 
     ga_handoff = (
         f"Conflict decomposition complete.\n"
-        f"Lead: {top_conflict_name} — {channel_str}.\n"
+        f"Lead: {top_conflict_name} - {channel_str}.\n"
         f"Affected commodities: {affected_str}. Hedge assets: {hedge_str}.\n"
     )
     if top_c2:
@@ -467,10 +467,10 @@ def run_morning_briefing_protocol(ctx: dict) -> str:
 
     ovx_signal = ""
     if ovx:
-        ovx_signal = f" OVX (crude vol) at {ovx:.1f} — {'elevated fear' if ovx > 30 else 'contained'}."
+        ovx_signal = f" OVX (crude vol) at {ovx:.1f} - {'elevated fear' if ovx > 30 else 'contained'}."
     gvz_signal = ""
     if gvz:
-        gvz_signal = f" GVZ (gold vol) at {gvz:.1f} — {'safe-haven demand elevated' if gvz > 20 else 'contained'}."
+        gvz_signal = f" GVZ (gold vol) at {gvz:.1f} - {'safe-haven demand elevated' if gvz > 20 else 'contained'}."
 
     cot_str = "; ".join(cot_summary[:3]) if cot_summary else "COT data not loaded this session"
 
@@ -483,7 +483,7 @@ def run_morning_briefing_protocol(ctx: dict) -> str:
         + ", ".join({c.get("channel","?") for c in active_conflicts[:3] if c.get("channel")})
         + f".\n"
         f"Assessment: {'Supply disruption risk is elevated' if tps >= 60 else 'Supply disruption risk is moderate'}. "
-        f"{'Energy and ag routes most stressed at current TPS {tps:.0f}.' if tps >= 50 else f'TPS at {tps:.0f} — transmission pressure manageable but building.'}\n"
+        f"{'Energy and ag routes most stressed at current TPS {tps:.0f}.' if tps >= 50 else f'TPS at {tps:.0f} - transmission pressure manageable but building.'}\n"
         f"Handing to Macro Strategist for inflation and rates implications."
     )
 
@@ -499,10 +499,10 @@ def run_morning_briefing_protocol(ctx: dict) -> str:
         curve_str = f" TLT 60d: {yield_curve:+.1f}% ({'bull steepening / duration bid' if yield_curve > 2 else 'bear flattening / rate pressure' if yield_curve < -2 else 'curve range-bound'})."
     credit_str = ""
     if credit_spread is not None:
-        credit_str = f" HYG 60d: {credit_spread:+.1f}% ({'spreads tightening' if credit_spread > 0 else 'spreads widening — credit stress signal'})."
+        credit_str = f" HYG 60d: {credit_spread:+.1f}% ({'spreads tightening' if credit_spread > 0 else 'spreads widening - credit stress signal'})."
     dollar_str = ""
     if dollar_60d is not None:
-        dollar_str = f" DXY proxy 60d: {dollar_60d:+.1f}% ({'dollar strengthening — EM headwind' if dollar_60d > 2 else 'dollar weakening — commodity tailwind' if dollar_60d < -2 else 'dollar neutral'})."
+        dollar_str = f" DXY proxy 60d: {dollar_60d:+.1f}% ({'dollar strengthening - EM headwind' if dollar_60d > 2 else 'dollar weakening - commodity tailwind' if dollar_60d < -2 else 'dollar neutral'})."
 
     eq_moves = []
     if top_eq_winner: eq_moves.append(f"{top_eq_winner} {top_eq_winner_ret:+.1f}% (5d)")
@@ -511,12 +511,12 @@ def run_morning_briefing_protocol(ctx: dict) -> str:
 
     macro_handoff = (
         f"Macro regime: {regime_label} · Correlation at {corr_pct:.0f}th percentile.\n"
-        f"{'Diversification is failing — equities and commodities co-moving.' if corr_pct > 70 else 'Diversification still effective at current correlation.'}\n"
+        f"{'Diversification is failing - equities and commodities co-moving.' if corr_pct > 70 else 'Diversification still effective at current correlation.'}\n"
         f"Equity 5-day: {eq_str}\n"
         f"Fixed income:{curve_str}{credit_str}\n"
         f"FX:{dollar_str}\n"
-        + (f"VIX at {vix:.1f} — {'fear elevated, risk-off likely dominating flows' if vix > 25 else 'vol contained' if vix < 18 else 'vol moderate'}.\n" if vix else "")
-        + (f"VVIX at {vvix:.1f} — {'tail-risk hedging demand elevated' if vvix > 100 else 'second-order vol contained'}.\n" if vvix else "")
+        + (f"VIX at {vix:.1f} - {'fear elevated, risk-off likely dominating flows' if vix > 25 else 'vol contained' if vix < 18 else 'vol moderate'}.\n" if vix else "")
+        + (f"VVIX at {vvix:.1f} - {'tail-risk hedging demand elevated' if vvix > 100 else 'second-order vol contained'}.\n" if vvix else "")
         + f"Under {scenario} scenario (×{geo_mult:.2f}): "
         + ("inflation pass-through from energy/ag disruption is the primary macro risk." if tps > 55 else "correlation regime shift is the primary macro risk.")
         + f"\nHanding to Trade Structurer for positioning expression."
@@ -532,17 +532,17 @@ def run_morning_briefing_protocol(ctx: dict) -> str:
     # Build trade expressions based on what the data actually says
     expressions = []
     if top_cmd_winner and top_cmd_winner_ret and top_cmd_winner_ret > 2:
-        expressions.append(f"Long {top_cmd_winner} momentum — confirmed by {top_c.get('channel','supply disruption') if top_c else 'geo pressure'}")
+        expressions.append(f"Long {top_cmd_winner} momentum - confirmed by {top_c.get('channel','supply disruption') if top_c else 'geo pressure'}")
     if vix and vix > 22:
-        expressions.append("Long VIX puts / short-vol fade — fear elevated, mean-reversion candidate")
+        expressions.append("Long VIX puts / short-vol fade - fear elevated, mean-reversion candidate")
     if credit_spread is not None and credit_spread < -2:
-        expressions.append("Short HYG / long LQD — spread widening momentum, credit stress forming")
+        expressions.append("Short HYG / long LQD - spread widening momentum, credit stress forming")
     if corr_pct > 70:
-        expressions.append("Regime hedge: long gold + short S&P — crisis correlation, diversification failing")
+        expressions.append("Regime hedge: long gold + short S&P - crisis correlation, diversification failing")
     if dollar_60d is not None and dollar_60d > 3:
-        expressions.append("Short EMB / reduce EM equity — dollar strength EM headwind confirmed")
+        expressions.append("Short EMB / reduce EM equity - dollar strength EM headwind confirmed")
     if not expressions:
-        expressions.append("No high-conviction asymmetric expression — reduce position size, await regime clarification")
+        expressions.append("No high-conviction asymmetric expression - reduce position size, await regime clarification")
 
     ts_resolve = (
         f"Trade synthesis from full briefing chain:\n"
@@ -591,7 +591,7 @@ def challenge_trade(
             content=f"QC flags raised: {flag_text}. "
                     + ("Recommending rejection pending resolution."
                        if len(qc_flags) >= 3
-                       else "Minor flags — confidence haircut applied."),
+                       else "Minor flags - confidence haircut applied."),
             subject_id=trade_id,
             thread_id=tid,
             payload={"flags": qc_flags},

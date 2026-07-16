@@ -1,5 +1,5 @@
 """
-Commodity Futures Curve Analysis — backwardation / contango detection.
+Commodity Futures Curve Analysis - backwardation / contango detection.
 
 Fetches front-month and deferred contract prices via yfinance and computes:
   - Curve slope (spot vs 6M contract): negative = backwardation, positive = contango
@@ -120,7 +120,7 @@ def fetch_curve_snapshot() -> pd.DataFrame:
             front_col    = pair["front"]
             deferred_col = pair["deferred"]
 
-            # Some deferred contracts may not trade — fall back to NaN
+            # Some deferred contracts may not trade - fall back to NaN
             if front_col not in data.columns or deferred_col not in data.columns:
                 # Try scalar download if only one ticker returned
                 continue
@@ -230,12 +230,12 @@ def geopolitical_corroboration(
     A high GRS score claiming supply disruption should coincide with energy
     commodities being in backwardation (near-term tightness priced in).
     If GRS is high but energy is in contango, the market structure contradicts
-    the geopolitical narrative — worth flagging.
+    the geopolitical narrative - worth flagging.
 
     Returns dict with:
       overall_signal   : "Corroborated" / "Contradicted" / "Inconclusive"
       energy_structure : list of (name, structure) for energy commodities
-      detail           : str — human-readable corroboration summary
+      detail           : str - human-readable corroboration summary
     """
     if curve_df.empty:
         return {
@@ -281,7 +281,7 @@ def geopolitical_corroboration(
         detail = (
             f"GRS={grs_score:.0f} (low), but energy in backwardation "
             f"({n_backwardation}/{n_total}). Supply tightness may be demand-driven, "
-            f"not geopolitical — or the GRS may be lagging market pricing."
+            f"not geopolitical - or the GRS may be lagging market pricing."
         )
     else:
         signal = "Inconclusive"

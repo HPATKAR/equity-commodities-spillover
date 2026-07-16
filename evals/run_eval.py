@@ -10,8 +10,8 @@ Usage:
     python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 
 No Streamlit required. All @st.cache_data decorators are mocked out.
-The script uses only the quantitative model (correlations, risk_score) —
-not the LLM agents — so results are deterministic and reproducible.
+The script uses only the quantitative model (correlations, risk_score) - 
+not the LLM agents - so results are deterministic and reproducible.
 """
 from __future__ import annotations
 
@@ -148,7 +148,7 @@ def print_summary(results: dict[str, dict]) -> None:
     print("=" * 72)
     n_fail = sum(1 for r in results.values() if r["gate"] == "FAIL")
     if n_fail:
-        print(f"\n⚠  {n_fail} agent(s) below {_PASS_THRESHOLD:.0%} threshold — review details above.\n")
+        print(f"\n⚠  {n_fail} agent(s) below {_PASS_THRESHOLD:.0%} threshold - review details above.\n")
     else:
         print(f"\n✓  All agents passed the {_PASS_THRESHOLD:.0%} hit-rate gate.\n")
 
@@ -156,7 +156,7 @@ def print_summary(results: dict[str, dict]) -> None:
 def write_markdown(results: dict[str, dict], path: str) -> None:
     run_date = datetime.date.today().isoformat()
     lines = [
-        f"# Benchmark Results — {run_date}",
+        f"# Benchmark Results - {run_date}",
         "",
         f"Pass threshold: **{_PASS_THRESHOLD:.0%}** hit rate",
         "",

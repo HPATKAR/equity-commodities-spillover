@@ -1,5 +1,5 @@
 """
-Replay Mode — point-in-time enforcement tests.
+Replay Mode - point-in-time enforcement tests.
 
 The one rule: NO data after the replay cutoff touches the computation, ever.
 These tests inject leaked future observations and assert the choke point
@@ -42,7 +42,7 @@ def test_pit_assert_raises_on_single_leaked_row():
 def test_pit_assert_passes_at_exact_cutoff():
     idx = pd.bdate_range(end=str(CUTOFF), periods=100)
     df = pd.DataFrame(0.0, index=idx, columns=["A"])
-    pit_assert(df, CUTOFF, "unit_test")     # must not raise — cutoff day inclusive
+    pit_assert(df, CUTOFF, "unit_test")     # must not raise - cutoff day inclusive
 
 
 def test_pit_slice_trims_and_result_passes_assert():
@@ -61,7 +61,7 @@ def test_pit_assert_rejects_tz_aware_leak():
 
 
 def test_pit_assert_rejects_non_datetime_index():
-    df = pd.DataFrame({"A": [1, 2, 3]})     # RangeIndex — unverifiable
+    df = pd.DataFrame({"A": [1, 2, 3]})     # RangeIndex - unverifiable
     with pytest.raises(LookaheadError, match="non-datetime"):
         pit_assert(df, CUTOFF, "unit_test")
 
@@ -86,8 +86,8 @@ def test_terminal_call_slices_leaked_inputs_on_entry():
 def test_conflicts_after_cutoff_are_excluded():
     scores = replay_conflict_scores(CUTOFF)
     assert "ukraine_russia" in scores       # broke out that day
-    assert "iran_conflict" not in scores    # June 2025 — must not exist yet
-    assert "india_pakistan" not in scores   # May 2025 — must not exist yet
+    assert "iran_conflict" not in scores    # June 2025 - must not exist yet
+    assert "india_pakistan" not in scores   # May 2025 - must not exist yet
 
 
 def test_breakout_day_is_active_and_escalating():

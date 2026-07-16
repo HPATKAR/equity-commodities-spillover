@@ -1,31 +1,31 @@
 """
-STEP 2 of 4 — weight allocator over Step-1-eligible trades.
+STEP 2 of 4 - weight allocator over Step-1-eligible trades.
 
 Each eligible trade is sized from four multiplicative factors:
 
     raw_w = conviction × dsr_factor × (1 / leg_vol) × liquidity
 
-  conviction  — Stage-3 thesis confirmation_score (0–1). Measured, not
+  conviction - Stage-3 thesis confirmation_score (0–1). Measured, not
                 self-reported.
-  dsr_factor  — clip((DSR − 0.5) / 0.5, 0, 1) where DSR is the deflated
+  dsr_factor - clip((DSR − 0.5) / 0.5, 0, 1) where DSR is the deflated
                 Sharpe probability (Bailey & López de Prado 2014) computed on
                 the trade's own backtest at n_strategies = 9. Raw Sharpe NEVER
                 sizes a weight: a strategy that cannot beat the best-of-9 luck
                 benchmark (DSR ≤ 0.5) sizes to exactly zero, as do stale
                 strategies with < 3 historical signals.
-  1/leg_vol   — inverse annualized vol of the trade's signed, equal-weight
+  1/leg_vol - inverse annualized vol of the trade's signed, equal-weight
                 leg return series (vol-parity sizing).
-  liquidity   — min across legs of a STATED static tier map (no volume data
+  liquidity - min across legs of a STATED static tier map (no volume data
                 is loaded anywhere in the terminal; tiers are a registry-style
                 calibration, same disclosure class as the transmission
                 weights). Majors 1.0, softs/regionals ~0.75.
 
 Raw weights are normalized to 100% gross across eligible trades, capped at
-35% per trade (excess redistributed pro-rata), and EVERY final assignment —
-eligible or not — is routed through Step 1's enforce_weight() choke point.
+35% per trade (excess redistributed pro-rata), and EVERY final assignment - 
+eligible or not - is routed through Step 1's enforce_weight() choke point.
 A non-allocatable trade receives literal 0.0 regardless of its metrics.
 
-Ranking and display are Step 3+ — this module computes and stamps only.
+Ranking and display are Step 3+ - this module computes and stamps only.
 """
 
 from __future__ import annotations
@@ -37,12 +37,12 @@ from src.analysis.trade_filter import enforce_weight
 
 MAX_SINGLE_WEIGHT = 0.35
 MIN_TRADES_FOR_DSR = 3
-_N_STRATEGIES = 9          # honest trial count — see backtest._N_LIBRARY_STRATEGIES
+_N_STRATEGIES = 9          # honest trial count - see backtest._N_LIBRARY_STRATEGIES
 
 # ── Deploy bar & risk appetite ────────────────────────────────────────────────
 # DSR_DEPLOY_BAR is the deflated-Sharpe confidence threshold (Bailey & López de
 # Prado): below it a strategy cannot be distinguished from the best-of-9 luck
-# benchmark. It is the DEFAULT (Defensive) bar and the labelled reference — it
+# benchmark. It is the DEFAULT (Defensive) bar and the labelled reference - it
 # is never silently lowered. A user-set risk appetite may lower the EFFECTIVE
 # bar toward DEPLOY_BAR_FLOOR, deploying the strongest relative ideas below the
 # confidence bar. That is an explicit, disclosed choice (see the desk-call
@@ -64,7 +64,7 @@ def effective_deploy_bar(appetite: float) -> float:
     """Map risk appetite [0,1] to the effective DSR deploy bar. Appetite 0
     keeps the strict deflated-Sharpe bar (Defensive); appetite 1 lowers it to
     DEPLOY_BAR_FLOOR (best-available). The ramp is concave (sqrt) so the upper
-    half of the slider deploys progressively — a linear ramp would leave every
+    half of the slider deploys progressively - a linear ramp would leave every
     mid-setting stranded above a weak-edge book's DSR mass and only the extreme
     would ever leave cash."""
     a = float(np.clip(appetite, 0.0, 1.0))
@@ -127,13 +127,13 @@ def build_allocation_inputs(
 ) -> dict[str, dict]:
     """
     Assemble the four sizing factors per ELIGIBLE trade using the existing
-    backtest machinery. Ineligible trades are skipped — they can never carry
+    backtest machinery. Ineligible trades are skipped - they can never carry
     weight, so computing metrics for them would only invite misuse.
 
     deploy_bar is the EFFECTIVE DSR threshold sizing scales from (Defensive =
     DSR_DEPLOY_BAR = 0.50; a higher risk appetite lowers it toward
     DEPLOY_BAR_FLOOR). The raw `dsr` is stored unchanged so ranking stays
-    evidence-based — only `dsr_factor` (and thus weight) responds to appetite.
+    evidence-based - only `dsr_factor` (and thus weight) responds to appetite.
 
     Returns {trade_name: {conviction, dsr, dsr_factor, vol, liquidity,
                           sharpe_raw, n_trades, deploy_bar}}.
@@ -163,7 +163,7 @@ def build_allocation_inputs(
         sharpe_raw = float(bt.get("sharpe") or 0.0)
         hold_days = _parse_holding_days(t, default=20)
 
-        # Direction-aware, regime-conditional P&L stats — the honest per-name
+        # Direction-aware, regime-conditional P&L stats - the honest per-name
         # expected return + dispersion for this signal over ONE holding window.
         # These drive the scenario-free profit projection (a Short's negative
         # realised edge shows as negative, not a flat zero).
@@ -212,19 +212,19 @@ def allocate_weights(
 ) -> list[dict]:
     """
     Pure allocator. Stamps every trade with:
-      alloc_weight : float — final portfolio weight (0.0 for non-allocatable)
-      alloc_detail : dict  — the factor breakdown, for Step-3 transparency
+      alloc_weight : float - final portfolio weight (0.0 for non-allocatable)
+      alloc_detail : dict - the factor breakdown, for Step-3 transparency
 
     Every assignment routes through enforce_weight(); a non-allocatable trade
     receives 0.0 no matter what its metrics say.
 
     EQUITY-SLEEVE MODEL. This book is the EQUITY COMPONENT of a larger
-    portfolio, so it stays FULLY INVESTED — the cash / hedge overlay is the
+    portfolio, so it stays FULLY INVESTED - the cash / hedge overlay is the
     parent portfolio's decision, not this sleeve's. Capital is sized by each
     trade's RISK-ADJUSTED EXPECTED EDGE: the direction-aware realised Sharpe
     (backtest mean ÷ σ per holding window), shrunk by deflated-Sharpe
-    confidence. A historically money-LOSING signal earns ~no capital — that
-    capital is reallocated to the winners, never parked in cash — so the book's
+    confidence. A historically money-LOSING signal earns ~no capital - that
+    capital is reallocated to the winners, never parked in cash - so the book's
     expected return actually reflects its best ideas rather than washing out
     across every eligible name. If literally nothing has a positive edge, the
     sleeve falls back to an inverse-vol spread (still fully invested, never
@@ -235,7 +235,7 @@ def allocate_weights(
     so the book leans into its highest-return names rather than the blandest
     low-vol ones. `concentration` (from risk appetite) sharpens that tilt and
     `top_n`, if set, hard-caps the book to the strongest N ideas (the rest are
-    a zero-weight watchlist) — together they trade diversification for return.
+    a zero-weight watchlist) - together they trade diversification for return.
     Neither changes gross deployment: the book is always 100% invested.
     """
     conc = float(np.clip(concentration, 0.5, 6.0))
@@ -251,7 +251,7 @@ def allocate_weights(
         inv_vol_fallback[name] = inv_vol
         # Normalise backtest stats to a common MONTHLY horizon so a 3-month
         # thesis is not mechanically favoured over a 1-month one (return scales
-        # with time, vol with sqrt-time) — sizing compares like-for-like.
+        # with time, vol with sqrt-time) - sizing compares like-for-like.
         hd   = max(int(m.get("holding_days", 21) or 21), 1)
         k    = 21.0 / hd
         mu_m = float(m.get("avg_return", 0.0)) * k
@@ -268,7 +268,7 @@ def allocate_weights(
 
     total = sum(raw.values())
     if total <= 1e-12:
-        # No positive-edge trade in this regime — keep the sleeve fully invested
+        # No positive-edge trade in this regime - keep the sleeve fully invested
         # by spreading over eligible names inverse to volatility (never cash).
         raw = dict(inv_vol_fallback)
     # Concentrate: keep only the top-N strongest ideas (diversify less); the
@@ -319,20 +319,20 @@ def allocate_weights(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 3 of 4 — PORTFOLIO CONSTRAINTS on top of Step-2 weights.
+# STEP 3 of 4 - PORTFOLIO CONSTRAINTS on top of Step-2 weights.
 #
 # Two group caps, applied over alloc_weight and re-normalized to the original
 # gross without ever letting a group re-breach (iterative water-fill; the
-# residual goes to cash when every group binds — same semantics as Step 2's
+# residual goes to cash when every group binds - same semantics as Step 2's
 # single-trade cap):
-#   • conflict cap  — trades grouped by conflict_id; no event may carry more
+#   • conflict cap - trades grouped by conflict_id; no event may carry more
 #     than CONFLICT_CAP of target gross. Untagged trades form an
 #     "unattributed" macro bucket EXEMPT from this cap (capping "no event" as
 #     if it were one event would be fake rigor) but fully cluster-capped.
-#   • cluster cap   — groups from backtest.correlation_clusters(), the SAME
+#   • cluster cap - groups from backtest.correlation_clusters(), the SAME
 #     union-find compute_effective_n uses (r > 0.90 on signed leg-series
 #     returns): duplicated bets share one budget.
-# A runtime assertion — not just a test — fails loudly if any group exceeds
+# A runtime assertion - not just a test - fails loudly if any group exceeds
 # its cap after re-normalization.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -393,7 +393,7 @@ def apply_portfolio_constraints(
     conflict_groups = {k: v for k, v in _groups(conflict_of).items()
                        if k != _UNATTRIBUTED}
     # Singleton clusters are exempt: the cluster cap exists to stop DUPLICATE
-    # bets double-counting — a lone bet is concentration, which the single
+    # bets double-counting - a lone bet is concentration, which the single
     # and conflict caps already govern.
     cluster_groups = {k: v for k, v in _groups(cluster_of).items() if len(v) > 1}
 
@@ -437,7 +437,7 @@ def apply_portfolio_constraints(
             if not changed:
                 break
 
-        # FORBIDDEN clause, enforced at runtime — not only in tests
+        # FORBIDDEN clause, enforced at runtime - not only in tests
         assert all(w[n_] <= single_cap + 1e-6 for n_ in w), "single cap breached"
         for members in conflict_groups.values():
             assert sum(w[m] for m in members) <= conflict_lim + 1e-6, \
@@ -461,14 +461,14 @@ def apply_portfolio_constraints(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 4 of 4 — RANKING. Attractiveness, never raw P&L:
+# STEP 4 of 4 - RANKING. Attractiveness, never raw P&L:
 #
 #     attractiveness = 0.50·DSR + 0.35·conviction + 0.15·constraint_room
 #
 # DSR is the deflated Sharpe probability (Step 2); sharpe_raw exists in the
 # stamps for transparency and MUST NOT enter this score. constraint_room is
 # the trade's minimum remaining headroom across its single / conflict /
-# cluster caps at final weights — trades with room to grow outrank cap-pinned
+# cluster caps at final weights - trades with room to grow outrank cap-pinned
 # ones at equal evidence. With zero gross (the honest all-cash book) room is
 # 1 everywhere and ranking reduces to evidence strength.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -543,7 +543,7 @@ def rank_trades(
 def desk_report_feed(ranked: list[dict]) -> list[dict]:
     """
     Adapt the CONSTRUCTED BOOK to the existing generate_report() trade-card
-    schema — the adaptation lives in the fed data, never in the generator.
+    schema - the adaptation lives in the fed data, never in the generator.
 
     Only the DEPLOYED positions (alloc_weight > 0) are fed: the desk report
     documents the equity sleeve we actually hold, not the full candidate
@@ -551,8 +551,8 @@ def desk_report_feed(ranked: list[dict]) -> list[dict]:
     ride in `name`; attractiveness components ride in `trigger`; the
     invalidation condition is prepended to `risk`.
 
-    If nothing is deployed — a fully-invested equity sleeve only holds cash when
-    it structurally cannot invest (no eligible thesis this regime) — a single
+    If nothing is deployed - a fully-invested equity sleeve only holds cash when
+    it structurally cannot invest (no eligible thesis this regime) - a single
     lead card explains the empty book and no positions follow.
     """
     invest = sorted(
@@ -564,20 +564,20 @@ def desk_report_feed(ranked: list[dict]) -> list[dict]:
     if not invest:
         n = len(ranked)
         feed.append({
-            "name": "DESK CALL — NO POSITIONS · 100% CASH",
+            "name": "DESK CALL - NO POSITIONS · 100% CASH",
             "category": "Desk Call",
-            "trigger": "EQUITY SLEEVE — NOTHING ELIGIBLE THIS REGIME",
+            "trigger": "EQUITY SLEEVE - NOTHING ELIGIBLE THIS REGIME",
             "rationale": (
                 "No thesis is eligible this regime"
-                + (f" — all {n} candidates are missing return data or failed "
+                + (f" - all {n} candidates are missing return data or failed "
                    f"Stage-3 confirmation" if n else "")
                 + ", so the sleeve holds cash. This equity component stays fully "
                 "invested whenever it can; the cash / hedge overlay is the "
                 "parent portfolio's decision, not this sleeve's."
             ),
             "regime": [], "assets": [], "direction": [],
-            "entry": "—", "exit": "—",
-            "risk": ("INVALIDATED IF: any thesis becomes eligible — the sleeve "
+            "entry": " - ", "exit": " - ",
+            "risk": ("INVALIDATED IF: any thesis becomes eligible - the sleeve "
                      "deploys on reload"),
         })
         return feed
@@ -586,8 +586,8 @@ def desk_report_feed(ranked: list[dict]) -> list[dict]:
         c = dict(t)
         ad = t.get("attr_detail") or {}
         inval = (t.get("invalidation") or t.get("invalidation_condition")
-                 or t.get("exit") or t.get("risk") or "—")
-        # Number positions 1..N by weight (largest first) — a holdings report,
+                 or t.get("exit") or t.get("risk") or " - ")
+        # Number positions 1..N by weight (largest first) - a holdings report,
         # not the full-universe attractiveness rank.
         c["name"] = (f"#{i} · "
                      f"{t.get('alloc_weight', 0.0) * 100:.1f}% wt · "
@@ -595,7 +595,7 @@ def desk_report_feed(ranked: list[dict]) -> list[dict]:
         c["trigger"] = (f"ATTR {t.get('attractiveness', 0.0):.2f} · "
                         f"DSR {ad.get('dsr', 0.0):.2f} · "
                         f"CONV {ad.get('conviction', 0.0):.2f} · "
-                        f"ROOM {ad.get('room', 0.0):.2f} — "
+                        f"ROOM {ad.get('room', 0.0):.2f} - "
                         f"{t.get('trigger', '')}")
         c["risk"] = f"INVALIDATED IF: {inval}"
         feed.append(c)

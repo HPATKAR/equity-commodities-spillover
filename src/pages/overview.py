@@ -209,7 +209,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         "The regime badge (Normal / Elevated / Crisis) is the answer in one word. "
         "The KPIs quantify how tight the spillover channel is at this moment. "
         "The heatmap shows which specific equity-commodity pairs are most coupled. "
-        "Read this page after Correlation and Spillover — it synthesises their outputs "
+        "Read this page after Correlation and Spillover - it synthesises their outputs "
         "into a single regime classification and hands the finding to the AI briefing."
     )
 
@@ -481,7 +481,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                     unsafe_allow_html=True,
                 )
             else:
-                pass  # Implied vol data unavailable — skip section rather than showing a banner
+                pass  # Implied vol data unavailable - skip section rather than showing a banner
     except Exception:
         pass
 
@@ -612,7 +612,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
     )
 
     # ── ROW: Risk gauge | Risk history ─────────────────────────────────────
-    # Run risk score, EWS, and COT load concurrently — all pure/cached, no st.* calls.
+    # Run risk score, EWS, and COT load concurrently - all pure/cached, no st.* calls.
     from concurrent.futures import ThreadPoolExecutor
 
     def _ov_ews():
@@ -990,11 +990,11 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                         )
                         st.session_state[_narrative_key] = _resp.choices[0].message.content
             except Exception:
-                pass  # Silent — retry on next render; don't surface API errors to users
+                pass  # Silent - retry on next render; don't surface API errors to users
 
     _narrative_val = st.session_state.get(_narrative_key, "")
     if not _narrative_val:
-        return  # AI narrative unavailable — skip section entirely rather than showing a banner
+        return  # AI narrative unavailable - skip section entirely rather than showing a banner
     st.markdown(
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:0.14em;color:#8E9AAA;margin:0.5rem 0 0.3rem">AI Market Narrative</p>',
@@ -1014,7 +1014,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             '<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
             unsafe_allow_html=True,
         )
-        _label("Risk Index History — Market-Data Uncertainty Fan Chart")
+        _label("Risk Index History - Market-Data Uncertainty Fan Chart")
 
         _fig_fan = go.Figure()
 
@@ -1044,7 +1044,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                     line=dict(color="rgba(0,0,0,0)", width=0),
                     hoverinfo="skip",
                     showlegend=True,
-                    name="90% CI — market-data only",
+                    name="90% CI - market-data only",
                 ))
                 # p50 median line (dashed)
                 if "p50" in _bci_df.columns:
@@ -1057,7 +1057,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
                     ))
                 _ci_label = " · shaded = 90% bootstrap CI (market returns only)"
 
-        # Point estimate — realized index
+        # Point estimate - realized index
         _fig_fan.add_trace(go.Scatter(
             x=list(score_hist.index),
             y=list(score_hist.values),
@@ -1084,7 +1084,7 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
         _panel_note(
             "Gold line = realized market risk index (equity + commodity realized vol, EWM z-scored). "
             "Shaded band = 90% moving-block bootstrap CI over market-data inputs (cmd_r + eq_r). "
-            "Static analyst layers — news GPR, conflict CIS, chokepoint — are held at point "
+            "Static analyst layers - news GPR, conflict CIS, chokepoint - are held at point "
             "estimates; the fan captures market-data uncertainty only."
             + _ci_label
         )
@@ -1224,6 +1224,6 @@ def page_overview(start: str, end: str, fred_key: str = "") -> None:
             st.markdown("---")
             render_pending_review()
     except Exception:
-        pass  # AI Workforce module unavailable — skip section silently
+        pass  # AI Workforce module unavailable - skip section silently
 
     _page_footer()

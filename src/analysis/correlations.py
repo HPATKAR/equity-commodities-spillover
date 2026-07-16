@@ -332,13 +332,13 @@ def dcc_correlation(
     DCC-GARCH(1,1) dynamic conditional correlation (Engle 2002).
 
     Implementation follows the two-step procedure:
-      Step 1  — EWMA volatility pre-whitening (RiskMetrics, λ=0.94).
+      Step 1 - EWMA volatility pre-whitening (RiskMetrics, λ=0.94).
                 Raw returns are standardised by their EWMA conditional
                 standard deviation before the DCC recursion.  Skipping
                 this step causes the quasi-correlation matrix Q to be
                 contaminated by heteroskedasticity, inflating correlations
                 during high-vol episodes even when the true ρ is unchanged.
-      Step 2  — DCC(1,1) recursion on the standardised residuals ε̃_t:
+      Step 2 - DCC(1,1) recursion on the standardised residuals ε̃_t:
                 Q_t = (1−a−b)Q̄ + a ε̃_{t−1}ε̃'_{t−1} + b Q_{t−1}
                 R_t = diag(Q_t)^{−½} Q_t diag(Q_t)^{−½}
 
@@ -359,7 +359,7 @@ def dcc_correlation(
     x = x - x.mean(axis=0)
 
     # EWMA volatility pre-whitening (RiskMetrics λ=0.94)
-    # h[t] = λ·h[t-1] + (1-λ)·x[t-1]²  — initialised at sample variance
+    # h[t] = λ·h[t-1] + (1-λ)·x[t-1]² - initialised at sample variance
     h = np.var(x, axis=0, ddof=1).copy()
     eps = np.zeros_like(x)
     for t in range(T):
@@ -571,11 +571,11 @@ def correlation_alarm_scan(
     For each pair, computes the fast_window-day rolling correlation and scores
     it against the pair's own slow_window-day rolling distribution (mean + std).
     Flags when the current value is ≥ z_thresh standard deviations from the
-    pair's historical norm — before the aggregate regime label catches up.
+    pair's historical norm - before the aggregate regime label catches up.
 
-    alarm_type : "DECOUPLING" — historically positive pair losing correlation
-                 "LOCKING"    — historically uncorrelated pair gaining correlation
-                 "NORMAL"     — within ±z_thresh sigma
+    alarm_type : "DECOUPLING" - historically positive pair losing correlation
+                 "LOCKING" - historically uncorrelated pair gaining correlation
+                 "NORMAL" - within ±z_thresh sigma
     severity   : "HIGH" (|z| ≥ 3.0) | "MODERATE" (|z| ≥ z_thresh) | "NONE"
 
     Returns list sorted by abs_z descending.

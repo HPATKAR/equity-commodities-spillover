@@ -7,14 +7,14 @@ Import pattern:
 """
 
 # ── Brand ──────────────────────────────────────────────────────────────────
-GOLD   = "#CFB991"   # Boilermaker Gold — primary accent
-GOLD_D = "#8E6F3E"   # Aged Brown — dimmed gold, eyebrow labels
+GOLD   = "#CFB991"   # Boilermaker Gold - primary accent
+GOLD_D = "#8E6F3E"   # Aged Brown - dimmed gold, eyebrow labels
 
 # ── Backgrounds ───────────────────────────────────────────────────────────
-BG      = "#000000"   # page background — pitch black
-BG_WARM = "#080808"   # chart plot area — near-black
+BG      = "#000000"   # page background - pitch black
+BG_WARM = "#080808"   # chart plot area - near-black
 CARD    = "#0d0d0d"   # card surface
-CARD2   = "#141414"   # card surface — elevated
+CARD2   = "#141414"   # card surface - elevated
 CARD3   = "#1a1a1a"   # hover state
 
 # ── Borders ───────────────────────────────────────────────────────────────
@@ -37,4 +37,4 @@ SAFE   = "#27ae60"   # normal / live
 INFO   = "#2980b9"   # informational / neutral signal
 
 # ── Misc ──────────────────────────────────────────────────────────────────
-NAVY = "#1E3A5F"   # accent — used in select panels
+NAVY = "#1E3A5F"   # accent - used in select panels

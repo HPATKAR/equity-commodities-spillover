@@ -10,7 +10,7 @@ Stage 3 – CONFIRMATION : prior-aligned test (LP-IRF for conflict theses,
                           the thesis's predicted direction is a binary gate.
 Stage 4 – SIZING       : vol-target position scaled by IRF confirmation strength
                           and capped per conflict source.
-Stage 5 – GRADE        : thesis-consistent rubric — high Sharpe without a confirmed
+Stage 5 – GRADE        : thesis-consistent rubric - high Sharpe without a confirmed
                           mechanism is capped, not rewarded.
 """
 
@@ -70,7 +70,7 @@ class ThesisBlock:
         if not self.shock.strip():
             return False, "thesis.shock is empty"
         if not self.tps_channels:
-            return False, "thesis.tps_channels is empty — name at least one channel"
+            return False, "thesis.tps_channels is empty - name at least one channel"
         bad = [c for c in self.tps_channels if c not in TPS_CHANNELS]
         if bad:
             return False, f"unknown TPS channels: {bad}"
@@ -143,7 +143,7 @@ class SizingRule:
     target_annual_vol: float        # portfolio vol target for this strategy
     estimated_strat_vol: float      # annualized std of OOS trade returns
     base_weight_pct: float          # vol-target implied weight before scaling
-    irf_scale_factor: float         # confirmation_score — scales weight up/down
+    irf_scale_factor: float         # confirmation_score - scales weight up/down
     conflict_cap_pct: float         # hard ceiling per conflict source
     final_weight_pct: float         # min(base × irf_scale, cap)
     rule_text: str                  # human-readable description
@@ -159,15 +159,15 @@ class ThesisGrade:
     Four mutually exclusive outcomes:
       confirmation_state = "confirm"                 → grade A/B/C/D (normal rubric)
       confirmation_state = "mechanism_not_tradeable" → grade "MT": Stage 3 confirmed the
-                                                        transmission but DSR < 50% — no
+                                                        transmission but DSR < 50% - no
                                                         edge after costs + trial deflation.
                                                         Thesis correct; market already priced
-                                                        it. Not a failure — do not discard.
+                                                        it. Not a failure - do not discard.
       confirmation_state = "reject"                  → grade F (Stage 3 NOT confirmed,
                                                         mechanism contradicted or inverted)
       confirmation_state = "insufficient_evidence"   → grade "IE" (sign OK, < 20 trades)
 
-    The fix for MT     is not "discard" — find the faster signal that beats the market's
+    The fix for MT     is not "discard" - find the faster signal that beats the market's
                         pricing speed, or use the thesis as a risk factor, not a trade.
     The fix for REJECT is "discard the thesis."
     The fix for IE     is "get more trades."
@@ -254,7 +254,7 @@ def run_stage2(
     Leg validation at construction time.
 
     Hard-fail (do not degrade silently) if any declared leg is absent from the
-    return data — this is the bug that caused two Gold strategies to appear
+    return data - this is the bug that caused two Gold strategies to appear
     identical by collapsing to a single-leg Long Gold.
     """
     if not strategy.stage1_passed:
@@ -269,7 +269,7 @@ def run_stage2(
     missing = [a for a in sig.assets if a not in available_columns]
     if missing:
         strategy.stage2_passed = False
-        strategy.stage2_reason = f"Missing legs: {missing} — rejected at construction"
+        strategy.stage2_reason = f"Missing legs: {missing} - rejected at construction"
         return strategy
 
     # Holding period must match thesis horizon
@@ -277,7 +277,7 @@ def run_stage2(
         strategy.stage2_passed = False
         strategy.stage2_reason = (
             f"Signal holding_period={sig.holding_period}d ≠ "
-            f"thesis.horizon_days={strategy.thesis.horizon_days}d — "
+            f"thesis.horizon_days={strategy.thesis.horizon_days}d - "
             "the backtest horizon must match the thesis horizon"
         )
         return strategy
@@ -311,7 +311,7 @@ def _lp_irf_confirmation(
         shock = _build_shock_series(conflict_id, trading_idx)
 
         if shock is None or len(shock) < 100:
-            raise ValueError("Insufficient GDELT history — falling back to regime track")
+            raise ValueError("Insufficient GDELT history - falling back to regime track")
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -323,7 +323,7 @@ def _lp_irf_confirmation(
             )
 
         if irf_df.empty:
-            raise ValueError("LP-IRF returned empty — falling back to regime track")
+            raise ValueError("LP-IRF returned empty - falling back to regime track")
 
         # Check sign + significance at thesis horizon (±5d window)
         h_target = thesis.horizon_days
@@ -506,7 +506,7 @@ def run_stage3(
     strategy.stage3_passed = conf.stage_passed
     strategy.stage3_reason = (
         conf.rejection_reason or
-        f"{conf.track} — {conf.confirmation_score:.0%} of legs confirm predicted sign"
+        f"{conf.track} - {conf.confirmation_score:.0%} of legs confirm predicted sign"
     )
     return strategy
 
@@ -577,12 +577,12 @@ def run_stage5(
     Thesis-consistent grade.
 
     Four mutually exclusive outcomes (in routing order):
-      IE  (grade="IE") — n_trades < 20 and sign matched; thesis parked, not discarded.
-      MT  (grade="MT") — Stage 3 confirmed + DSR < 50%; mechanism real, edge gone.
-                         Exits before caps — neither the base grade nor any cap can
+      IE  (grade="IE") - n_trades < 20 and sign matched; thesis parked, not discarded.
+      MT  (grade="MT") - Stage 3 confirmed + DSR < 50%; mechanism real, edge gone.
+                         Exits before caps - neither the base grade nor any cap can
                          override an explicit S3-confirm / DSR-fail split.
-      CONFIRM (A/B/C/D) — Stage 3 confirmed or unexplained Sharpe; graded by DSR rubric.
-      REJECT (F)         — Stage 3 NOT confirmed and OOS inverted or DSR < 0.25.
+      CONFIRM (A/B/C/D) - Stage 3 confirmed or unexplained Sharpe; graded by DSR rubric.
+      REJECT (F) - Stage 3 NOT confirmed and OOS inverted or DSR < 0.25.
 
     The fix for MT     is "find a faster signal or use as a hedge."
     The fix for REJECT is "discard the thesis."
@@ -603,7 +603,7 @@ def run_stage5(
     # ── Low trade count: route to IE or REJECT before grading ────────────────
     if n_trades < 20:
         if sign_matched:
-            # Thesis direction was not contradicted — park it
+            # Thesis direction was not contradicted - park it
             strategy.thesis_grade = ThesisGrade(
                 grade="IE",
                 confirmation_state="insufficient_evidence",
@@ -613,14 +613,14 @@ def run_stage5(
                 sign_matches_oos=None,
                 dsr_prob=0.0, pbo=pbo,
                 rationale=(
-                    f"Only {n_trades} OOS trades (< 20) — not enough history to grade. "
+                    f"Only {n_trades} OOS trades (< 20) - not enough history to grade. "
                     "Thesis sign not contradicted; mechanism is plausible but untested. "
                     "Resolution: reduce holding period to increase trade frequency, "
                     "or wait for more regime history."
                 ),
                 flags=[
-                    f"Only {n_trades} OOS trades — DSR requires ≥ 20",
-                    "Stage 3 sign direction matched — mechanism not contradicted",
+                    f"Only {n_trades} OOS trades - DSR requires ≥ 20",
+                    "Stage 3 sign direction matched - mechanism not contradicted",
                 ],
                 capped_reason=None,
             )
@@ -635,12 +635,12 @@ def run_stage5(
                 sign_matches_oos=None,
                 dsr_prob=0.0, pbo=pbo,
                 rationale=(
-                    f"Only {n_trades} OOS trades and Stage 3 sign did not match — "
+                    f"Only {n_trades} OOS trades and Stage 3 sign did not match - "
                     "mechanism contradicted even in the limited available data. REJECT."
                 ),
                 flags=[
                     f"Only {n_trades} OOS trades",
-                    "Stage 3 sign direction WRONG — mechanism contradicted",
+                    "Stage 3 sign direction WRONG - mechanism contradicted",
                 ],
                 capped_reason=None,
             )
@@ -663,7 +663,7 @@ def run_stage5(
         sign_matches_oos = (oos_sign == thesis_sign)
         if not sign_matches_oos:
             flags.append(
-                "OOS net return sign OPPOSES thesis prediction — "
+                "OOS net return sign OPPOSES thesis prediction - "
                 "strategy is directionally inverted relative to mechanism; REJECT"
             )
 
@@ -678,7 +678,7 @@ def run_stage5(
     #
     # Note on OOS sign: if Stage 3 is confirmed but OOS returns are negative
     # (sign_matches_oos is False), the most likely explanation is that the
-    # market prices the signal before our entry fires — "already priced in."
+    # market prices the signal before our entry fires - "already priced in."
     # This is a sub-type of MT, not REJECT, because Stage 3 used full-history
     # LP-IRF / regime data, which is more statistically reliable than the OOS
     # subsample sign. We label it MT and surface the sub-reason explicitly.
@@ -686,19 +686,19 @@ def run_stage5(
         _mt_flags: list[str] = []
         if sign_matches_oos is False:
             _mt_sub = (
-                "OOS returns negative despite confirmed mechanism — "
+                "OOS returns negative despite confirmed mechanism - "
                 "market likely prices the signal before entry fires (already-priced). "
                 "Find a faster signal or use as a risk-factor hedge, not a directional trade."
             )
         elif dsr_prob < 0.25:
             _mt_sub = (
-                f"DSR {dsr_prob:.0%} — net of transaction costs and N={n_strategies} "
+                f"DSR {dsr_prob:.0%} - net of transaction costs and N={n_strategies} "
                 f"trial deflation, expected return is negative. "
                 "Mechanism confirmed but fully arbitraged."
             )
         else:
             _mt_sub = (
-                f"DSR {dsr_prob:.0%} — transmission is real but the edge is too small "
+                f"DSR {dsr_prob:.0%} - transmission is real but the edge is too small "
                 f"to survive costs ({n_strategies}-trial SR* deflation). "
                 "Mechanism is correct; monetisation requires faster entry or cheaper execution."
             )
@@ -716,7 +716,7 @@ def run_stage5(
             pbo=round(pbo, 4) if pbo is not None and np.isfinite(pbo) else None,
             rationale=(
                 "Stage 3 confirmed: transmission mechanism is real. "
-                f"DSR {dsr_prob:.0%} < 50% — no tradeable edge after deflation and costs. "
+                f"DSR {dsr_prob:.0%} < 50% - no tradeable edge after deflation and costs. "
                 + _mt_sub
             ),
             flags=_mt_flags,
@@ -726,7 +726,7 @@ def run_stage5(
 
     # ── Base grade from DSR ──────────────────────────────────────────────────
     # (reached only when Stage 3 is NOT confirmed, OR when Stage 3 IS confirmed
-    # and DSR ≥ 50% — i.e., the edge survived. MT has already returned above.)
+    # and DSR ≥ 50% - i.e., the edge survived. MT has already returned above.)
     if dsr_prob >= 0.95:   grade = "A"
     elif dsr_prob >= 0.75: grade = "B"
     elif dsr_prob >= 0.50: grade = "C"
@@ -736,7 +736,7 @@ def run_stage5(
     # ── Thesis-consistency caps (applied after DSR base grade) ───────────────
     # Cap 1: Wrong OOS sign → F.
     # At this point Stage 3 is NOT confirmed (MT with confirmed S3 exited above),
-    # so an inverted OOS sign genuinely contradicts the mechanism — REJECT.
+    # so an inverted OOS sign genuinely contradicts the mechanism - REJECT.
     if sign_matches_oos is False:
         grade = "F"
         flags.append("Grade forced to F: OOS direction contradicts thesis mechanism")
@@ -748,25 +748,25 @@ def run_stage5(
         capped_reason = (
             "Stage 3 not confirmed: "
             + (strategy.stage3_reason or "mechanism not validated by IRF or regime test")
-            + " — unexplained Sharpe capped at C"
+            + " - unexplained Sharpe capped at C"
         )
         flags.append(capped_reason)
 
     # Cap 3: No thesis → max C (shouldn't reach here, but defensive)
     if not has_thesis and grade in ("A", "B"):
         grade = "C"
-        capped_reason = "No thesis provided — unexplained Sharpe capped at C"
+        capped_reason = "No thesis provided - unexplained Sharpe capped at C"
         flags.append(capped_reason)
 
     # Cap 4: PBO > 0.5 → max D
     if pbo is not None and np.isfinite(pbo) and pbo > 0.5 and grade not in ("D", "F"):
         grade = "D"
-        flags.append(f"CSCV PBO {pbo:.0%} — majority of block splits show IS→OOS sign flip")
+        flags.append(f"CSCV PBO {pbo:.0%} - majority of block splits show IS→OOS sign flip")
 
     # Cap 5: Low N (< 20 handled above, but 20-30 warrants a flag)
     if n_trades < 30 and grade in ("A", "B"):
         grade = "C"
-        flags.append(f"LOW N ({n_trades} trades) — Sharpe SE too wide for A/B with thesis-first rigor")
+        flags.append(f"LOW N ({n_trades} trades) - Sharpe SE too wide for A/B with thesis-first rigor")
 
     # ── Rationale ────────────────────────────────────────────────────────────
     if grade == "A":
@@ -779,12 +779,12 @@ def run_stage5(
     elif grade == "C":
         rationale = (
             capped_reason if capped_reason else
-            f"Partial confirmation or DSR {dsr_prob:.0%} — mechanism plausible but not decisive"
+            f"Partial confirmation or DSR {dsr_prob:.0%} - mechanism plausible but not decisive"
         )
     elif grade == "D":
-        rationale = f"Mechanism stated but Stage 3 failed or DSR {dsr_prob:.0%} — weak empirical support"
+        rationale = f"Mechanism stated but Stage 3 failed or DSR {dsr_prob:.0%} - weak empirical support"
     else:
-        rationale = f"DSR {dsr_prob:.0%} or mechanism contradiction — REJECT"
+        rationale = f"DSR {dsr_prob:.0%} or mechanism contradiction - REJECT"
 
     # confirmation_state: reject when sign inverted OR grade F; confirm otherwise
     if sign_matches_oos is False or grade == "F":
@@ -826,7 +826,7 @@ def run_full_pipeline(
     strategy = run_stage1(strategy)
     if not strategy.stage1_passed:
         _log.warning("Stage 1 FAIL [%s]: %s", strategy.name, strategy.stage1_reason)
-        # Stage 1 is a hard gate — no further processing without a thesis
+        # Stage 1 is a hard gate - no further processing without a thesis
         return strategy
 
     strategy = run_stage2(strategy, available_columns=set(returns.columns))
@@ -834,7 +834,7 @@ def run_full_pipeline(
         _log.warning("Stage 2 FAIL [%s]: %s", strategy.name, strategy.stage2_reason)
         return strategy
 
-    # Stage 3: confirmation (runs even if we'll reject later — we want the IRF curve)
+    # Stage 3: confirmation (runs even if we'll reject later - we want the IRF curve)
     strategy = run_stage3(strategy, returns, regimes)
 
     # Walk-forward backtest (call from UI with caching; here we run directly)

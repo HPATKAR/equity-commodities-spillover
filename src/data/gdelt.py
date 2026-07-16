@@ -44,7 +44,7 @@ _GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
 
 # ── Circuit breaker ──────────────────────────────────────────────────────────
 # GDELT can accept the TCP connection but STALL the TLS handshake, which does not
-# reliably honour requests' socket timeout — a stalled fetch hangs its worker
+# reliably honour requests' socket timeout - a stalled fetch hangs its worker
 # thread indefinitely (page "loads for eternity"). Once any fetch fails or is
 # detected stalled, we disable live GDELT for a cool-off window so every later
 # call returns the static fallback INSTANTLY instead of re-hanging.
@@ -61,7 +61,7 @@ def gdelt_disabled() -> bool:
     return time.time() < _GDELT_DISABLED_UNTIL
 
 
-# Browser-like UA — Python's default "python-requests/x.x" is commonly blocked by CDN rules
+# Browser-like UA - Python's default "python-requests/x.x" is commonly blocked by CDN rules
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -125,18 +125,18 @@ def fetch_gdelt_escalation(
 
     Parameters
     ----------
-    conflict_id : str — key from _GDELT_CONFLICT_QUERIES
-    timespan    : str — GDELT TIMESPAN parameter: "7d", "14d", "30d"
+    conflict_id : str - key from _GDELT_CONFLICT_QUERIES
+    timespan    : str - GDELT TIMESPAN parameter: "7d", "14d", "30d"
 
     Returns
     -------
     dict with keys:
-        volume_recent   : int   — article count in recent half of timespan
-        volume_prior    : int   — article count in prior half of timespan
-        volume_trend    : float — (recent/prior) − 1 (+ = escalating coverage)
-        escalation_signal: str  — "escalating"/"stable"/"de-escalating"
-        tone_recent     : float — mean tone of recent articles (negative = alarming)
-        tone_delta      : float — recent tone − prior tone (negative = worsening)
+        volume_recent   : int - article count in recent half of timespan
+        volume_prior    : int - article count in prior half of timespan
+        volume_trend    : float - (recent/prior) − 1 (+ = escalating coverage)
+        escalation_signal: str - "escalating"/"stable"/"de-escalating"
+        tone_recent     : float - mean tone of recent articles (negative = alarming)
+        tone_delta      : float - recent tone − prior tone (negative = worsening)
         data_available  : bool
         source          : str
         as_of           : str
@@ -168,7 +168,7 @@ def fetch_gdelt_escalation(
         _result, _cached_at = _cached
         if (datetime.datetime.now() - _cached_at).total_seconds() < _GDELT_TTL_S:
             return _result
-        # TTL expired — remove stale entry and fall through to live fetch
+        # TTL expired - remove stale entry and fall through to live fetch
         _GDELT_CACHE.pop(_cache_key, None)  # pop avoids KeyError under concurrent sessions
 
     cfg = _GDELT_CONFLICT_QUERIES[conflict_id]
@@ -279,14 +279,14 @@ def fetch_gdelt_escalation(
             "source":            "GDELT live",
             "as_of":             str(datetime.date.today()),
         }
-        # Only cache successes — failures must NOT be cached so the next call retries
+        # Only cache successes - failures must NOT be cached so the next call retries
         _GDELT_CACHE[_cache_key] = (result, datetime.datetime.now())
         return result
 
       except requests.exceptions.HTTPError as he:
         # Capture actual HTTP status code for actionable error messages
         _status = he.response.status_code if he.response is not None else "?"
-        # 429 = rate limited — back off and retry once before giving up
+        # 429 = rate limited - back off and retry once before giving up
         if _status == 429 and _attempt < _max_attempts - 1:
             _backoff = 4.0 * (_attempt + 1)  # 4s on first retry
             time.sleep(_backoff)
@@ -300,7 +300,7 @@ def fetch_gdelt_escalation(
         return {**_empty, "source": _msg}
 
       except Exception as e:
-        # Connection error / timeout / unreachable host — trip the breaker so the
+        # Connection error / timeout / unreachable host - trip the breaker so the
         # rest of this session's conflicts skip the network instead of re-hanging.
         disable_gdelt(600)
         _msg = f"GDELT {type(e).__name__}"
@@ -318,10 +318,10 @@ def fetch_all_gdelt_signals(timespan: str = "7d") -> dict[str, dict]:
     Fetch GDELT escalation signals for all tracked conflicts.
     Each conflict result is individually cached (success-only, 3h TTL) inside
     fetch_gdelt_escalation. Outer @st.cache_data(ttl=10800) caches the aggregated
-    result across all sessions — cold start (9-12s with sleeps) happens at most
+    result across all sessions - cold start (9-12s with sleeps) happens at most
     once per 3h, then all subsequent calls return instantly from Streamlit cache.
 
-    Inter-conflict delay (1.5s) is applied only for live fetches — cached results
+    Inter-conflict delay (1.5s) is applied only for live fetches - cached results
     are returned immediately. This prevents the 6-conflict cold-start from firing
     12 requests in <2s and triggering GDELT's 429 rate limiter.
     """
@@ -360,29 +360,29 @@ def gdelt_corroboration(acled_signal: str, gdelt_signal: str) -> dict:
     Cross-validate ACLED and GDELT escalation signals.
 
     Returns a corroboration dict:
-        agreed       : bool — both sources agree on direction
-        confidence   : str  — "high"/"medium"/"low"
-        final_signal : str  — consensus signal
-        note         : str  — human-readable explanation
+        agreed       : bool - both sources agree on direction
+        confidence   : str - "high"/"medium"/"low"
+        final_signal : str - consensus signal
+        note         : str - human-readable explanation
     """
     agreed = acled_signal == gdelt_signal
 
     if agreed:
         confidence   = "high"
         final_signal = acled_signal
-        note = f"ACLED + GDELT both signal '{acled_signal}' — high confidence."
+        note = f"ACLED + GDELT both signal '{acled_signal}' - high confidence."
     elif acled_signal == "stable" or gdelt_signal == "stable":
-        # One says stable, the other says something — moderate confidence
+        # One says stable, the other says something - moderate confidence
         confidence   = "medium"
         # Prefer the non-stable signal (more informative)
         final_signal = gdelt_signal if acled_signal == "stable" else acled_signal
-        note = (f"ACLED='{acled_signal}', GDELT='{gdelt_signal}' — "
+        note = (f"ACLED='{acled_signal}', GDELT='{gdelt_signal}' - "
                 f"using non-stable signal with medium confidence.")
     else:
-        # One escalating, one de-escalating — contradictory
+        # One escalating, one de-escalating - contradictory
         confidence   = "low"
         final_signal = "stable"  # conservative fallback
-        note = (f"ACLED='{acled_signal}' vs GDELT='{gdelt_signal}' — "
+        note = (f"ACLED='{acled_signal}' vs GDELT='{gdelt_signal}' - "
                 f"contradictory signals; defaulting to 'stable'.")
 
     return {

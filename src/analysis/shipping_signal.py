@@ -62,21 +62,21 @@ def compute_lead_lag(
 
     Parameters
     ----------
-    ship_series  : pd.Series — daily ship counts (n_tanker or oil_tanker), date-indexed
-    price_series : pd.Series — daily crude price levels (WTI or Brent), date-indexed
+    ship_series  : pd.Series - daily ship counts (n_tanker or oil_tanker), date-indexed
+    price_series : pd.Series - daily crude price levels (WTI or Brent), date-indexed
 
     Returns
     -------
     dict with:
-      peak_lag   : int | None — positive = shipping leads price, negative = price leads shipping
-      direction  : str — "shipping → price" | "price → shipping" | "contemporaneous" | "no signal" | "insufficient data"
-      r          : float — correlation at peak lag
-      significant: bool — |r| > 2/sqrt(n) (approx 95% CI under white-noise null)
-      n_obs      : int — aligned observations used
-      ci95       : float — significance threshold
-      ccf        : dict[int, float] — full CCF at each lag
-      sign_label : str — "positive" | "negative" (sign of r at peak)
-      note       : str — honest data-quality note
+      peak_lag   : int | None - positive = shipping leads price, negative = price leads shipping
+      direction  : str - "shipping → price" | "price → shipping" | "contemporaneous" | "no signal" | "insufficient data"
+      r          : float - correlation at peak lag
+      significant: bool - |r| > 2/sqrt(n) (approx 95% CI under white-noise null)
+      n_obs      : int - aligned observations used
+      ci95       : float - significance threshold
+      ccf        : dict[int, float] - full CCF at each lag
+      sign_label : str - "positive" | "negative" (sign of r at peak)
+      note       : str - honest data-quality note
     """
     ship_chg  = ship_series.pct_change().replace([np.inf, -np.inf], np.nan)
     price_ret = price_series.pct_change().replace([np.inf, -np.inf], np.nan)
@@ -87,7 +87,7 @@ def compute_lead_lag(
     _empty = {
         "peak_lag": None, "direction": "insufficient data",
         "r": 0.0, "significant": False, "n_obs": n,
-        "ci95": 0.0, "ccf": {}, "sign_label": "—",
+        "ci95": 0.0, "ccf": {}, "sign_label": " - ",
         "note": f"Only {n} aligned observations (minimum {min_obs} required).",
     }
     if n < min_obs:
@@ -120,7 +120,7 @@ def compute_lead_lag(
     # Honest note about data quality
     note_parts = [f"n={n} daily obs."]
     if peak_lag is not None and abs(peak_lag) <= 6:
-        note_parts.append("Peak lag ≤6 days — may overlap ~7d PortWatch publication lag.")
+        note_parts.append("Peak lag ≤6 days - may overlap ~7d PortWatch publication lag.")
     if n < 120:
         note_parts.append("Short sample; treat as indicative.")
 
@@ -166,7 +166,7 @@ def run_all_strait_lead_lag(
     """
     Run lead-lag analysis for all 5 straits against `price_series` (WTI or Brent).
 
-    Calls load_strait_tankers() for each portid — uses its own @st.cache_data TTL.
+    Calls load_strait_tankers() for each portid - uses its own @st.cache_data TTL.
     Returns list of result dicts, each augmented with 'strait_id' and 'strait_label'.
     """
     from src.data.portwatch import load_strait_tankers
@@ -182,7 +182,7 @@ def run_all_strait_lead_lag(
                     "peak_lag": None, "direction": "no data",
                     "r": 0.0, "significant": False,
                     "n_obs": len(df), "ci95": 0.0, "ccf": {},
-                    "sign_label": "—",
+                    "sign_label": " - ",
                     "note": "PortWatch returned insufficient data for this strait.",
                 }
             else:
@@ -192,7 +192,7 @@ def run_all_strait_lead_lag(
             result = {
                 "peak_lag": None, "direction": "error",
                 "r": 0.0, "significant": False, "n_obs": 0, "ci95": 0.0,
-                "ccf": {}, "sign_label": "—", "note": "Data fetch failed.",
+                "ccf": {}, "sign_label": " - ", "note": "Data fetch failed.",
             }
 
         result["strait_id"]    = strait_id

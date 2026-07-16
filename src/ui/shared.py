@@ -192,7 +192,7 @@ def _add_event_bands(
 # ── Text components ────────────────────────────────────────────────────────
 
 def _h2(text: str) -> None:
-    """Section heading — monospace label with gold rule. Use as primary sub-section divider."""
+    """Section heading - monospace label with gold rule. Use as primary sub-section divider."""
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.63rem;font-weight:700;'
         f'letter-spacing:.20em;color:{_GOLD};text-transform:uppercase;'
@@ -202,7 +202,7 @@ def _h2(text: str) -> None:
 
 
 def _h3(text: str) -> None:
-    """Sub-section heading — dimmed monospace label. Use for tertiary groupings."""
+    """Sub-section heading - dimmed monospace label. Use for tertiary groupings."""
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;font-weight:700;'
         f'letter-spacing:.12em;color:#8890a1;text-transform:uppercase;'
@@ -426,7 +426,7 @@ def _regime_banner(label: str, sub: str = "", color: str = "#8E6F3E") -> None:
         f'color:#8890a1;margin-left:0.75rem;font-weight:400">{sub}</span>'
         if sub else ""
     )
-    # Ambient glow — more visible at higher severity (crisis red vs. normal gold)
+    # Ambient glow - more visible at higher severity (crisis red vs. normal gold)
     glow = f"box-shadow:0 -1px 8px {color}26"
     st.markdown(
         f'<div style="border-top:2px solid {color};border-bottom:1px solid #1e1e1e;'
@@ -859,7 +859,7 @@ def _header_status_html() -> str:
                        else 'SCENARIO: <span style="color:#e8e9ed">BASE</span>')
         except Exception:
             sc_note = 'SCENARIO: <span style="color:#e8e9ed">BASE</span>'
-        # Extra live chips (all from cr/agg already computed above — no new cost)
+        # Extra live chips (all from cr/agg already computed above - no new cost)
         _m6  = f'{_M}font-size:0.6rem;color:#8890a1;white-space:nowrap'
         mkt_col  = "#27ae60" if mkt_open else "#6b7280"
         mkt_chip = (f'<span style="{_M}font-size:0.56rem;font-weight:700;'
@@ -918,7 +918,7 @@ def _page_header(title: str, subtitle: str = "", eyebrow: str = "",
     """
     import streamlit.components.v1 as _cmp
     _cmp.html('<script>window.parent.scrollTo({top:0,behavior:"instant"});</script>', height=0)
-    # Global pitch-black background — injected once per page via the header.
+    # Global pitch-black background - injected once per page via the header.
     # block-container padding-top matches the command center (home.py) so the
     # gap between the top nav bar and the header is identical on every page.
     st.markdown("""<style>
@@ -998,7 +998,7 @@ def _page_footer() -> None:
     yr  = datetime.now().year
     ts  = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
 
-    # ── Controls tray — inline, just above the footer ─────────────────────
+    # ── Controls tray - inline, just above the footer ─────────────────────
     # Rendered here (inside _page_footer) so every page gets it automatically
     # without any per-page wiring. Skipped on About pages and when agent state
     # is not yet initialised (e.g., very first cold boot before init_agents()).
@@ -1021,7 +1021,7 @@ def _page_footer() -> None:
             _lbl = f"CONTROLS  ·  {_n}/8"
 
             # CSS: style the trigger button and popover panel.
-            # No position:fixed — button sits inline in page flow.
+            # No position:fixed - button sits inline in page flow.
             st.markdown("""<style>
 /* Controls tray row: right-align within its column */
 div[data-testid="stColumn"]:has(div[data-testid="stPopover"]) {
@@ -1350,7 +1350,7 @@ function nav(page) {{
   <p>&copy; {yr} Cross-Asset Spillover Monitor &middot; Purdue Daniels School of Business &middot; For research and educational purposes only &middot; Not investment advice</p>
 </div>
 </body></html>""", height=300, scrolling=False)
-    # components.html() always returns None — navigation is handled entirely
+    # components.html() always returns None - navigation is handled entirely
     # by window.parent.location.href inside nav() in the JS above.
     # The _ft_click return-value check that previously appeared here was dead
     # code and has been removed.
@@ -1363,7 +1363,7 @@ function nav(page) {{
 
 def _nx_badge(text: str, level: str = "nominal") -> str:
     """
-    Return an inline HTML severity badge string (not rendered — caller embeds in f-string).
+    Return an inline HTML severity badge string (not rendered - caller embeds in f-string).
     level: 'critical' | 'warning' | 'nominal' | 'live' | 'high-impact' | 'med-impact' |
            'low-impact' | 'active' | 'draft' | 'error'
     """

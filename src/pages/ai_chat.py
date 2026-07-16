@@ -457,7 +457,7 @@ def render_chat_core(start: str, end: str, show_status_bar: bool = True) -> None
                         response = "".join(_chunks)
                         if not _complete and _drop_err:
                             st.warning(
-                                f"Response may be incomplete — connection dropped "
+                                f"Response may be incomplete - connection dropped "
                                 f"({_drop_err[:120]}). Retry if needed."
                             )
                     else:
@@ -489,7 +489,7 @@ def render_chat_core(start: str, end: str, show_status_bar: bool = True) -> None
                         response = "".join(_chunks)
                         if not _complete and _drop_err:
                             st.warning(
-                                f"Response may be incomplete — connection dropped "
+                                f"Response may be incomplete - connection dropped "
                                 f"({_drop_err[:120]}). Retry if needed."
                             )
                 except Exception as e:

@@ -4,7 +4,7 @@ Unit tests for src/analysis/risk_score.py.
 Tests target the pure-math helper functions that don't require network
 access, API keys, or Streamlit session state. compute_risk_score itself
 is integration-level (calls conflict model, news, PortWatch) and is
-excluded from unit tests — integration coverage comes from the app running.
+excluded from unit tests - integration coverage comes from the app running.
 
 Run with: python -m pytest tests/test_risk_score.py -v
 """
@@ -192,7 +192,7 @@ class TestCommodityVolScore:
         low  = rng.standard_normal((200, 3)) * 0.005
         high = rng.standard_normal((200, 3)) * 0.05   # 10× higher vol
         data = np.vstack([low, high])
-        # _commodity_vol_score filters columns by name — must use recognised names
+        # _commodity_vol_score filters columns by name - must use recognised names
         cols  = ["WTI Crude Oil", "Brent Crude", "Natural Gas"]
         cmd_r = pd.DataFrame(data, index=_dates(n), columns=cols)
         score = _commodity_vol_score(cmd_r)

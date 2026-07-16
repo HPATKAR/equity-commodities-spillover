@@ -1,4 +1,4 @@
-# Data Quality Report — Cross-Asset Spillover Monitor
+# Data Quality Report - Cross-Asset Spillover Monitor
 
 **As of:** 2026-04-14
 **Standard:** SR 11-7 model risk management (conceptual soundness + ongoing monitoring)
@@ -38,7 +38,7 @@ Implemented in: `src/data/loader._validate_prices()`
 | Regions / commodities | `isinstance(list)` | Row dropped |
 | Drop count reported | `st.warning(f"{n} malformed rows dropped")` | Warning displayed |
 
-Implemented in: `src/ingestion/geo_rss.ingest_headlines()` — validation loop after scoring.
+Implemented in: `src/ingestion/geo_rss.ingest_headlines()` - validation loop after scoring.
 
 ### 1.4 Fixed Income / Credit Spreads (`loader.load_fixed_income_prices`)
 

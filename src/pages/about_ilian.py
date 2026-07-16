@@ -108,7 +108,7 @@ def page_about_ilian() -> None:
                 "January 2024 &ndash; Present &middot; Full-time",
                 [
                     "Managing payment systems, risk, and security operations across high-volume "
-                    "travel platforms — overseeing fraud monitoring and customer verification at scale.",
+                    "travel platforms - overseeing fraud monitoring and customer verification at scale.",
                     "Implemented outbound-chargeback processes and increased chargeback win rate "
                     "while reducing average document preparation time by 70% through systematic "
                     "workflow redesign.",

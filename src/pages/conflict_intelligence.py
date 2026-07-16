@@ -1,7 +1,7 @@
 """
 Conflict Intelligence Page.
 
-Per-conflict scorecard grid — one card per conflict showing:
+Per-conflict scorecard grid - one card per conflict showing:
   CIS, TPS, confidence, trend, state, freshness
 
 Detailed drill-down for selected conflict:
@@ -19,7 +19,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from src.ui.shared import _page_header, _page_footer, _page_intro
+from src.ui.shared import (_page_header, _page_footer, _page_intro,
+                           _definition_block)
 
 from src.analysis.conflict_model import (
     score_all_conflicts,
@@ -145,7 +146,7 @@ def _render_scorecard_grid(results: dict) -> str | None:
                     f'</div>'
                     f'<div style="margin-top:2px">'
                     f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;color:#555960">'
-                    f'Last updated: {r.get("last_updated", "—")}</span>'
+                    f'Last updated: {r.get("last_updated", " - ")}</span>'
                     f'</div>'
                     # CIS source provenance badge
                     + _cis_source_badge(r.get("cis_source", "static"))
@@ -305,9 +306,9 @@ def _render_affected_assets(selected_id: str, selected: dict) -> None:
     # Fallback to config lists if no structured exposure
     if not rows:
         for a in selected.get("affected_commodities", [])[:3]:
-            rows.append({"Asset": a, "Exposure": "—", "Type": "Commodity"})
+            rows.append({"Asset": a, "Exposure": " - ", "Type": "Commodity"})
         for a in selected.get("affected_equities", [])[:3]:
-            rows.append({"Asset": a, "Exposure": "—", "Type": "Equity"})
+            rows.append({"Asset": a, "Exposure": " - ", "Type": "Equity"})
 
     if not rows:
         st.caption("No asset exposure data.")
@@ -455,7 +456,7 @@ def _render_sensitivity_summary(results: dict) -> None:
     for row in rows:
         bar_w   = max(2, int(row["delta_up"] / max_up * 72))
         up_col  = "#c0392b" if row["delta_up"] >= max_up * 0.65 else "#e67e22"
-        dn_str  = f'{row["delta_dn"]:.1f}' if row["delta_dn"] < -0.05 else "—"
+        dn_str  = f'{row["delta_dn"]:.1f}' if row["delta_dn"] < -0.05 else " - "
         rows_html += (
             f'<tr style="border-bottom:1px solid #111">'
             f'<td style="padding:5px 8px">'
@@ -477,7 +478,7 @@ def _render_sensitivity_summary(results: dict) -> None:
             f'</div>'
             f'</td>'
             f'<td style="padding:5px 8px;font-family:\'JetBrains Mono\',monospace;'
-            f'font-size:0.56rem;color:#27ae60">{dn_str if dn_str == "—" else f"▼ {dn_str}"}</td>'
+            f'font-size:0.56rem;color:#27ae60">{dn_str if dn_str == " - " else f"▼ {dn_str}"}</td>'
             f'</tr>'
         )
 
@@ -669,11 +670,20 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     _page_intro(
         "<strong>Research question for this page: which active geopolitical shocks are material enough to "
         "transmit risk into commodity and equity markets?</strong> "
-        "The Conflict Intensity Score (CIS) aggregates seven analyst-assessed dimensions — deadliness, "
-        "civilian danger, geographic diffusion, fragmentation, escalation trend, recency, and source coverage — "
-        "into a 0–100 composite. Each conflict also carries a Transmission Pressure Score (TPS) that weights "
+        "The Conflict Intensity Score (CIS) aggregates seven analyst-assessed dimensions (deadliness, "
+        "civilian danger, geographic diffusion, fragmentation, escalation trend, recency, and source coverage) "
+        "into a 0 to 100 composite. Each conflict also carries a Transmission Pressure Score (TPS) that weights "
         "the open commodity channels (energy, shipping, metals, FX/sanctions). "
-        "CIS × TPS together determine how much of the geopolitical signal reaches the markets analysed on steps 2–5."
+        "CIS and TPS together determine how much of the geopolitical signal reaches the markets analysed on steps 2 to 5."
+    )
+    _definition_block(
+        "What CIS is, and what it is not",
+        "CIS is an <strong>analyst-assessed composite</strong>, not a market-calibrated or back-tested "
+        "signal. The seven dimensions are scored from reported events, so the number is a transparent "
+        "triage of which conflicts warrant attention, not a probability. Read it as a "
+        "<strong>monitoring and hedge-sizing input</strong>: it co-moves with market stress and "
+        "volatility, but it is not a forecast of forward returns and should never be traded as one. "
+        "The dimension weights are set by judgement, so reasonable analysts can differ on the exact level."
     )
 
     # ── Live Data Status Banner (ACLED + GDELT) ────────────────────────────
@@ -683,7 +693,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
 
         acled_live = acled_configured()
 
-        # GDELT runs regardless — no key needed; just check it responded
+        # GDELT runs regardless - no key needed; just check it responded
         gdelt_signals = {}
         try:
             gdelt_signals = fetch_all_gdelt_signals(timespan="7d")
@@ -728,7 +738,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 unsafe_allow_html=True,
             )
         else:
-            with st.expander("Enable live conflict data (ACLED API — free for academic use)", expanded=False):
+            with st.expander("Enable live conflict data (ACLED API - free for academic use)", expanded=False):
                 st.markdown(acled_setup_instructions())
 
         # ── GDELT signal summary table (when available) ────────────────────
@@ -760,14 +770,14 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         from src.analysis.conflict_model import _REGISTRY_WARNINGS
         if _REGISTRY_WARNINGS:
             with st.expander(
-                f"⚠ {len(_REGISTRY_WARNINGS)} conflict registry warning(s) — schema or staleness issues",
+                f"⚠ {len(_REGISTRY_WARNINGS)} conflict registry warning(s) - schema or staleness issues",
                 expanded=False,
             ):
                 st.markdown(
                     '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
                     'color:#e67e22">These warnings are generated at app startup by validating '
                     'the CONFLICTS registry against schema rules and staleness thresholds. '
-                    'They do not block scoring — review and update config.py if stale.</span>',
+                    'They do not block scoring - review and update config.py if stale.</span>',
                     unsafe_allow_html=True,
                 )
                 for w in _REGISTRY_WARNINGS:
@@ -782,7 +792,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     try:
         results = score_all_conflicts()
     except Exception as e:
-        st.error("Error loading conflict data — see logs.")
+        st.error("Error loading conflict data - see logs.")
         _page_footer()
         return
 
@@ -807,7 +817,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
-        'TRANSMISSION PRESSURE — CONFLICTS × CHANNELS</p>',
+        'TRANSMISSION PRESSURE - CONFLICTS × CHANNELS</p>',
         unsafe_allow_html=True,
     )
     _render_transmission_heatmap(results)
@@ -816,7 +826,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
-        'CIS SENSITIVITY SCAN — TOP DRIVER PER CONFLICT</p>',
+        'CIS SENSITIVITY SCAN - TOP DRIVER PER CONFLICT</p>',
         unsafe_allow_html=True,
     )
     _render_sensitivity_summary(results)
@@ -856,7 +866,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
             'margin-bottom:.5rem;font-family:\'JetBrains Mono\',monospace;font-size:0.56rem">'
             '<span style="color:#e67e22;font-weight:700">⚠ MANUAL SCENARIO ASSUMPTION</span>'
             '<span style="color:#8E9AAA;margin-left:.5rem">'
-            'ACLED and GDELT are unavailable — all CIS intensity dimensions use '
+            'ACLED and GDELT are unavailable - all CIS intensity dimensions use '
             'hardcoded registry values. Scores reflect the analyst\'s last manual update, '
             'not live event data. All transmission channel weights are always manual.</span>'
             '</div>',
@@ -904,7 +914,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;'
         f'padding-bottom:4px;margin:1.2rem 0 .4rem">'
-        f'CIS SENSITIVITY — {selected["label"].upper()} · WHAT TO WATCH</p>',
+        f'CIS SENSITIVITY - {selected["label"].upper()} · WHAT TO WATCH</p>',
         unsafe_allow_html=True,
     )
     _render_sensitivity_panel(selected_id)
@@ -934,7 +944,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         'color:#CFB991;letter-spacing:.16em;border-bottom:1px solid #1e1e1e;padding-bottom:4px;margin:1.4rem 0 .6rem">'
-        'AI ANALYST TEAM — CONFLICT ASSESSMENT</p>',
+        'AI ANALYST TEAM - CONFLICT ASSESSMENT</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -960,7 +970,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                     recipient="geopolitical_analyst",
                     msg_type="query",
                     content=(
-                        f"{selected['label']} — CIS {_cis:.0f}/100, TPS {_tps:.0f}/100, "
+                        f"{selected['label']} - CIS {_cis:.0f}/100, TPS {_tps:.0f}/100, "
                         f"state {_state.upper()}, trend {_trend.upper()}. "
                         f"What is driving the current intensity and which transmission "
                         f"channels carry the most near-term market risk?"
@@ -969,16 +979,16 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                 )
                 _trend_context = {
                     "rising":  "Escalation risk is real. Recommend elevated positioning.",
-                    "stable":  "Holding steady — monitor for shift triggers.",
+                    "stable":  "Holding steady - monitor for shift triggers.",
                     "falling": "De-escalation signal. Watch for false dawns.",
-                }.get(_trend, "Trend ambiguous — insufficient data to project.")
+                }.get(_trend, "Trend ambiguous - insufficient data to project.")
                 send_message(
                     sender="geopolitical_analyst",
                     recipient="commodities_specialist",
                     msg_type="handoff",
                     content=(
                         f"Intensity analysis complete. "
-                        f"Conflict is {_trend.upper()} — {_trend_context} "
+                        f"Conflict is {_trend.upper()} - {_trend_context} "
                         f"Handing off to commodity specialist for transmission impact."
                     ),
                     subject_id=_conf_subject,
@@ -996,7 +1006,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                         f"Top transmission channel: {_top_ch[0].replace('_',' ').title()} "
                         f"({_top_ch[1]:.0%} weight). "
                         f"TPS {_tps:.0f} indicates "
-                        + ("active market transmission — commodity repricing underway."
+                        + ("active market transmission - commodity repricing underway."
                            if _tps >= 50 else
                            "pressure building but not yet reflected in prices.")
                     ),
@@ -1004,10 +1014,10 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                     thread_id=_tid,
                 )
                 _conf_label = (
-                    "HIGH CONFIDENCE — act on signal" if selected.get("confidence", 0.5) >= 0.7
-                    else "MODERATE CONFIDENCE — size conservatively"
+                    "HIGH CONFIDENCE - act on signal" if selected.get("confidence", 0.5) >= 0.7
+                    else "MODERATE CONFIDENCE - size conservatively"
                     if selected.get("confidence", 0.5) >= 0.5
-                    else "LOW CONFIDENCE — watch but do not trade yet"
+                    else "LOW CONFIDENCE - watch but do not trade yet"
                 )
                 send_message(
                     sender="macro_strategist",
@@ -1030,7 +1040,7 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
             if _existing_msgs:
                 render_deliberation_panel(
                     subject_id=_conf_subject,
-                    title=f"Analyst Assessment — {selected['label']}",
+                    title=f"Analyst Assessment - {selected['label']}",
                     max_msgs=8,
                     show_consensus=True,
                 )
@@ -1043,6 +1053,6 @@ def page_conflict_intelligence(start=None, end=None, fred_key: str = "") -> None
                     unsafe_allow_html=True,
                 )
     except Exception as exc:
-        st.caption("Agent deliberation unavailable — see logs.")
+        st.caption("Agent deliberation unavailable - see logs.")
 
     _page_footer()

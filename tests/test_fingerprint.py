@@ -1,5 +1,5 @@
 """
-Pattern Memory — fingerprint causality and matching tests.
+Pattern Memory - fingerprint causality and matching tests.
 
 Raw-feature causality: the fingerprint at day t must use no data after t.
 Geo/chokepoint features must carry zero trace of events that had not started;
@@ -45,7 +45,7 @@ def test_geo_state_is_zero_before_any_event():
 def test_ukraine_invisible_the_day_before_onset():
     idx = pd.DatetimeIndex([pd.Timestamp("2022-02-23"), pd.Timestamp("2022-02-24")])
     g = daily_geo_state(idx)
-    # Feb 23: no active events (COVID event ended 2021-11-30) — Feb 24: Ukraine active
+    # Feb 23: no active events (COVID event ended 2021-11-30) - Feb 24: Ukraine active
     assert g["geo_n_active"].iloc[1] == g["geo_n_active"].iloc[0] + 1
     assert g["choke_pressure"].iloc[1] > g["choke_pressure"].iloc[0]
 
@@ -118,7 +118,7 @@ def test_outcomes_and_base_rates(fp_and_regimes):
     outs = match_outcomes(res, combined, regimes)
     assert outs
     for o in outs:
-        assert o["verdict"] in ("GOOD", "MIXED", "BAD", "—")
+        assert o["verdict"] in ("GOOD", "MIXED", "BAD", " - ")
         assert o["regime_then"] in (0, 1, 2, 3)
     br = base_rates(combined, regimes)
     assert abs(br["GOOD"] + br["MIXED"] + br["BAD"] - 1.0) < 1e-9

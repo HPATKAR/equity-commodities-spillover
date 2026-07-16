@@ -7,17 +7,17 @@ and computes dollar-weighted portfolio allocations.
 
 Expected upload columns (case-insensitive):
   Required: ticker, dollar_amount   (or market_value / position_value / amount)
-  Optional: currency  (ISO 4217, e.g. EUR, GBP, JPY — defaults to USD)
+  Optional: currency  (ISO 4217, e.g. EUR, GBP, JPY - defaults to USD)
             cusip, isin, name, sector, asset_class
 
 Output stored in st.session_state["gbl_portfolio"] as:
   {
-    "positions": list[dict]   — one row per holding with enriched fields
-    "weights":   dict[str, float]  — {ticker: weight_0_to_1}
-    "total_usd": float             — total portfolio value in USD
-    "n":         int               — number of valid positions
-    "loaded_at": str               — ISO timestamp
-    "errors":    list[str]         — tickers that could not be priced
+    "positions": list[dict] - one row per holding with enriched fields
+    "weights":   dict[str, float] - {ticker: weight_0_to_1}
+    "total_usd": float - total portfolio value in USD
+    "n":         int - number of valid positions
+    "loaded_at": str - ISO timestamp
+    "errors":    list[str] - tickers that could not be priced
   }
 """
 
@@ -94,10 +94,10 @@ def _normalise_df(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     df = df.rename(columns={amount_col.lower().strip(): "dollar_amount"})
     df["dollar_amount"] = pd.to_numeric(df["dollar_amount"], errors="coerce").fillna(0)
 
-    # Currency — default USD
+    # Currency - default USD
     if "currency" not in df.columns:
         df["currency"] = "USD"
-        warnings.append("No 'currency' column found — assuming all positions are in USD.")
+        warnings.append("No 'currency' column found - assuming all positions are in USD.")
     else:
         df["currency"] = df["currency"].fillna("USD").str.upper().str.strip()
 
@@ -249,12 +249,12 @@ def build_portfolio(file_obj) -> dict:
 
     missing_price = [t for t in tickers if t not in live_prices]
     if missing_price:
-        errors.extend([f"Price not found for {t} — using uploaded dollar_amount as-is." for t in missing_price])
+        errors.extend([f"Price not found for {t} - using uploaded dollar_amount as-is." for t in missing_price])
 
     # ── Weights ─────────────────────────────────────────────────────────────
     total_usd = df["dollar_amount_usd"].sum()
     if total_usd <= 0:
-        raise ValueError("Total portfolio value is zero — check dollar_amount column.")
+        raise ValueError("Total portfolio value is zero - check dollar_amount column.")
 
     df["weight"] = df["dollar_amount_usd"] / total_usd
     df["live_price"] = df["ticker"].map(live_prices)

@@ -46,7 +46,7 @@ _F    = "font-family:'DM Sans',sans-serif;"
 _M    = "font-family:'JetBrains Mono',monospace;"
 _GOLD = GOLD
 
-# ── Design tokens — sourced from src/ui/palette.py ────────────────────────────
+# ── Design tokens - sourced from src/ui/palette.py ────────────────────────────
 _C = {
     "danger":  DANGER,
     "warn":    WARN,
@@ -65,7 +65,7 @@ _C = {
 }
 
 # ── Shared style helpers ───────────────────────────────────────────────────────
-# Panel header — consistent across every SVG/HTML panel.
+# Panel header - consistent across every SVG/HTML panel.
 def _ph(title: str, accent: str = "") -> str:
     """Render a standardised panel header label."""
     color = accent if accent else _C["text"]
@@ -77,7 +77,7 @@ def _ph(title: str, accent: str = "") -> str:
     )
 
 
-# Unified card wrapper — every panel goes through this.
+# Unified card wrapper - every panel goes through this.
 def _card(title: str, body: str, accent: str = "") -> None:
     """Render a panel card with consistent header and surface styling."""
     st.markdown(
@@ -91,7 +91,7 @@ def _card(title: str, body: str, accent: str = "") -> None:
     )
 
 
-# Status badge — one shape everywhere.
+# Status badge - one shape everywhere.
 def _badge(label: str, color: str) -> str:
     return (
         f'<span style="{_M}font-size:0.50rem;font-weight:700;letter-spacing:.1em;'
@@ -106,7 +106,7 @@ def _badge(label: str, color: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _STYLE = """<style>
-/* ── Base resets — aligned to app-wide neutral dark palette ── */
+/* ── Base resets - aligned to app-wide neutral dark palette ── */
 html,body,[data-testid="stAppViewContainer"]{background:#000!important}
 [data-testid="stAppViewContainer"] p,
 [data-testid="stAppViewContainer"] li{
@@ -138,7 +138,7 @@ header[data-testid="stHeader"]{background:#000!important;border-bottom:1px solid
   padding-bottom:5px;border-bottom:1px solid #1e1e1e;margin-bottom:8px;display:block}
 /* ── Section rule ── */
 .hm-rule{border:none;border-top:1px solid #1a1a1a;margin:.35rem 0}
-/* ── Section-level top spacer — applied to first element of each render block ── */
+/* ── Section-level top spacer - applied to first element of each render block ── */
 .hm-section-top{margin-top:.6rem!important}
 /* ── Status badge ── */
 .hm-badge{font-family:'JetBrains Mono',monospace!important;font-size:0.50rem!important;
@@ -254,7 +254,7 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="
     border-left:none!important;padding-left:0!important}
 section[data-testid="stMain"] *{border-radius:0!important;box-shadow:none!important;
     font-variant-numeric:tabular-nums}
-/* Hero band — CSS grid, 12 columns, 12px gap everywhere */
+/* Hero band - CSS grid, 12 columns, 12px gap everywhere */
 .cc-hero{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin:0 0 12px}
 .cc-cell{background:#0a0a0a;border:1px solid #1e1e1e;padding:.4rem .65rem;min-width:0}
 .cc-thin{display:flex;align-items:center;padding:.3rem .65rem;overflow:hidden}
@@ -269,12 +269,12 @@ section[data-testid="stMain"] *{border-radius:0!important;box-shadow:none!import
 /* ── FINALIZATION: static terminal discipline ─────────────────────────────
    Data doesn't dance. All entrance/attention animations, glows, and text
    shadows are disabled; the only motion left is the live heartbeat dot and
-   the loading sweep — both functional, not decorative. Buttons drop the
+   the loading sweep - both functional, not decorative. Buttons drop the
    app-wide gold border: gold is reserved for the GRS accent and primary
    actions only. */
 section[data-testid="stMain"] *{animation:none!important;transition:none!important;
     text-shadow:none!important}
-/* Liveness exceptions — motion that signals LIVE DATA, never decoration:
+/* Liveness exceptions - motion that signals LIVE DATA, never decoration:
    heartbeat dots, current-value markers, GRS breathe, top-conflict radar
    rings, and state pulses on critical/escalating readings. */
 section[data-testid="stMain"] .nx-live-dot{animation:nx-pulse 1.8s ease-out infinite!important}
@@ -297,14 +297,14 @@ section[data-testid="stMain"] button[data-testid="baseButton-primary"]{
     background:#CFB991!important;color:#000!important;border-color:#CFB991!important;
     font-weight:800!important}
 
-/* ── DENSITY: Streamlit defaults to ~1rem between every element — on a
+/* ── DENSITY: Streamlit defaults to ~1rem between every element - on a
    terminal that is dead air. Compress inter-element gaps page-wide and
    trim panel padding; density carries MORE info, not smaller info. */
 section[data-testid="stMain"] [data-testid="stVerticalBlock"]{gap:.35rem!important}
 /* Streamlit pins explicit pixel heights on markdown wrappers measured
    BEFORE the JetBrains Mono/DM Sans font swap; once real glyph metrics land,
    content outgrows the pinned box and paints over the next element (clipped
-   headers). Force natural flow height — but ONLY for markdown: element
+   headers). Force natural flow height - but ONLY for markdown: element
    containers hosting components.html iframes are collapsed on purpose
    (navbar/JS helpers) and blanket height:auto re-inflates them to the 150px
    iframe default, leaving a black band at the top of the page. */
@@ -324,7 +324,7 @@ section[data-testid="stMain"] [data-testid="stExpander"] summary{padding:.4rem .
 .cc-tape-row+.cc-tape-row{border-top:1px solid #161616}
 .cc-tape-row > *{flex-shrink:0}
 .cc-tape .cc-clip{flex-shrink:1;overflow:hidden;text-overflow:ellipsis;min-width:0}
-/* Hero interior grids — pack cells with columns, not padding */
+/* Hero interior grids - pack cells with columns, not padding */
 .cc-grs{display:grid;grid-template-columns:270px 1fr;gap:0 20px;align-items:start}
 .cc-mv2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
 .cc-mv-it{display:flex;align-items:center;justify-content:space-between;gap:5px;
@@ -345,7 +345,7 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
     Load market returns, compute avg_corr, then run the full 3-layer risk score.
     Returns risk_result dict.
 
-    NOTE: does NOT call any other @st.cache_data functions internally — Streamlit 1.35+
+    NOTE: does NOT call any other @st.cache_data functions internally - Streamlit 1.35+
     raises StreamlitAPIException on nested cached calls. market_fear_index() is called
     separately in page_home() on the main thread.
 
@@ -365,7 +365,7 @@ def _load_market_risk(start: str, end: str, scenario_id: str = "base") -> dict:
 
     from src.analysis.risk_score import compute_risk_score
     computed_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # Clamp to 3 years — rolling corr needs 60 days, charts need ~2y.
+    # Clamp to 3 years - rolling corr needs 60 days, charts need ~2y.
     _floor = str((datetime.date.today() - datetime.timedelta(days=3 * 365)))
     effective_start = _floor if start < _floor else start
     try:
@@ -421,7 +421,7 @@ def _home_logo_b64() -> str:
 
 
 def _err_slot(label: str) -> None:
-    """One-liner placeholder when a render section fails — muted, non-alarming."""
+    """One-liner placeholder when a render section fails - muted, non-alarming."""
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
         f'color:{_C["muted"]};margin:2px 0 10px;letter-spacing:.06em">'
@@ -434,7 +434,7 @@ def _render_masthead(conflict_agg: dict) -> None:
     # The right-side status cluster is the shared, dense one
     # (src/ui/shared._header_status_html) so the Command Center masthead stays
     # byte-identical to the cold-load placeholder (_page_header) and to every
-    # other page — one source of truth, no more two-copies-drift. conflict_agg
+    # other page - one source of truth, no more two-copies-drift. conflict_agg
     # is retained for signature compatibility; the shared cluster recomputes
     # (cached) so its CIS matches this page's.
     _logo = _home_logo_b64()
@@ -537,7 +537,7 @@ def _bar_row(label: str, value: float, weight: float, color: str, note: str = ""
 
 def _spark_bare(values: list, width: int = 64, height: int = 16,
                 color: str = "#8890a1") -> str:
-    """Bare row sparkline — no label, greyscale by default (hero mover rows)."""
+    """Bare row sparkline - no label, greyscale by default (hero mover rows)."""
     if len(values) < 2:
         return ""
     vmin, vmax = min(values), max(values)
@@ -566,7 +566,7 @@ def _render_command_hero(
     cmd_r,
 ) -> None:
     """
-    Command hero v3 — maximum packing. Thin one-line top strip (reserved slot,
+    Command hero v3 - maximum packing. Thin one-line top strip (reserved slot,
     alerts inline, regime inline), then GRS | full conflict roster w/ TPS |
     16 movers with 1d+5d, then the tape with computed vol/corr cells.
     Display-only: all values already computed or trivial arithmetic on loaded
@@ -581,7 +581,7 @@ def _render_command_hero(
             d_geo = d.get("delta")
     if d_geo is None:
         d_geo = st.session_state.get("_delta_geo_score")
-    d_txt = "—" if d_geo is None else f"{d_geo:+.1f}"
+    d_txt = " - " if d_geo is None else f"{d_geo:+.1f}"
     d_col = _C["label"] if not d_geo else (_C["danger"] if d_geo > 0 else _C["safe"])
 
     spark = ""
@@ -598,7 +598,7 @@ def _render_command_hero(
     news_gpr = risk.get("news_gpr")
     # Semantic shading + a level arrow (▲ elevated / ▼ benign) so each number
     # reads good/bad at a glance. Risk layers: high = bad (green<45<amber<65<red).
-    # Confidence is INVERTED — high confidence is good (green).
+    # Confidence is INVERTED - high confidence is good (green).
     def _risk_ct(v: float | None, inverted: bool = False) -> tuple[str, str]:
         if v is None:
             return _C["label"], ""
@@ -606,7 +606,7 @@ def _render_command_hero(
             col = _C["safe"] if v >= 65 else _C["warn"] if v >= 45 else _C["danger"]
         else:
             col = _C["danger"] if v >= 65 else _C["warn"] if v >= 45 else _C["safe"]
-        # ︎ = text-presentation selector — forces the triangle to render as
+        # ︎ = text-presentation selector - forces the triangle to render as
         # a text glyph (which takes the CSS color) instead of a monochrome emoji.
         return col, ("▲︎" if v >= 50 else "▼︎")
     comp_rows = ""
@@ -618,7 +618,7 @@ def _render_command_hero(
         ("Peak conflict CIS", peak_cis, None, False),
         ("Confidence %", float(risk.get("confidence", 0)) * 100, None, True),
     ):
-        v_txt = "    —" if val is None else f"{val:5.1f}"
+        v_txt = " - " if val is None else f"{val:5.1f}"
         _vc, _tri = _risk_ct(val, inv)
         dd_txt = "" if dd is None else f"{dd:+5.1f}"
         dd_col = _C["danger"] if (dd or 0) > 0 else _C["safe"]
@@ -632,7 +632,7 @@ def _render_command_hero(
             + f'</span></div>'
         )
 
-    # Weighted-contribution bar: which layer is driving the composite (greys —
+    # Weighted-contribution bar: which layer is driving the composite (greys - 
     # categorical, not state; labels differentiate)
     _wc = float(risk.get("cis", 0)) * 0.35
     _wt = float(risk.get("tps", 0)) * 0.30
@@ -700,7 +700,7 @@ def _render_command_hero(
             _d20 = score - _tv[-21] if len(_tv) > 21 else float("nan")
             def _dv(v):
                 if v != v:
-                    return f'<span style="color:{_C["label"]}">—</span>'
+                    return f'<span style="color:{_C["label"]}"> - </span>'
                 c = _C["danger"] if v > 0 else _C["safe"]
                 return f'<span style="color:{c}">{v:+.1f}</span>'
             trail_stats = (
@@ -737,7 +737,7 @@ def _render_command_hero(
     def _age_txt(cid: str) -> str:
         st_d = _starts.get(cid)
         if not isinstance(st_d, datetime.date):
-            return "  — "
+            return " - "
         days = (datetime.date.today() - st_d).days
         return f"{days:3d}d" if days < 365 else f"{days / 365.25:3.1f}y"
 
@@ -758,13 +758,13 @@ def _render_command_hero(
         tps_v = float(r.get("tps", 0))
         conf_v = float(r.get("confidence", 0)) * 100.0
         c_col = _C["danger"] if esc else _C["text"]
-        # Confidence is reliability, not good/bad — a neutral brightness ramp,
+        # Confidence is reliability, not good/bad - a neutral brightness ramp,
         # never the risk red/green (which would misread as a risk signal).
         cf_col = _C["text"] if conf_v >= 80 else _C["muted"] if conf_v >= 65 else _C["label"]
         bar_c = _C["danger"] if cis_v >= 65 else _C["warn"] if cis_v >= 45 else "#3a3a3a"
         state_dim = "opacity:.45" if r.get("state") != "active" else ""
         tx = r.get("transmission", {}) or {}
-        top_ch = _CH_CODE.get(max(tx, key=tx.get), "—") if tx else "—"
+        top_ch = _CH_CODE.get(max(tx, key=tx.get), " - ") if tx else " - "
         # Arrow = trend DIRECTION; its colour/pulse = escalation SEVERITY.
         _tr = str(r.get("trend", "")).lower()
         arw = "▲" if _tr == "rising" else "▼" if _tr == "falling" else "→"
@@ -855,9 +855,9 @@ def _render_command_hero(
             r5 = float(np.expm1(ser.iloc[-5:].sum()) * 100) if len(ser) >= 5 else float("nan")
             c1 = _C["danger"] if r1 < 0 else _C["safe"]
             c5 = _C["label"] if r5 != r5 else (_C["danger"] if r5 < 0 else _C["safe"])
-            r5t = "  —  " if r5 != r5 else f"{r5:+5.1f}"
+            r5t = " - " if r5 != r5 else f"{r5:+5.1f}"
             short = name if len(name) <= 10 else name[:9] + "…"
-            # sparkline color MATCHES the adjacent 5d figure — a trend color
+            # sparkline color MATCHES the adjacent 5d figure - a trend color
             # contradicting the printed number reads as an error (1d fallback
             # when 5d is unavailable)
             _t20 = [float(v) for v in ser.tail(20)]
@@ -905,7 +905,7 @@ def _render_command_hero(
                 f'</div>'
             )
         # Computed cells from already-loaded frames (display arithmetic only).
-        # Sparklines colored by their own 5-observation direction — rising vol
+        # Sparklines colored by their own 5-observation direction - rising vol
         # or coupling is risk-off (red), falling is green, matching the VIX
         # convention so no cell contradicts its neighbours.
         try:
@@ -915,7 +915,7 @@ def _render_command_hero(
                       * np.sqrt(252) * 100).dropna().tail(30)
             _cor_s = (avg_corr.dropna() * 100).tail(30)
             # Transmission beta (WTI→S&P, 60d rolling), correlation velocity
-            # (10d change), and equity breadth (% advancing) — same
+            # (10d change), and equity breadth (% advancing) - same
             # value·Δ5·30d-range·spark format as the vol/corr cells
             _beta_s = pd.Series(dtype=float)
             try:
@@ -1009,7 +1009,7 @@ def _render_command_hero(
            if latest_crit else '')
     )
 
-    regime_name, regime_days, corr_txt, vel_txt = "—", "—", "—", "—"
+    regime_name, regime_days, corr_txt, vel_txt = " - ", " - ", " - ", " - "
     try:
         _rn = {0: "DECORRELATED", 1: "NORMAL", 2: "ELEVATED", 3: "CRISIS"}
         rlast = int(regimes.iloc[-1])
@@ -1062,7 +1062,7 @@ def _render_command_hero(
         f'color:{_vel_col};margin-left:4px">{vel_txt}</span>'
     )
 
-    # ── "Changed since yesterday" slot — top day-over-day movers from the daily
+    # ── "Changed since yesterday" slot - top day-over-day movers from the daily
     # snapshot (GRS / CIS / TPS / per-conflict CIS), colour-coded: red = risk
     # rose, green = risk fell. Fills what used to be the reserved placeholder.
     _CHG_SHORT = {"geo_risk_score": "GRS", "portfolio_cis": "CIS",
@@ -1093,7 +1093,7 @@ def _render_command_hero(
     st.markdown(
         f'<div class="cc-hero">'
 
-        # Row A — one status line: LIVE | changed-slot | alerts | regime
+        # Row A - one status line: LIVE | changed-slot | alerts | regime
         f'<div class="cc-cell cc-thin" style="grid-column:span 2;gap:5px">'
         f'<span class="hm-live-blink" style="display:inline-block;width:6px;height:6px;'
         f'border-radius:50%;background:{_C["safe"]};flex-shrink:0"></span>'
@@ -1114,15 +1114,15 @@ def _render_command_hero(
         f'border:1px solid rgba(207,185,145,0.4);padding:2px 8px;white-space:nowrap">'
         f'TRADE IDEAS &rarr;</a></div>'
         f'<div class="cc-cell cc-thin" style="grid-column:span 4">'
-        f'<a href="?page=correlation" target="_self" title="Open Correlation — regime detail" '
+        f'<a href="?page=correlation" target="_self" title="Open Correlation - regime detail" '
         f'style="text-decoration:none;{_M}font-size:.52rem;font-weight:700;letter-spacing:.14em;'
         f'color:{_C["gold"]};margin-right:10px;cursor:pointer">REGIME &rarr;</a>'
         f'{regime_line}{regime_strip}</div>'
 
-        # Row B — GRS (span 5) | conflict roster (span 3) | movers 16 (span 4)
+        # Row B - GRS (span 5) | conflict roster (span 3) | movers 16 (span 4)
         f'<div class="cc-cell" style="grid-column:span 5;border-left:3px solid {s_col}">'
         f'<div class="cc-lbl">Global Risk Score · composite 0–100 '
-        f'<a href="?page=overview" target="_self" title="Open Overview — full risk decomposition" '
+        f'<a href="?page=overview" target="_self" title="Open Overview - full risk decomposition" '
         f'style="text-decoration:none;color:{_C["gold"]};font-weight:700;cursor:pointer">'
         f'Overview &rarr;</a></div>'
         f'<div class="cc-grs2">'
@@ -1637,7 +1637,7 @@ def _render_geo_risk_block(
             unsafe_allow_html=True,
         )
 
-    # ── LAYOUT PASS: speedometer + score-layer bars removed — both repeated
+    # ── LAYOUT PASS: speedometer + score-layer bars removed - both repeated
     # the hero's GRS readout (the number rendered 4×: hero, feed tile, header
     # badge, gauge). This block now carries only what the hero does not:
     # conflict movers, news GPR, the fear-index history, and the decomposition.
@@ -1664,7 +1664,7 @@ def _render_geo_risk_block(
             + (f' vs {yday_date}' if yday_date else '') + f'</span>{_mv_html}'
         )
     else:
-        # No day-over-day moves — conflict CIS is static when GDELT isn't
+        # No day-over-day moves - conflict CIS is static when GDELT isn't
         # corroborating. Light the card up with the current top conflicts by
         # intensity (CIS) + escalation arrow instead of an empty message.
         _top = sorted(
@@ -1693,7 +1693,7 @@ def _render_geo_risk_block(
         else:
             _mv_block = (
                 f'<span style="{_M}font-size:0.58rem;color:{_C["muted"]}">'
-                + ("— no conflict moves vs prior snapshot" if yday_deltas is not None
+                + (" - no conflict moves vs prior snapshot" if yday_deltas is not None
                    else "no prior baseline yet") + '</span>'
             )
     _gpr_block = ""
@@ -1742,7 +1742,7 @@ def _render_geo_risk_block(
     dw   = risk.get("weights", {})
 
     if comp:
-        # Rich sub-component grid — only when the model produces them
+        # Rich sub-component grid - only when the model produces them
         bars_html = ""
         for name, val in comp.items():
             c_col  = _C["danger"] if val > 70 else _C["warn"] if val > 45 else "#2e7d32"
@@ -1969,7 +1969,7 @@ def _render_context_narrative(risk: dict, conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L  INTELLIGENCE FEED  (left column — Stitch-style severity card feed)
+# § L  INTELLIGENCE FEED  (left column - Stitch-style severity card feed)
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Alert page_hint → short display label + click-through target. Keys are the
@@ -2000,7 +2000,7 @@ def _render_intelligence_feed(
     color = risk["color"]
     label = risk["label"]
 
-    # ── Chokepoint Strait Watch — pinned to the TOP of the feed ───────────────
+    # ── Chokepoint Strait Watch - pinned to the TOP of the feed ───────────────
     scenario = get_scenario()
     tps_mult = scenario.get("tps_mult", 1.0) if "shipping" in scenario.get("id", "") else 1.0
     st.markdown(
@@ -2047,9 +2047,9 @@ def _render_intelligence_feed(
     if any(v is not None for v in [_dg, _dc, _dt]):
         def _dchip(label, delta):
             if delta is None:
-                return f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;—</span>'
+                return f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp; - </span>'
             col  = _C["danger"] if delta > 0.3 else _C["safe"] if delta < -0.3 else _C["muted"]
-            sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else "— flat"
+            sign = f"▲ +{delta:.1f}" if delta > 0.3 else f"▼ {delta:.1f}" if delta < -0.3 else " - flat"
             return (
                 f'<span style="{_M}font-size:0.56rem;color:{_C["muted"]}">{label}&nbsp;</span>'
                 f'<span style="{_M}font-size:0.56rem;font-weight:700;color:{col}">{sign}</span>'
@@ -2066,7 +2066,7 @@ def _render_intelligence_feed(
             unsafe_allow_html=True,
         )
 
-    # Header — "Intelligence Feed" + a compact News GPR chip folded inline
+    # Header - "Intelligence Feed" + a compact News GPR chip folded inline
     # (between the title and LIVE), replacing the old standalone GPR card.
     _gpr = risk.get("news_gpr")
     _gpr_chip = ""
@@ -2115,7 +2115,7 @@ def _render_intelligence_feed(
             border_c, badge_bg, badge_c, badge_lbl = _C["label"], "rgba(136,144,161,0.08)", _C["label"], "NORMAL"
 
         title  = getattr(a, "title", str(a))[:68]
-        # Alert dataclass carries body/category/page_hint/data — .detail and
+        # Alert dataclass carries body/category/page_hint/data - .detail and
         # .message never existed, so card bodies silently rendered empty.
         body   = getattr(a, "body", "")[:240]
         cat    = getattr(a, "category", "")
@@ -2213,7 +2213,7 @@ def _render_intelligence_feed(
             arw   = "▲" if _tr == "rising" else "▼" if _tr == "falling" else "→"
             a_col = (bar_c if esc else _C["warn"] if _tr == "rising"
                      else _C["safe"] if _tr == "falling" else _C["label"])
-            # Confidence is reliability — neutral brightness, never risk red/green.
+            # Confidence is reliability - neutral brightness, never risk red/green.
             cf_col = _C["text"] if cfv >= 80 else _C["label"]
             tx    = r.get("transmission", {}) or {}
             top_ch = max(tx, key=tx.get) if tx else ""
@@ -2229,7 +2229,7 @@ def _render_intelligence_feed(
                 # Streamlit's markdown reparents block <div> wrappers out of an
                 # <a>, which collapsed the old flex row and jammed the numbers;
                 # inline-block spans honour width + text-align with no wrapper,
-                # so each number keeps its own right-aligned box — never touching.
+                # so each number keeps its own right-aligned box - never touching.
                 f'<a href="?page=conflict_intelligence" target="_self" '
                 f'title="Open Conflict Intelligence · {r["label"]}" '
                 f'style="text-decoration:none;cursor:pointer;display:block;'
@@ -2262,7 +2262,7 @@ def _render_intelligence_feed(
                 unsafe_allow_html=True,
             )
 
-    # Chokepoint pressure — structural shipping/chokepoint weights of the
+    # Chokepoint pressure - structural shipping/chokepoint weights of the
     # active theaters (registry transmission channels, display-only)
     _cp = sorted(
         ((r["label"], (float((r.get("transmission") or {}).get("chokepoint", 0))
@@ -2324,7 +2324,7 @@ def _render_intelligence_feed(
             )
 
     # ── Regime-transition radar chip (critical slowing down) ──────────────────
-    # Runs the early-warning engine on the already-loaded avg_corr driver — no
+    # Runs the early-warning engine on the already-loaded avg_corr driver - no
     # extra data load. Links to the full Early-Warning Radar (Research menu).
     try:
         from src.analysis import critical_slowing as _cs
@@ -2375,7 +2375,7 @@ def _render_intelligence_feed(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R  MARKET PULSE CARDS  (right column — Stitch vertical card layout)
+# § R  MARKET PULSE CARDS  (right column - Stitch vertical card layout)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_market_pulse_cards() -> None:
@@ -2384,7 +2384,7 @@ def _render_market_pulse_cards() -> None:
     if not data:
         _card("DAILY RETURNS · 5D",
               f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
-              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'padding:.3rem 0">live instrument feed unavailable - '
               f'retries automatically (15-min cache)</div>')
         return
 
@@ -2393,7 +2393,7 @@ def _render_market_pulse_cards() -> None:
         pct    = d["pct"]
         is_vix = d["sym"] == "^VIX"
         if abs(pct) < 0.05:
-            c, arrow = _C["muted"], "—"
+            c, arrow = _C["muted"], " - "
         elif pct > 0:
             c, arrow = (_C["danger"] if is_vix else _C["safe"]), "▲"
         else:
@@ -2670,7 +2670,7 @@ def _render_scenario_switch(narrow: bool = False) -> None:
     st.markdown(
         f'<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;'
         f'color:{_C["muted"]};margin:.3rem 0 0;line-height:1.55">'
-        f'NOTE — Scenario multipliers are <b>manual scenario assumptions</b> — '
+        f'NOTE - Scenario multipliers are <b>manual scenario assumptions</b> - '
         f'not statistically calibrated against historical episodes. '
         f'{_calib}</p>',
         unsafe_allow_html=True,
@@ -2791,7 +2791,7 @@ _JUMP_GROUPS = [
     {
         "group":   "Core Analysis",
         "color":   _C["info"],
-        "caption": "Follow this sequence on every session — steps 2 → 3 → 4b → 4a → 5.",
+        "caption": "Follow this sequence on every session - steps 2 → 3 → 4b → 4a → 5.",
         "items": [
             ("Watchlist",      "watchlist",      "Step 2 · Which commodity markets moved?",          "daily", "1"),
             ("Exposure",       "exposure_scoring","Step 3 · Which equity markets are exposed?",       "deep",  "2"),
@@ -2816,7 +2816,7 @@ _JUMP_GROUPS = [
     {
         "group":   "Strategy & Research",
         "color":   _C["safe"],
-        "caption": "Use after reading the analysis pages — for scenario simulation and AI conclusions.",
+        "caption": "Use after reading the analysis pages - for scenario simulation and AI conclusions.",
         "items": [
             ("Scenario Engine",  "scenario_engine", "What-if shock simulation under active scenario",  "deep",  "12"),
             ("Stress Test",      "stress_test",     "Portfolio drawdown under commodity shock events",  "deep",  "13"),
@@ -2835,7 +2835,7 @@ _TAG_META = {
 
 
 def _render_quickjump() -> None:
-    # Flatten all groups into a single 4-col grid — no separate per-group st.columns calls
+    # Flatten all groups into a single 4-col grid - no separate per-group st.columns calls
     # Group identity lives in the card's top-border color; rendered as one pass.
     all_items: list[tuple[str, str, str, str, str, str]] = []  # label, page_id, desc, tag, _sc, g_color
     for group in _JUMP_GROUPS:
@@ -2962,7 +2962,7 @@ def _render_market_pulse() -> None:
     if not data:
         _card("DAILY RETURNS · 5D",
               f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
-              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'padding:.3rem 0">live instrument feed unavailable - '
               f'retries automatically (15-min cache)</div>')
         return
 
@@ -3311,7 +3311,7 @@ def _render_agent_strip() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L2  CORRELATION PULSE  (left column — equity-commodity sparkline)
+# § L2  CORRELATION PULSE  (left column - equity-commodity sparkline)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_correlation_pulse(
@@ -3364,13 +3364,13 @@ def _render_correlation_pulse(
         # zero reference line
         f'<line x1="0" y1="{zero_y:.1f}" x2="{W}" y2="{zero_y:.1f}" '
         f'stroke="#2e2e2e" stroke-width="1"/>'
-        # 0.35 high-coupling threshold (was: stroke=_C["danger"] — color bug fixed)
+        # 0.35 high-coupling threshold (was: stroke=_C["danger"] - color bug fixed)
         f'<line x1="0" y1="{thr_y:.1f}" x2="{W}" y2="{thr_y:.1f}" '
         f'stroke="{_C["danger"]}" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.45"/>'
         # correlation sparkline
         f'<polyline class="hm-line-in" points="{pts}" fill="none" stroke="{cur_c}" '
         f'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>'
-        # terminal dot — pulsing "live" indicator
+        # terminal dot - pulsing "live" indicator
         f'<circle class="hm-dot-live" cx="{W:.1f}" cy="{dot_y:.1f}" r="3.5" fill="{cur_c}"/>'
         # axis labels
         f'<text x="0" y="{H + 11}" font-size="8" fill="{_C["label"]}" '
@@ -3385,7 +3385,7 @@ def _render_correlation_pulse(
 
     _corr_num_cls = "hm-glow-pulse" if regime_lbl == "HIGH COUPLING" else "hm-num-pop"
 
-    # ── Readout — turns the sparkline into numbers (regime tenure, 60d average,
+    # ── Readout - turns the sparkline into numbers (regime tenure, 60d average,
     #    10-day drift, range position, distance to the coupling threshold). Being
     #    fixed-height, it also squares the left column with its taller neighbours.
     _avg = float(np.mean(series))
@@ -3442,7 +3442,7 @@ def _render_correlation_pulse(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R2  RISK DECOMPOSITION  (right column — component meter bars)
+# § R2  RISK DECOMPOSITION  (right column - component meter bars)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_risk_arc(risk: dict) -> None:
@@ -3520,7 +3520,7 @@ def _render_risk_arc(risk: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L4  ESCALATION TRACKER  (left column — trend / CIS velocity per conflict)
+# § L4  ESCALATION TRACKER  (left column - trend / CIS velocity per conflict)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_escalation_tracker(conflict_results: dict) -> None:
@@ -3585,7 +3585,7 @@ def _render_escalation_tracker(conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L5  TOP AFFECTED COMMODITIES  (left column — commodity exposure hit-list)
+# § L5  TOP AFFECTED COMMODITIES  (left column - commodity exposure hit-list)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_top_commodities(conflict_results: dict) -> None:
@@ -3641,7 +3641,7 @@ def _render_top_commodities(conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L3  CONFLICT LANDSCAPE  (left column — CIS × TPS 2-D scatter)
+# § L3  CONFLICT LANDSCAPE  (left column - CIS × TPS 2-D scatter)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_conflict_landscape(conflict_results: dict) -> None:
@@ -3708,7 +3708,7 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
         f'font-family="JetBrains Mono,monospace">↑ TPS</text>'
     )
 
-    # Conflict dots — monitoring first (behind), active on top
+    # Conflict dots - monitoring first (behind), active on top
     active_items, mon_items = [], []
     for cid, r in conflict_results.items():
         entry = (float(r.get("cis", 0)), float(r.get("tps", 0)),
@@ -3729,7 +3729,7 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
     for cis_v, tps_v, col, lbl in active_items:
         px, py = _fx(cis_v), _fy(tps_v)
         # collision nudge: conflicts with near-identical CIS/TPS would print
-        # their labels on top of each other — stack subsequent labels below
+        # their labels on top of each other - stack subsequent labels below
         ly = py + 3
         for ox_, oy_ in _placed:
             if abs(px - ox_) < 18 and abs(ly - oy_) < 9:
@@ -3766,11 +3766,11 @@ def _render_conflict_landscape(conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L3b  GEOPOLITICAL RISK BY REGION — conflict clusters rolled up by region
+# § L3b  GEOPOLITICAL RISK BY REGION - conflict clusters rolled up by region
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_regional_conflict_risk(conflict_results: dict) -> None:
-    """Centre-left column: geopolitical risk concentration by region — ranked
+    """Centre-left column: geopolitical risk concentration by region - ranked
     bars of aggregate conflict intensity across each region's active fronts.
 
     The Conflict Landscape above plots individual conflicts on CIS×TPS; this
@@ -3834,7 +3834,7 @@ def _render_regional_conflict_risk(conflict_results: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R3  RISK COMPASS  (right column — 5-axis radar)
+# § R3  RISK COMPASS  (right column - 5-axis radar)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
@@ -3858,7 +3858,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
     else:
         coup_score = 50.0
 
-    # 5 axes — ordered to make the pentagon visually balanced
+    # 5 axes - ordered to make the pentagon visually balanced
     axes = [
         ("CIS",  cis,        _C["danger"]),   # top
         ("MCS",  mcs,        _C["info"]),   # upper-right
@@ -3922,7 +3922,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
         px, py = _pt(i, val)
         lbl_html += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{col}" opacity="0.9"/>'
 
-    # Score in center — breathing animation signals live data
+    # Score in center - breathing animation signals live data
     ctr_html = (
         f'<text class="hm-score-breathe" x="{cx}" y="{cy - 5}" font-size="15" fill="{fill_c}" '
         f'font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">{score:.0f}</text>'
@@ -3957,7 +3957,7 @@ def _render_risk_compass(risk: dict, corr_val: float | None = None) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R4  5-DAY RETURNS HEATMAP  (right column — colored day-by-day asset grid)
+# § R4  5-DAY RETURNS HEATMAP  (right column - colored day-by-day asset grid)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_returns_heatmap() -> None:
@@ -3966,7 +3966,7 @@ def _render_returns_heatmap() -> None:
     if not data:
         _card("DAILY RETURNS · 5D",
               f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
-              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'padding:.3rem 0">live instrument feed unavailable - '
               f'retries automatically (15-min cache)</div>')
         return
 
@@ -3987,7 +3987,7 @@ def _render_returns_heatmap() -> None:
     if not rows_data or n_days == 0:
         return
 
-    # Day column headers — count back from today
+    # Day column headers - count back from today
     day_labels = [f"D-{n_days - i}" for i in range(n_days - 1)] + ["TODAY"]
 
     # Color helpers
@@ -4061,7 +4061,7 @@ def _render_returns_heatmap() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R5  TRANSMISSION CHANNELS  (right column — channel-level TPS breakdown)
+# § R5  TRANSMISSION CHANNELS  (right column - channel-level TPS breakdown)
 # ─────────────────────────────────────────────────────────────────────────────
 
 _CHANNEL_GROUPS = {
@@ -4076,7 +4076,7 @@ _CHANNEL_GROUPS = {
 def _load_credit_signal(_fred_key: str, start: str, end: str) -> dict:
     """Credit-stress summary (HY OAS + leveraged-loan / BDC basket) for the
     Cross-Asset Signals cell. Wraps the Intelligence Briefing's private-credit
-    builder — same computation, single source of truth — and disk-backs it so a
+    builder - same computation, single source of truth - and disk-backs it so a
     cold Command Center render never pays the FRED + yfinance cost. Leading
     underscore on _fred_key keeps the secret out of the cache signature."""
     import datetime as _dt
@@ -4189,7 +4189,7 @@ def _render_cross_asset_signals(fred_key: str, start: str, end: str) -> None:
         )
 
     if not rows:
-        return  # no data (e.g. no FRED key and fetch failed) — hide silently
+        return  # no data (e.g. no FRED key and fetch failed) - hide silently
 
     body = (
         "".join(rows)
@@ -4307,11 +4307,11 @@ def _load_vol_trio() -> dict[str, dict]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L6  REGIME HISTORY — 60-day colour-coded regime strip
+# § L6  REGIME HISTORY - 60-day colour-coded regime strip
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_hedge_basket(conflict_results: dict) -> None:
-    """Left column (tail): aggregate geopolitical hedge basket — the assets the
+    """Left column (tail): aggregate geopolitical hedge basket - the assets the
     active conflicts point to as hedges, CIS-weighted across fronts. The
     actionable 'so what' of the conflict intelligence, ranked."""
     active = [(cid, r) for cid, r in conflict_results.items() if r.get("state") == "active"]
@@ -4404,7 +4404,7 @@ def _render_regime_history(regimes: "pd.Series | None") -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L7  ALERT SUMMARY — severity breakdown of proactive alerts
+# § L7  ALERT SUMMARY - severity breakdown of proactive alerts
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_alert_summary(alerts: list) -> None:
@@ -4454,7 +4454,7 @@ def _render_alert_summary(alerts: list) -> None:
 
 
 def _render_transmission_beta(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
-    """Center: rolling 60d OLS beta of S&P 500 on WTI — the transmission dial."""
+    """Center: rolling 60d OLS beta of S&P 500 on WTI - the transmission dial."""
     if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
         return
     if "WTI Crude Oil" not in cmd_r.columns or "S&P 500" not in eq_r.columns:
@@ -4478,7 +4478,7 @@ def _render_transmission_beta(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame 
     zero_y = _y(0.0)
     cur = float(beta.iloc[-1])
     # Colour the line by transmission regime: muted / absorbing (green), elevated
-    # (amber — oil shocks feeding through), strong (red) — so you see WHEN the
+    # (amber - oil shocks feeding through), strong (red) - so you see WHEN the
     # dial ran hot across the window, not just its current level.
     def _beta_col(v: float) -> str:
         if v >= 0.40: return _C["danger"]
@@ -4508,14 +4508,14 @@ def _render_transmission_beta(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame 
         f'font-family="JetBrains Mono,monospace">NOW</text>'
         f'</svg>'
     )
-    note = ("elevated — oil shocks transmitting into equities"
-            if cur > 0.15 else "muted — equities absorbing commodity moves")
+    note = ("elevated - oil shocks transmitting into equities"
+            if cur > 0.15 else "muted - equities absorbing commodity moves")
     _card("TRANSMISSION BETA · WTI→S&P · 60D ROLLING",
           svg + f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:2px">{note}</div>')
 
 
 def _render_corr_distribution(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
-    """Center: histogram of ALL pairwise eq×cmd 60d correlations — regime shape."""
+    """Center: histogram of ALL pairwise eq×cmd 60d correlations - regime shape."""
     if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
         return
     eq60, cmd60 = eq_r.tail(60), cmd_r.tail(60)
@@ -4566,11 +4566,11 @@ def _render_corr_distribution(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame 
     right_mass = sum(1 for v in vals if v > 0.3) / len(vals) * 100
     _card(f"EQ×CMD CORRELATION SHAPE · 60D · {len(vals)} PAIRS",
           svg + f'<div style="{_M}font-size:0.5rem;color:{_C["muted"]};margin-top:2px">'
-                f'{right_mass:.0f}% of pairs above +0.30 — right-shifted mass = broad coupling</div>')
+                f'{right_mass:.0f}% of pairs above +0.30 - right-shifted mass = broad coupling</div>')
 
 
 def _render_risk_appetite(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
-    """Right: S&P minus Gold cumulative spread, 60d — the risk-on/off dial."""
+    """Right: S&P minus Gold cumulative spread, 60d - the risk-on/off dial."""
     if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
         return
     if "S&P 500" not in eq_r.columns or "Gold" not in cmd_r.columns:
@@ -4605,13 +4605,13 @@ def _render_risk_appetite(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | No
     _card("RISK APPETITE · S&P − GOLD · 60D CUM",
           svg + f'<div style="display:flex;justify-content:space-between;margin-top:2px">'
                 f'<span style="{_M}font-size:0.5rem;color:{_C["muted"]}">'
-                f'{"risk-ON — equities outrunning gold" if on else "risk-OFF — gold bid over equities"}</span>'
+                f'{"risk-ON - equities outrunning gold" if on else "risk-OFF - gold bid over equities"}</span>'
                 f'<span class="cc-num" style="font-size:0.56rem;font-weight:700;'
                 f'color:{line_c}">{d5:+.1f}pp/5d</span></div>')
 
 
 def _render_range_position(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
-    """Right: where each instrument sits in its 120d range — percentile dot strip."""
+    """Right: where each instrument sits in its 120d range - percentile dot strip."""
     if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
         return
     assets = ["S&P 500", "Nasdaq 100", "DAX", "Nikkei 225",
@@ -4646,7 +4646,7 @@ def _render_range_position(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
 
 def _render_regional_performance(eq_r: "pd.DataFrame | None") -> None:
-    """Center sub-grid: 1d / 5d average equity return by region — bar infographic."""
+    """Center sub-grid: 1d / 5d average equity return by region - bar infographic."""
     if eq_r is None or eq_r.empty:
         return
     from src.data.config import EQUITY_REGIONS
@@ -4694,7 +4694,7 @@ def _render_regional_performance(eq_r: "pd.DataFrame | None") -> None:
 
 
 def _render_drawdown_monitor(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
-    """Right column: distance from each asset's 60-day high — drawdown bars."""
+    """Right column: distance from each asset's 60-day high - drawdown bars."""
     if eq_r is None or cmd_r is None or eq_r.empty or cmd_r.empty:
         return
     assets = ["S&P 500", "Nasdaq 100", "DAX", "Nikkei 225",
@@ -4734,7 +4734,7 @@ def _render_drawdown_monitor(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame |
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R6  GRS TREND — 60-day composite risk score sparkline
+# § R6  GRS TREND - 60-day composite risk score sparkline
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_grs_trend(score_hist: "pd.Series | None") -> None:
@@ -4814,7 +4814,7 @@ def _render_grs_trend(score_hist: "pd.Series | None") -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R7  MACRO SNAPSHOT — 4-cell grid: VIX / 10Y / DXY / WTI
+# § R7  MACRO SNAPSHOT - 4-cell grid: VIX / 10Y / DXY / WTI
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_macro_snapshot() -> None:
@@ -4823,7 +4823,7 @@ def _render_macro_snapshot() -> None:
     if not data:
         _card("DAILY RETURNS · 5D",
               f'<div style="{_M}font-size:.58rem;color:{_C["label"]};'
-              f'padding:.3rem 0">live instrument feed unavailable — '
+              f'padding:.3rem 0">live instrument feed unavailable - '
               f'retries automatically (15-min cache)</div>')
         return
 
@@ -4837,7 +4837,7 @@ def _render_macro_snapshot() -> None:
         pct   = d["pct"]
         vstr  = fmt_fn(val)
         reg, rc = regime_fn(val)
-        arr   = "▲" if pct > 0.05 else "▼" if pct < -0.05 else "—"
+        arr   = "▲" if pct > 0.05 else "▼" if pct < -0.05 else " - "
         ac    = _C["danger"] if arr == "▲" else _C["safe"] if arr == "▼" else _C["muted"]
         # flip colour for VIX (up = bad)
         if sym == "^VIX":
@@ -4907,7 +4907,7 @@ def _render_macro_snapshot() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L8  COMMODITY SECTOR RETURNS — Energy / Metals / Agri 5-day performance
+# § L8  COMMODITY SECTOR RETURNS - Energy / Metals / Agri 5-day performance
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
@@ -4926,7 +4926,7 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
             if asset in members:
                 s = cmd_r[col].dropna()
                 if len(s) >= 5:
-                    # cmd_r holds daily LOG RETURNS, not prices — the 5-day
+                    # cmd_r holds daily LOG RETURNS, not prices - the 5-day
                     # return is exp(sum of last 5) - 1, not a price ratio.
                     ret5 = float(np.expm1(s.iloc[-5:].sum()) * 100)
                     group_rets[g].append(ret5)
@@ -4970,7 +4970,7 @@ def _render_commodity_sector_returns(cmd_r: "pd.DataFrame | None") -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L9  CROSS-CORRELATION LAG — does commodity lead or lag equity?
+# § L9  CROSS-CORRELATION LAG - does commodity lead or lag equity?
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
@@ -5060,7 +5060,7 @@ def _render_cross_corr_lag(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R8  YIELD CURVE SNAPSHOT — 3M / 5Y / 10Y / 30Y shape
+# § R8  YIELD CURVE SNAPSHOT - 3M / 5Y / 10Y / 30Y shape
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_yield_curve_snap() -> None:
@@ -5138,7 +5138,7 @@ def _render_yield_curve_snap() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R9  VOL REGIME TRIO — VIX / OVX / GVZ gauge bars
+# § R9  VOL REGIME TRIO - VIX / OVX / GVZ gauge bars
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_vol_trio() -> None:
@@ -5206,7 +5206,7 @@ def _render_vol_trio() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R12  HOT STOCKS TO WATCH — top movers by 24h news activity
+# § R12  HOT STOCKS TO WATCH - top movers by 24h news activity
 # ─────────────────────────────────────────────────────────────────────────────
 
 _HOT_STOCKS_TICKERS = (
@@ -5219,7 +5219,7 @@ _HOT_STOCKS_TICKERS = (
 def _load_hot_stocks() -> list[dict]:
     """
     Fetch Yahoo Finance RSS news per ticker; rank by 24h article count.
-    Uses feedparser RSS (same infra as geo_rss) — more reliable than yfinance .news scraping.
+    Uses feedparser RSS (same infra as geo_rss) - more reliable than yfinance .news scraping.
     """
     # Cold-start fast path: the RSS + price fetch is the home page's slowest call
     # (it sits behind a .result(timeout=25) on the render path). Read the last
@@ -5236,7 +5236,7 @@ def _load_hot_stocks() -> list[dict]:
     now = time.time()
     tickers = list(_HOT_STOCKS_TICKERS)
 
-    # Batch price fetch — one yf.download call for all tickers
+    # Batch price fetch - one yf.download call for all tickers
     try:
         raw_px = yf.download(tickers, period="7d", auto_adjust=True, progress=False, threads=True)
         closes = raw_px["Close"] if isinstance(raw_px.columns, pd.MultiIndex) else pd.DataFrame()
@@ -5244,7 +5244,7 @@ def _load_hot_stocks() -> list[dict]:
         closes = pd.DataFrame()
 
     def _price_stats(ticker: str) -> tuple:
-        """(last price, 1-day return %, ~5-day return %) — Nones if unavailable."""
+        """(last price, 1-day return %, ~5-day return %) - Nones if unavailable."""
         try:
             col = closes[ticker].dropna()
             if len(col) >= 2:
@@ -5333,7 +5333,7 @@ def _render_hot_stocks() -> None:
         ret_5d   = item.get("ret_5d")
 
         if day_ret is None:
-            ret_str, ret_col = "—", _C["label"]
+            ret_str, ret_col = " - ", _C["label"]
         elif day_ret >= 0:
             ret_str, ret_col = f"+{day_ret:.1f}%", _C.get("green", "#27ae60")
         else:
@@ -5393,7 +5393,7 @@ def _render_hot_stocks() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § L10  THREAT RADAR — polar scatter: conflicts plotted by CIS (radius) × TPS (angle)
+# § L10  THREAT RADAR - polar scatter: conflicts plotted by CIS (radius) × TPS (angle)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
@@ -5414,7 +5414,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     n_esc   = sum(1 for _, r in active if r.get("escalation") == "escalating")
     n_ct    = len(active)
 
-    # Responsive viewBox — fills column width, square aspect ratio
+    # Responsive viewBox - fills column width, square aspect ratio
     VW, VH  = 260, 260
     CX, CY  = 130, 130
     R       = 98   # radar radius; leaves ~32px margin on each side for labels
@@ -5448,7 +5448,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         for d in range(0, 360, 45)
     )
 
-    # ── CIS ring labels — placed at upper-left diagonal to avoid blip lanes ───
+    # ── CIS ring labels - placed at upper-left diagonal to avoid blip lanes ───
     ring_labels = ""
     for pct, lbl in [(0.32, "25"), (0.65, "50"), (1.0, "75+")]:
         angle_deg = -125  # upper-left diagonal
@@ -5484,7 +5484,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
             f'stroke="#3a3a3a" stroke-width="{1.0 if _maj else 0.6}"/>'
         )
 
-    # ── rotating radar sweep — flat trailing wedge + bright leading edge ──────
+    # ── rotating radar sweep - flat trailing wedge + bright leading edge ──────
     _sw = _C["safe"]
     _a0 = math.radians(-90)          # leading edge at 12 o'clock
     _a1 = math.radians(-90 - 40)     # 40° trailing fade
@@ -5507,7 +5507,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
     )
     vignette = f'<circle cx="{CX}" cy="{CY}" r="{R}" fill="url(#tr-vig)" pointer-events="none"/>'
 
-    # ── conflict blips — low CIS painted first so high-CIS renders on top ─────
+    # ── conflict blips - low CIS painted first so high-CIS renders on top ─────
     pulse_rings = ""
     reticle     = ""
     blips       = ""
@@ -5559,7 +5559,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         lx = CX + lrad * math.cos(theta)
         ly = CY + lrad * math.sin(theta)
         # clamp: a label running past the ring collides with the fixed angle
-        # ticks (90/270) — flip it to the inner side of the blip
+        # ticks (90/270) - flip it to the inner side of the blip
         _est_w = 5.2 * len(label)
         if anchor == "start" and lx + _est_w > CX + R + 6:
             anchor, lx = "end", bx - dot_r - 5
@@ -5580,7 +5580,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
         f'text-anchor="middle" font-family="JetBrains Mono,monospace">GRS</text>'
     )
 
-    # ── CSS animation — transform-based (cross-browser; r: in keyframes is unreliable)
+    # ── CSS animation - transform-based (cross-browser; r: in keyframes is unreliable)
     anim = (
         "<style>"
         "@keyframes rp1{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.9);opacity:.03}}"
@@ -5622,7 +5622,7 @@ def _render_threat_radar(conflict_results: dict, risk: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# § R10  RISK CONVERGENCE — GRS / Coupling / Vol stress area overlay (60d)
+# § R10  RISK CONVERGENCE - GRS / Coupling / Vol stress area overlay (60d)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_risk_convergence(
@@ -5731,7 +5731,7 @@ def _render_risk_convergence(
         )
 
     # End-value labels: sorted downward sweep enforcing 12-unit separation,
-    # then a bottom-clamp back-sweep — no ordering can stack two labels.
+    # then a bottom-clamp back-sweep - no ordering can stack two labels.
     _lbl_ys.sort(key=lambda x: x[0])
     for _i in range(1, len(_lbl_ys)):
         if _lbl_ys[_i][0] - _lbl_ys[_i - 1][0] < 12:
@@ -5767,16 +5767,16 @@ def _render_risk_convergence(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# §C13b  RISK REGIME MAP — correlation × volatility quadrant with 60d trail
+# §C13b  RISK REGIME MAP - correlation × volatility quadrant with 60d trail
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_regime_map(corr_series: "pd.Series | None", eq_r: "pd.DataFrame | None") -> None:
-    """Centre column: a 2-D risk-regime map — cross-asset correlation (x) against
+    """Centre column: a 2-D risk-regime map - cross-asset correlation (x) against
     equity volatility (y), with the last 60 sessions drawn as a fading trail.
 
     Distinct from the correlation / convergence panels (those are 1-D time
     series): this places the market in the joint corr×vol plane so the *regime*
-    and its recent path read at a glance. Four quadrants —
+    and its recent path read at a glance. Four quadrants - 
       low corr / low vol  → CALM        low corr / high vol → CHOPPY
       high corr / low vol → COMPLACENT   high corr / high vol → CONTAGION
     High correlation collapsing diversification while vol rises is the classic
@@ -5868,7 +5868,7 @@ def _render_regime_map(corr_series: "pd.Series | None", eq_r: "pd.DataFrame | No
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# §C0  Top Cross-Asset Correlation Pairs — full-width ranked bar panel
+# §C0  Top Cross-Asset Correlation Pairs - full-width ranked bar panel
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
@@ -5956,7 +5956,7 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
                 # track
                 f'<rect x="{PAD_X + LABEL_W}" y="{y}" width="{BAR_MAX}" height="{BAR_H}" '
                 f'fill="{_C["card2"]}" rx="2"/>'
-                # bar — animated grow from center
+                # bar - animated grow from center
                 f'<rect x="{bx:.1f}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
                 f'fill="{col}" opacity="0.85" rx="2">'
                 f'<animate attributeName="width" from="0" to="{bw:.1f}" dur="0.65s" '
@@ -5992,7 +5992,7 @@ def _render_top_corr_pairs(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | N
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# §C1  Asset Correlation Heatmap — center-column mini heatmap
+# §C1  Asset Correlation Heatmap - center-column mini heatmap
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | None") -> None:
@@ -6000,7 +6000,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
     try:
     
         # Keyed on the ACTUAL return-frame column names (full instrument names),
-        # not tickers — otherwise the lookup misses and labels fall back to an
+        # not tickers - otherwise the lookup misses and labels fall back to an
         # ugly 5-char chop ("S&P 5", "Nasda", "WTI C", "Gasol").
         _ABBR = {
             "S&P 500": "SPX", "Nasdaq 100": "NDX", "DJIA": "DJIA",
@@ -6043,7 +6043,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
 
         # Column labels sit just above the grid (small top pad); row labels need
         # horizontal room (larger left pad). One shared PAD left a big empty band
-        # under the title — split them so the grid starts right below the header.
+        # under the title - split them so the grid starts right below the header.
         CELL     = 28
         PAD_TOP  = 16
         PAD_LEFT = 46
@@ -6062,7 +6062,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
         for i, ri in enumerate(corr.index):
             for j, ci in enumerate(corr.columns):
                 v   = corr.loc[ri, ci]
-                # Solid, uniform fills — the bucket colour already encodes
+                # Solid, uniform fills - the bucket colour already encodes
                 # strength, so the old magnitude-scaled opacity just made weak
                 # cells look washed-out and patchy. Diagonal = inert neutral.
                 col = "#2b2b2b" if i == j else _corr_color(v)
@@ -6109,7 +6109,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
             + "</div>"
         )
 
-        # ── Readout — turns the grid into a decision: the EQ↔CMD cross-block
+        # ── Readout - turns the grid into a decision: the EQ↔CMD cross-block
         #    average is the coupling / spillover number this desk cares about,
         #    plus the equity- and commodity-block internals and the strongest /
         #    weakest pairs. Also squares the panel with its taller neighbour so
@@ -6160,7 +6160,7 @@ def _render_corr_heatmap(eq_r: "pd.DataFrame | None", cmd_r: "pd.DataFrame | Non
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# §C2  Risk Signal Waterfall — multi-model signal stack
+# §C2  Risk Signal Waterfall - multi-model signal stack
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_risk_signal_waterfall(
@@ -6169,7 +6169,7 @@ def _render_risk_signal_waterfall(
     regimes: "pd.Series | None",
     alerts: list,
 ) -> None:
-    """Stacked signal bars from all analytical layers — geo / regime / vol / FI."""
+    """Stacked signal bars from all analytical layers - geo / regime / vol / FI."""
     try:
         if isinstance(conflict_results, dict):
             conflict_results = list(conflict_results.values())
@@ -6240,7 +6240,7 @@ def _render_risk_signal_waterfall(
                 # track
                 f'<rect x="{LABEL_W}" y="{y}" width="{BAR_W}" height="{BAR_H}" '
                 f'fill="{_C["card2"]}" rx="2"/>'
-                # bar — animated grow from left
+                # bar - animated grow from left
                 f'<rect x="{LABEL_W}" y="{y}" width="{bw:.1f}" height="{BAR_H}" '
                 f'fill="{col}" opacity="0.85" rx="2">'
                 f'<animate attributeName="width" from="0" to="{bw:.1f}" dur="0.65s" '
@@ -6447,14 +6447,14 @@ def _render_geo_event_timeline(conflict_results) -> None:
 @st.fragment(run_every="1m")
 def _live_heartbeat() -> None:
     """Fires every 60 s and triggers a full-page rerun to pull fresh data.
-    Renders nothing itself — the visible LIVE indicator + reserved slot now
+    Renders nothing itself - the visible LIVE indicator + reserved slot now
     live in the command hero's Row A (beside ALERTS/REGIME)."""
     import time
     _key = "_home_live_loaded_at"
     _now = time.time()
     _loaded_at = st.session_state.get(_key, 0.0)
     if _loaded_at == 0.0:
-        st.session_state[_key] = _now   # first render — just record, don't rerun
+        st.session_state[_key] = _now   # first render - just record, don't rerun
     elif (_now - _loaded_at) >= 55:     # 55s buffer covers render latency
         st.session_state[_key] = _now
         st.rerun()
@@ -6512,11 +6512,11 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _f_conflict    = _pool.submit(score_all_conflicts)
     _f_pulse       = _pool.submit(_load_market_pulse)
     _f_hot_stocks  = _pool.submit(_load_hot_stocks)   # warm RSS feed in parallel
-    # Main thread: market risk (must not thread — session_state writes inside)
+    # Main thread: market risk (must not thread - session_state writes inside)
     risk        = _load_market_risk(start, end, _scenario_id)
-    _score_hist = market_fear_index()  # separate call — avoids nested @st.cache_data
+    _score_hist = market_fear_index()  # separate call - avoids nested @st.cache_data
 
-    # Collect thread results — 25s timeout each so a hung external call can't block the page
+    # Collect thread results - 25s timeout each so a hung external call can't block the page
     try:
         conflict_results = _f_conflict.result(timeout=25)
         record_fetch("conflict_model")
@@ -6669,16 +6669,16 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # § 1  Masthead — replaces the loading header rendered above
+    # § 1  Masthead - replaces the loading header rendered above
     st.session_state["_home_last_load_ts"]  = time.time()   # mark cache as warm
     st.session_state["_home_last_scenario"] = _scenario_id  # mark scenario as loaded
     with _header_slot.container():
         _render_masthead(conflict_agg)
     _live_heartbeat()   # live indicator + 60-s auto-refresh fragment
 
-    # § 1.05  Command hero — LAYOUT PASS: insight first. GRS + biggest movers
+    # § 1.05  Command hero - LAYOUT PASS: insight first. GRS + biggest movers
     # top-left, largest; strip carries the reserved "changed since yesterday"
-    # stub slot. Display-only — all values computed above.
+    # stub slot. Display-only - all values computed above.
     try:
         _render_command_hero(
             risk, conflict_agg, conflict_results, _score_hist,
@@ -6688,7 +6688,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         _err_slot("command hero")
 
-    # § 1.1  Analytical reading guide — moved to the bottom expander in the
+    # § 1.1  Analytical reading guide - moved to the bottom expander in the
     # layout pass (onboarding chrome, not signal); steps defined here for reuse.
     _steps = [
         ("1", "Shock / Scenario",    "What geopolitical event or scenario are we analysing?",  _C["warn"]),
@@ -6751,31 +6751,31 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     #   Right  = market pulse cards + where-to-go-now recommendations
     # Context narrative + intel panel + morning briefing go BELOW as full-width.
     # ─────────────────────────────────────────────────────────────────────────
-    # LAYOUT PASS: 12-col scheme — [3,6,3], uniform small gap (CSS pins to 12px)
+    # LAYOUT PASS: 12-col scheme - [3,6,3], uniform small gap (CSS pins to 12px)
     _col_left, _col_ctr, _col_right = st.columns([3, 6, 3], gap="small")
 
     with _col_left:
         _section_header("01", "Intelligence Feed", "alerts · signals · chokepoints",
                         link_page="conflict_intelligence", link_label="Conflict Intel")
-        # § L1  Intelligence feed — live alerts + morning briefing + chokepoint watch
+        # § L1  Intelligence feed - live alerts + morning briefing + chokepoint watch
         try:
             _render_intelligence_feed(risk, conflict_results, alerts=_cached_alerts)
         except Exception:
             _err_slot("intelligence feed")
-        # § L2  Threat radar — visually striking showpiece directly under intel feed
+        # § L2  Threat radar - visually striking showpiece directly under intel feed
         #        polar scatter: CIS radius × TPS angle, animated pulse on top conflict
         try:
             _render_threat_radar(conflict_results, risk)
         except Exception:
             _err_slot("threat radar")
-        # § L3  Correlation pulse — 60-day equity↔commodity sparkline + regime badge
+        # § L3  Correlation pulse - 60-day equity↔commodity sparkline + regime badge
         _render_correlation_pulse(_al_corr, _al_regimes)
         # (Conflict landscape → center sub-grid, risk compass → right column:
         #  the enriched feed made the left column ~1000px taller than its
         #  neighbours; the two chart panels re-level the trio.)
-        # § L4  Regime history strip — 60d day-by-day coupling regime
+        # § L4  Regime history strip - 60d day-by-day coupling regime
         _render_regime_history(_al_regimes)
-        # § L5  Geopolitical hedge basket — fills the tail below Regime History
+        # § L5  Geopolitical hedge basket - fills the tail below Regime History
         try:
             _render_hedge_basket(conflict_results)
         except Exception:
@@ -6784,10 +6784,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     with _col_ctr:
         _section_header("02", "Risk & Market Analysis", "geo risk · correlations · signals",
                         link_page="overview", link_label="Overview")
-        # (Market pulse strip removed — duplicated the right column's pulse cards.)
-        # Portfolio pulse (conditional — hidden unless CSV uploaded)
+        # (Market pulse strip removed - duplicated the right column's pulse cards.)
+        # Portfolio pulse (conditional - hidden unless CSV uploaded)
         _render_portfolio_pulse()
-        # Geo risk block: gauge + history chart + decomposition — the CENTERPIECE
+        # Geo risk block: gauge + history chart + decomposition - the CENTERPIECE
         try:
             _render_geo_risk_block(
                 risk, conflict_agg, conflict_results, _score_hist,
@@ -6826,12 +6826,12 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 )
         except Exception:
             pass
-        # § C0  Top cross-asset correlation pairs — full-width ranked bar chart
+        # § C0  Top cross-asset correlation pairs - full-width ranked bar chart
         try:
             _render_top_corr_pairs(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("cross-asset correlations")
-        # § C1–C8  Center sub-grid — ONE 2-column split with panels stacked
+        # § C1–C8  Center sub-grid - ONE 2-column split with panels stacked
         # continuously per side. Separate st.columns rows set each row's height
         # to its tallest cell, leaving black voids beneath every shorter panel;
         # a single split lets heights average out and the sides end together.
@@ -6841,24 +6841,24 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             # first, then conflict detail / transmission, reference grid last.
             # § C5  Escalation tracker
             _render_escalation_tracker(conflict_results)
-            # § C12b Geopolitical risk by region — conflict clusters rolled up
+            # § C12b Geopolitical risk by region - conflict clusters rolled up
             try:
                 _render_regional_conflict_risk(conflict_results)
             except Exception:
                 _err_slot("regional conflict risk")
-            # § C12 Conflict landscape — CIS×TPS scatter
+            # § C12 Conflict landscape - CIS×TPS scatter
             _render_conflict_landscape(conflict_results)
             # § C3  Conflict × Commodity Impact Matrix
             try:
                 _render_conflict_commodity_matrix(conflict_results)
             except Exception:
                 _err_slot("conflict × commodity matrix")
-            # § C10 Transmission beta — WTI→S&P rolling 60d
+            # § C10 Transmission beta - WTI→S&P rolling 60d
             try:
                 _render_transmission_beta(_al_eq_r, _al_cmd_r)
             except Exception:
                 _err_slot("transmission beta")
-            # § C1  Asset Correlation Heatmap — reference correlation grid
+            # § C1  Asset Correlation Heatmap - reference correlation grid
             try:
                 _render_corr_heatmap(_al_eq_r, _al_cmd_r)
             except Exception:
@@ -6873,19 +6873,19 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _err_slot("signal waterfall")
             # § C8  Alert summary
             _render_alert_summary(_cached_alerts)
-            # § C4  Conflict Severity Timeline — CIS bar + TPS overlay per conflict
+            # § C4  Conflict Severity Timeline - CIS bar + TPS overlay per conflict
             try:
                 _render_geo_event_timeline(conflict_results)
             except Exception:
                 _err_slot("severity timeline")
             # § C6  Commodity exposure ranking
             _render_top_commodities(conflict_results)
-            # § C13b Risk regime map — corr × vol quadrant with 60d trail
+            # § C13b Risk regime map - corr × vol quadrant with 60d trail
             try:
                 _render_regime_map(_al_corr, _al_eq_r)
             except Exception:
                 _err_slot("regime map")
-            # § C13 Risk signal convergence — GRS / coupling / VIX 60d overlay
+            # § C13 Risk signal convergence - GRS / coupling / VIX 60d overlay
             try:
                 _render_risk_convergence(_score_hist, _al_corr)
             except Exception:
@@ -6895,7 +6895,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
                 _render_regional_performance(_al_eq_r)
             except Exception:
                 _err_slot("regional performance")
-            # § C11 Correlation distribution — regime shape (reference)
+            # § C11 Correlation distribution - regime shape (reference)
             try:
                 _render_corr_distribution(_al_eq_r, _al_cmd_r)
             except Exception:
@@ -6905,34 +6905,34 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         _section_header("03", "Market Signals", "returns · channels · risk arc",
                         link_page="transmission_matrix", link_label="Transmission")
         # Stocks to Watch pinned at the top of the rail (user preference); the
-        # rest ordered by morning priority — routing + credit + GRS decomposition,
+        # rest ordered by morning priority - routing + credit + GRS decomposition,
         # then the market-data panels.
-        # § R2a Stocks to Watch — top mega-caps by 24h news activity
+        # § R2a Stocks to Watch - top mega-caps by 24h news activity
         _section_header("", "Stocks to Watch", "most active by news · click to read",
                         link_page="watchlist", link_label="Watchlist")
         try:
             _render_hot_stocks()
         except Exception:
             pass
-        # § R4  Next action — routing recommendation based on dominant risk driver
+        # § R4  Next action - routing recommendation based on dominant risk driver
         _render_next_action(conflict_agg, conflict_results, compact=True)
-        # § R1c Cross-asset signals — credit-stress read absent elsewhere on the CC
+        # § R1c Cross-asset signals - credit-stress read absent elsewhere on the CC
         try:
             _render_cross_asset_signals(fred_key, start, end)
         except Exception:
             _err_slot("cross-asset signals")
-        # § R2  Risk arc — GRS component decomposition bars (CIS/TPS/MCS)
+        # § R2  Risk arc - GRS component decomposition bars (CIS/TPS/MCS)
         _render_risk_arc(risk)
-        # § R1  Returns heatmap — 5-day day-over-day asset return grid
+        # § R1  Returns heatmap - 5-day day-over-day asset return grid
         _render_returns_heatmap()
-        # § R1b Transmission channels — CIS-weighted channel pressure breakdown
+        # § R1b Transmission channels - CIS-weighted channel pressure breakdown
         _render_transmission_channels(conflict_results, risk)
-        # § R5  Drawdown monitor — distance from 60d highs
+        # § R5  Drawdown monitor - distance from 60d highs
         try:
             _render_drawdown_monitor(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("drawdown monitor")
-        # § R6  Risk appetite dial — S&P vs Gold spread
+        # § R6  Risk appetite dial - S&P vs Gold spread
         try:
             _render_risk_appetite(_al_eq_r, _al_cmd_r)
         except Exception:
@@ -6942,7 +6942,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
             _render_range_position(_al_eq_r, _al_cmd_r)
         except Exception:
             _err_slot("range position")
-        # § R8  Risk compass — 5-axis radar
+        # § R8  Risk compass - 5-axis radar
         _corr_cur = (
             float(_al_corr.dropna().iloc[-1])
             if _al_corr is not None and len(_al_corr.dropna()) >= 1
@@ -6950,7 +6950,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         )
         _render_risk_compass(risk, corr_val=_corr_cur)
 
-    # ── § 04  Market Detail — full-width 3-across row (layout pass) ──────────
+    # ── § 04  Market Detail - full-width 3-across row (layout pass) ──────────
     # Hosts the panels moved out of the over-long side columns so all three
     # columns above end together instead of leaving a center void.
     st.markdown('<div style="height:0.6rem"></div>', unsafe_allow_html=True)
@@ -6977,10 +6977,10 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     _section_header("05", "Scenario & Context", "scenario switch · narrative · intel monitor",
                     link_page="scenario_engine", link_label="Scenario Sim")
 
-    # Scenario switch — full-width, 8 buttons in one row
+    # Scenario switch - full-width, 8 buttons in one row
     _render_scenario_switch()
 
-    # Context narrative + Intel panel — collapsed by default to save space
+    # Context narrative + Intel panel - collapsed by default to save space
     with st.expander("Context & Intelligence  ·  Narrative · Conflict Monitor · Channels", expanded=False):
         _col_ctx, _col_intel = st.columns([6, 6], gap="small")
         with _col_ctx:
@@ -6988,7 +6988,7 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
         with _col_intel:
             _render_intel_panel(conflict_results)
 
-    # Morning Briefing Chain — full-width expander
+    # Morning Briefing Chain - full-width expander
     try:
         from src.ui.agent_panel import render_morning_briefing_panel
         _top_texts    = [getattr(a, "title", "") for a in _cached_alerts[:3] if getattr(a, "title", "")]
@@ -7012,16 +7012,16 @@ def page_home(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         pass
 
-    # About & reading guide — moved here in the layout pass (chrome, not signal)
+    # About & reading guide - moved here in the layout pass (chrome, not signal)
     with st.expander("About This Terminal  ·  Reading Guide", expanded=False):
         st.markdown(_about_html, unsafe_allow_html=True)
         st.markdown(_guide_html, unsafe_allow_html=True)
 
-    # Navigate Terminal — collapsed by default; open when switching pages
+    # Navigate Terminal - collapsed by default; open when switching pages
     with st.expander("Navigate Terminal  ·  14 modules", expanded=False):
         _render_quickjump()
 
-    # AI Agent Activity strip (optional — only shown when agents are active)
+    # AI Agent Activity strip (optional - only shown when agents are active)
     _render_agent_strip()
 
     _page_footer()

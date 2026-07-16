@@ -1,7 +1,7 @@
 """
 Core quantitative model runner for the standalone eval script.
 Duplicates the essential computation from run_historical_snapshot() in
-agent_benchmark.py — kept here to remain Streamlit-free and importable
+agent_benchmark.py - kept here to remain Streamlit-free and importable
 without side effects.
 
 Provides:
@@ -19,8 +19,8 @@ def run_snapshot(date_str: str) -> dict:
 
     Fields returned:
         risk_score, regime, corr_pct, cmd_vol_z,
-        yield_curve_spread, granger_hit_rate (None — not back-testable),
-        cis, tps (None — set by caller from VIX proxy),
+        yield_curve_spread, granger_hit_rate (None - not back-testable),
+        cis, tps (None - set by caller from VIX proxy),
         _computed (bool), _error (str | None)
     """
     import yfinance as yf

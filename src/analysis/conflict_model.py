@@ -213,7 +213,7 @@ def _validate_conflict_registry(conflicts: list[dict]) -> list[str]:
     return warnings
 
 
-# Run once at import — catches schema drift before it silently corrupts scores.
+# Run once at import - catches schema drift before it silently corrupts scores.
 _REGISTRY_WARNINGS: list[str] = _validate_conflict_registry(CONFLICTS)
 
 
@@ -400,7 +400,7 @@ def compute_cis_sensitivity(conflict_raw: dict) -> list[dict]:
     For each of the 7 CIS dimensions, compute how much the score would shift
     if that dimension moved to its floor (0.0) or ceiling (1.0).
 
-    Uses static registry values only — no ACLED/GDELT calls — so this is
+    Uses static registry values only - no ACLED/GDELT calls - so this is
     always instant and consistent with the baseline shown in the intensity breakdown.
 
     Returns list sorted by max |delta| descending:
@@ -673,13 +673,13 @@ def score_all_conflicts() -> dict[str, dict]:
     # back to serial if the pool errors for any reason.
     results: dict[str, dict] = {}
     # Bounded, non-blocking GDELT scoring. Each _score_one fires GDELT requests,
-    # and GDELT can stall the TLS handshake PAST the socket timeout — a plain
+    # and GDELT can stall the TLS handshake PAST the socket timeout - a plain
     # `with ThreadPoolExecutor` would then block forever joining the hung sockets
     # on exit ("loads for eternity"). So we (a) cap the whole batch with a
     # wall-clock map() timeout and (b) shut the pool down with wait=False so hung
     # sockets are ABANDONED as daemon threads instead of blocking the page. On
     # timeout we trip the GDELT circuit breaker, then re-score any unfinished
-    # conflict — now instant because the breaker makes GDELT skip the network.
+    # conflict - now instant because the breaker makes GDELT skip the network.
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FutTimeout
     _ex = ThreadPoolExecutor(max_workers=max(1, len(CONFLICTS)))
     try:
@@ -835,7 +835,7 @@ def aggregate_portfolio_scores(
     n_eff          = 1 / HHI (HHI-based effective conflict count)
 
     The n_eff^0.25 breadth multiplier ensures that adding a new active conflict
-    increases (not decreases) the portfolio score — more simultaneous crises
+    increases (not decreases) the portfolio score - more simultaneous crises
     means higher systemic stress, not a diluted average.
 
     Returns:
@@ -872,7 +872,7 @@ def aggregate_portfolio_scores(
     weighted_mean_cis = sum(cis_vals[cid] * weights[cid] for cid in conflict_results)
     weighted_mean_tps = sum(conflict_results[cid]["tps"] * weights[cid] for cid in conflict_results)
 
-    # HHI-based effective conflict count — portfolio theory breadth multiplier.
+    # HHI-based effective conflict count - portfolio theory breadth multiplier.
     # n_eff = 1/HHI ranges from 1 (single conflict) to N (equal-weight N conflicts).
     # n_eff^0.25 (4th-root) rewards breadth without double-counting: adding a new
     # conflict at CIS=70 to a portfolio at CIS=83 should raise the score, not lower it.

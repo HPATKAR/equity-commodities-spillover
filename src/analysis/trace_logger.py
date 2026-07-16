@@ -1,7 +1,7 @@
 """
 Per-step cost and latency tracer for all AI agent LLM calls.
 Appends one row to logs/agent_traces.csv on every actual LLM call
-(cache misses only — @st.cache_data means cached hits are free).
+(cache misses only - @st.cache_data means cached hits are free).
 
 Usage inside any _call_ai():
     import time
@@ -78,7 +78,7 @@ def log_trace(
     """
     Append one trace row to logs/agent_traces.csv.
     Falls back to session_state accumulation if file I/O fails.
-    Silent on any remaining failure — must never crash an agent.
+    Silent on any remaining failure - must never crash an agent.
     """
     try:
         prompt_tokens     = max(prompt_chars     // 4, 1)
@@ -119,7 +119,7 @@ def log_failure(
 ) -> None:
     """
     Record a failed agent LLM call.  Failed calls are as important as
-    successes for harness observability — production failures almost always
+    successes for harness observability - production failures almost always
     originate in tool execution or context truncation, not model quality.
     """
     try:

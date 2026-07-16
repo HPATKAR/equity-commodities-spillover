@@ -44,11 +44,11 @@ from reportlab.platypus import (
 
 
 def Paragraph(text=None, *args, **kwargs):
-    """reportlab Paragraph with em-dashes stripped from ALL rendered text — "—"
+    """reportlab Paragraph with em-dashes stripped from ALL rendered text - " - "
     becomes a spaced hyphen so the report reads cleanly (en-dashes in ranges like
     3–8 weeks are preserved). Shadows the import so every call is sanitised."""
     if isinstance(text, str):
-        text = text.replace("—", " - ").replace("&mdash;", " - ")
+        text = text.replace(" - ", " - ").replace("&mdash;", " - ")
     return _RLParagraph(text, *args, **kwargs)
 
 # ── Purdue palette ──────────────────────────────────────────────────────────
@@ -570,7 +570,7 @@ def _prep_logo_png(logo_png):
     mark on transparency, e.g. BlackRock / Nike) would be invisible. Detect that
     case and composite the mark onto a dark rounded tile so it stays legible;
     leave dark or self-contained (opaque-background) logos untouched. Best-effort
-    — returns the original bytes on any failure."""
+ - returns the original bytes on any failure."""
     try:
         from PIL import Image, ImageDraw
         im = Image.open(io.BytesIO(logo_png)).convert("RGBA")
@@ -612,7 +612,7 @@ def _logo_flowable(logo_png, height_mm: float = 6.5, max_w_mm: float = 11.0):
     Height is fixed; width derives from the image's aspect ratio and is capped so
     a wide wordmark can't blow out the column. White logos are put on a dark tile
     (_prep_logo_png) so they stay visible on the light header. Any missing/corrupt/
-    undecodable image returns None so the card renders logo-less — never raises."""
+    undecodable image returns None so the card renders logo-less - never raises."""
     if not logo_png:
         return None
     try:
@@ -664,7 +664,7 @@ def _trade_card(trade: dict) -> list:
         textColor=GRAY, alignment=TA_RIGHT, leading=11))
     _logo = _logo_flowable(trade.get("logo_png"))
     if _logo is not None:
-        # [ logo | thesis name | direction ] — logo in a fixed left slot, vertically
+        # [ logo | thesis name | direction ] - logo in a fixed left slot, vertically
         # centred with the name. Falls back to the 2-col layout below if no logo.
         _LOGO_SLOT = 13 * mm
         name_row = Table(
@@ -725,11 +725,11 @@ def _trade_card(trade: dict) -> list:
             ]),
         )
 
-    risk_text = trade.get("risk") or trade.get("stop", "—")
+    risk_text = trade.get("risk") or trade.get("stop", " - ")
     eer_row = Table(
-        [[_sub("ENTRY TRIGGER", trade.get("entry", "—"),
+        [[_sub("ENTRY TRIGGER", trade.get("entry", " - "),
                colors.HexColor("#f9f8f6"), AGED),
-          _sub("EXIT SIGNAL",   trade.get("exit", "—"),
+          _sub("EXIT SIGNAL",   trade.get("exit", " - "),
                colors.HexColor("#f9f8f6"), GRAY),
           _sub("KEY RISKS / STOP", risk_text,
                colors.HexColor("#fff8f8"), RED)]],
@@ -755,11 +755,11 @@ def _trade_card(trade: dict) -> list:
     if trade.get("target") or trade.get("invalidation") or trade.get("holding_period"):
         extra_rows.append(
             Table(
-                [[_sub("TARGET",       trade.get("target",         "—"),
+                [[_sub("TARGET",       trade.get("target",         " - "),
                         colors.HexColor("#f3faf3"), GREEN),
-                  _sub("INVALIDATION", trade.get("invalidation",   "—"),
+                  _sub("INVALIDATION", trade.get("invalidation",   " - "),
                         colors.HexColor("#f5f5ff"), BLUE),
-                  _sub("HOLD PERIOD",  trade.get("holding_period", "—"),
+                  _sub("HOLD PERIOD",  trade.get("holding_period", " - "),
                         colors.HexColor("#f9f8f6"), GRAY)]],
                 colWidths=[col_w/3, col_w/3, col_w/3],
                 style=TableStyle([
@@ -778,7 +778,7 @@ def _trade_card(trade: dict) -> list:
             )
         )
 
-    # Recent third-party coverage — real, dated, sourced headlines (last ~30d)
+    # Recent third-party coverage - real, dated, sourced headlines (last ~30d)
     # attached at report time (yfinance) to anchor the thesis to live market
     # context. Two-row band: label, then one line per headline.
     def _esc(s: str) -> str:
@@ -829,7 +829,7 @@ def _fa_bar(frac: float, color, w: float = 104, h: float = 6.5):
 
 
 def _factor_attribution_section(d: dict, S: dict, cw: float) -> list:
-    """One-page 'Book Risk Character' section for the desk report — the buy-side
+    """One-page 'Book Risk Character' section for the desk report - the buy-side
     alpha-vs-beta verdict, rendered from the decomposition dict computed on the
     trade page (_compute_book_factor_decomp). Returns reportlab flowables."""
     from reportlab.graphics.shapes import Drawing, Rect
@@ -844,7 +844,7 @@ def _factor_attribution_section(d: dict, S: dict, cw: float) -> list:
     a_mf, a_t, sig = d["alpha_mf"], d["alpha_mf_t"], d["sig"]
     acol = GREEN if (a_mf > 0 and sig) else (DARK if a_mf >= 0 else RED)
 
-    story = _section_header("Book Risk Character — Factor & Alpha Attribution")
+    story = _section_header("Book Risk Character - Factor & Alpha Attribution")
     story.append(Paragraph(
         "Ex-post attribution of the deployed book over the sample window. The "
         "weight-normalised book return is regressed on the market (S&amp;P 500) plus "
@@ -898,7 +898,7 @@ def _factor_attribution_section(d: dict, S: dict, cw: float) -> list:
     story.append(Spacer(1, 12))
 
     # Factor loadings table
-    story.append(Paragraph("Factor Loadings — market-orthogonalised", S["h3"]))
+    story.append(Paragraph("Factor Loadings - market-orthogonalised", S["h3"]))
     _bmax = max((abs(b) for _, b, _ in d["loadings"]), default=1.0) or 1.0
     _rows = [[Paragraph("<b>FACTOR</b>", S["body_sm"]),
               Paragraph("<b>BETA</b>", _ps("lh1", fontName="Helvetica-Bold", fontSize=7.5,
@@ -962,7 +962,7 @@ def _factor_attribution_section(d: dict, S: dict, cw: float) -> list:
             f'This {n}-position book carries <b>{d["beta_mkt"]:.2f} market beta</b>; '
             f'<b>{d["r2_full"]*100:.0f}%</b> of its daily variance is market + sector '
             f'beta (dominated by {_esc(d["lead_txt"])}). Jensen alpha is '
-            f'<b>{a_mf:+.1f}%/yr</b> and is <b>{_sig_word}</b> (t {a_t:.1f}) — {_skill} '
+            f'<b>{a_mf:+.1f}%/yr</b> and is <b>{_sig_word}</b> (t {a_t:.1f}) - {_skill} '
             f'The {n} positions span ~<b>{d["enb"]:.1f}</b> independent bets.',
             S["body"])]],
         colWidths=[cw],
@@ -1271,7 +1271,7 @@ def generate_report(
         for trade in other:
             story += _trade_card(trade)
 
-    # ── 6b. BOOK RISK CHARACTER — FACTOR & ALPHA ATTRIBUTION ────────────────
+    # ── 6b. BOOK RISK CHARACTER - FACTOR & ALPHA ATTRIBUTION ────────────────
     # Is the book alpha or beta? Rendered from the decomposition computed on the
     # trade page. Best-effort: a bad/absent dict just omits the section.
     if factor_decomp:
@@ -1362,8 +1362,8 @@ def generate_report(
          "Regime-triggered library covering Crisis Hedge, Geopolitical, Macro, and Growth "
          "categories. Each idea has quantitative entry/exit conditions and key risks."),
         ("How Trade Ideas Are Decided",
-         "Every candidate — single-name equities (US / India / China) and macro / commodity "
-         "expressions — is mapped to the active regime's spillover and conflict signals, then "
+         "Every candidate - single-name equities (US / India / China) and macro / commodity "
+         "expressions - is mapped to the active regime's spillover and conflict signals, then "
          "run through a five-stage gate: (1) SIGNAL from the regime and structural-exposure "
          "model; (2) PRIOR-ALIGNED Stage-3 confirmation, where the leg must historically move "
          "in the predicted direction in the triggering regime; (3) a DIRECTION-AWARE, "

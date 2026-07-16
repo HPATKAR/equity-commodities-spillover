@@ -54,11 +54,11 @@ _MASTER_INVESTOR_LENS: dict[str, list[dict]] = {
     ],
     "Macro": [
         {"manager": "Stanley Druckenmiller","archetype": "MACRO LIQUIDITY",
-         "insight": "Liquidity drives markets above near-term earnings by an order of magnitude. Follow the money supply and central bank balance sheet — they are the real alpha signal."},
+         "insight": "Liquidity drives markets above near-term earnings by an order of magnitude. Follow the money supply and central bank balance sheet - they are the real alpha signal."},
         {"manager": "S Naren",             "archetype": "DYNAMIC ALLOCATOR",
          "insight": "Dynamic asset allocation based on macro valuation metrics like Market Cap-to-GDP. Shift systematically; mean reversion is the law of financial gravity."},
         {"manager": "Shankar Sharma",       "archetype": "MACRO INFLECTION",
-         "insight": "Global macro allocation based on structural data, not narrative. The largest forces — fiscal, monetary, demographic — move asset prices over years, not quarters."},
+         "insight": "Global macro allocation based on structural data, not narrative. The largest forces - fiscal, monetary, demographic - move asset prices over years, not quarters."},
     ],
     "Growth": [
         {"manager": "Peter Lynch",          "archetype": "GARP",
@@ -74,7 +74,7 @@ _MASTER_INVESTOR_LENS: dict[str, list[dict]] = {
         {"manager": "Seth Klarman",         "archetype": "DISTRESSED",
          "insight": "Forced institutional selling driven by credit rating downgrades is the Baupost entry point. The psychology of institutional ignorance creates the asymmetric mispricing."},
         {"manager": "David Tepper",         "archetype": "DISTRESSED DEBT",
-         "insight": "Invest at the absolute bottom of the capital structure. Distressed debt converts to dominant post-restructuring equity — the Appaloosa playbook from the 2009 financials trade."},
+         "insight": "Invest at the absolute bottom of the capital structure. Distressed debt converts to dominant post-restructuring equity - the Appaloosa playbook from the 2009 financials trade."},
     ],
     "Fixed Income": [
         {"manager": "Howard Marks",         "archetype": "CYCLE AWARE",
@@ -86,15 +86,15 @@ _MASTER_INVESTOR_LENS: dict[str, list[dict]] = {
     ],
     "India/EM": [
         {"manager": "S Naren",             "archetype": "INDIA MACRO",
-         "insight": "Patience in contrariness: invest in deeply undervalued sectors facing cyclical headwinds. India's oil import shock is a cyclical headwind — not a structural ruin."},
+         "insight": "Patience in contrariness: invest in deeply undervalued sectors facing cyclical headwinds. India's oil import shock is a cyclical headwind - not a structural ruin."},
         {"manager": "Prashant Jain",        "archetype": "CONTRA-CYCLICAL",
-         "insight": "Contra-cyclical value discipline: buy out-of-favour sectors at peak cyclical pain. Ask whether the business survives over a 10-year horizon — not 10 weeks."},
+         "insight": "Contra-cyclical value discipline: buy out-of-favour sectors at peak cyclical pain. Ask whether the business survives over a 10-year horizon - not 10 weeks."},
         {"manager": "John Templeton",       "archetype": "MAX PESSIMISM",
          "insight": "Maximum pessimism in EM is the entry point. INR stress and crude shock at extremes is precisely the Templeton setup. Buy when blood is in the streets."},
     ],
     "Asia Divergence": [
         {"manager": "Shankar Sharma",       "archetype": "MACRO INFLECTION",
-         "insight": "Spotting inflection points early across cap ranges. China property is structural, not cyclical. Japan is the mirror image — BOJ policy normalisation is a decade-long re-rating."},
+         "insight": "Spotting inflection points early across cap ranges. China property is structural, not cyclical. Japan is the mirror image - BOJ policy normalisation is a decade-long re-rating."},
         {"manager": "Kerr Neilson",         "archetype": "GLOBAL CONTRARIAN",
          "insight": "True global sourcing agility: allocate into regions when valuations become compelling. Japan at Shiller CAPE 22x vs China property distress is a screaming divergence trade."},
         {"manager": "S Naren",             "archetype": "DYNAMIC ALLOCATOR",
@@ -102,7 +102,7 @@ _MASTER_INVESTOR_LENS: dict[str, list[dict]] = {
     ],
     "Dollar Cycle": [
         {"manager": "Stanley Druckenmiller","archetype": "MACRO LIQUIDITY",
-         "insight": "The dollar cycle is the single most powerful force for EM asset re-rating. Liquidity flows globally — when DXY peaks, EM assets inflect sharply."},
+         "insight": "The dollar cycle is the single most powerful force for EM asset re-rating. Liquidity flows globally - when DXY peaks, EM assets inflect sharply."},
         {"manager": "John Templeton",       "archetype": "MAX PESSIMISM",
          "insight": "Buy at maximum pessimism. When EM is universally abandoned at a dollar peak, it is universally mispriced. The fundamental equation reverses."},
         {"manager": "Kerr Neilson",         "archetype": "GLOBAL CONTRARIAN",
@@ -111,86 +111,86 @@ _MASTER_INVESTOR_LENS: dict[str, list[dict]] = {
 }
 
 # ── Specific tradeable instruments for each trade ──────────────────────────
-# {trade_name: {asset_name: "TICKER — description"}}
-# Used for display only — backtest uses the asset name against return data columns.
+# {trade_name: {asset_name: "TICKER - description"}}
+# Used for display only - backtest uses the asset name against return data columns.
 _TRADE_TICKERS: dict[str, dict[str, str]] = {
     "Long Gold / Short Eurostoxx 50": {
-        "Gold":          "GLD  — SPDR Gold Shares (NYSE)",
-        "Eurostoxx 50":  "FEZ  — SPDR Euro Stoxx 50 ETF (NYSE)",
+        "Gold":          "GLD - SPDR Gold Shares (NYSE)",
+        "Eurostoxx 50":  "FEZ - SPDR Euro Stoxx 50 ETF (NYSE)",
     },
     "Long Natural Gas / Short Nikkei 225": {
-        "Natural Gas":   "UNG  — United States Natural Gas Fund (NYSE)",
-        "Nikkei 225":    "EWJ  — iShares MSCI Japan ETF (NYSE)",
+        "Natural Gas":   "UNG - United States Natural Gas Fund (NYSE)",
+        "Nikkei 225":    "EWJ - iShares MSCI Japan ETF (NYSE)",
     },
     "Long Wheat / Long Gold / Short Emerging Markets": {
-        "Wheat":         "WEAT — Teucrium Wheat Fund (NYSE)",
-        "Gold":          "GLD  — SPDR Gold Shares (NYSE)",
-        "Sensex":        "EEM  — iShares MSCI Emerging Markets ETF (NYSE)",
+        "Wheat":         "WEAT - Teucrium Wheat Fund (NYSE)",
+        "Gold":          "GLD - SPDR Gold Shares (NYSE)",
+        "Sensex":        "EEM - iShares MSCI Emerging Markets ETF (NYSE)",
     },
     "Long Copper / Long S&P 500": {
-        "Copper":        "CPER — United States Copper Index Fund (NYSE)",
-        "S&P 500":       "SPY  — SPDR S&P 500 ETF Trust (NYSE)",
+        "Copper":        "CPER - United States Copper Index Fund (NYSE)",
+        "S&P 500":       "SPY - SPDR S&P 500 ETF Trust (NYSE)",
     },
     "Long WTI Crude / Short S&P 500 Energy-Heavy Sectors": {
-        "WTI Crude Oil": "USO  — United States Oil Fund (NYSE) | XLE short for sector precision",
-        "S&P 500":       "SPY  — SPDR S&P 500 ETF Trust (NYSE)",
+        "WTI Crude Oil": "USO - United States Oil Fund (NYSE) | XLE short for sector precision",
+        "S&P 500":       "SPY - SPDR S&P 500 ETF Trust (NYSE)",
     },
     "Long Gold, Long Silver / Short Copper, Short Shanghai Comp": {
-        "Gold":          "GLD  — SPDR Gold Shares (NYSE)",
-        "Silver":        "SLV  — iShares Silver Trust (NYSE)",
-        "Copper":        "CPER — United States Copper Index Fund (NYSE)",
-        "Shanghai Comp": "MCHI — iShares MSCI China ETF (NYSE)",
+        "Gold":          "GLD - SPDR Gold Shares (NYSE)",
+        "Silver":        "SLV - iShares Silver Trust (NYSE)",
+        "Copper":        "CPER - United States Copper Index Fund (NYSE)",
+        "Shanghai Comp": "MCHI - iShares MSCI China ETF (NYSE)",
     },
     "Short BDC Basket / Long HY Credit Protection": {
-        "Ares Capital (ARCC)": "ARCC — Ares Capital Corp (NASDAQ) — short",
-        "Blue Owl (OBDC)":     "OBDC — Blue Owl Capital Corp (NYSE) — short",
-        "Gold":                "GLD  — SPDR Gold Shares (NYSE) — long",
+        "Ares Capital (ARCC)": "ARCC - Ares Capital Corp (NASDAQ) - short",
+        "Blue Owl (OBDC)":     "OBDC - Blue Owl Capital Corp (NYSE) - short",
+        "Gold":                "GLD - SPDR Gold Shares (NYSE) - long",
     },
     "Long TLT / Short HYG (Flight to Quality)": {
-        "US 20Y+ Treasury (TLT)": "TLT  — iShares 20+ Year Treasury Bond ETF (NYSE)",
-        "HY Corporate (HYG)":     "HYG  — iShares iBoxx $ High Yield Corporate Bond ETF (NYSE) — short",
+        "US 20Y+ Treasury (TLT)": "TLT - iShares 20+ Year Treasury Bond ETF (NYSE)",
+        "HY Corporate (HYG)":     "HYG - iShares iBoxx $ High Yield Corporate Bond ETF (NYSE) - short",
     },
     "Long TIP / Short TLT (Inflation Breakeven Trade)": {
-        "TIPS / Inflation (TIP)":  "TIP  — iShares TIPS Bond ETF (NYSE)",
-        "US 20Y+ Treasury (TLT)":  "TLT  — iShares 20+ Year Treasury Bond ETF (NYSE) — short",
+        "TIPS / Inflation (TIP)":  "TIP - iShares TIPS Bond ETF (NYSE)",
+        "US 20Y+ Treasury (TLT)":  "TLT - iShares 20+ Year Treasury Bond ETF (NYSE) - short",
     },
     "Long Brent Crude / Short Nifty 50 (India Import Shock)": {
-        "Brent Crude":  "BNO  — United States Brent Oil Fund (NYSE)",
-        "Nifty 50":     "INDY — iShares India 50 ETF (NYSE) | NIFTYBEES.NS (NSE)",
+        "Brent Crude":  "BNO - United States Brent Oil Fund (NYSE)",
+        "Nifty 50":     "INDY - iShares India 50 ETF (NYSE) | NIFTYBEES.NS (NSE)",
     },
     "Long Gold / Short INR (India Geopolitical Hedge)": {
-        "Gold":    "GLD  — SPDR Gold Shares (NYSE)",
-        "USD/INR": "USDINR=X — Forex spot | USDINR futures on NSE",
+        "Gold":    "GLD - SPDR Gold Shares (NYSE)",
+        "USD/INR": "USDINR=X - Forex spot | USDINR futures on NSE",
     },
     "Long EMB / Short DXY (Dollar Debasement - EM Relief)": {
-        "EM USD Bonds (EMB)":  "EMB  — iShares J.P. Morgan USD EM Bond ETF (NYSE)",
-        "DXY (Dollar Index)":  "UUP  — Invesco DB US Dollar Index Bullish Fund (NYSE) — short",
-        "Gold":                "GLD  — SPDR Gold Shares (NYSE)",
+        "EM USD Bonds (EMB)":  "EMB - iShares J.P. Morgan USD EM Bond ETF (NYSE)",
+        "DXY (Dollar Index)":  "UUP - Invesco DB US Dollar Index Bullish Fund (NYSE) - short",
+        "Gold":                "GLD - SPDR Gold Shares (NYSE)",
     },
     "Long Gold / Short TLT (Fiscal Dominance / Dollar Debasement)": {
-        "Gold":                    "GLD  — SPDR Gold Shares (NYSE) | GDX for miners leverage",
-        "US 20Y+ Treasury (TLT)": "TLT  — iShares 20+ Year Treasury Bond ETF (NYSE) — short",
+        "Gold":                    "GLD - SPDR Gold Shares (NYSE) | GDX for miners leverage",
+        "US 20Y+ Treasury (TLT)": "TLT - iShares 20+ Year Treasury Bond ETF (NYSE) - short",
     },
     "Long EM Asia / Short DXY (Max Pessimism EM Reversal)": {
-        "Shanghai Comp":      "MCHI — iShares MSCI China ETF (NYSE) | 2800.HK Tracker Fund",
-        "Sensex":             "INDA — iShares MSCI India ETF (NYSE) | NIFTYBEES.NS",
-        "DXY (Dollar Index)": "UUP  — Invesco DB US Dollar Index Bullish Fund (NYSE) — short",
+        "Shanghai Comp":      "MCHI - iShares MSCI China ETF (NYSE) | 2800.HK Tracker Fund",
+        "Sensex":             "INDA - iShares MSCI India ETF (NYSE) | NIFTYBEES.NS",
+        "DXY (Dollar Index)": "UUP - Invesco DB US Dollar Index Bullish Fund (NYSE) - short",
     },
-    "Long LQD / Short HYG (Credit Cycle Peak — Quality Flight)": {
-        "IG Corporate (LQD)": "LQD  — iShares iBoxx $ IG Corporate Bond ETF (NYSE)",
-        "HY Corporate (HYG)": "HYG  — iShares iBoxx $ HY Corporate Bond ETF (NYSE) — short",
+    "Long LQD / Short HYG (Credit Cycle Peak - Quality Flight)": {
+        "IG Corporate (LQD)": "LQD - iShares iBoxx $ IG Corporate Bond ETF (NYSE)",
+        "HY Corporate (HYG)": "HYG - iShares iBoxx $ HY Corporate Bond ETF (NYSE) - short",
     },
     "Long SHY / Long Gold (Fed Pivot Front-Run)": {
-        "US 1-3Y Treasury (SHY)": "SHY  — iShares 1-3 Year Treasury Bond ETF (NYSE)",
-        "Gold":                    "GLD  — SPDR Gold Shares (NYSE) | GDX for leveraged exposure",
+        "US 1-3Y Treasury (SHY)": "SHY - iShares 1-3 Year Treasury Bond ETF (NYSE)",
+        "Gold":                    "GLD - SPDR Gold Shares (NYSE) | GDX for leveraged exposure",
     },
     "Long Nifty 50 / Short Brent (India Rate Cut + Oil Tailwind)": {
-        "Nifty 50":     "INDA — iShares MSCI India ETF (NYSE) | NIFTYBEES.NS (NSE)",
-        "Brent Crude":  "BNO  — United States Brent Oil Fund (NYSE) — short",
+        "Nifty 50":     "INDA - iShares MSCI India ETF (NYSE) | NIFTYBEES.NS (NSE)",
+        "Brent Crude":  "BNO - United States Brent Oil Fund (NYSE) - short",
     },
     "Short Shanghai Comp / Long Nikkei 225 (China Deflation vs Japan Reflation)": {
-        "Shanghai Comp": "FXI  — iShares China Large-Cap ETF (NYSE) — short via puts",
-        "Nikkei 225":    "EWJ  — iShares MSCI Japan ETF (NYSE)",
+        "Shanghai Comp": "FXI - iShares China Large-Cap ETF (NYSE) - short via puts",
+        "Nikkei 225":    "EWJ - iShares MSCI Japan ETF (NYSE)",
     },
 }
 
@@ -394,10 +394,10 @@ _TRADE_LIBRARY_BASE = [
         "name":           "Long Gold / Short TLT (Fiscal Dominance / Dollar Debasement)",
         "rationale":      (
             "When the US fiscal deficit exceeds 6% of GDP and the Fed is monetising debt (balance sheet expanding), "
-            "real rates collapse and fiat currency credibility erodes. Gold — the monetary metal — outperforms nominal "
+            "real rates collapse and fiat currency credibility erodes. Gold - the monetary metal - outperforms nominal "
             "Treasuries structurally. Druckenmiller: 'Liquidity drives markets above all else. When the Fed prints and "
             "fiscal expands, the answer is always gold over bonds.' Watsa: macro-hedging against systemic dollar "
-            "debasement. Templeton: real returns focus — nominal treasury yields minus realized inflation = deeply "
+            "debasement. Templeton: real returns focus - nominal treasury yields minus realized inflation = deeply "
             "negative real returns. The math is unambiguous. "
             "ETFs: Long GLD (SPDR Gold Shares), Short TLT (iShares 20+ Year Treasury Bond ETF). "
             "Leverage play: Long GDX (VanEck Gold Miners) for 2–3× operating leverage to gold price."
@@ -421,7 +421,7 @@ _TRADE_LIBRARY_BASE = [
             "Templeton's core principle: buy at the point of maximum pessimism. When the dollar peaks at 3-year highs "
             "and EM assets are universally abandoned, the fundamental equation reverses. EM GDP growth premium vs DM "
             "is widening; current accounts improving; dollar debasement is structural as US fiscal position deteriorates. "
-            "Kerr Neilson: 'True global sourcing agility — allocate into regions when valuations become compelling.' "
+            "Kerr Neilson: 'True global sourcing agility - allocate into regions when valuations become compelling.' "
             "Druckenmiller: the dollar cycle is the most powerful single force for EM asset re-rating. "
             "Instruments: Long MCHI (iShares MSCI China ETF) + INDA (iShares MSCI India ETF); Short UUP (Invesco DB "
             "USD Index Bullish Fund). Add EEM for broad EM exposure."
@@ -440,12 +440,12 @@ _TRADE_LIBRARY_BASE = [
     {
         "regime":         [1, 2],
         "trigger":        "HY–IG spread compression to cycle lows + leveraged loan issuance at 3Y high + Fed at terminal rate",
-        "name":           "Long LQD / Short HYG (Credit Cycle Peak — Quality Flight)",
+        "name":           "Long LQD / Short HYG (Credit Cycle Peak - Quality Flight)",
         "rationale":      (
             "Howard Marks: 'Gauge risk as permanent loss of capital, not volatility. Calibrate aggressiveness based on "
             "where the market stands in the credit cycle.' When HY–IG spreads compress to cycle lows (<200 bps), "
-            "leveraged loan issuance is at records, and the Fed has reached terminal rate — credit cycle is at peak. "
-            "Investment-grade bonds offer duration safety as HY reprices default risk. Marks: 'Asymmetry of returns — "
+            "leveraged loan issuance is at records, and the Fed has reached terminal rate - credit cycle is at peak. "
+            "Investment-grade bonds offer duration safety as HY reprices default risk. Marks: 'Asymmetry of returns - "
             "capture upside while protecting downside.' Klarman: forced institutional selling driven by credit rating "
             "downgrades is the Baupost entry point. "
             "ETFs: Long LQD (iShares iBoxx $ Investment Grade Corporate Bond ETF); "
@@ -454,7 +454,7 @@ _TRADE_LIBRARY_BASE = [
         ),
         "entry":          "HY OAS (BAMLH0A0HYM2) − IG OAS (BAMLC0A0CM) <200 bps AND leveraged loan issuance at 3Y high AND Fed funds held >6 months at cycle high",
         "exit":           "HY spreads widen to 400 bps; credit cycle turns; recession confirmed by 2Q negative GDP",
-        "stop":           "LQD −5% from entry (bear-steepening scenario); HYG −8% in risk-off panic (correlations spike — exit both legs)",
+        "stop":           "LQD −5% from entry (bear-steepening scenario); HYG −8% in risk-off panic (correlations spike - exit both legs)",
         "target":         "LQD +8–12% as rates rally; HYG −15–25% as spreads blow out on first credit event",
         "invalidation":   "Fed pivots to cuts immediately; fiscal stimulus backstops credit markets; HY default rate stays below 2%",
         "holding_period": "6–18 months",
@@ -470,9 +470,9 @@ _TRADE_LIBRARY_BASE = [
         "rationale":      (
             "Druckenmiller: 'Liquidity drives markets vastly above near-term earnings. Never fight the Fed.' When the "
             "Fed is at terminal rate, unemployment has risen 0.5% from trough, and the yield curve begins "
-            "bull-steepening — the next macro move is rate cuts. 2Y Treasuries front-run the cut cycle with "
+            "bull-steepening - the next macro move is rate cuts. 2Y Treasuries front-run the cut cycle with "
             "mathematical certainty (SHY +4–6% per 100 bps cut). Gold front-runs the real yield collapse and "
-            "dollar weakness that follows easing. S Naren: 'Dynamic asset allocation — shift systematically to "
+            "dollar weakness that follows easing. S Naren: 'Dynamic asset allocation - shift systematically to "
             "duration and gold at the cycle peak. Market Cap-to-GDP >1.0 confirms equity risk is too high.' "
             "ETFs: Long SHY (iShares 1-3 Year Treasury Bond ETF); Long GLD (SPDR Gold Shares). "
             "Tactical overlay: GDX (VanEck Gold Miners) for leveraged gold exposure on confirmed cut signals."
@@ -496,8 +496,8 @@ _TRADE_LIBRARY_BASE = [
             "S Naren: 'Contra-cyclical value: accumulate quality Indian equities when the macro headwinds peak.' "
             "India imports ~85% of crude oil needs. When Brent falls below $80 AND the RBI begins cutting, "
             "the India macro equation flips structurally: CAD narrows, INR stabilises, real household incomes rise, "
-            "and corporate margins expand. This is the inverse of the India Import Shock trade — it fires when oil "
-            "stress reverses. Prashant Jain: 'Business longevity — ask whether the company grows cash flows over 10 "
+            "and corporate margins expand. This is the inverse of the India Import Shock trade - it fires when oil "
+            "stress reverses. Prashant Jain: 'Business longevity - ask whether the company grows cash flows over 10 "
             "years. India's structural consumption story is intact below $80 oil.' "
             "ETFs: Long INDA (iShares MSCI India ETF) or NIFTYBEES.NS (NSE); "
             "Short BNO (United States Brent Oil Fund) or BZ=F futures."
@@ -519,10 +519,10 @@ _TRADE_LIBRARY_BASE = [
         "name":           "Short Shanghai Comp / Long Nikkei 225 (China Deflation vs Japan Reflation)",
         "rationale":      (
             "Shankar Sharma: 'Spotting inflection points early across cap ranges. China property is structural, not "
-            "cyclical — $300B+ in offshore dollar debt with demographic reversal and structural oversupply.' Japan is "
+            "cyclical - $300B+ in offshore dollar debt with demographic reversal and structural oversupply.' Japan is "
             "the mirror image: Yen weakness (USD/JPY >148) boosts export profits, domestic reflation is accelerating, "
             "and the Nikkei Shiller CAPE at ~22x is cheap vs its own 30-year history. Kerr Neilson: 'True global "
-            "sourcing agility — Japan valuations are compelling. China property is a regulatory and demographic trap. "
+            "sourcing agility - Japan valuations are compelling. China property is a regulatory and demographic trap. "
             "Rotate with conviction.' S Naren: 'Macro risk tracking: China leverage cycle is in systemic unwind. "
             "Mean reversion for Japan is supported by BOJ policy normalisation.' "
             "ETFs: Short FXI (iShares China Large-Cap ETF) via puts or inverse ETF; Long EWJ (iShares MSCI Japan ETF). "
@@ -791,7 +791,7 @@ def _format_stock_context(prices: dict[str, float], sectors: list[str]) -> str:
         return ""
     sector_set = set(sectors)
     lines: list[str] = [
-        "S&P 500 STOCK REFERENCE PRICES (live — use these for specific entry/target/stop):"
+        "S&P 500 STOCK REFERENCE PRICES (live - use these for specific entry/target/stop):"
     ]
     by_sector: dict[str, list[str]] = {}
     for ticker, (name, sector) in _SP500_UNIVERSE.items():
@@ -809,7 +809,7 @@ def _format_stock_context(prices: dict[str, float], sectors: list[str]) -> str:
 
 
 _TI_STYLE = """<style>
-/* ── Trade Ideas — Design System ───────────────────────────────────────────
+/* ── Trade Ideas - Design System ───────────────────────────────────────────
    Typography scale (matches shared.py + palette.py):
      0.50rem  JetBrains Mono  uppercase labels, badges, chips, dims
      0.52rem  JetBrains Mono  header labels (slightly heavier weight labels)
@@ -817,7 +817,7 @@ _TI_STYLE = """<style>
      0.70rem  DM Sans         body / rationale (matches _page_intro scale)
      0.81rem  DM Sans bold    card trade name (primary heading in card)
      0.94rem  JetBrains Mono  KPI number (page-level metrics)
-   Colors: palette.py — TEXT #e8e9ed · TEXT_SOFT #c8c8c8 · TEXT_MUTED #b8b8b8
+   Colors: palette.py - TEXT #e8e9ed · TEXT_SOFT #c8c8c8 · TEXT_MUTED #b8b8b8
            LABEL #8890a1 · TICK #555960 · GOLD #CFB991
            BORDER #1e1e1e · BORDER2 #2a2a2a · CARD #0d0d0d · CARD2 #141414
 ──────────────────────────────────────────────────────────────────────────── */
@@ -1023,7 +1023,7 @@ def _compute_leg_weights(
             elif direction.lower() == "short" and asset_dir == "safe_haven":
                 base *= (1 + sas / 200)
             elif direction.lower() == "long" and asset_dir == "safe_haven":
-                base *= (1 + sas / 300)  # smaller boost — safe haven long is defensive
+                base *= (1 + sas / 300)  # smaller boost - safe haven long is defensive
         # Confidence modifier
         base *= (0.5 + confidence)
         weights.append(max(base, 1e-6))
@@ -1202,7 +1202,7 @@ def _library_stage3_results(_all_r: pd.DataFrame, _regimes,
     """
     Stage-3 confirmation for every thesis whose legs all exist in the loaded
     returns frame. Predicted signs derive mechanically from the legs (Long →
-    +1, Short → −1). Phantom-leg entries are skipped — Stage 3 cannot run
+    +1, Short → −1). Phantom-leg entries are skipped - Stage 3 cannot run
     without data, and the leg check in annotate_eligibility() locks them with
     the specific missing legs named.
 
@@ -1245,7 +1245,7 @@ def _run_pipeline_validator_cached(
 ) -> dict:
     """
     Walk-forward pipeline validation. Returns a serialisable dict.
-    Builds the validation universe internally — these theses are the
+    Builds the validation universe internally - these theses are the
     classification test set, not a ranked catalogue.
     """
     from src.analysis.thesis_engine import ThesisStrategy, ThesisBlock, SignalSpec
@@ -1299,7 +1299,7 @@ def _run_pipeline_validator_cached(
             ["WTI Crude Oil","S&P 500"],["Long","Short"],[1,2],20),
 
         _ts("Long Gold, Long Silver / Short Copper, Short Shanghai", "Crisis Hedge",
-            "Full crisis: VIX > 35, DXY trending up — monetary vs industrial metals decouple.",
+            "Full crisis: VIX > 35, DXY trending up - monetary vs industrial metals decouple.",
             ["metals","equity_sector","fx","credit"],"taiwan_strait",None,
             {"Gold":+1,"Silver":+1,"Copper":-1,"Shanghai Comp":-1}, 10,
             "Flight from industrial metals persists until VIX < 25.",
@@ -1423,8 +1423,8 @@ def _render_trade_card(
     """Render a single trade card with QC grade, confidence, payoff table, and debate thread."""
     # Suppress low-confidence generated CONFLICT ideas to keep signal-to-noise
     # high. The signal-ranked candidate universe (relative-value / directional /
-    # safe-haven) is intentionally broad — it's meant to be browsed, and the
-    # eligibility → DSR gate does the real filtering — so it is exempt.
+    # safe-haven) is intentionally broad - it's meant to be browsed, and the
+    # eligibility → DSR gate does the real filtering - so it is exempt.
     _conf_raw = float(trade.get("confidence", 0.60))
     if (trade.get("generated") and not trade.get("screened")
             and _conf_raw < 0.55):
@@ -1484,7 +1484,7 @@ def _render_trade_card(
                 f'&nbsp;<span style="color:#e8e9ed;font-weight:600">{_full}</span>'
                 f'&nbsp;<span style="color:#8890a1">({_t})</span>'
             )
-    # AI-structured trades carry tickers as a single descriptive string — surface it directly
+    # AI-structured trades carry tickers as a single descriptive string - surface it directly
     _ai_tickers_str = trade.get("tickers", "") if isinstance(trade.get("tickers"), str) else ""
     if not _ticker_parts and _ai_tickers_str:
         _ticker_parts = [f'<span style="color:#c8c8c8">{_ai_tickers_str}</span>']
@@ -1504,15 +1504,15 @@ def _render_trade_card(
         return (
             f'<div class="ti-cell"{(" " + extra) if extra else ""}>'
             f'<div class="ti-cell-lbl" style="color:{lbl_col}">{lbl}</div>'
-            f'<div class="ti-cell-val">{val or "—"}</div>'
+            f'<div class="ti-cell-val">{val or " - "}</div>'
             f'</div>'
         )
 
     grid_html = (
         '<div class="ti-grid">'
-        + _cell("Entry",  trade.get("entry", "—"), "#CFB991")
-        + _cell("Exit",   trade.get("exit",  "—"), "#8890a1")
-        + _cell("Risk",   trade.get("risk",  "—"), "#c0392b", 'style="border-left:2px solid #220000"')
+        + _cell("Entry",  trade.get("entry", " - "), "#CFB991")
+        + _cell("Exit",   trade.get("exit",  " - "), "#8890a1")
+        + _cell("Risk",   trade.get("risk",  " - "), "#c0392b", 'style="border-left:2px solid #220000"')
         + '</div>'
     )
 
@@ -1544,10 +1544,10 @@ def _render_trade_card(
     if any(trade.get(k) for k in ["stop", "target", "invalidation", "holding_period"]):
         ext_html = (
             '<div class="ti-ext-grid">'
-            + _cell("Stop",         trade.get("stop",           "—"), "#27ae60")
-            + _cell("Target",       trade.get("target",         "—"), "#27ae60")
-            + _cell("Invalidation", trade.get("invalidation",   "—"), "#2980b9")
-            + _cell("Hold Period",  trade.get("holding_period", "—"), "#8890a1")
+            + _cell("Stop",         trade.get("stop",           " - "), "#27ae60")
+            + _cell("Target",       trade.get("target",         " - "), "#27ae60")
+            + _cell("Invalidation", trade.get("invalidation",   " - "), "#2980b9")
+            + _cell("Hold Period",  trade.get("holding_period", " - "), "#8890a1")
             + '</div>'
         )
 
@@ -1691,7 +1691,7 @@ def _render_trade_card(
                 if _sas_vals:
                     _avg_sas = sum(_sas_vals) / len(_sas_vals)
                     if _avg_sas >= 60:
-                        _pass_reasons.append(f"SAS {_avg_sas:.0f} — high exposure")
+                        _pass_reasons.append(f"SAS {_avg_sas:.0f} - high exposure")
                     elif _avg_sas >= 35:
                         _pass_reasons.append(f"SAS {_avg_sas:.0f}")
                 _hedge_scores = [asset_exposure[a]["hedge_score"] for a in _trade_assets if a in asset_exposure]
@@ -1754,7 +1754,7 @@ def _render_trade_card(
 
         # ── Payoff table expander ─────────────────────────────────────────
         with col:
-            with st.expander(f"Scenario Payoff — {trade['name'][:40]}", expanded=False):
+            with st.expander(f"Scenario Payoff - {trade['name'][:40]}", expanded=False):
                 try:
                     from src.analysis.profit_projection import project_trade
                     proj    = project_trade(trade)
@@ -1796,7 +1796,7 @@ def _render_trade_card(
                     st.dataframe(pt_df, width="stretch", hide_index=True)
 
                 except Exception as exc:
-                    st.caption("Payoff projection unavailable — see logs.")
+                    st.caption("Payoff projection unavailable - see logs.")
 
         # ── Walk-forward backtest expander ────────────────────────────────
         try:
@@ -1851,10 +1851,10 @@ def _render_trade_card(
                 _dsr_pct = f"{_dsr_prob:.0%}" if _has_result else "─"
                 _pbo_pct = f"{_pbo_val:.0%}" if (_has_result and _pbo_val is not None) else None
                 _wf_label = (
-                    (f"Backtest (Walk-Forward OOS) — {_wf_grade} · DSR {_dsr_pct}"
+                    (f"Backtest (Walk-Forward OOS) - {_wf_grade} · DSR {_dsr_pct}"
                      + (f" · PBO {_pbo_pct}" if _pbo_pct else ""))
                     if _has_result else
-                    ("Backtest (Walk-Forward OOS) — MISSING DATA"
+                    ("Backtest (Walk-Forward OOS) - MISSING DATA"
                      if _missing_legs else
                      "Backtest (Walk-Forward OOS)")
                 )
@@ -1869,7 +1869,7 @@ def _render_trade_card(
                                 f'<div style="background:#1a0000;border:1px solid #c0392b;'
                                 f'border-radius:4px;padding:8px 12px;margin-bottom:8px;'
                                 f'font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:#e74c3c">'
-                                f'<b>MISSING LEGS — NOT GRADEABLE</b><br>'
+                                f'<b>MISSING LEGS - NOT GRADEABLE</b><br>'
                                 f'Declared: {", ".join(trade.get("assets", []))}<br>'
                                 f'Present in return data: {_present_str}<br>'
                                 f'Absent: <b>{_dropped_str}</b><br>'
@@ -1887,7 +1887,7 @@ def _render_trade_card(
                                     f'<div style="background:#0d1a2a;border:1px solid #2980b9;'
                                     f'border-radius:4px;padding:6px 10px;margin-bottom:8px;'
                                     f'font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:#5dade2">'
-                                    f'DUPLICATE DETECTED — trade-return series is identical to '
+                                    f'DUPLICATE DETECTED - trade-return series is identical to '
                                     f'<b>{_dup_of[:50]}</b>. '
                                     f'Non-Gold leg absent from return data. '
                                     f'Counts as ×1 unique strategy in N for DSR multiple-testing correction.</div>',
@@ -1902,7 +1902,7 @@ def _render_trade_card(
                                     f'<div style="background:#2a1f00;border:1px solid #e67e22;'
                                     f'border-radius:4px;padding:6px 10px;margin-bottom:8px;'
                                     f'font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;color:#e67e22">'
-                                    f'LOW N — {_n_actual} trades (need ≥20). '
+                                    f'LOW N - {_n_actual} trades (need ≥20). '
                                     f'Sharpe SE is too wide for A/B. Grade capped at C.</div>',
                                     unsafe_allow_html=True,
                                 )
@@ -2048,9 +2048,9 @@ def _render_trade_card(
         _is_geo_trade = trade.get("generated", False)
         _debate_open  = _is_geo_trade
         _debate_label = (
-            f"⚡ Agent Debate — {trade['name'][:40]}"
+            f"⚡ Agent Debate - {trade['name'][:40]}"
             if _is_geo_trade
-            else f"Agent Debate — {trade['name'][:40]}"
+            else f"Agent Debate - {trade['name'][:40]}"
         )
         with col:
             with st.expander(_debate_label, expanded=_debate_open):
@@ -2086,7 +2086,7 @@ def _render_trade_card(
                                     st.session_state[_stored_key] = _new_tid
                                     st.rerun()
                                 except Exception as exc:
-                                    st.caption("Debate unavailable — see logs.")
+                                    st.caption("Debate unavailable - see logs.")
 
                     if msgs:
                         _render_tid = st.session_state.get(_stored_key) or msgs[0]["thread_id"]
@@ -2098,7 +2098,7 @@ def _render_trade_card(
                             show_consensus=True,
                         )
                 except Exception as exc:
-                    st.caption("Debate panel unavailable — see logs.")
+                    st.caption("Debate panel unavailable - see logs.")
 
         # ── Mini correlation chart ────────────────────────────────────────
         if len(trade["assets"]) >= 2:
@@ -2138,7 +2138,7 @@ def _render_trade_card(
                     )
 
 
-# Deploy bar of Step 2's dsr_factor — single owner: trade_allocator.py.
+# Deploy bar of Step 2's dsr_factor - single owner: trade_allocator.py.
 from src.analysis.trade_allocator import DSR_DEPLOY_BAR as _DSR_DEPLOY_BAR
 
 
@@ -2163,8 +2163,8 @@ def _weight_earn_condition(alloc_detail: dict) -> str:
 def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
     """Targeted upside for the CONSTRUCTED book (deployed trades only). Each
     trade's expected P&L and dispersion come from its OWN regime-conditional,
-    direction-aware backtest — the mean and σ of realised returns per holding
-    window — so the number is honest and per-name (a Short whose realised edge
+    direction-aware backtest - the mean and σ of realised returns per holding
+    window - so the number is honest and per-name (a Short whose realised edge
     was negative shows negative, not a flat zero). Figures are returns on TOTAL
     book capital: a trade's weight is its share of the fully-invested equity
     sleeve. The bull/bear cone is a ±1.28σ (10th/90th-pctile) band on the BOOK
@@ -2181,8 +2181,8 @@ def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
     Z = 1.2816        # 10th / 90th percentile of the standard normal
     gross = sum(float(t["alloc_weight"]) for t in deployed)
     exp = be_w = 0.0
-    ws_indep = 0.0    # Σ (w·σ)²  — idiosyncratic-risk term
-    ws_sum = 0.0      # Σ (w·σ)   — common-factor term
+    ws_indep = 0.0    # Σ (w·σ)² - idiosyncratic-risk term
+    ws_sum = 0.0      # Σ (w·σ) - common-factor term
     horizons: list[int] = []
     for t in deployed:
         w = float(t["alloc_weight"])
@@ -2193,7 +2193,7 @@ def _portfolio_upside(book: list[dict], current_regime: int) -> dict | None:
             mu = float(det.get("avg_return", 0.0)) * kf
             sd = max(float(det.get("ret_std", 0.0)), 0.0) * math.sqrt(kf)
         else:
-            # curated thesis without a backtest sample — scenario fallback
+            # curated thesis without a backtest sample - scenario fallback
             try:
                 p = project_trade(t, holding_years=max(hd / 252.0, 0.02),
                                   current_regime=current_regime)
@@ -2227,7 +2227,7 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
     """Log-returns for the liquid single-stock universe (US S&P 500 + top India
     NSE + top China HK), columns keyed by DISPLAY NAME so they line up with the
     generated single-name trades' legs. Merged into the gate frame so those
-    trades are eligible, backtestable and deployable — not just candidates."""
+    trades are eligible, backtestable and deployable - not just candidates."""
     from src.utils.artifact_cache import read_artifact, write_artifact
     _ac_key = f"stock_returns__{end}"          # end=today, so it refreshes daily
     _hit = read_artifact(_ac_key, max_age_s=3600)
@@ -2241,7 +2241,7 @@ def _load_stock_returns(start: str, end: str) -> pd.DataFrame:
         name_by_ticker = {tk: disp for disp, (tk, _s, _r) in uni.items()}
         import datetime as _dt
         from src.data.loader import _yf_download   # process-wide yfinance lock
-        # Clamp to ~5y — backtest windows are ≤252d, so deeper history just
+        # Clamp to ~5y - backtest windows are ≤252d, so deeper history just
         # slows the 184-ticker fetch. Recent 5y is plenty for these signals.
         _floor = str(_dt.date.today() - _dt.timedelta(days=5 * 365))
         _s = _floor if start < _floor else start
@@ -2266,7 +2266,7 @@ def _live_generated_cached(regime: int, _start: str, _end: str) -> list:
     spawns a ThreadPoolExecutor, and wrapping a threaded cached function inside
     another cached function DEADLOCKS on Streamlit's cache lock (0% CPU, loads
     forever). The heavy work (score_all_assets) carries its OWN cache, so reruns
-    are still fast — only the ~0.6s trade construction repeats. Conflict-driven
+    are still fast - only the ~0.6s trade construction repeats. Conflict-driven
     generation was dropped: it cost ~73s (LP-IRF Stage-3 on 9 theses) for at
     most one redundant gold position; the signal universe already maps stocks to
     their conflict/macro drivers, and the static library carries the conflict
@@ -2278,7 +2278,7 @@ def _live_generated_cached(regime: int, _start: str, _end: str) -> list:
 def _attach_recent_news(feed: list[dict]) -> None:
     """Enrich each deployed trade card with recent REAL third-party coverage
     (last ~30d, source + date + link) so the desk report anchors every idea to
-    live market context. Best-effort — silently skips names with no ticker or
+    live market context. Best-effort - silently skips names with no ticker or
     no recent news. Never fabricates: headlines come straight from yfinance."""
     try:
         from src.data.loader import fetch_ticker_news
@@ -2358,7 +2358,7 @@ def _fetch_company_logo(ticker: str) -> "bytes | None":
 def _attach_logos(feed: list[dict]) -> None:
     """Attach a small company-logo PNG (bytes, under key 'logo_png') to each
     deployed trade whose primary leg is a single-name company, for the desk
-    report. Only real companies from the single-name universe get a mark —
+    report. Only real companies from the single-name universe get a mark - 
     commodities, ETFs and indices are intentionally left logo-less (a company
     logo there would misrepresent the exposure). Best-effort and never raises."""
     try:
@@ -2386,7 +2386,7 @@ def _attach_logos(feed: list[dict]) -> None:
 # Answers the buy-side question the pipeline validation does NOT: is the deployed
 # book alpha or beta? Regresses the weight-normalised book return on a market
 # factor plus market-orthogonalised thematic factors (HAC/Newey-West errors), so
-# market beta, sector tilts and genuine idiosyncratic return are separated — and
+# market beta, sector tilts and genuine idiosyncratic return are separated - and
 # reports an effective-number-of-bets concentration read (are 8 ideas really 8?).
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -2649,7 +2649,7 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
         f'{r2_full*100:.0f}%</b> of its daily variance is market + sector beta '
         f'(dominated by {_lead_txt}). Jensen alpha is <b style="color:{_acol}">'
         f'{alpha_mf:+.1f}%/yr</b> and is <b>{_sig_word}</b> '
-        f'(t&nbsp;{alpha_mf_t:.1f}) — {_skill_txt}'
+        f'(t&nbsp;{alpha_mf_t:.1f}) - {_skill_txt}'
         f' The {n_pos} positions span ~<b style="color:#e8e9ed">{enb:.1f}</b> '
         f'independent bets.')
 
@@ -2727,12 +2727,23 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             "Spillover analysis is most useful when it connects to positioning hypotheses. "
             "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
             "Static library theses fire when the current regime matches their structural trigger. "
-            "The five-stage pipeline (Signal → Prior Validation → Confidence-weighted sizing) "
-            "is walk-forward validated — the pipeline's admit/reject decisions are the deliverable, not individual trade grades. "
+            "The five-stage pipeline (Signal, Prior Validation, Confidence-weighted sizing) "
+            "is walk-forward validated: the pipeline's admit/reject decisions are the deliverable, not individual trade grades. "
             "<strong>The constructed book is a fully-invested equity sleeve</strong> (the cash / hedge overlay is the parent portfolio's decision), sized by risk-adjusted expected edge."
         )
+        _definition_block(
+            "Selection caveat: validation controls execution, not thesis selection",
+            "The static thesis library was authored with knowledge of market history. The walk-forward "
+            "validation removes <strong>execution</strong> look-ahead (entry and exit timing at each "
+            "window use only prior data), but it cannot remove <strong>selection</strong> look-ahead: "
+            "the choice of which theses exist in the library was made after seeing the sample. Read the "
+            "admit/reject results as evidence about the theses that are here, not as proof that this was "
+            "the right library to test. The book is also long-only and fully invested, so its market "
+            "beta and sector tilts are a deliberate feature, quantified in the Book Factor and Alpha "
+            "Decomposition below."
+        )
     with _ti_pdf_col:
-        # Desk-report PDF — fills the blank space beside the intro. The book is
+        # Desk-report PDF - fills the blank space beside the intro. The book is
         # built lower on the page, so this sets a flag and generation runs below
         # (guarded); the finished PDF is stashed and the download surfaces here.
         st.markdown('<div style="height:.2rem"></div>', unsafe_allow_html=True)
@@ -2830,7 +2841,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             unsafe_allow_html=True,
         )
     except Exception as _geo_err:
-        st.caption("Geo context unavailable — conflict model not loaded for this session.")
+        st.caption("Geo context unavailable - conflict model not loaded for this session.")
 
     from concurrent.futures import ThreadPoolExecutor
     from src.data.loader import load_fixed_income_returns, load_fx_returns
@@ -2877,7 +2888,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     r_name   = _REGIME_NAMES[current]
     r_color  = _REGIME_COLORS[current]
 
-    # Trade cards removed — the pipeline is the deliverable, not individual strategy scores.
+    # Trade cards removed - the pipeline is the deliverable, not individual strategy scores.
     active_trades: list[dict] = []
     asset_exposure: dict = {}   # was populated by score_all_assets(); empty without trade cards
 
@@ -2913,11 +2924,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     import copy as _copy
     _TRADE_LIBRARY = _copy.deepcopy(_TRADE_LIBRARY_BASE)
 
-    # ── LIVE IDEA GENERATION — conflict-driven candidates for THIS regime ────
+    # ── LIVE IDEA GENERATION - conflict-driven candidates for THIS regime ────
     # The desk is not just a static catalogue: it also generates fresh trades
     # from the current conflict / exposure / scenario / regime state and runs
     # them through the SAME eligibility → Stage-3 → DSR gate as the library.
-    # Nothing is weakened — the honest trial count (n_strategies) is raised to
+    # Nothing is weakened - the honest trial count (n_strategies) is raised to
     # the full eligible set below, so the wider search is properly penalised by
     # the deflated Sharpe. Generated ideas only deploy if they earn it.
     _n_generated = 0
@@ -2925,7 +2936,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         import copy as _copy_gen
         # Signal-ranked single-name candidates for this regime (directional +
         # safe-haven, US/India/China + macro), cached so the ~8s cold scoring
-        # runs once, not on every rerun. Deep-copy before mutating/appending —
+        # runs once, not on every rerun. Deep-copy before mutating/appending - 
         # later steps stamp eligibility/weights in place and must never touch
         # the cached objects. Each runs the SAME eligibility → Stage-3 → sizing
         # gate; the wider search raises the deflated-Sharpe trial penalty.
@@ -2940,7 +2951,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         _n_generated = 0
 
-    # ── STEP 1 OF 4 — ELIGIBILITY GATE ─────────────────────────────────────
+    # ── STEP 1 OF 4 - ELIGIBILITY GATE ─────────────────────────────────────
     # Eligible ⟺ every leg exists in the loaded returns frame AND the thesis
     # passed Stage-3 confirmation. Everything else is NON-ALLOCATABLE: still
     # rendered, clearly marked, hard-locked to zero weight (enforce_weight in
@@ -2957,7 +2968,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _all_r_gate = pd.concat([all_r_concat, _stock_r.reindex(all_r_concat.index)], axis=1)
         _all_r_gate = _all_r_gate.loc[:, ~_all_r_gate.columns.duplicated()]
     else:
-        _all_r_gate = all_r_concat   # full tradeable universe — eq/cmd/FI/FX/PC
+        _all_r_gate = all_r_concat   # full tradeable universe - eq/cmd/FI/FX/PC
     # Loadable universe: every leg display name with ANY loader mapping,
     # loaded or not. A missing leg outside this set is STRUCTURALLY DEAD
     # (can never trade); inside it, it is merely missing from today's fetch.
@@ -2969,12 +2980,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # This equity sleeve is ALWAYS fully invested; appetite controls how tightly
     # capital concentrates into the strongest risk-adjusted ideas, not a cash
     # level. Defensive spreads broadly across positive-edge names; Aggressive
-    # concentrates into the best few. Ranking and the raw DSR are unaffected —
+    # concentrates into the best few. Ranking and the raw DSR are unaffected - 
     # only the shape of the book responds.
     from src.analysis.trade_allocator import (
         APPETITE_STOPS, effective_deploy_bar, DSR_DEPLOY_BAR, DEPLOY_BAR_FLOOR,
     )
-    # Risk-appetite slider removed — the sleeve runs the AGGRESSIVE (concentrated,
+    # Risk-appetite slider removed - the sleeve runs the AGGRESSIVE (concentrated,
     # return-forward) profile as standard: sized into the strongest ~11 names.
     _appetite_label = "Aggressive"
     _appetite = 1.0
@@ -2990,7 +3001,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     try:
-        with st.spinner("Running eligibility gate — leg check + Stage-3 confirmation…"):
+        with st.spinner("Running eligibility gate - leg check + Stage-3 confirmation…"):
             _s3_results = _library_stage3_results(_all_r_gate, regimes,
                                                   trades=_TRADE_LIBRARY)
     except Exception:
@@ -2999,11 +3010,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                          loadable_universe=_loadable)
     # Honest trial count for the deflated Sharpe: the number of ELIGIBLE
     # strategies actually searched (static + generated). A wider search MUST
-    # raise this so the best-of-N luck benchmark is harder, not easier — this
+    # raise this so the best-of-N luck benchmark is harder, not easier - this
     # is the anti-gaming half of live generation.
     _n_eligible_total = sum(1 for _t in _TRADE_LIBRARY if _t.get("is_eligible"))
     _n_trials = max(_n_eligible_total, 9)
-    # ── STEP 2 OF 4 — WEIGHT ALLOCATOR (silent: stamps alloc_weight +
+    # ── STEP 2 OF 4 - WEIGHT ALLOCATOR (silent: stamps alloc_weight +
     # alloc_detail; ranking and display are steps 3–4) ──────────────────────
     try:
         from src.analysis.trade_allocator import (
@@ -3018,7 +3029,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # the highest-DSR ideas) rather than moving capital to cash.
         allocate_weights(_TRADE_LIBRARY, _alloc_metrics,
                          concentration=_concentration, top_n=_top_n)
-        # ── STEP 3 OF 4 — PORTFOLIO CONSTRAINTS (silent) ────────────────────
+        # ── STEP 3 OF 4 - PORTFOLIO CONSTRAINTS (silent) ────────────────────
         # Conflict cap 40% / correlation-cluster cap 45% of gross, iterative
         # re-normalization; runtime-asserted, stamps constraint_detail.
         from src.analysis.trade_allocator import apply_portfolio_constraints
@@ -3026,10 +3037,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     except Exception:
         for _t in _TRADE_LIBRARY:
             _t.setdefault("alloc_weight", 0.0)
-    # ── STEP 4 OF 4 — RANKED BOOK · LIVE ────────────────────────────────────
+    # ── STEP 4 OF 4 - RANKED BOOK · LIVE ────────────────────────────────────
     # Regenerated from current regime / Stage-3 / backtest state on every
     # load. Attractiveness = 0.50·DSR + 0.35·conviction + 0.15·constraint
-    # room — raw Sharpe is displayed for transparency, never ranked on.
+    # room - raw Sharpe is displayed for transparency, never ranked on.
     _ranked_book: list[dict] = []
     try:
         from src.analysis.trade_allocator import rank_trades
@@ -3041,7 +3052,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _n_dead = sum(1 for _t in _TRADE_LIBRARY if _t.get("structurally_dead"))
     _n_lock = len(_TRADE_LIBRARY) - _n_elig - _n_dead
     _dead_note = (f' · <b style="color:#555960">{_n_dead} STRUCTURALLY DEAD</b> '
-                  f'(no data source — excluded from the live count)'
+                  f'(no data source - excluded from the live count)'
                   if _n_dead else '')
     _gen_note = (f' · <b style="color:#2980b9">{_n_generated} LIVE-GENERATED</b> '
                  f'(signal-ranked, this regime)' if _n_generated else '')
@@ -3062,7 +3073,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _gross_bk = sum(t.get("alloc_weight", 0.0) for t in _ranked_book)
         # Equity sleeve: fully invested by design. The book is 100% cash ONLY in
         # the STRUCTURAL case where nothing is eligible this regime (no legs in
-        # data / no Stage-3 confirmation) — never as a deploy-bar risk decision.
+        # data / no Stage-3 confirmation) - never as a deploy-bar risk decision.
         _is_cash_book = _gross_bk <= 1e-9
         _speculative = False
         _best_dsr = max(
@@ -3077,15 +3088,15 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'align-items:baseline;flex-wrap:wrap">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
-                f'color:#CFB991">EQUITY SLEEVE — NO ELIGIBLE POSITIONS</span>'
+                f'color:#CFB991">EQUITY SLEEVE - NO ELIGIBLE POSITIONS</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.52rem;color:#8890a1">{_appetite_label.upper()}</span></div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
-                f'color:#8890a1;margin-top:4px">No thesis is eligible this regime — '
+                f'color:#8890a1;margin-top:4px">No thesis is eligible this regime - '
                 f'every candidate is missing return data or failed Stage-3 '
                 f'confirmation, so there is nothing to invest in. Ranked ideas below '
                 f'are a watchlist. This sleeve holds cash only when it structurally '
-                f'cannot invest — never as a risk call; that overlay lives at the '
+                f'cannot invest - never as a risk call; that overlay lives at the '
                 f'parent-portfolio level.</div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -3098,14 +3109,14 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'align-items:baseline;flex-wrap:wrap">'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.92rem;font-weight:700;letter-spacing:.06em;'
-                f'color:#27ae60">EQUITY SLEEVE — 100% INVESTED · '
+                f'color:#27ae60">EQUITY SLEEVE - 100% INVESTED · '
                 f'{_n_deployed} POSITIONS</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.52rem;color:#8890a1">CONCENTRATED · '
                 f'RETURN-FORWARD</span></div>'
                 f'<div style="font-family:\'DM Sans\',sans-serif;font-size:.63rem;'
                 f'color:#8890a1;margin-top:4px">The equity component of a larger '
-                f'portfolio — always fully invested; the cash / hedge overlay is the '
+                f'portfolio - always fully invested; the cash / hedge overlay is the '
                 f'parent allocation&rsquo;s call, not this sleeve&rsquo;s. Capital is '
                 f'sized by <b>risk-adjusted expected return</b> (each idea&rsquo;s '
                 f'own direction-aware backtested edge, shrunk by the deflated-Sharpe '
@@ -3164,7 +3175,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _dd = _t.get("alloc_detail") or {}
             _cdt = _t.get("constraint_detail") or {}
             _inval = (_t.get("invalidation") or _t.get("exit")
-                      or _t.get("risk") or "—")
+                      or _t.get("risk") or " - ")
             _bk_rows += (
                 f'<tr style="border-bottom:1px solid #141414">'
                 f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
@@ -3185,7 +3196,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<td style="padding:3px 8px;font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.56rem;text-align:right;color:'
                 f'{"#CFB991" if _is_cash_book else ("#e67e22" if _cdt.get("clipped") else "#8890a1")}">'
-                f'{_weight_earn_condition(_dd) if _is_cash_book else ("CLIPPED" if _cdt.get("clipped") else "—")}</td>'
+                f'{_weight_earn_condition(_dd) if _is_cash_book else ("CLIPPED" if _cdt.get("clipped") else " - ")}</td>'
                 f'<td style="padding:3px 8px;font-size:.54rem;color:#8890a1;'
                 f'max-width:260px;white-space:nowrap;overflow:hidden;'
                 f'text-overflow:ellipsis">{_inval[:90]}</td>'
@@ -3205,7 +3216,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'padding:.4rem .8rem;border-bottom:1px solid #1e1e1e">'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.6rem;'
             f'font-weight:700;letter-spacing:.14em;color:#e8e9ed">'
-            f'{"WATCHLIST · RANKED — NOT YET ALLOCATABLE" if _is_cash_book else "RANKED BOOK · LIVE"}</span>'
+            f'{"WATCHLIST · RANKED - NOT YET ALLOCATABLE" if _is_cash_book else "RANKED BOOK · LIVE"}</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
             f'color:#8890a1">regenerated {datetime.datetime.now().strftime("%H:%M:%S")} · '
             f'regime {r_name.upper()} · {len(_ranked_book)} eligible · '
@@ -3222,7 +3233,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
 
         # Is this book alpha or beta? Factor & alpha attribution of the deployed
-        # positions — the buy-side question the pipeline validation doesn't answer.
+        # positions - the buy-side question the pipeline validation doesn't answer.
         try:
             _render_book_factor_decomp(_ranked_book, _all_r_gate, start, end)
         except Exception:
@@ -3250,7 +3261,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         dirs    = tr.get("direction", [])
         assets  = tr.get("assets", [])
 
-        # Leg directions — all legs, asset name stripped of parentheticals
+        # Leg directions - all legs, asset name stripped of parentheticals
         legs = "  ".join(
             f'{"▲" if d == "Long" else "▼"} {a.split("(")[0].strip()}'
             for a, d in zip(assets, dirs)
@@ -3279,7 +3290,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'⏱ {hold}</span>'
         ) if hold else ""
 
-        # Target (optional — newer theses)
+        # Target (optional - newer theses)
         tgt     = tr.get("target", "")
         tgt_h   = ""
         if tgt:
@@ -3294,7 +3305,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         trig    = tr.get("trigger", "")
         trig_s  = trig[:62] + "…" if len(trig) > 62 else trig
 
-        # Investor lens (optional — newer theses)
+        # Investor lens (optional - newer theses)
         lens    = tr.get("investor_lens", [])
         lens_h  = (
             f'<div style="font-size:.49rem;color:#CFB99175;'
@@ -3303,7 +3314,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'{" · ".join(lens[:3])}</div>'
         ) if lens else ""
 
-        # STEP-1 eligibility verdict — every card states it; locked cards name why
+        # STEP-1 eligibility verdict - every card states it; locked cards name why
         _elig = tr.get("is_eligible", False)
         _elig_reason = tr.get("eligibility_reason", "gate not run")
         if _elig:
@@ -3380,7 +3391,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # Avg holding: count theses with holding_period
     _n_with_hold = sum(1 for t in _TRADE_LIBRARY if t.get("holding_period"))
 
-    # Build section list for left column — each with 2 detail lines
+    # Build section list for left column - each with 2 detail lines
     _dl_sections = [
         ("01", "Regime Analysis",
          f"Current regime: {r_name}",
@@ -3469,7 +3480,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         f'<div style="padding:5px 10px;background:#050505;border-bottom:1px solid #1a1a1a;'
         f'font-family:\'JetBrains Mono\',monospace;font-size:.52rem;'
         f'color:#555960;letter-spacing:.10em">'
-        f'THESES REFERENCED — {_n_theses} PAIRS</div>'
+        f'THESES REFERENCED - {_n_theses} PAIRS</div>'
         f'{_col1_html}'
         f'</div>'
         # Theses col 2 (bottom half)
@@ -3500,15 +3511,15 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         unsafe_allow_html=True,
     )
     # Generation runs here (where the book exists), triggered by the top button's
-    # flag — the redundant bottom "Generate" button was removed.
+    # flag - the redundant bottom "Generate" button was removed.
     if bool(st.session_state.pop("_ti_pdf_pending", False)):
         _pdf_ok = False
         try:
             from src.reports.report_generator import generate_report
-            with st.spinner("Building report — invested book + recent coverage + charts…"):
+            with st.spinner("Building report - invested book + recent coverage + charts…"):
                 stress = composite_stress_index(eq_r, cmd_r, avg_corr=avg_corr)
                 from src.analysis.trade_allocator import desk_report_feed
-                # Invested book only — desk_report_feed keeps just the deployed
+                # Invested book only - desk_report_feed keeps just the deployed
                 # positions (alloc_weight > 0). Enrich each with recent REAL
                 # third-party coverage (source + date + link, last ~30d) so the
                 # report anchors every idea to live market context.
@@ -3530,7 +3541,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     current_regime=current,
                     regimes=regimes,
                     # all_trades=[] so the "other regimes" reference section stays
-                    # empty (no 80-card candidate dump — the report is the book).
+                    # empty (no 80-card candidate dump - the report is the book).
                     active_trades=_feed,
                     all_trades=[],
                     eq_r=eq_r,
@@ -3564,12 +3575,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         )
 
     # ── Data Integrity Audit ────────────────────────────────────────────────
-    with st.expander("Data Integrity Audit — Leg Coverage & Strategy Correlation", expanded=False):
+    with st.expander("Data Integrity Audit - Leg Coverage & Strategy Correlation", expanded=False):
         _DI_M = "font-family:'JetBrains Mono',monospace;"
         st.markdown(
             f'<p style="{_DI_M}font-size:0.60rem;color:#8890a1;margin-bottom:.8rem">'
             'Checks every strategy\'s declared legs against the loaded return data. '
-            'Strategies with missing legs are mislabeled — their backtest results are excluded. '
+            'Strategies with missing legs are mislabeled - their backtest results are excluded. '
             'The correlation matrix identifies hidden duplicate bets.</p>',
             unsafe_allow_html=True,
         )
@@ -3590,8 +3601,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _audit_rows.append({
                 "Strategy":    _tr["name"],
                 "Declared":    ", ".join(_declared),
-                "Present":     ", ".join(_present) if _present else "—",
-                "Dropped":     ", ".join(_dropped) if _dropped else "—",
+                "Present":     ", ".join(_present) if _present else " - ",
+                "Dropped":     ", ".join(_dropped) if _dropped else " - ",
                 "Status":      _status,
             })
 
@@ -3621,7 +3632,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<td style="{_tdb}font-size:.63rem;color:#c8c8c8;max-width:260px">{_r["Strategy"]}</td>'
                 f'<td style="{_tdb}font-size:.60rem;color:#8890a1">{_r["Declared"]}</td>'
                 f'<td style="{_tdb}font-size:.60rem;color:#8890a1">{_r["Present"]}</td>'
-                f'<td style="{_tdb}font-size:.60rem;color:#c0392b">{_r["Dropped"] or "—"}</td>'
+                f'<td style="{_tdb}font-size:.60rem;color:#c0392b">{_r["Dropped"] or " - "}</td>'
                 f'<td style="{_tdb}font-size:.60rem;font-weight:700;color:{_sc};'
                 f'font-family:\'JetBrains Mono\',monospace">{_s}</td>'
                 f'</tr>'
@@ -3642,7 +3653,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<p style="{_DI_M}font-size:0.60rem;color:#8890a1;margin-top:1rem;margin-bottom:.4rem">'
             'Pairwise correlation of daily equity-curve returns across all strategies '
-            '(OOS walk-forward). Clusters above r ≈ 0.90 are hidden duplicates — '
+            '(OOS walk-forward). Clusters above r ≈ 0.90 are hidden duplicates - '
             'they count as 1 distinct bet for DSR multiple-testing correction.</p>',
             unsafe_allow_html=True,
         )
@@ -3695,7 +3706,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         f'<div style="background:#1a1200;border:1px solid #e67e22;'
                         f'border-radius:4px;padding:8px 12px;margin-bottom:.6rem;'
                         f'{_DI_M}font-size:0.63rem;color:#e67e22">'
-                        f'<b>HIGH-CORRELATION CLUSTERS (r ≥ 0.90) — count as 1 distinct bet each:</b><br>'
+                        f'<b>HIGH-CORRELATION CLUSTERS (r ≥ 0.90) - count as 1 distinct bet each:</b><br>'
                         + "<br>".join(_clusters)
                         + "</div>",
                         unsafe_allow_html=True,
@@ -3728,7 +3739,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     ),
                 ))
 
-                # Per-cell text annotations — the only way to get correct contrast
+                # Per-cell text annotations - the only way to get correct contrast
                 # on both dark-green (|r|>0.45 → white) and light-yellow (→ dark)
                 for _ri, _rn in enumerate(_names_y):
                     for _ci, _cn in enumerate(_names_x):
@@ -3780,14 +3791,14 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             else:
                 st.caption("Insufficient gradeable strategies to compute correlation matrix.")
         else:
-            st.caption("avg_corr unavailable — cannot run pairwise correlation.")
+            st.caption("avg_corr unavailable - cannot run pairwise correlation.")
 
     # ── Multiple Testing Report ─────────────────────────────────────────────
     # Reports effective N vs raw N, per-strategy DSR vs HLZ cross-check,
     # and flags disagreements. Opening this panel also updates session_state
     # so subsequent rerenders use the dynamic effective N in card grades.
     with st.expander(
-        "Multiple Testing Report — DSR vs HLZ Cross-Check (Effective N)",
+        "Multiple Testing Report - DSR vs HLZ Cross-Check (Effective N)",
         expanded=False,
     ):
         from src.analysis.backtest import (
@@ -3797,7 +3808,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _MT_M = "font-family:'JetBrains Mono',monospace;"
         st.markdown(
             f'<p style="{_MT_M}font-size:0.60rem;color:#8890a1;margin-bottom:.8rem">'
-            'DSR is the single grading gate — it already corrects for N via the expected maximum SR under '
+            'DSR is the single grading gate - it already corrects for N via the expected maximum SR under '
             'H₀ (Bailey &amp; Lopez de Prado 2014). '
             'HLZ (Harvey, Liu &amp; Zhu 2016) BHY-adjusted t-hurdle is shown as a cross-check only. '
             'Disagreements are flagged for manual review. '
@@ -3813,7 +3824,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
           for _tr in _TRADE_LIBRARY:
             _missing = [a for a in _tr.get("assets", []) if a not in _avail_cols_mt]
             if _missing:
-                continue   # ungradeable — skip for N computation
+                continue   # ungradeable - skip for N computation
             try:
                 _lw  = _compute_leg_weights(_tr, asset_exposure or {})
                 _lwt = tuple(_lw) if _lw else None
@@ -3874,19 +3885,19 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 _report_rows.append({
                     "Strategy": _tr["name"][:45],
                     "Prior":    "THEORY",
-                    "N used":   "—",
-                    "DSR %":    "—",
-                    "Grade":    "—",
-                    "t-stat":   "—",
-                    "HLZ hurdle": "—",
+                    "N used":   " - ",
+                    "DSR %":    " - ",
+                    "Grade":    " - ",
+                    "t-stat":   " - ",
+                    "HLZ hurdle": " - ",
                     "HLZ":      "MISSING",
-                    "Agree?":   "—",
+                    "Agree?":   " - ",
                 })
                 continue
             _base = _mt_results.get(_tr["name"])
             if _base is None:
                 continue
-            # Re-grade with dynamic N (pure function — cheap)
+            # Re-grade with dynamic N (pure function - cheap)
             from src.analysis.backtest import qc_grade_backtest as _regrade
             _qc = _regrade(_base, n_strategies=_n_used, is_economic_prior=_is_prior)
             _hlz_p = _qc.get("hlz_pass")
@@ -3896,11 +3907,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 "Prior":      "THEORY" if _is_prior else "GRID",
                 "N used":     str(_n_used),
                 "DSR %":      f'{_qc.get("dsr_prob", 0):.0%}',
-                "Grade":      _qc.get("grade", "—"),
+                "Grade":      _qc.get("grade", " - "),
                 "t-stat":     f'{_qc["hlz_tstat"]:.2f}' if _qc.get("hlz_tstat") is not None else "n/a",
                 "HLZ hurdle": f'{_qc.get("hlz_threshold", 0):.2f}',
                 "HLZ":        ("PASS" if _hlz_p is True else "FAIL" if _hlz_p is False else "n/a"),
-                "Agree?":     ("✓" if _ag is True else "⚠ REVIEW" if _ag is False else "—"),
+                "Agree?":     ("✓" if _ag is True else "⚠ REVIEW" if _ag is False else " - "),
             })
 
         if _report_rows:
@@ -3912,7 +3923,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                       f'white-space:nowrap"')
             _mt_body = ""
             for _r in _report_rows:
-                _ag = _r.get("Agree?", "—")
+                _ag = _r.get("Agree?", " - ")
                 _gr = _r.get("Grade", "")
                 _hl = _r.get("HLZ", "")
                 if _ag == "⚠ REVIEW":
@@ -3941,7 +3952,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     f'<td style="padding:5px 10px;border-bottom:1px solid #1a1a1a;'
                     f'font-size:.62rem;{"font-weight:700;" if _c == "Grade" else ""}'
                     f'color:{_mt_cell_color(_c)}">'
-                    f'{_r.get(_c, "—")}</td>'
+                    f'{_r.get(_c, " - ")}</td>'
                     for _c in _mt_cols
                 )
                 _mt_body += f'<tr style="background:{_bg}">{_cells}</tr>'
@@ -3964,7 +3975,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<b style="color:#27ae60">{_n_agree}</b> DSR/HLZ agree · '
                 f'<b style="color:{"#e67e22" if _n_disagree else "#27ae60"}">'
                 f'{_n_disagree}</b> disagree (manual review recommended) · '
-                f'HLZ cross-check only — DSR is the binding grade criterion'
+                f'HLZ cross-check only - DSR is the binding grade criterion'
                 f'</p>',
                 unsafe_allow_html=True,
             )
@@ -3975,7 +3986,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # Auto-expand when we have results (from disk cache or a prior run this session).
     _tp_has_results = bool(st.session_state.get(_PV_SESSION_KEY))
     with st.expander(
-        "Thesis Pipeline — 5-Stage Economic Mechanism Validation",
+        "Thesis Pipeline - 5-Stage Economic Mechanism Validation",
         expanded=_tp_has_results,
     ):
         _TP_M = "font-family:'JetBrains Mono',monospace;"
@@ -3991,31 +4002,31 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             f'<p style="{_TP_M}font-size:0.58rem;color:#8890a1;margin-bottom:1rem">'
             'The five-stage pipeline is the deliverable. Each gate is a binary contract: '
             'a thesis that fails any gate cannot advance. The pipeline is tested as a '
-            'decision rule — does its admit/reject classification predict out-of-sample '
+            'decision rule - does its admit/reject classification predict out-of-sample '
             'returns? Individual trade P&amp;L is not the output.</p>',
             unsafe_allow_html=True,
         )
 
         _stage_defs = [
-            ("#CFB991", "STAGE 1 — THESIS",
+            ("#CFB991", "STAGE 1 - THESIS",
              "Researcher constructs shock → TPS channel → predicted sign → holding horizon from first "
              "principles. No optimisation. The economic narrative must be stated before any data is viewed. "
              "Gate: shock is named, ≥1 TPS channel specified, predicted direction signed per leg, horizon set."),
-            ("#2980b9", "STAGE 2 — SIGNAL",
+            ("#2980b9", "STAGE 2 - SIGNAL",
              "Every declared leg must be present in the loaded return data. Any missing leg "
-             "is a hard stop — the thesis cannot be tested and the researcher must revise the leg specification. "
+             "is a hard stop - the thesis cannot be tested and the researcher must revise the leg specification. "
              "Gate: all assets in return index. Fail-loud: never silently drop a leg."),
-            ("#27ae60", "STAGE 3 — PRIOR-ALIGNED CONFIRMATION",
+            ("#27ae60", "STAGE 3 - PRIOR-ALIGNED CONFIRMATION",
              "LP-IRF (local projection) or regime-conditional returns confirm that the data's sign "
              "matches the predicted sign from Stage 1 at the stated horizon. "
-             "Outcomes: CONFIRM (sign + significance), IE (sign matched but n &lt; 20 — insufficient evidence, "
+             "Outcomes: CONFIRM (sign + significance), IE (sign matched but n &lt; 20 - insufficient evidence, "
              "not a rejection), REJECT (sign contradicted). "
              "Gate: sign matched AND significant at 10%."),
-            ("#e67e22", "STAGE 4 — SIZING",
+            ("#e67e22", "STAGE 4 - SIZING",
              "Vol-scaled allocation: target 10% annual vol ÷ estimated strategy vol → base weight. "
              "IRF scale factor applied (larger coef at horizon → larger weight). "
              "Capped at 20% per conflict source. Gate: sizing computed; output is final weight %."),
-            ("#8e44ad", "STAGE 5 — GRADE",
+            ("#8e44ad", "STAGE 5 - GRADE",
              "Deflated Sharpe Ratio (DSR) gate on per-trade Sharpe (de-annualised, Bailey &amp; Lopez de Prado 2014). "
              "DSR ≥ 0.50 required. If Stage 3 confirmed AND DSR &lt; 0.50 → MT (mechanism real, not tradeable: "
              "transmission genuine but too weak or already priced). "
@@ -4059,7 +4070,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'<div style="{_TP_M}border:1px solid #e67e22;border-radius:4px;'
                 f'padding:8px 12px;margin-bottom:8px;background:#1a1000">'
                 f'<span style="font-size:0.56rem;color:#e67e22;font-weight:700">⚠ Open Multiple Testing Report first</span>'
-                f'<span style="font-size:0.56rem;color:#8890a1"> — Effective N for DSR correction defaults to 9 until the MT Report '
+                f'<span style="font-size:0.56rem;color:#8890a1"> - Effective N for DSR correction defaults to 9 until the MT Report '
                 f'computes the true value from your backtest results. Validation run before then may apply the wrong correction.</span>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -4070,7 +4081,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _pv_col1, _pv_col2 = st.columns([1, 4])
         with _pv_col1:
             _run_pv = st.button(
-                ("⚠ Rerun — Book Stale" if _pv_stale else "Refresh Validation"),
+                ("⚠ Rerun - Book Stale" if _pv_stale else "Refresh Validation"),
                 key="run_pipeline_val", type="primary",
                 help="Re-runs walk-forward validation (~2-4 min). Saves result to disk for next session.",
             ) or st.session_state.pop("_ti_force_pv", False)
@@ -4082,13 +4093,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     unsafe_allow_html=True,
                 )
             elif _pv_stale:
-                # Hard staleness flag: book past the threshold — loud, not a note.
+                # Hard staleness flag: book past the threshold - loud, not a note.
                 st.markdown(
                     f'<div style="{_TP_M}border:1px solid #c0392b;border-radius:4px;'
                     f'padding:6px 12px;background:#1a0808;display:inline-block">'
                     f'<span style="font-size:0.6rem;color:#e05241;font-weight:700;'
                     f'letter-spacing:.08em">⚠ STALE BOOK</span>'
-                    f'<span style="font-size:0.57rem;color:#c98b86"> — validated '
+                    f'<span style="font-size:0.57rem;color:#c98b86"> - validated '
                     f'{_pv_age_lbl} (&gt; {_PV_STALE_HOURS}h). Rerun before trusting '
                     f'these weights.</span></div>',
                     unsafe_allow_html=True,
@@ -4210,9 +4221,9 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     </div>
   </div>
   <div class="_pv_msgs">
-    <div class="_pv_msg">Fitting LP-IRF on training window — past data only&hellip;</div>
+    <div class="_pv_msg">Fitting LP-IRF on training window - past data only&hellip;</div>
     <div class="_pv_msg">Stage 3 confirming sign direction per leg&hellip;</div>
-    <div class="_pv_msg">Running DSR gate — deflating Sharpe by trial count&hellip;</div>
+    <div class="_pv_msg">Running DSR gate - deflating Sharpe by trial count&hellip;</div>
     <div class="_pv_msg">Computing OOS returns in test window&hellip;</div>
     <div class="_pv_msg">Monte Carlo random-admission baseline (500 draws)&hellip;</div>
   </div>
@@ -4280,11 +4291,11 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
             _gap_cols = st.columns(2, gap="medium")
             for _gc_idx, (_gtitle, _gval, _gpval, _gdesc) in enumerate([
-                ("GAP 1 — Admitted vs Rejected",
+                ("GAP 1 - Admitted vs Rejected",
                  _g1, _g1p,
                  "Mean OOS return of admitted theses minus rejected theses (%). "
                  "Must be positive: the gates must discriminate."),
-                ("GAP 2 — Admitted vs Random",
+                ("GAP 2 - Admitted vs Random",
                  _g2, _g2p,
                  "Mean OOS return of admitted theses minus 500 random-draw baselines "
                  "(same N selected per window). Must be positive: gates must beat luck."),
@@ -4312,7 +4323,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             # Bucket behavior
             st.markdown(
                 f'<p style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;color:#8890a1;'
-                f'margin:1rem 0 .4rem">BUCKET BEHAVIOR — OOS MEAN RETURN (%)</p>',
+                f'margin:1rem 0 .4rem">BUCKET BEHAVIOR - OOS MEAN RETURN (%)</p>',
                 unsafe_allow_html=True,
             )
             _bkt_labels = {
@@ -4326,7 +4337,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 with _bkt_cols[_bi]:
                     _b = _pv["buckets"].get(_bkey, {})
                     _bmean = _b.get("mean")
-                    _bmean_str = (f'{_bmean:+.2f}%' if _bmean is not None else '—')
+                    _bmean_str = (f'{_bmean:+.2f}%' if _bmean is not None else ' - ')
                     _bstd  = _b.get("std")
                     _bstd_str = (f'±{_bstd:.2f}%' if _bstd is not None else '')
                     _bn = _b.get("n_obs", 0)
@@ -4377,16 +4388,16 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
 
         st.markdown("---")
 
-        # ── PART 3: Worked Example — Pipeline decision trace for one thesis ───
+        # ── PART 3: Worked Example - Pipeline decision trace for one thesis ───
         st.markdown(
             f'<p style="{_TP_M}font-size:0.58rem;font-weight:700;letter-spacing:.10em;'
-            f'color:#CFB991;margin-bottom:.3rem">WORKED EXAMPLE — PIPELINE DECISION TRACE</p>'
+            f'color:#CFB991;margin-bottom:.3rem">WORKED EXAMPLE - PIPELINE DECISION TRACE</p>'
             f'<p style="{_TP_S}font-size:0.65rem;color:#8890a1;margin-bottom:.6rem;'
             f'line-height:1.6">'
             f'Thesis: Iran conflict → Strait of Hormuz → WTI crude supply shock → S&amp;P 500 margin '
             f'compression. Left: the mechanism narrative and Stage 3 confirmation result (how the pipeline '
             f'reads the data). Right: the pipeline\'s admit/reject/MT/IE decision at each walk-forward window '
-            f'and the OOS return that followed — this is approach-testing, not trade performance.</p>',
+            f'and the OOS return that followed - this is approach-testing, not trade performance.</p>',
             unsafe_allow_html=True,
         )
 
@@ -4403,7 +4414,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         _WE_PRED    = {"WTI Crude Oil": +1, "S&P 500": -1}
         _WE_HORIZON = 20
         _WE_PERSIST = ("WTI price spikes from supply shocks are not quickly demand-destroyed at "
-                       "short horizons — consumption is inelastic for 2-4 weeks. Equity margin "
+                       "short horizons - consumption is inelastic for 2-4 weeks. Equity margin "
                        "compression persists until the next earnings revision cycle (~6-8 weeks). "
                        "The Brent-WTI spread widening also signals physical tightness independent "
                        "of financial positioning.")
@@ -4420,7 +4431,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'border-left:3px solid #CFB991;border-radius:4px;'
                 f'padding:.7rem 1rem;margin-bottom:.5rem">'
                 f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
-                f'color:#CFB991;margin-bottom:6px">STAGE 1 — THESIS ✓</div>'
+                f'color:#CFB991;margin-bottom:6px">STAGE 1 - THESIS ✓</div>'
                 f'<div style="{_TP_S}font-size:0.68rem;color:#e8e9ed;line-height:1.6">'
                 f'<b>Shock:</b> {_WE_SHOCK}<br>'
                 f'<b>Channels:</b> {", ".join(_WE_CHANNELS)}<br>'
@@ -4446,10 +4457,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 f'padding:.6rem 1rem;margin-bottom:.5rem">'
                 f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                 f'color:{_we_s2_color};margin-bottom:5px">'
-                f'STAGE 2 — SIGNAL {"✓" if _we_s2_ok else "✗"}</div>'
+                f'STAGE 2 - SIGNAL {"✓" if _we_s2_ok else "✗"}</div>'
                 f'<div style="{_TP_S}font-size:0.68rem;color:#c8c8c8">{_we_leg_str}</div>'
                 f'<div style="{_TP_M}font-size:0.58rem;color:{_we_s2_color};margin-top:4px">'
-                f'{"All legs present in return data." if _we_s2_ok else "Missing legs — thesis untestable."}'
+                f'{"All legs present in return data." if _we_s2_ok else "Missing legs - thesis untestable."}'
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
@@ -4478,7 +4489,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     }
                 _we_s3_ok   = bool(_we_s3d.get("stage_passed", False))
                 _we_s3_sign = bool(_we_s3d.get("sign_matched", False))
-                _we_track   = _we_s3d.get("track", "—")
+                _we_track   = _we_s3d.get("track", " - ")
                 _we_score   = float(_we_s3d.get("confirmation_score", 0.0))
                 _we_s3_color = "#27ae60" if _we_s3_ok else "#e67e22"
                 _we_per_leg = _we_s3d.get("per_leg", {})
@@ -4490,23 +4501,23 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     f'{"sig" if _v.get("significant") else "n.s."}</td>'
                     + (f'<td style="color:#8890a1">{_v.get("irf_coef","")}</td>'
                        if _we_track.startswith("lp") else
-                       f'<td style="color:#8890a1">{_v.get("mean_ret","—")}%</td>')
+                       f'<td style="color:#8890a1">{_v.get("mean_ret"," - ")}%</td>')
                     + '</tr>'
                     for _a, _v in _we_per_leg.items()
                 )
                 if _we_s3_ok:
                     _we_s3_verdict = f"CONFIRMED ({_we_score:.0%} legs)"
                 elif _we_s3_sign:
-                    _we_s3_verdict = f"SIGN MATCHED, NOT SIGNIFICANT — IE if n &lt; 20"
+                    _we_s3_verdict = f"SIGN MATCHED, NOT SIGNIFICANT - IE if n &lt; 20"
                 else:
-                    _we_s3_verdict = "REJECTED — predicted sign not matched"
+                    _we_s3_verdict = "REJECTED - predicted sign not matched"
                 st.markdown(
                     f'<div style="background:#0a0a0a;border:1px solid #1e1e1e;'
                     f'border-left:3px solid {_we_s3_color};border-radius:4px;'
                     f'padding:.6rem 1rem;margin-bottom:.5rem">'
                     f'<div style="{_TP_M}font-size:0.56rem;letter-spacing:.12em;'
                     f'color:{_we_s3_color};margin-bottom:5px">'
-                    f'STAGE 3 — CONFIRMATION ({_we_track.upper()}) · {_we_s3_verdict}</div>'
+                    f'STAGE 3 - CONFIRMATION ({_we_track.upper()}) · {_we_s3_verdict}</div>'
                     + (f'<table style="{_TP_M}font-size:0.60rem;border-collapse:collapse">'
                        f'<tr><th style="color:#555960;text-align:left">Leg</th>'
                        f'<th style="color:#555960">Sign</th>'
@@ -4523,10 +4534,10 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 _we_s3d  = {}
                 _we_s3_ok = False
                 _we_s3_sign = False
-                _we_track = "—"
+                _we_track = " - "
                 st.markdown(
                     f'<div style="{_TP_M}font-size:0.60rem;color:#c0392b;padding:.4rem">'
-                    f'Stage 3 skipped — Stage 2 failed.</div>',
+                    f'Stage 3 skipped - Stage 2 failed.</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -4598,7 +4609,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     _fig_we.update_yaxes(tickfont=dict(color="#c8c8c8"))
                     st.plotly_chart(_fig_we, use_container_width=True)
 
-            # Decision trace — pipeline's classification of this thesis at each window
+            # Decision trace - pipeline's classification of this thesis at each window
             _we_trace = (_pv or {}).get("worked_example_trace", [])
             if _we_trace:
                 import numpy as _np_we
@@ -4634,7 +4645,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     ),
                 ))
                 _fig_trace.update_layout(
-                    title="Pipeline Decision Trace — WTI / S&P 500 across Walk-Forward Windows",
+                    title="Pipeline Decision Trace - WTI / S&P 500 across Walk-Forward Windows",
                     height=240, margin=dict(l=0, r=0, t=30, b=0),
                     paper_bgcolor="#080808", plot_bgcolor="#080808",
                     font=dict(family="JetBrains Mono", size=8),
@@ -4677,7 +4688,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                         f'padding:.5rem .8rem;background:#090909;border-radius:4px;'
                         f'border:1px solid #1e1e1e">'
                         + " &nbsp;·&nbsp; ".join(_summary_parts)
-                        + f'<span style="color:#555960;font-size:0.55rem"> — mean OOS return by pipeline decision</span>'
+                        + f'<span style="color:#555960;font-size:0.55rem"> - mean OOS return by pipeline decision</span>'
                         + '</div>',
                         unsafe_allow_html=True,
                     )
@@ -4690,7 +4701,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     unsafe_allow_html=True,
                 )
 
-        # Individual strategy cards removed — pipeline is the deliverable, not per-thesis P&L.
+        # Individual strategy cards removed - pipeline is the deliverable, not per-thesis P&L.
         # The worked example shows the pipeline's decision trace across windows, not a trade grade.
 
     _section_note(

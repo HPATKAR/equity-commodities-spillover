@@ -721,7 +721,7 @@ def render_morning_briefing_panel(
     except ImportError:
         return None
 
-    # Session-scoped flag — cleared on every browser reload since session_state
+    # Session-scoped flag - cleared on every browser reload since session_state
     # resets. Within a session, navigating away and back does NOT re-run.
     thread_id: str | None = st.session_state.get("_morning_briefing_tid")
 

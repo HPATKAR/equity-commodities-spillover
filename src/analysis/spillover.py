@@ -15,7 +15,7 @@ Schreiber (2000) "Measuring Information Transfer." PRL 85(2): 461–464.
 Diebold & Yilmaz (2012) "Better to Give than to Receive: Forecast-Based
   Measurement of Volatility Spillovers." IJF 28(1): 57–66.
 Engle (2002) "Dynamic Conditional Correlation." JBES 20(3): 339–350.
-  (DCC-GARCH — EWMA pre-whitening in correlations.py)
+  (DCC-GARCH - EWMA pre-whitening in correlations.py)
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ _BK_BANDS: dict[str, tuple[float, float]] = {
 def _require_obs(n: int, required: int, context: str) -> None:
     """
     Log a warning to trace_logger when n < required.
-    Does not raise — statistical functions degrade gracefully on small samples.
+    Does not raise - statistical functions degrade gracefully on small samples.
     The trace record means the professor/auditor can see that the harness
     detected the constraint, not that the result was silently unreliable.
     """
@@ -78,8 +78,8 @@ def check_stationarity(df: pd.DataFrame, significance: float = 0.05) -> dict:
     caller can surface a warning rather than silently report unreliable stats.
 
     Returns:
-      "stationary"     : {col: bool}  — True if ADF p < significance
-      "non_stationary" : list[str]    — columns where unit root is not rejected
+      "stationary"     : {col: bool} - True if ADF p < significance
+      "non_stationary" : list[str] - columns where unit root is not rejected
     """
     stationary_map: dict[str, bool] = {}
     for col in df.columns:
@@ -110,7 +110,7 @@ def granger_test(
     Lag selection: BIC-optimal lag chosen via VAR(maxlags, ic='bic') before
     testing.  Testing at the data-selected lag avoids the implicit p-hacking
     of comparing test statistics across all lags 1..max_lag and reporting the
-    minimum — a known multiple-comparison inflation (Lütkepohl 2005, Ch. 4).
+    minimum - a known multiple-comparison inflation (Lütkepohl 2005, Ch. 4).
 
     Falls back to max_lag if BIC selection fails (e.g. too few observations).
 
@@ -222,7 +222,7 @@ def granger_grid(
             if df.at[idx_i, "min_p"] < threshold_i:
                 holm_sig.at[idx_i] = True
             else:
-                reject = False  # stop — all subsequent are also retained
+                reject = False  # stop - all subsequent are also retained
 
     df["holm_significant"]       = holm_sig
     df["bonferroni_significant"] = bonf_sig
@@ -254,7 +254,7 @@ def transfer_entropy(
     TE(X→Y) = H(Y_t | Y_{t-1}) − H(Y_t | Y_{t-1}, X_{t-1})
 
     Raw TE values are always ≥ 0 by construction; significance requires a
-    separate shuffle test — see transfer_entropy_significance().
+    separate shuffle test - see transfer_entropy_significance().
     """
     combined = pd.concat([source, target], axis=1).dropna()
     n = len(combined)
@@ -365,7 +365,7 @@ def transfer_entropy_matrix(
     by maximising TE(commodity → equity).  This captures the 2-5 day
     transmission delay documented in commodity-equity spillover literature.
 
-    Significance test: Schreiber (2000) surrogate method — source series is
+    Significance test: Schreiber (2000) surrogate method - source series is
     shuffled n_shuffle times to build a null distribution; p-value is the
     fraction of null TEs ≥ observed TE.  Set n_shuffle=0 to skip (returns
     NaN p-value matrices, useful for fast interactive exploration).
@@ -489,7 +489,7 @@ def _bk_all_bands(
 
     Using within-band row sums as the denominator (the naive approach) inflates
     each band's TC by ~1/band_fraction and makes them triple-count the variance,
-    yielding a sum ~3× the correct total — confirmed by the diagnostic below.
+    yielding a sum ~3× the correct total - confirmed by the diagnostic below.
 
     Returns dict keyed by band name plus '_full_gfevd_tc' for the invariant check.
     """
@@ -498,7 +498,7 @@ def _bk_all_bands(
     for name, (fa, fb) in _BK_BANDS.items():
         theta_raw[name] = _spectral_gfevd_band(coefs, sigma, fa, fb, n_freqs)
 
-    # Step 2: full-spectrum Θ (sum across bands) — shared normalisation denominator
+    # Step 2: full-spectrum Θ (sum across bands) - shared normalisation denominator
     theta_full    = sum(theta_raw.values())                        # (n, n)
     full_row_sums = theta_full.sum(axis=1)                         # (n,)
 
@@ -530,7 +530,7 @@ def _bk_all_bands(
     tc_sum = sum(out[b]["total_connectedness"] for b in _BK_BANDS)
     gap    = abs(tc_sum - tc_full)
     if gap > 0.5:
-        # Log via trace_logger if available — never raise in production
+        # Log via trace_logger if available - never raise in production
         try:
             from src.analysis.trace_logger import log_failure
             log_failure("bk_invariant_fail",
@@ -590,7 +590,7 @@ def diebold_yilmaz(
 
     Uses the generalized FEVD (Pesaran & Shin 1998), which D-Y (2012) §2.2 formally
     specifies. Unlike the Cholesky FEVD it is INVARIANT to VAR column ordering, so
-    FROM/TO/NET — and the equity-led vs commodity-led conclusion — do not depend on
+    FROM/TO/NET - and the equity-led vs commodity-led conclusion - do not depend on
     whether equities or commodities happen to be listed first. (The Cholesky FEVD
     attributes contemporaneous covariance to the first-ordered assets, which biased
     the direction toward whichever class led the column order.) See _gfevd_decomp.
@@ -613,19 +613,19 @@ def diebold_yilmaz(
         The included asset names are returned in ``assets_used`` for transparency.
 
     Returns:
-      spillover_table  : pd.DataFrame (n×n) — raw FEVD in %
-      from_spillover   : pd.Series — received variance from others per asset (%)
-      to_spillover     : pd.Series — variance sent to others per asset (%)
-      net_spillover    : pd.Series — TO - FROM per asset (+ = transmitter)
-      total_spillover  : float — overall interconnectedness (%)
-      top_transmitter  : str — asset with highest net positive spillover
-      top_receiver     : str — asset with most negative net spillover
-      direction_label  : str — "Commodity → Equity dominant" or "Equity → Commodity dominant"
-      assets_used      : list[str] — columns actually included in the VAR
+      spillover_table  : pd.DataFrame (n×n) - raw FEVD in %
+      from_spillover   : pd.Series - received variance from others per asset (%)
+      to_spillover     : pd.Series - variance sent to others per asset (%)
+      net_spillover    : pd.Series - TO - FROM per asset (+ = transmitter)
+      total_spillover  : float - overall interconnectedness (%)
+      top_transmitter  : str - asset with highest net positive spillover
+      top_receiver     : str - asset with most negative net spillover
+      direction_label  : str - "Commodity → Equity dominant" or "Equity → Commodity dominant"
+      assets_used      : list[str] - columns actually included in the VAR
     """
     cleaned = returns.dropna(how="all").dropna()
     if top_n > 0 and top_n < len(cleaned.columns):
-        # Select by variance descending — highest-signal assets first
+        # Select by variance descending - highest-signal assets first
         variances = cleaned.var().sort_values(ascending=False)
         cleaned = cleaned[variances.index[:top_n]]
     data = cleaned
@@ -680,10 +680,10 @@ def diebold_yilmaz(
         tbl_offdiag = table.copy()
         np.fill_diagonal(tbl_offdiag.values, 0.0)
 
-        # FROM[i]: sum of row i excluding diagonal — how much i receives
+        # FROM[i]: sum of row i excluding diagonal - how much i receives
         from_sp = tbl_offdiag.sum(axis=1)
 
-        # TO[j]: sum of column j excluding diagonal — how much j sends
+        # TO[j]: sum of column j excluding diagonal - how much j sends
         to_sp = tbl_offdiag.sum(axis=0)
 
         # NET[i] = TO[i] - FROM[i]
@@ -714,7 +714,7 @@ def diebold_yilmaz(
         top_tx  = str(net_sp.idxmax())
         top_rx  = str(net_sp.idxmin())
 
-        # Baruník-Křehlík frequency bands — reuse the same VAR result, no re-fit.
+        # Baruník-Křehlík frequency bands - reuse the same VAR result, no re-fit.
         # _bk_all_bands normalises with the shared full-spectrum denominator so
         # TC(short)+TC(medium)+TC(long) == TC(full-GFEVD) to numerical precision.
         bk_bands: dict = {}
@@ -790,7 +790,7 @@ def bootstrap_dy_ci(
         return {}
 
     b    = block_len or max(5, int(np.sqrt(T)))
-    vals = data.values                          # (T, N) — avoid per-iter DataFrame copy
+    vals = data.values                          # (T, N) - avoid per-iter DataFrame copy
     cols = list(data.columns)
     rng  = np.random.default_rng(42)            # reproducible seed → stable cached CI
 
@@ -930,7 +930,7 @@ def rolling_frequency_connectedness(
     Rolling Baruník-Křehlík (2018) within-band total connectedness over time.
 
     Fits a VAR once per rolling window and computes spectral GFEVD over three
-    frequency bands — no per-band re-fit. Bands follow trading-day periods:
+    frequency bands - no per-band re-fit. Bands follow trading-day periods:
       short  (1-5d)  : ω ∈ [2π/5, π]
       medium (5-22d) : ω ∈ [2π/22, 2π/5]
       long   (22d+)  : ω ∈ [ε, 2π/22]
@@ -1004,7 +1004,7 @@ def regime_conditional_spillover(
                 "total_spillover": np.nan,
                 "from_mean":      np.nan,
                 "to_mean":        np.nan,
-                "top_transmitter": "—",
+                "top_transmitter": " - ",
                 "n_obs":          len(subset),
             }
             continue
@@ -1042,7 +1042,7 @@ def regime_conditional_spillover(
                 "total_spillover": np.nan,
                 "from_mean":       np.nan,
                 "to_mean":         np.nan,
-                "top_transmitter": "—",
+                "top_transmitter": " - ",
                 "n_obs":           len(subset),
             }
 

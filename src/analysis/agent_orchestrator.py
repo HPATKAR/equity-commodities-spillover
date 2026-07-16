@@ -52,7 +52,7 @@ from src.analysis.agent_state import (
 
 # ── Structured handoff schema ─────────────────────────────────────────────────
 # Every agent run() returns this alongside its narrative text.
-# Downstream agents receive these typed fields — NOT a truncated string —
+# Downstream agents receive these typed fields - NOT a truncated string - 
 # so numeric precision is preserved and divergence detection is field-level.
 
 class AgentHandoff(TypedDict, total=False):
@@ -63,7 +63,7 @@ class AgentHandoff(TypedDict, total=False):
     regime:       int           # 1=Normal 2=Elevated 3=Crisis
     risk_score:   Optional[float]   # 0–100 composite, if agent computes it
     signal_class: str           # "macro" | "geo" | "commodity" | "cross_asset" | "audit"
-    # Key typed signals — each agent populates what it knows
+    # Key typed signals - each agent populates what it knows
     yield_curve_spread: Optional[float]   # TLT-SHY 60d spread, bps
     cpi_yoy:            Optional[float]   # CPI YoY %
     cis:                Optional[float]   # Conflict Intensity Score 0–100
@@ -100,16 +100,16 @@ PIPELINE: list[dict] = [
 # Thresholds derived from measured eval hit rates (evals/results-2026-04.md,
 # run 2026-04-28, 56-case benchmark).  Gate = 80% × hit_rate, min 0.35.
 # Agents returning all-None on historical fields (geo, signal_auditor) are
-# eval-limited by offline API access — gate is held at conservative floor.
+# eval-limited by offline API access - gate is held at conservative floor.
 #
 #   Agent                  Measured hit rate   Gate
 #   ─────────────────────  ─────────────────   ────
 #   risk_officer           43.3% (13/30)       0.35
 #   macro_strategist       63.6%  (7/11)       0.50
-#   geopolitical_analyst    0.0%  (0/11)*      0.40  * eval offline — CIS/TPS need live API
+#   geopolitical_analyst    0.0%  (0/11)*      0.40  * eval offline - CIS/TPS need live API
 #   commodities_specialist 33.3%  (1/3)        0.35
-#   stress_engineer       100.0%  (1/1)        0.48  (small sample — hold floor)
-#   signal_auditor          0.0%  (0/4)*       0.40  * eval offline — granger needs live data
+#   stress_engineer       100.0%  (1/1)        0.48  (small sample - hold floor)
+#   signal_auditor          0.0%  (0/4)*       0.40  * eval offline - granger needs live data
 #   trade_structurer      structured output    0.45  (Pydantic schema guards quality)
 #   quality_officer       per-page audit       0.60
 #
@@ -146,10 +146,10 @@ AGENT_TTL: dict[str, int] = {
 class DivergenceRule:
     """
     Specifies the maximum acceptable numeric gap between two agents on a
-    shared typed field.  Frozen dataclass — rules cannot be mutated at runtime.
+    shared typed field.  Frozen dataclass - rules cannot be mutated at runtime.
 
     .check(h_a, h_b) → (diverged: bool, diff: float)
-    Returns (False, 0.0) when either agent has no value for the field —
+    Returns (False, 0.0) when either agent has no value for the field - 
     a missing value is not a divergence, it is a coverage gap.
     """
     agent_a:   str
@@ -178,7 +178,7 @@ class DivergenceRule:
         return diff > self.threshold, round(diff, 2)
 
 
-# All numeric divergence rules in one place — edit here, nowhere else.
+# All numeric divergence rules in one place - edit here, nowhere else.
 _DIVERGENCE_RULES: tuple[DivergenceRule, ...] = (
     DivergenceRule("macro_strategist",     "risk_officer",          "risk_score", 20.0),
     DivergenceRule("geopolitical_analyst", "risk_officer",          "risk_score", 20.0),
@@ -202,16 +202,16 @@ def _validate_handoff(h: "AgentHandoff", agent_id: str) -> list[str]:
     """
     Validate an AgentHandoff against all schema constraints.
     Returns a list of violation strings; empty list means the handoff is valid.
-    Does NOT raise — the caller decides whether to sanitize or reject.
+    Does NOT raise - the caller decides whether to sanitize or reject.
 
     Constraints enforced
     ────────────────────
-    confidence       ∈ [0.0, 1.0]   — not regex-parsed, must be a numeric float
-    regime           ∈ {1, 2, 3}    — 1=Normal 2=Elevated 3=Crisis, nothing else valid
-    risk_score       ∈ [0.0, 100.0] — composite score bounds
-    cis, tps         ∈ [0.0, 100.0] — conflict model score bounds
-    corr_pct         ∈ [0.0, 100.0] — percentile
-    granger_hit_rate ∈ [0.0, 1.0]   — fraction, not percentage
+    confidence       ∈ [0.0, 1.0] - not regex-parsed, must be a numeric float
+    regime           ∈ {1, 2, 3} - 1=Normal 2=Elevated 3=Crisis, nothing else valid
+    risk_score       ∈ [0.0, 100.0] - composite score bounds
+    cis, tps         ∈ [0.0, 100.0] - conflict model score bounds
+    corr_pct         ∈ [0.0, 100.0] - percentile
+    granger_hit_rate ∈ [0.0, 1.0] - fraction, not percentage
     narrative        must not start with an error-marker string; error strings
                      must never be stored as agent output (caught in _run_agent,
                      double-checked here as defence-in-depth)
@@ -283,13 +283,13 @@ def _validate_handoff(h: "AgentHandoff", agent_id: str) -> list[str]:
 def _assert_round_ready(round_n: int, orch: dict) -> None:
     """
     Assert that all prior rounds are marked complete before round_n runs.
-    Raises RuntimeError on violation — a round-ordering bug is a hard error,
+    Raises RuntimeError on violation - a round-ordering bug is a hard error,
     not a warning, because downstream agents would receive incomplete peer context.
     """
     for prior in range(1, round_n):
         if not orch.get("round_complete", {}).get(prior, False):
             raise RuntimeError(
-                f"Pipeline dependency violation: Round {round_n} cannot start — "
+                f"Pipeline dependency violation: Round {round_n} cannot start - "
                 f"Round {prior} is not marked complete.  Check PIPELINE definition "
                 f"and call order in Orchestrator.run()."
             )
@@ -297,7 +297,7 @@ def _assert_round_ready(round_n: int, orch: dict) -> None:
 
 def _validate_pipeline_config() -> None:
     """
-    Module-level sanity check — runs once at import time.
+    Module-level sanity check - runs once at import time.
     Verifies that PIPELINE, CONFIDENCE_THRESHOLDS, and AGENT_TTL are
     internally consistent so misconfigurations surface immediately, not
     silently at runtime during a live session.
@@ -372,7 +372,7 @@ def _store_handoff(agent_id: str, handoff: AgentHandoff) -> None:
       1. Each violation is written to trace_logger as HandoffValidation error.
       2. Out-of-range numeric fields are clamped in-place (e.g. confidence
          clipped to [0,1]) so downstream agents still receive a usable value.
-      3. An invalid regime is reset to 1 (Normal) — the safe fallback.
+      3. An invalid regime is reset to 1 (Normal) - the safe fallback.
     The harness never silently discards a handoff; clamping + tracing is
     preferable to dropping, because downstream agents need *some* peer signal.
     """
@@ -385,7 +385,7 @@ def _store_handoff(agent_id: str, handoff: AgentHandoff) -> None:
         except Exception:
             pass
 
-        # Sanitize in-place — clamp numeric fields into valid ranges
+        # Sanitize in-place - clamp numeric fields into valid ranges
         conf = handoff.get("confidence")
         if conf is not None:
             try:
@@ -415,7 +415,7 @@ def _store_handoff(agent_id: str, handoff: AgentHandoff) -> None:
                 except (TypeError, ValueError):
                     handoff[pct_field] = None
 
-        # Strip error-marker narratives — must not enter peer context
+        # Strip error-marker narratives - must not enter peer context
         narrative = handoff.get("narrative", "")
         if narrative and any(m in narrative.lower() for m in _ERROR_MARKERS):
             handoff["narrative"] = ""
@@ -434,7 +434,7 @@ def _get_handoff(agent_id: str) -> AgentHandoff | None:
 def _peer_context(agent_id: str) -> dict[str, "AgentHandoff"]:
     """
     Build structured peer context for an agent.
-    Returns typed AgentHandoff dicts — NOT truncated strings — so numeric
+    Returns typed AgentHandoff dicts - NOT truncated strings - so numeric
     precision is preserved across the pipeline handoff chain.
     Downstream agents receive e.g. peer["macro_strategist"]["yield_curve_spread"]
     as a float, not a substring of a 400-char blob.
@@ -456,7 +456,7 @@ def _peer_context(agent_id: str) -> dict[str, "AgentHandoff"]:
                 peers[pid] = AgentHandoff(
                     agent_id=pid,
                     ts=a.get("last_run", datetime.datetime.now()),
-                    narrative=raw,   # FULL text — no truncation
+                    narrative=raw,   # FULL text - no truncation
                     confidence=a.get("confidence", 0.5),
                     regime=None, risk_score=None, signal_class="unknown",
                     routed_to=[],
@@ -471,7 +471,7 @@ def _detect_divergence(
     Numeric field-level divergence detection driven by _DIVERGENCE_RULES.
 
     Iterates all DivergenceRule instances applicable to agent_id, calls
-    rule.check() — the single authoritative comparison — and writes a
+    rule.check() - the single authoritative comparison - and writes a
     verification event to the trace CSV for every rule checked (fired or
     passed).  Only fired rules append to the returned flag list.
     """
@@ -550,7 +550,7 @@ class Orchestrator:
         """
         orch = self.orch
         orch["pipeline_status"] = "running"
-        # Clear stale divergence flags from previous run — flags must reflect
+        # Clear stale divergence flags from previous run - flags must reflect
         # the current pipeline execution only, not accumulate across sessions.
         orch["divergence_flags"] = []
         results: dict[str, Any] = {}
@@ -575,7 +575,7 @@ class Orchestrator:
                 result = self._run_agent(aid, ctx)
                 results[aid] = result
 
-                # Skip handoff and divergence for failed agents — an error
+                # Skip handoff and divergence for failed agents - an error
                 # result has no typed fields to check and must not pollute
                 # downstream peer context with empty/wrong numeric data.
                 if result.get("error"):
@@ -585,7 +585,7 @@ class Orchestrator:
                 h = self._build_handoff(aid, result, market_context)
                 _store_handoff(aid, h)
 
-                # Confidence gate — log to trace when output falls below threshold.
+                # Confidence gate - log to trace when output falls below threshold.
                 # Output is still used downstream but flagged so peers and UI
                 # know they are working with uncertain upstream data.
                 if h.get("low_confidence"):
@@ -598,10 +598,10 @@ class Orchestrator:
                     except Exception:
                         pass
                     log_activity(aid, "low confidence gate",
-                                 f"{conf_detail} — output flagged, downstream peers notified",
+                                 f"{conf_detail} - output flagged, downstream peers notified",
                                  "warning")
 
-                # Numeric field-level divergence detection — runs on the handoff
+                # Numeric field-level divergence detection - runs on the handoff
                 # regardless of whether narrative is populated (field check is
                 # independent of text; empty narrative does not skip this).
                 flags = _detect_divergence(aid, h, orch)
@@ -639,7 +639,7 @@ class Orchestrator:
             ctx = self._build_context(aid, market_context)
             result = self._run_agent(aid, ctx)
             results[aid] = result
-            # Store handoff — critical so Round 2/3 agents that call
+            # Store handoff - critical so Round 2/3 agents that call
             # _peer_context() later in the session find typed data.
             h = self._build_handoff(aid, result, market_context)
             _store_handoff(aid, h)
@@ -663,14 +663,14 @@ class Orchestrator:
         """
         Extract typed numeric fields from an agent result + market context
         and package them as an AgentHandoff for downstream peer consumption.
-        All fields are typed — no regex parsing, no string truncation.
+        All fields are typed - no regex parsing, no string truncation.
         """
         a     = get_agent(agent_id)
         conf  = result.get("confidence", a.get("confidence", 0.5))
         regime_map = {"Normal": 1, "Elevated": 2, "Crisis": 3}
         # Prefer agent's own regime assessment (result["regime"]) over the
         # shared market-context regime.  Using mc["regime_name"] for ALL agents
-        # makes them identical, rendering regime divergence checks vacuous —
+        # makes them identical, rendering regime divergence checks vacuous - 
         # every agent would report the same value and Δ would always be 0.
         agent_regime_raw = result.get("regime_name") or mc.get("regime_name", "Normal")
         regime_int = result.get("regime") or regime_map.get(agent_regime_raw, 1)
@@ -697,7 +697,7 @@ class Orchestrator:
 
         elif agent_id == "geopolitical_analyst":
             h["signal_class"] = "geo"
-            # Pull live CIS/TPS from conflict model — not from agent text
+            # Pull live CIS/TPS from conflict model - not from agent text
             try:
                 from src.analysis.conflict_model import score_all_conflicts, aggregate_portfolio_scores
                 agg = aggregate_portfolio_scores(score_all_conflicts())
@@ -813,7 +813,7 @@ class Orchestrator:
             }
 
         if agent_id == "risk_officer":
-            # peer_ctx now contains typed AgentHandoff dicts — numeric fields preserved
+            # peer_ctx now contains typed AgentHandoff dicts - numeric fields preserved
             geo_h   = peer_ctx.get("geopolitical_analyst", {})
             macro_h = peer_ctx.get("macro_strategist", {})
             audit_h = peer_ctx.get("signal_auditor", {})
@@ -830,7 +830,7 @@ class Orchestrator:
                 "n_alerts":          mc.get("n_alerts", 0),
                 "alert_categories":  mc.get("alert_categories", []),
                 "alert_summaries":   mc.get("alert_summaries", []),
-                # Typed peer fields — downstream agents use these directly
+                # Typed peer fields - downstream agents use these directly
                 "peer_cis":          geo_h.get("cis"),
                 "peer_tps":          geo_h.get("tps"),
                 "peer_top_conflict": geo_h.get("top_conflict"),
@@ -857,7 +857,7 @@ class Orchestrator:
                 "crowded_shorts":    mc.get("crowded_shorts", []),
                 "avg_corr":          mc.get("avg_corr"),
                 "regime_name":       mc.get("regime_name"),
-                # Typed geo fields — not a truncated string
+                # Typed geo fields - not a truncated string
                 "geo_cis":           geo_h.get("cis"),
                 "geo_tps":           geo_h.get("tps"),
                 "geo_top_conflict":  geo_h.get("top_conflict"),
@@ -952,7 +952,7 @@ class Orchestrator:
                 # Guard: agents return an "unavailable" string as narrative when
                 # _call_ai raises (e.g. "Risk Officer unavailable: ...").
                 # That error string must not be stored as agent output or used
-                # to build a handoff — treat it as a recoverable failure.
+                # to build a handoff - treat it as a recoverable failure.
                 narrative = result.get("narrative", "")
                 if narrative and "unavailable:" in narrative.lower():
                     last_err = narrative
@@ -970,7 +970,7 @@ class Orchestrator:
                 return result
             except Exception as e:
                 last_err = e
-                # Log failure to trace for harness observability — failed calls
+                # Log failure to trace for harness observability - failed calls
                 # are as important as successes for auditing pipeline health.
                 try:
                     from src.analysis.trace_logger import log_failure
@@ -1007,7 +1007,7 @@ class Orchestrator:
         """
         Returns list of numeric divergence dicts with fields:
           agent_a, agent_b, field, val_a, val_b, diff, threshold, ts
-        Use .get("diff") and .get("field") for display — not keyword strings.
+        Use .get("diff") and .get("field") for display - not keyword strings.
         """
         return self.orch.get("divergence_flags", [])
 
@@ -1039,5 +1039,5 @@ def get_orchestrator(provider: str | None, api_key: str) -> Orchestrator:
 
 # ── Module-level config validation ───────────────────────────────────────────
 # Runs once at import time.  Any PIPELINE/threshold misconfiguration raises
-# AssertionError immediately — not silently at runtime during a live session.
+# AssertionError immediately - not silently at runtime during a live session.
 _validate_pipeline_config()

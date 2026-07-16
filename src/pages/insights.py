@@ -111,7 +111,7 @@ def _build_insights(
     cards: list[dict] = []
     _n_attempted = 0  # tracks how many sections were attempted (for load-count display)
 
-    # Pre-compute shared series once — sections 1, 2, 4 all use these
+    # Pre-compute shared series once - sections 1, 2, 4 all use these
     try:
         _avg_corr  = average_cross_corr_series(eq_r, cmd_r, window=60)
         _regimes   = detect_correlation_regime(_avg_corr)
@@ -1093,7 +1093,7 @@ def _build_private_credit_insight(
     if not scores:
         return dict(
             emoji="○",
-            headline="Private credit bubble risk — data unavailable",
+            headline="Private credit bubble risk - data unavailable",
             action="FRED API key not configured or market data fetch failed. "
                    "Add a FRED key in Settings to enable HY OAS spread analysis.",
             color=_GREY,
@@ -1219,7 +1219,7 @@ def _build_private_credit_insight(
         detail_html="".join(_d),
         confidence=conf,
         confidence_label=conf_lbl,
-        # Compact summary for the Command Center "Cross-Asset Signals" cell —
+        # Compact summary for the Command Center "Cross-Asset Signals" cell - 
         # same computation, terse projection (single source of truth).
         # HY OAS is FRED percent units (3.42 = 342 bps); keep raw, format at render.
         _score=round(composite),
@@ -1430,7 +1430,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
         'TRADE IDEA METHODOLOGY</p>',
         unsafe_allow_html=True,
     )
-    with st.expander("Backtest & Projected P&L — Framework, Assumptions, and Limitations", expanded=False):
+    with st.expander("Backtest & Projected P&L - Framework, Assumptions, and Limitations", expanded=False):
         st.markdown(
             """
 <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#cccccc;line-height:1.7">
@@ -1439,7 +1439,7 @@ def page_insights(start: str, end: str, fred_key: str = "") -> None:
 letter-spacing:.12em;color:#CFB991;text-transform:uppercase;margin-bottom:4px">
 HISTORICAL BACKTEST</p>
 
-The backtest simulates entries triggered by **regime transition events** — specifically the first day
+The backtest simulates entries triggered by **regime transition events** - specifically the first day
 the 60-day average cross-asset correlation series enters a qualifying regime (Elevated or Crisis for
 hedge trades; Normal or Decorrelated for growth trades). This rising-edge signal approximates the
 moment a practitioner would receive the regime alert.
@@ -1472,7 +1472,7 @@ return of this trade across all plausible macroeconomic scenarios?"
 - **Long legs** receive: `base_return × holding_years + scenario_adjustment × geo_multiplier × holding_years`
 - **Short legs** receive zero unconditional drift. The alpha in a pair trade is the *spread
   divergence* under a scenario, not betting against the long-run equity risk premium.
-  Including the ERP would cause all short-equity legs to show −2%/quarter unconditionally —
+  Including the ERP would cause all short-equity legs to show −2%/quarter unconditionally - 
   a model artefact, not a trade reality.
 
 **Regime-conditioned scenario weights** replace the naive flat probability distribution.
@@ -1494,7 +1494,7 @@ KNOWN LIMITATIONS</p>
 - **Macro trades require patience.** A 126-day backtest horizon still understates the full
   6–18 month thesis. The backtest should be read as "early-period performance," not total return.
 - **Scenario P&L is a model prior.** Asset return distributions, scenario adjustments, and
-  geo multipliers are calibrated from historical ranges — not a forecast. They are updated as
+  geo multipliers are calibrated from historical ranges - not a forecast. They are updated as
   the macro environment evolves.
 - **No transaction costs, slippage, or carry.** ETF bid-ask spreads, borrowing costs on short
   legs, and FX hedging costs are excluded. Real-world returns will be modestly lower.

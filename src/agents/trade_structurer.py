@@ -5,7 +5,7 @@ to the Pending Review Panel for human approval before display.
 
 Structured output: uses Pydantic TradeOutput schema with up to 2 retries on
 validation failure. The model returns JSON; we validate the schema before
-the output is accepted — junk never passes forward silently.
+the output is accepted - junk never passes forward silently.
 Cached 1 hour per idea set.
 """
 
@@ -36,24 +36,24 @@ _SYSTEM = (
     "YOUR TASK:\n"
     "Using the quantitative signals provided in the context, generate ONE high-conviction, "
     "academically defensible cross-asset trade idea. The idea must be grounded in the "
-    "spillover/regime data — not in general market commentary.\n\n"
+    "spillover/regime data - not in general market commentary.\n\n"
 
     "MANDATORY OUTPUT REQUIREMENTS:\n"
-    "1. SPECIFIC INDIVIDUAL STOCKS — use the live stock prices provided in the context. "
+    "1. SPECIFIC INDIVIDUAL STOCKS - use the live stock prices provided in the context. "
     "Example output: 'Buy XOM at $113.45, target $129.00 (+13.7%), stop $107.50 (−5.2%)'. "
     "Do NOT produce vague ideas like 'Long energy sector' or 'Long XLE'. "
     "Name 1-2 actual stocks from the price list, anchor to their live price.\n"
     "2. Options alternative tied to the specific stock "
-    "(e.g. 'Buy XOM $115C 45DTE / Sell $125C — debit spread est. ~$3.20')\n"
+    "(e.g. 'Buy XOM $115C 45DTE / Sell $125C - debit spread est. ~$3.20')\n"
     "3. entry_price_ref = live price ± a technical trigger (e.g. 'XOM $113.45 on next open')\n"
     "4. upside_pct = specific dollar target AND % (e.g. '$129.00 (+13.7%) in 3-5 weeks')\n"
     "5. stop_loss = specific dollar level AND % (e.g. '$107.50 (−5.2%) hard stop')\n"
     "6. evidence must cite ≥2 model metrics from the context "
     "(e.g. 'CIS=72, TPS=58, regime=Elevated, XOM live=$113.45')\n"
-    "7. ONLY generate if confidence is HIGH — otherwise mark 'Medium' or 'Low' to be filtered\n\n"
+    "7. ONLY generate if confidence is HIGH - otherwise mark 'Medium' or 'Low' to be filtered\n\n"
 
-    "This is for academic research — not investment advice. No portfolio sizing or leverage.\n"
-    "Respond ONLY with a valid JSON object — no markdown fences, no extra text."
+    "This is for academic research - not investment advice. No portfolio sizing or leverage.\n"
+    "Respond ONLY with a valid JSON object - no markdown fences, no extra text."
 )
 
 _AGENT = "trade_structurer"
@@ -68,10 +68,10 @@ class TradeOutput(BaseModel):
     entry_price_ref:       str = Field(description="Entry price reference, e.g. 'XOM ~$112 on breakout above 50d MA; GLD ~$215'")
     upside_pct:            str = Field(description="% upside target with price level, e.g. '+12-18% → XOM $128-132'")
     stop_loss:             str = Field(description="Stop-loss as % from entry, e.g. 'Stop XOM below $107 (−4.5%)'")
-    options_structure:     str = Field(description="Options alternative if applicable, e.g. 'Buy XOM $115C 45DTE / Sell $125C — debit ~$3.20; or GLD $210P'")
+    options_structure:     str = Field(description="Options alternative if applicable, e.g. 'Buy XOM $115C 45DTE / Sell $125C - debit ~$3.20; or GLD $210P'")
     rationale:             str = Field(description="2-3 sentences grounded in the provided market data")
     evidence:              str = Field(description="Specific data points from the context supporting this idea")
-    confidence_level:      str = Field(description="Must be 'High' — only generate when high confidence. Include one-line reason.")
+    confidence_level:      str = Field(description="Must be 'High' - only generate when high confidence. Include one-line reason.")
     key_uncertainty:       str = Field(description="What the available data cannot resolve")
     invalidation_condition: str = Field(description="Market condition that would invalidate this view")
     alternative_view:      str = Field(description="One plausible alternative interpretation of the same data")
@@ -85,10 +85,10 @@ _SCHEMA_HINT = """{
   "entry_price_ref":        "XOM ~$112, CVX ~$152, JETS ~$18 (reference at signal date)",
   "upside_pct":             "+12-18% → XOM $126-132, CVX $170-180 over 3-6 weeks",
   "stop_loss":              "XOM closes below $107 (−4.5%); JETS rallies above $20 (+11%)",
-  "options_structure":      "Alt: Buy XOM $115C (45 DTE) / Sell $125C — debit ~$3.20; or USO $80C",
+  "options_structure":      "Alt: Buy XOM $115C (45 DTE) / Sell $125C - debit ~$3.20; or USO $80C",
   "rationale":              "2-3 sentences from provided data",
   "evidence":               "specific data points supporting this idea",
-  "confidence_level":       "High — [one-line reason]",
+  "confidence_level":       "High - [one-line reason]",
   "key_uncertainty":        "what the data cannot resolve",
   "invalidation_condition": "market condition that contradicts this view",
   "alternative_view":       "one plausible alternative interpretation"
@@ -120,10 +120,10 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> dict:
         "• options_structure = a specific options play on the same stock\n"
         "• evidence MUST cite the live price AND ≥2 model metrics (CIS, TPS, regime, etc.)\n"
         "• If the regime/signal data does NOT clearly support a specific stock play, set "
-        "confidence_level = 'Medium — [reason]' or 'Low — [reason]' and the system discards it\n"
-        "• Academic research only — no portfolio sizing, no leverage\n"
+        "confidence_level = 'Medium - [reason]' or 'Low - [reason]' and the system discards it\n"
+        "• Academic research only - no portfolio sizing, no leverage\n"
         f"Respond with a JSON object matching this structure:\n{_SCHEMA_HINT}\n"
-        "Return ONLY the JSON object — no markdown fences, no extra text."
+        "Return ONLY the JSON object - no markdown fences, no extra text."
     )
 
     last_error = ""
@@ -253,7 +253,7 @@ def run(
 
     if conf < 0.45:
         set_status(_AGENT, "monitoring")
-        log_activity(_AGENT, "confidence below threshold — skipped", f"conf={conf:.2f}", "info")
+        log_activity(_AGENT, "confidence below threshold - skipped", f"conf={conf:.2f}", "info")
         return {"status": "monitoring", "reason": f"confidence too low ({conf:.2f})"}
 
     trade_dict = _call_ai(ctx_str, provider, api_key)
@@ -285,12 +285,12 @@ def run(
         f"INVALIDATED IF: {trade_dict.get('invalidation_condition', '')}",
         f"ALT VIEW: {trade_dict.get('alternative_view', '')}",
     ])
-    summary = f"{direction} — Entry: {trade_dict.get('entry_price_ref', '')} | Upside: {trade_dict.get('upside_pct', '')}"
+    summary = f"{direction} - Entry: {trade_dict.get('entry_price_ref', '')} | Upside: {trade_dict.get('upside_pct', '')}"
 
     # Only route to approval queue if HIGH confidence
     if not conf_level.lower().startswith("high"):
         set_status(_AGENT, "monitoring")
-        log_activity(_AGENT, "idea filtered — not high confidence", conf_level[:80], "info")
+        log_activity(_AGENT, "idea filtered - not high confidence", conf_level[:80], "info")
         return {
             "narrative":  narrative,
             "trade":      trade_dict,

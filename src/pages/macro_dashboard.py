@@ -502,7 +502,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
     today      = date.today()
     perf_start = (today - timedelta(days=400)).isoformat()
 
-    # Pre-load all data in parallel — all loaders are @st.cache_data with no st.* calls.
+    # Pre-load all data in parallel - all loaders are @st.cache_data with no st.* calls.
     from concurrent.futures import ThreadPoolExecutor
     macro_data: dict = {}
     money_data: dict = {}
@@ -1482,7 +1482,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                     key="macro_pdf_dl",
                 )
             except Exception as e:
-                st.error("PDF generation failed — see logs.")
+                st.error("PDF generation failed - see logs.")
 
     # ── AI Macro Strategist ────────────────────────────────────────────────
     try:
@@ -1589,7 +1589,7 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                         f'<div style="background:#111;border-left:2px solid #e67e22;'
                         f'padding:6px 10px;margin-bottom:4px;font-size:0.70rem">'
                         f'<b style="color:#e67e22">{cid.replace("_"," ").upper()}</b> · '
-                        f'CIS {_cis:.0f} · TPS {_tps:.0f} — '
+                        f'CIS {_cis:.0f} · TPS {_tps:.0f} - '
                         f'{"Energy/agriculture supply disruption → imported inflation" if _tps >= 50 else "Moderate transmission via trade/shipping routes"}'
                         f'</div>'
                     )
@@ -1600,10 +1600,10 @@ def page_macro_dashboard(start: str, end: str, fred_key: str = "") -> None:
                 f"Active scenario: <b>{_sc_md['label']}</b> (geo_mult={_sc_md['geo_mult']:.2f}x, "
                 f"vol_mult={_sc_md['vol_mult']:.2f}x). "
                 f"The primary macro channels are: "
-                f"(1) <b>Commodity inflation</b> — supply disruption premia feed into PPI/CPI; "
-                f"(2) <b>FX</b> — USD safe-haven bid compresses EM currencies and widens CADs; "
-                f"(3) <b>Rate expectations</b> — persistent geo-inflation complicates Fed/ECB cuts; "
-                f"(4) <b>Risk premium</b> — equity multiples compress under elevated uncertainty."
+                f"(1) <b>Commodity inflation</b> - supply disruption premia feed into PPI/CPI; "
+                f"(2) <b>FX</b> - USD safe-haven bid compresses EM currencies and widens CADs; "
+                f"(3) <b>Rate expectations</b> - persistent geo-inflation complicates Fed/ECB cuts; "
+                f"(4) <b>Risk premium</b> - equity multiples compress under elevated uncertainty."
             )
 
             st.markdown(

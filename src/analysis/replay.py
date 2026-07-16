@@ -1,41 +1,41 @@
 """
-Replay Mode — strict point-in-time (PIT) reconstruction of the terminal's call.
+Replay Mode - strict point-in-time (PIT) reconstruction of the terminal's call.
 
 Points the terminal at a past date and recomputes what it WOULD have said using
 ONLY data available up to that timestamp, then fast-forwards to compare against
 the actual outcome. Each tracked conflict breakout becomes a worked case study.
 
 ════════════════════════════════════════════════════════════════════════════
-THE ONE RULE — CUTOFF ENFORCEMENT
+THE ONE RULE - CUTOFF ENFORCEMENT
 ════════════════════════════════════════════════════════════════════════════
 No data after the replay cutoff may touch the terminal-call computation. Ever.
 A single leaked future point makes the terminal look brilliant and it's a lie.
 
 Enforcement is three-layered:
 
-1. `pit_slice()` / `pit_assert()` — THE single choke point. Every DataFrame or
+1. `pit_slice()` / `pit_assert()` - THE single choke point. Every DataFrame or
    Series entering the computation passes through `pit_slice`, which trims to
    index ≤ cutoff and then re-asserts. `pit_assert` raises `LookaheadError`
-   naming the offending source and timestamp — loud, never silent. The fetch
+   naming the offending source and timestamp - loud, never silent. The fetch
    layer is asked for end=cutoff but NEVER trusted: yfinance end-exclusivity,
    the loader's disk cache, and tz-aware indices are all leak vectors, so we
    slice-and-assert regardless of what the loader claims it returned.
 
-2. Structural separation — `terminal_call()` computes and returns a frozen
+2. Structural separation - `terminal_call()` computes and returns a frozen
    dict; `actual_outcome()` / `trade_leg_outcomes()` are SEPARATE functions
    that load post-cutoff data. Their outputs render next to the call but can
    never flow into it: no shared frames, no shared namespace.
 
-3. `tests/test_replay_pit.py` — injects a leaked future row and asserts
+3. `tests/test_replay_pit.py` - injects a leaked future row and asserts
    `LookaheadError` fires.
 
 What honestly CANNOT be replayed (shown in the UI, never silently substituted
-with today's values): GDELT, ACLED, PortWatch, EIA, COT, RSS — no historical
+with today's values): GDELT, ACLED, PortWatch, EIA, COT, RSS - no historical
 API snapshots exist. The replay GRS is therefore the market-confirmation proxy
 layer (`risk_score_history`), whose own docstring states CIS/news are not
 available historically. Additionally, the CONFLICTS registry's transmission
 weights were calibrated TODAY with knowledge of how these conflicts played
-out — that structural hindsight is disclosed on-screen, not hidden.
+out - that structural hindsight is disclosed on-screen, not hidden.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ import pandas as pd
 from src.data.config import CONFLICTS
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Layer 1 — the choke point
+# Layer 1 - the choke point
 # ═══════════════════════════════════════════════════════════════════════════
 
 class LookaheadError(RuntimeError):
@@ -82,7 +82,7 @@ def pit_assert(obj: pd.DataFrame | pd.Series, cutoff, source: str) -> None:
     idx = _naive_index(obj)
     if not isinstance(idx, pd.DatetimeIndex):
         raise LookaheadError(
-            f"PIT VIOLATION [{source}]: non-datetime index — cannot verify cutoff."
+            f"PIT VIOLATION [{source}]: non-datetime index - cannot verify cutoff."
         )
     mx = idx.max()
     limit = _naive_ts(cutoff)
@@ -90,7 +90,7 @@ def pit_assert(obj: pd.DataFrame | pd.Series, cutoff, source: str) -> None:
         n_bad = int((idx > limit).sum())
         raise LookaheadError(
             f"PIT VIOLATION [{source}]: {n_bad} observation(s) after cutoff "
-            f"{limit.date()} — latest is {mx}. Future data must never reach "
+            f"{limit.date()} - latest is {mx}. Future data must never reach "
             f"the replay computation."
         )
 
@@ -102,7 +102,7 @@ def pit_slice(
 ) -> pd.DataFrame | pd.Series:
     """
     THE single choke point. Trim to index ≤ cutoff, then re-assert.
-    All data entering `terminal_call` passes through here — the fetch layer
+    All data entering `terminal_call` passes through here - the fetch layer
     is never trusted to have honoured its end date.
     """
     if obj is None or len(obj) == 0:
@@ -110,7 +110,7 @@ def pit_slice(
     idx = _naive_index(obj)
     if not isinstance(idx, pd.DatetimeIndex):
         raise LookaheadError(
-            f"PIT VIOLATION [{source}]: non-datetime index — cannot slice to cutoff."
+            f"PIT VIOLATION [{source}]: non-datetime index - cannot slice to cutoff."
         )
     out = obj.loc[idx <= _naive_ts(cutoff)]
     pit_assert(out, cutoff, source)   # belt and braces: slicing bug = loud failure
@@ -118,7 +118,7 @@ def pit_slice(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Replay presets — the tracked conflict breakouts
+# Replay presets - the tracked conflict breakouts
 # ═══════════════════════════════════════════════════════════════════════════
 
 def replay_presets() -> list[dict]:
@@ -138,12 +138,12 @@ def replay_presets() -> list[dict]:
 # Static (no-live-API) conflict scoring as-of the cutoff
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Stated replay rules — not leaked data:
+# Stated replay rules - not leaked data:
 #   * Conflicts whose start date is AFTER the cutoff are EXCLUDED entirely
 #     (replaying Ukraine 2022 must not know Iran/Hormuz 2025 exists).
 #   * recency is computed against the CUTOFF, not today.
 #   * Within 90 days of onset a conflict is treated as "active" and within
-#     30 days its escalation_trend is "escalating" — the breakout IS the
+#     30 days its escalation_trend is "escalating" - the breakout IS the
 #     observable escalation on that day. Otherwise today's registry statics
 #     apply, with the hindsight caveat disclosed in the UI.
 _ONSET_ACTIVE_DAYS = 90
@@ -162,7 +162,7 @@ def _recency_at(conflict: dict, cutoff: datetime.date, state: str) -> float:
 
 def replay_conflict_scores(cutoff: datetime.date) -> dict[str, dict]:
     """
-    CIS/TPS per conflict as-of cutoff — ZERO live API calls (GDELT/ACLED have
+    CIS/TPS per conflict as-of cutoff - ZERO live API calls (GDELT/ACLED have
     no historical snapshots; attempting them would return TODAY's state, which
     is lookahead). Mirrors compute_cis()'s static path with cutoff-aware
     recency/state/escalation per the stated rules above.
@@ -175,7 +175,7 @@ def replay_conflict_scores(cutoff: datetime.date) -> dict[str, dict]:
     for c in CONFLICTS:
         start = c.get("start")
         if not isinstance(start, datetime.date) or start > cutoff:
-            continue    # did not exist yet — excluding it IS the PIT rule
+            continue    # did not exist yet - excluding it IS the PIT rule
 
         days_since = (cutoff - start).days
         if days_since <= _ONSET_ACTIVE_DAYS:
@@ -202,7 +202,7 @@ def replay_conflict_scores(cutoff: datetime.date) -> dict[str, dict]:
             sum(_CIS_WEIGHTS[k] * dims[k] for k in _CIS_WEIGHTS) * state_mult * 100,
             0, 100,
         ))
-        # compute_tps reads structural transmission channels only — no live I/O.
+        # compute_tps reads structural transmission channels only - no live I/O.
         # Recompute with the as-of state multiplier.
         c_asof = {**c, "state": state}
         tps = compute_tps(c_asof)
@@ -270,7 +270,7 @@ def replay_asset_scores(conflict_results: dict[str, dict]) -> dict[str, dict]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Layer 2a — the frozen terminal call (PIT side)
+# Layer 2a - the frozen terminal call (PIT side)
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Transmission channel pairs surfaced in the call
@@ -292,7 +292,7 @@ def terminal_call(
 ) -> dict:
     """
     Everything the terminal would have said at end-of-day `cutoff`, computed
-    from return frames that are pit-sliced ON ENTRY — the caller's fetch
+    from return frames that are pit-sliced ON ENTRY - the caller's fetch
     window is never trusted. Returns a frozen dict; nothing here may receive
     post-cutoff data (enforced by pit_slice/pit_assert on every input).
     """
@@ -308,12 +308,12 @@ def terminal_call(
 
     out: dict = {"cutoff": str(cutoff), "pit": {}}
 
-    # Record the newest observation per source — displayed as proof of cutoff
+    # Record the newest observation per source - displayed as proof of cutoff
     for name, df in (("equity_returns", eq_r), ("commodity_returns", cmd_r)):
         pit_assert(df, cutoff, name)          # re-assert before use
         out["pit"][name] = str(_naive_index(df).max().date()) if len(df) else "empty"
 
-    # ── GRS (market-confirmation proxy layer — the replayable GRS) ─────────
+    # ── GRS (market-confirmation proxy layer - the replayable GRS) ─────────
     grs_series = risk_score_history(pd.Series(dtype=float), cmd_r, eq_r)
     grs_series = pit_slice(grs_series, cutoff, "grs_history")
     out["grs"] = float(grs_series.iloc[-1]) if len(grs_series) else float("nan")
@@ -384,7 +384,7 @@ def terminal_call(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Layer 2b — the actual outcome (post-cutoff side, structurally separate)
+# Layer 2b - the actual outcome (post-cutoff side, structurally separate)
 # ═══════════════════════════════════════════════════════════════════════════
 # These functions load data AFTER the cutoff on purpose. Their outputs are
 # rendered NEXT TO the frozen call and must never be passed back into
@@ -416,7 +416,7 @@ def actual_outcome(
 ) -> dict:
     """
     What actually happened after the cutoff: crude / gold / freight / equities.
-    Deliberately loads post-cutoff data — never feed this into terminal_call.
+    Deliberately loads post-cutoff data - never feed this into terminal_call.
     """
     from src.data.loader import load_returns
 
@@ -439,7 +439,7 @@ def actual_outcome(
         fwd = combined[a].loc[idx > _naive_ts(cutoff)].dropna().iloc[:max(horizons)]
         out["paths"][a] = (np.exp(np.log1p(fwd).cumsum()) - 1.0) * 100
 
-    # Freight proxy — BDRY only trades from 2018; marked unavailable otherwise
+    # Freight proxy - BDRY only trades from 2018; marked unavailable otherwise
     try:
         import yfinance as yf
         px = yf.download(_FREIGHT_TICKER, start=start, end=end,
@@ -465,7 +465,7 @@ def trade_leg_outcomes(
     """
     Forward P&L of each generated trade thesis: equal-weight legs, Long legs
     positive / Short legs inverted, over `horizon` trading days after cutoff.
-    Post-cutoff by design — outcome side only.
+    Post-cutoff by design - outcome side only.
     """
     import yfinance as yf
 
@@ -503,7 +503,7 @@ def trade_leg_outcomes(
             "name": t.get("name", ""), "conflict_id": t.get("conflict_id", ""),
             "confidence": t.get("confidence", 0.0),
             "legs": leg_rows, "pnl": pnl, "horizon": horizon,
-            "verdict": ("—" if np.isnan(pnl)
+            "verdict": (" - " if np.isnan(pnl)
                         else "PAID" if pnl > 0.01
                         else "FLAT" if pnl > -0.01 else "LOST"),
         })

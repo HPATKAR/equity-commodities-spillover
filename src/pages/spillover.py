@@ -39,15 +39,27 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                  "Step 4a of 7 · Direction Test · Granger Causality · Transfer Entropy · Diebold-Yilmaz · Network Graph")
     _no_api_key_banner("AI spillover interpretation")
     _page_intro(
-        "<strong>Research question for this page: which market is statistically leading the other — "
-        "are equity returns Granger-preceding commodity returns, or the reverse?</strong> "
+        "<strong>Research question for this page: how does risk propagate across markets, and which "
+        "asset is the net transmitter versus receiver of shocks?</strong> "
+        "Read this as a risk-monitoring view, not a return forecast. "
         "Correlation (on the previous page) establishes <em>that</em> two markets move together. "
-        "Spillover analysis tests <em>which direction the statistical lead runs</em>. "
-        "Granger causality tests whether past equity returns statistically precede future commodity returns. "
+        "Spillover analysis measures <em>how a shock to one propagates to the other</em> and which "
+        "side leads the transmission. Granger causality tests whether past returns of one market "
+        "statistically precede the other (a weak 1 to 3 day association, not tradeable prediction). "
         "Transfer entropy measures directional information flow without assuming linearity. "
-        "Diebold-Yilmaz decomposes forecast error variance to assign a net transmitter or receiver "
-        "score to every asset. The dominant direction here — equity-led or commodity-led — is the "
-        "key input to the regime classification on the Overview page."
+        "Diebold-Yilmaz decomposes forecast-error variance to score each asset as a net transmitter "
+        "or receiver of volatility. Total connectedness is the headline: when it is high, shocks "
+        "spread fast and diversification fails when you need it most, which is the key input to the "
+        "regime classification on the Overview page."
+    )
+    _definition_block(
+        "Read as risk monitoring, not a forecast",
+        "This page maps how shocks propagate and who amplifies them, for hedge sizing and regime "
+        "classification. It is a coincident risk gauge, not an alpha signal. In this terminal's own "
+        "point-in-time validation, total connectedness tracks <strong>forward volatility</strong> "
+        "(Spearman rho about 0.16 to 0.19, hit rate near 55 percent), but the transmission "
+        "<strong>direction does not predict forward returns</strong>. Treat the transmitter and "
+        "receiver labels as a contagion map that sizes hedges, never as a directional trade signal."
     )
 
     # ── Conflict transmission context banner ──────────────────────────────────
@@ -129,7 +141,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
     # ══════════════════════════════════════════════════════════════════════
     # Pre-compute all three analyses in parallel (each is @st.cache_data,
-    # pure-numpy/statsmodels — no st.* calls inside, safe to thread).
+    # pure-numpy/statsmodels - no st.* calls inside, safe to thread).
     # Cold first-visit goes from ~17 s sequential → ~7 s parallel.
     # ══════════════════════════════════════════════════════════════════════
     dy_valid = [c for c in sel_all if c in all_r.columns]
@@ -166,7 +178,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             c2e     = sig_df[sig_df["direction"] == "Commodity → Equity"]
             c2e_holm = holm_df[holm_df["direction"] == "Commodity → Equity"]
 
-            # Metrics row — show both raw p<.05 count and Holm-corrected count
+            # Metrics row - show both raw p<.05 count and Holm-corrected count
             m1, m2, m3 = st.columns(3)
             m1.metric("Tested pairs",          len(granger_df))
             m2.metric("Sig (p<.05 unadj.)",    len(sig_df),
@@ -204,7 +216,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 _panel_note("Red = strong lead (low p-value). Energy commodities typically lead equities by 1–3 days.")
                 _insight_note(
                     "Red cells indicate the column commodity statistically Granger-precedes the row "
-                    "equity — meaning its past price moves are associated with subsequent equity moves "
+                    "equity - meaning its past price moves are associated with subsequent equity moves "
                     "in this sample. Commodity price changes have historically preceded equity price "
                     "changes in these pairs, suggesting a 1–3 day predictive association (not established causation)."
                 )
@@ -245,7 +257,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
     # ── Panel 2: Transfer Entropy ──────────────────────────────────────────
     _thread(
         "Granger causality tests whether a linear predictive relationship exists. Transfer entropy "
-        "below complements it — it measures directional information flow without assuming linearity, "
+        "below complements it - it measures directional information flow without assuming linearity, "
         "capturing asymmetric associations that linear tests may miss."
     )
     with col_te:
@@ -333,7 +345,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             f'<span style="color:#e67e22;font-weight:700">⚠ STATIONARITY WARNING</span>'
             f'<span style="color:#8E9AAA;margin-left:.6rem">'
             f'ADF test did not reject unit root for: '
-            f'<span style="color:#CFB991">{_ns_list}</span> — '
+            f'<span style="color:#CFB991">{_ns_list}</span> - '
             f'VAR inference on I(1) series without differencing may be unreliable.'
             f'</span></div>',
             unsafe_allow_html=True,
@@ -444,7 +456,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             _insight_note(
                 "Each cell shows what percentage of one asset's price uncertainty (forecast error) "
                 "is caused by shocks originating in another asset. The diagonal is self-driven. "
-                "A high total spillover index (above 50%) means markets are deeply interconnected — "
+                "A high total spillover index (above 50%) means markets are deeply interconnected - "
                 "a shock anywhere in the system propagates everywhere quickly."
             )
 
@@ -473,7 +485,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                             f'color:#8E9AAA;text-transform:uppercase;letter-spacing:.14em">{_label_txt}</div>'
                             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:20px;'
                             f'font-weight:700;color:{_color}">'
-                            f'{"—" if not isinstance(_tc, float) or np.isnan(_tc) else f"{_tc:.1f}%"}</div>'
+                            f'{" - " if not isinstance(_tc, float) or np.isnan(_tc) else f"{_tc:.1f}%"}</div>'
                             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                             f'color:#555960">{_period}</div></div>',
                             unsafe_allow_html=True,
@@ -538,13 +550,13 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         st.markdown(
                             f'<div style="font-family:\'JetBrains Mono\',monospace;'
                             f'font-size:0.50rem;color:#8E9AAA;margin:.5rem 0 0">'
-                            f'Invariant check — '
+                            f'Invariant check - '
                             f'Σ bands: <b style="color:#CFB991">{_bk_sum:.2f}%</b> '
                             f'| Full-spectrum GFEVD: <b style="color:#CFB991">{_bk_ful:.2f}%</b> '
                             f'| gap: <b style="color:{_gap_color}">{_bk_gap:.4f}%</b>'
                             f'{"  ⚠ normalisation error" if _bk_gap > 0.5 else "  ✓"}'
                             f'<br>D-Y Cholesky TC: <b style="color:#8890a1">{_dy_tc:.2f}%</b> '
-                            f'<span style="color:#555960">(different FEVD method — gap is expected)</span>'
+                            f'<span style="color:#555960">(different FEVD method - gap is expected)</span>'
                             f'</div>',
                             unsafe_allow_html=True,
                         )
@@ -627,7 +639,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
                 fig_roll = go.Figure()
 
-                # CI ribbon — rendered first so it sits behind the center line
+                # CI ribbon - rendered first so it sits behind the center line
                 if _bci and "total_p50" in _bci:
                     _hw_lo = max(0.0, _bci["total_p50"] - _bci["total_p05"])
                     _hw_hi = max(0.0, _bci["total_p95"] - _bci["total_p50"])
@@ -807,7 +819,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         _rdata  = _rc_result.get(_rid, {})
                         _rsp    = _rdata.get("total_spillover", np.nan)
                         _rn     = _rdata.get("n_obs", 0)
-                        _rtx    = _rdata.get("top_transmitter", "—")
+                        _rtx    = _rdata.get("top_transmitter", " - ")
                         _rcolor = _RCOLORS[_rid]
                         _is_cur = _rid == _cur_regime
                         _border = f"border-left:3px solid {_rcolor}" if _is_cur else f"border-left:1px solid #2a2a2a"
@@ -822,7 +834,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
                             f'font-weight:700;color:{_rcolor if _is_cur else "#c8c8c8"};'
                             f'display:block;line-height:1.2">'
-                            f'{"—" if not np.isfinite(_rsp) else f"{_rsp:.1f}%"}</span>'
+                            f'{" - " if not np.isfinite(_rsp) else f"{_rsp:.1f}%"}</span>'
                             f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.56rem;'
                             f'color:#8E9AAA">top tx: {_rtx} · {_rn} obs</span>'
                             f'</div>',
@@ -830,12 +842,12 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         )
                     _panel_note(
                         "Expected spillover in each historical regime. Current regime highlighted. "
-                        "Crisis regime spillover substantially exceeds normal — use to set hedge sizing."
+                        "Crisis regime spillover substantially exceeds normal - use to set hedge sizing."
                     )
                 else:
                     st.info("Need equity + commodity assets selected for regime detection.")
             except Exception as _rc_e:
-                st.caption("Regime-conditional computation unavailable — see logs.")
+                st.caption("Regime-conditional computation unavailable - see logs.")
         else:
             st.info("Select ≥ 3 VAR assets.")
 
@@ -844,11 +856,11 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True)
     st.markdown(
         '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
-        'color:#CFB991;margin-bottom:0.1rem">Rolling Risk Index — Bootstrap Scenario Fan</h2>'
+        'color:#CFB991;margin-bottom:0.1rem">Rolling Risk Index - Bootstrap Scenario Fan</h2>'
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
         'Moving-block bootstrap (n=300, block≈√T) resamples equity + commodity returns jointly. '
         'Band = 5th/95th percentile of scores under randomly re-ordered return histories '
-        '(market-data inputs only; analyst layers — news GPR, CIS, chokepoint — fixed at current values).</p>',
+        '(market-data inputs only; analyst layers - news GPR, CIS, chokepoint - fixed at current values).</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -886,7 +898,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         line=dict(color="rgba(207,185,145,0.30)", width=0.5),
                         hoverinfo="skip",
                         showlegend=True,
-                        name="90% CI — market-data only",
+                        name="90% CI - market-data only",
                     ))
                     if "p50" in _sp_bci_df.columns:
                         _fig_fan.add_trace(go.Scatter(
@@ -902,7 +914,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         f" Bootstrap n={_sp_n_boot}, block≈{max(5, int(len(_sp_score_hist)**0.5))}d."
                     )
 
-            # Point estimate — realized market risk index
+            # Point estimate - realized market risk index
             _fig_fan.add_trace(go.Scatter(
                 x=list(_sp_score_hist.index),
                 y=list(_sp_score_hist.values),
@@ -930,16 +942,16 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 "Gold line = realized market risk index (equity + commodity realized vol, EWM z-scored). "
                 "Band = 5th/95th percentile across 300 block-resampled return histories (block≈√T). "
                 "Interpretation: the band shows the range of scores that are compatible with randomly "
-                "re-ordered blocks of actual returns — not a confidence interval around the gold line. "
+                "re-ordered blocks of actual returns - not a confidence interval around the gold line. "
                 "Periods where the gold line sits above p95 indicate concentrated volatility episodes "
                 "that random block shuffling cannot replicate (expected; not a bias). "
-                "Analyst layers — news GPR (40%), CIS (30%), chokepoint (20%) — fixed at current values."
+                "Analyst layers - news GPR (40%), CIS (30%), chokepoint (20%) - fixed at current values."
                 + _sp_ci_label
             )
         else:
             st.caption("Insufficient data for risk index history (need ≥ 120 days of returns).")
     except Exception as _sp_fan_err:
-        st.caption("Risk index fan chart unavailable — see logs.")
+        st.caption("Risk index fan chart unavailable - see logs.")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Granger Causality Network (GAP 24)
@@ -948,7 +960,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                 unsafe_allow_html=True)
     st.markdown(
         '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
-        'color:#CFB991;margin-bottom:0.1rem">Granger Causality Network — Full Pair Analysis</h2>'
+        'color:#CFB991;margin-bottom:0.1rem">Granger Causality Network - Full Pair Analysis</h2>'
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
         'Directed network across all equity-commodity pairs (p &lt; 0.05). '
         'Node size = number of significant outgoing Granger links. '
@@ -967,10 +979,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         # Hub commodity: most significant outgoing Granger links toward equities
         if _n_cmd_to_eq > 0:
             _hub_counts = _sig[_sig["direction"] == "Commodity → Equity"]["cause"].value_counts()
-            _hub_cmd = _hub_counts.index[0] if len(_hub_counts) > 0 else "—"
+            _hub_cmd = _hub_counts.index[0] if len(_hub_counts) > 0 else " - "
             _hub_n   = int(_hub_counts.iloc[0]) if len(_hub_counts) > 0 else 0
             _hub_eq_counts = _sig[_sig["direction"] == "Equity → Commodity"]["cause"].value_counts()
-            _hub_eq  = _hub_eq_counts.index[0] if len(_hub_eq_counts) > 0 else "—"
+            _hub_eq  = _hub_eq_counts.index[0] if len(_hub_eq_counts) > 0 else " - "
             _hub_eq_n = int(_hub_eq_counts.iloc[0]) if len(_hub_eq_counts) > 0 else 0
 
             # Hub summary banner
@@ -1019,7 +1031,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         "Node size ∝ number of significant outgoing links (hub = large node)."
                     )
             except Exception as _gr_err:
-                st.caption("Network render unavailable — see logs.")
+                st.caption("Network render unavailable - see logs.")
 
         with _col_gr_hub:
             _label("Top Granger Transmitters")
@@ -1196,20 +1208,20 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         else:
             st.info("Fixed income or FX data unavailable. Cross-asset spillover requires internet connectivity.")
     except Exception as _e:
-        pass  # Cross-asset spillover section unavailable — skip silently
+        pass  # Cross-asset spillover section unavailable - skip silently
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION: Commodity Futures Curve — Backwardation / Contango (GAP 3/25)
+    # SECTION: Commodity Futures Curve - Backwardation / Contango (GAP 3/25)
     # ══════════════════════════════════════════════════════════════════════
     st.markdown('<div style="margin:0.8rem 0;border-top:1px solid #2a2a2a"></div>',
                 unsafe_allow_html=True)
     st.markdown(
         '<h2 style="font-family:\'DM Sans\',sans-serif;font-size:1.0rem;font-weight:700;'
-        'color:#CFB991;margin-bottom:0.1rem">Commodity Futures Curve — Backwardation / Contango</h2>'
+        'color:#CFB991;margin-bottom:0.1rem">Commodity Futures Curve - Backwardation / Contango</h2>'
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8890a1;margin:0 0 0.5rem">'
         'Front-month vs 6-month deferred contracts. '
-        'Backwardation (spot &gt; futures) signals near-term supply tightness — corroborates geopolitical risk. '
-        'Contango (spot &lt; futures) signals oversupply or weak demand — contradicts a high GRS.</p>',
+        'Backwardation (spot &gt; futures) signals near-term supply tightness - corroborates geopolitical risk. '
+        'Contango (spot &lt; futures) signals oversupply or weak demand - contradicts a high GRS.</p>',
         unsafe_allow_html=True,
     )
 
@@ -1308,8 +1320,8 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
 
             _panel_note(
                 "Basis = (6M deferred − front-month) / front-month × 100%. "
-                "Backwardation means market pays a premium for near-term delivery — "
-                "supply tightness or demand spike. Contango means storage cost is priced in — "
+                "Backwardation means market pays a premium for near-term delivery - "
+                "supply tightness or demand spike. Contango means storage cost is priced in - "
                 "supply is adequate. Source: yfinance (CME/ICE futures)."
             )
 
@@ -1356,7 +1368,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         f"(deferred contract ticker may not be liquid on this date)."
                     )
     except Exception as _fc_err:
-        st.caption("Futures curve section unavailable — see logs.")
+        st.caption("Futures curve section unavailable - see logs.")
 
     _page_conclusion(
         "Transmission Map",
@@ -1366,15 +1378,15 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
         "which equity markets to hedge when a key commodity breaks out."
     )
 
-    # ── ΔCoVaR — Adrian & Brunnermeier Systemic Risk ─────────────────────────
+    # ── ΔCoVaR - Adrian & Brunnermeier Systemic Risk ─────────────────────────
     st.markdown(
         f'<div style="margin:1.2rem 0 0.5rem;border-top:1px solid #1e1e1e;padding-top:0.9rem">'
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
-        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 3px">ΔCoVaR — Systemic Risk Amplification</p>'
+        f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 3px">ΔCoVaR - Systemic Risk Amplification</p>'
         f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0;line-height:1.55">'
         f'Adrian &amp; Brunnermeier (2016). For each asset, QuantReg of the equal-weighted system return '
         f'on the asset at τ=5% and τ=50% gives CoVaR at distress and median states. '
-        f'<b style="color:#c8c8c8">ΔCoVaR = CoVaR(5%) − CoVaR(50%)</b> — '
+        f'<b style="color:#c8c8c8">ΔCoVaR = CoVaR(5%) − CoVaR(50%)</b> - '
         f'more negative means the asset amplifies system losses when it is itself in distress. '
         f'Estimation window: full sample. System = equal-weighted cross-asset index.</p>'
         f'</div>',
@@ -1389,7 +1401,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             _covar_df = compute_covar(_covar_input, min_obs=126)
 
         if _covar_df.empty:
-            st.caption("Insufficient data for ΔCoVaR — need ≥ 126 overlapping observations per asset.")
+            st.caption("Insufficient data for ΔCoVaR - need ≥ 126 overlapping observations per asset.")
         else:
             # ── Convergence audit ──────────────────────────────────────────
             _no_conv = (
@@ -1400,7 +1412,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             if _no_conv:
                 st.warning(
                     f"QuantReg hit max iterations ({_MAX_ITER}) for "
-                    f"{len(_no_conv)} asset(s): **{', '.join(_no_conv)}** — "
+                    f"{len(_no_conv)} asset(s): **{', '.join(_no_conv)}** - "
                     "estimates retained but marked ⚠ (ranking may be unreliable for flagged assets).",
                     icon="⚠️",
                 )
@@ -1560,7 +1572,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                         plot_bgcolor="#000000",
                         font=dict(family="JetBrains Mono, monospace", color="#8890a1", size=10),
                         title=dict(
-                            text=f"Rolling {_roll_window}d ΔCoVaR — Top {_top_n_roll} Systemic",
+                            text=f"Rolling {_roll_window}d ΔCoVaR - Top {_top_n_roll} Systemic",
                             font=dict(size=11, color="#CFB991", family="JetBrains Mono, monospace"),
                             x=0, xanchor="left", pad=dict(l=4, b=6),
                         ),
@@ -1596,7 +1608,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
                     )
 
     except Exception as _cov_err:
-        st.caption("ΔCoVaR unavailable — see logs.")
+        st.caption("ΔCoVaR unavailable - see logs.")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION: Jordà Local-Projection IRF
@@ -1662,7 +1674,7 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<span style="{_F2}font-size:0.50rem;color:#c0392b;'
                 f'background:#1a0a0a;border:1px solid #c0392b;padding:2px 8px">'
-                f'NO DATA — {_lp_err}</span>',
+                f'NO DATA - {_lp_err}</span>',
                 unsafe_allow_html=True,
             )
 
@@ -1775,10 +1787,10 @@ def page_spillover(start: str, end: str, fred_key: str = "") -> None:
             )
 
         elif _lp_ok:
-            st.caption("LP regression returned no results — insufficient overlapping history.")
+            st.caption("LP regression returned no results - insufficient overlapping history.")
 
     except Exception as _lp_top_err:
-        st.caption("LP-IRF unavailable — see logs.")
+        st.caption("LP-IRF unavailable - see logs.")
 
     # ── Conflict Layer: which active conflicts are driving the current spillover ──
     st.markdown(

@@ -1,5 +1,5 @@
 """
-Pattern Memory — "the market has seen this before."
+Pattern Memory - "the market has seen this before."
 
 Whole-state analog recall: each historical day is compressed into a
 fingerprint of the terminal's full configuration (geo events + chokepoint
@@ -34,8 +34,8 @@ _AMBER = "#e67e22"
 _MUTED = "#8890a1"
 
 _HISTORY_START = "2008-01-01"
-_REGIME_NAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis", None: "—"}
-_VERDICT_COL = {"GOOD": _GREEN, "MIXED": _AMBER, "BAD": _RED, "—": _MUTED}
+_REGIME_NAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis", None: " - "}
+_VERDICT_COL = {"GOOD": _GREEN, "MIXED": _AMBER, "BAD": _RED, " - ": _MUTED}
 
 _BLOCK_LABELS = {
     "geo": "Geo events", "chokepoint": "Chokepoints",
@@ -55,7 +55,7 @@ def _section_label(text: str) -> None:
 
 @st.cache_data(ttl=86400, show_spinner=False, max_entries=2)
 def _dy_series_cached(start: str, end: str) -> pd.Series:
-    """Rolling D-Y total spillover — slow first run, cached for the day."""
+    """Rolling D-Y total spillover - slow first run, cached for the day."""
     from src.analysis.spillover import rolling_diebold_yilmaz
     eq_r, cmd_r = load_returns(start, end)
     cols = [c for c in ("S&P 500", "DAX", "Nikkei 225",
@@ -98,7 +98,7 @@ def _today_z_chart(today: dict, features: list[str]) -> go.Figure:
         template="plotly_dark", height=max(320, 22 * len(feats)),
         paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text="Today's fingerprint — z-scores vs full history",
+        title=dict(text="Today's fingerprint - z-scores vs full history",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
         xaxis=dict(title="Standard deviations from historical mean",
@@ -130,7 +130,7 @@ def _spaghetti_chart(outcomes: list[dict], combined: pd.DataFrame, asset: str) -
         template="plotly_dark", height=320,
         paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text=f"{asset} — 60 trading days after each analog "
+        title=dict(text=f"{asset} - 60 trading days after each analog "
                         f"(colored by verdict)",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
@@ -155,7 +155,7 @@ def _verdict_vs_base_chart(agg: dict, br: dict) -> go.Figure:
         textfont=dict(family="JetBrains Mono, monospace", size=11),
     ))
     fig.add_trace(go.Bar(
-        name=f"Base rate — all {br.get('n', 0):,} historical days",
+        name=f"Base rate - all {br.get('n', 0):,} historical days",
         x=cats, y=[br.get(c, 0) * 100 for c in cats],
         marker_color="rgba(136,144,161,0.45)",
         text=[f"{br.get(c, 0) * 100:.0f}%" for c in cats], textposition="outside",
@@ -165,7 +165,7 @@ def _verdict_vs_base_chart(agg: dict, br: dict) -> go.Figure:
         template="plotly_dark", height=300, barmode="group",
         paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text="Where did this fingerprint lead? — analogs vs unconditional base rate",
+        title=dict(text="Where did this fingerprint lead? - analogs vs unconditional base rate",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
         yaxis=dict(title="Share of outcomes (%)", showgrid=True, gridcolor="#1a1a1a",
@@ -178,11 +178,11 @@ def _verdict_vs_base_chart(agg: dict, br: dict) -> go.Figure:
 
 
 def page_pattern_memory(start: str, end: str, fred_key: str | None = None) -> None:
-    _page_header("Pattern Memory — The Market Has Seen This Before",
+    _page_header("Pattern Memory - The Market Has Seen This Before",
                  "Whole-state analog recall · Geo + chokepoint + spillover + regime + market · Base-rate honest")
     _page_intro(
         "Every historical day since 2008 is compressed into a fingerprint of the terminal's "
-        "full state — active geopolitical events, chokepoint pressure, spillover structure, "
+        "full state - active geopolitical events, chokepoint pressure, spillover structure, "
         "correlation regime, and market conditions. Today's fingerprint is matched against the "
         "entire state space at once: a past day only ranks if the geopolitical shape AND the "
         "market shape both rhyme. Not a price-similarity screen (that exists on the Scenario "
@@ -201,7 +201,7 @@ def page_pattern_memory(start: str, end: str, fred_key: str | None = None) -> No
                                 help="Rolling Diebold-Yilmaz total spillover as a feature. "
                                      "Slow on first run (~30–60s), then cached for the day.")
     if all(v == 0 for v in block_weights.values()):
-        st.warning("All block weights are zero — set at least one above zero.")
+        st.warning("All block weights are zero - set at least one above zero.")
         _page_footer()
         return
 
@@ -247,7 +247,7 @@ def page_pattern_memory(start: str, end: str, fred_key: str | None = None) -> No
 
         def _pct(v):
             if v is None or (isinstance(v, float) and np.isnan(v)):
-                return f'<span style="color:{_MUTED}">—</span>'
+                return f'<span style="color:{_MUTED}"> - </span>'
             c = _GREEN if v > 0 else _RED
             return f'<span style="color:{c}">{v * 100:+.1f}%</span>'
 
@@ -315,19 +315,19 @@ def page_pattern_memory(start: str, end: str, fred_key: str | None = None) -> No
         f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;border-top:2px solid {_GOLD};'
         f'padding:.8rem 1rem;font-size:.72rem;color:#c8c8c8;line-height:1.7">'
         f'{lift_txt} With {agg.get("n", 0)} analogs this is pattern recall, not statistical '
-        f'proof — treat lifts under ~15pp as noise.</div>',
+        f'proof - treat lifts under ~15pp as noise.</div>',
         unsafe_allow_html=True,
     )
 
     _definition_block(
-        "What this engine is — and is not",
+        "What this engine is - and is not",
         "Fingerprint blocks: GEO and CHOKEPOINT are structural reconstructions from the event/"
-        "conflict registry (weights calibrated recently — same disclosed hindsight as Replay "
+        "conflict registry (weights calibrated recently - same disclosed hindsight as Replay "
         "Mode; recency and activity are computed day-by-day, and no event exists before its "
         "onset). SPILLOVER, REGIME, and MARKET are genuinely historical (rolling D-Y, rolling "
         "betas, correlation regime, realized vol, momentum). Every raw feature at day t uses "
         "data ≤ t; feature standardization and regime percentile thresholds are full-sample "
-        "(in-sample normalization, standard for analog recall) — verified in "
+        "(in-sample normalization, standard for analog recall) - verified in "
         "tests/test_fingerprint.py. Matching is weighted Euclidean distance in z-space across "
         "the whole configuration; block weights are the sliders above. This is pattern-memory, "
         "NOT a forecast: n=7 analogs cannot establish significance, which is why the base-rate "

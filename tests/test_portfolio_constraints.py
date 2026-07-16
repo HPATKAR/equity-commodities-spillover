@@ -1,5 +1,5 @@
 """
-Step 3 of 4 — portfolio constraints.
+Step 3 of 4 - portfolio constraints.
 
 Pins: no conflict and no correlation-cluster exceeds its cap in the FINAL
 (re-normalized) weights; duplicated bets share one cluster budget via the
@@ -72,7 +72,7 @@ def test_unattributed_trades_exempt_from_conflict_cap():
         _t("M2", ["Nikkei 225"], 0.45),
     ]
     apply_portfolio_constraints(trades, all_r, single_cap=1.0)
-    # No conflict groups exist — weights untouched by the conflict cap
+    # No conflict groups exist - weights untouched by the conflict cap
     assert _w(trades, "M1") == pytest.approx(0.55, abs=1e-4)
 
 
@@ -114,7 +114,7 @@ def test_all_groups_binding_leaves_cash_not_breach():
     ]
     apply_portfolio_constraints(trades, all_r, single_cap=1.0)
     gross = sum(t["alloc_weight"] for t in trades)
-    assert gross <= CLUSTER_CAP + 1e-6               # rest is cash — no breach
+    assert gross <= CLUSTER_CAP + 1e-6               # rest is cash - no breach
 
 
 def test_locked_trades_stay_zero_through_constraints():

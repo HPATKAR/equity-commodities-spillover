@@ -923,7 +923,7 @@ def _analog_spaghetti_chart(
         ),
         margin=dict(l=52, r=24, t=20, b=80),
         title=dict(
-            text=f"{asset} — 20-day forward paths",
+            text=f"{asset} - 20-day forward paths",
             font=dict(family="JetBrains Mono, monospace", size=11, color="#8890a1"),
             x=0, xanchor="left",
         ),
@@ -1068,7 +1068,7 @@ def _tree_fan_chart(
     dist15: dict, dist30: dict,
     worst_cum: float | None = None,
 ) -> go.Figure:
-    """Fan chart: P5–P95 and P25–P75 bands at day 0 / 15 / 30 — widening with depth."""
+    """Fan chart: P5–P95 and P25–P75 bands at day 0 / 15 / 30 - widening with depth."""
     x = [0, _TREE_STEP_DAYS, _TREE_HORIZON]
     d15, d30 = dist15[asset], dist30[asset]
 
@@ -1152,8 +1152,8 @@ def _render_scenario_tree(
     var_es: dict,
     current_regime: int,
 ) -> None:
-    """Forward Scenario Tree section — see module docstring in scenario_tree.py."""
-    _section_label("Forward Scenario Tree — Conditional 30-Day Forecast")
+    """Forward Scenario Tree section - see module docstring in scenario_tree.py."""
+    _section_label("Forward Scenario Tree - Conditional 30-Day Forecast")
     st.markdown(
         f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.6rem;line-height:1.6">'
         f'From today\'s state, the chosen conflict branches into '
@@ -1162,7 +1162,7 @@ def _render_scenario_tree(
         f'(9 terminal paths). Branch probabilities seed from the live ACLED+GDELT escalation '
         f'signal; every node is priced with the same regime-conditional OLS betas used above. '
         f'All paths collapse, probability-weighted, into a <em>distribution</em> of 30-day '
-        f'outcomes. This is a forecast of branches under stated, perturbable assumptions — '
+        f'outcomes. This is a forecast of branches under stated, perturbable assumptions - '
         f'<b>not a point prediction</b>. The bands widen with depth; that is the feature.</p>',
         unsafe_allow_html=True,
     )
@@ -1173,7 +1173,7 @@ def _render_scenario_tree(
         scores = score_all_conflicts()
         matrix = conflict_commodity_matrix()
     except Exception:
-        st.info("Conflict registry unavailable — scenario tree cannot run.")
+        st.info("Conflict registry unavailable - scenario tree cannot run.")
         return
     active = sorted(
         [s for s in scores.values() if s.get("state") == "active"],
@@ -1214,13 +1214,13 @@ def _render_scenario_tree(
     # ── Perturbation controls ─────────────────────────────────────────────
     kb = f"{pick}_{signal}"
     tc1, tc2, tc3 = st.columns(3)
-    p_esc = tc1.slider("P(escalate) — step 1", 0.0, 1.0,
+    p_esc = tc1.slider("P(escalate) - step 1", 0.0, 1.0,
                        float(base_priors["escalate"]), 0.05, key=f"tr_pe_{kb}")
-    p_de = tc2.slider("P(de-escalate) — step 1", 0.0, 1.0,
+    p_de = tc2.slider("P(de-escalate) - step 1", 0.0, 1.0,
                       float(base_priors["deescalate"]), 0.05, key=f"tr_pd_{kb}")
     persistence = tc3.slider("Persistence tilt (step 2)", 0.0, 1.0, 0.5, 0.05,
                              key=f"tr_ps_{kb}",
-                             help="0 = steps independent; 1 = full tilt — escalation "
+                             help="0 = steps independent; 1 = full tilt - escalation "
                                   "begets escalation, de-escalation begets de-escalation.")
     if p_esc + p_de > 0.95:
         scale = 0.95 / (p_esc + p_de)
@@ -1229,7 +1229,7 @@ def _render_scenario_tree(
     priors = {"escalate": p_esc, "hold": 1.0 - p_esc - p_de, "deescalate": p_de}
 
     cond_overrides: dict[str, dict[str, float]] = {}
-    with st.expander("Advanced — per-branch step-2 probabilities"):
+    with st.expander("Advanced - per-branch step-2 probabilities"):
         st.caption("Defaults are the persistence-tilted priors. P(hold | parent) is the remainder.")
         for parent in _TREE_BRANCHES:
             dflt = _tree_cond_priors(priors, parent, persistence)
@@ -1289,7 +1289,7 @@ def _render_scenario_tree(
         f'<div style="padding:.35rem 0;border-top:1px solid #161616">'
         f'<span style="color:#CFB991;font-family:\'JetBrains Mono\',monospace;'
         f'font-size:0.62rem;font-weight:600">{s["signal"]}</span>'
-        f'<span style="color:#c8c8c8;font-size:0.66rem"> — {s["watch"]}</span>'
+        f'<span style="color:#c8c8c8;font-size:0.66rem"> - {s["watch"]}</span>'
         + (f'<br><span style="color:#8890a1;font-family:\'JetBrains Mono\',monospace;'
            f'font-size:0.58rem">now: {s["current"]}</span>' if s["current"] else "")
         + "</div>"
@@ -1314,14 +1314,14 @@ def _render_scenario_tree(
     )
 
     _definition_block(
-        "Scenario Tree — Stated Assumptions",
+        "Scenario Tree - Stated Assumptions",
         f"(1) Branch priors map the fused ACLED+GDELT escalation signal to step-1 "
-        f"probabilities (escalating → 50/35/15; stable → 25/50/25; mirrored) — a stated prior, "
+        f"probabilities (escalating → 50/35/15; stable → 25/50/25; mirrored) - a stated prior, "
         f"not an estimate, and perturbable above. "
         f"(2) Step-2 probabilities are persistence-tilted priors (escalation begets escalation); "
         f"the tilt strength is the slider, per-branch overrides in the expander. "
         f"(3) Per-step shocks are scaled preset magnitudes (escalate: oil +18% × channel relevance, "
-        f"gold +6%, gas +14%, +45 bps credit, geo ∝ TPS; de-escalation relief = 0.6 × shock — "
+        f"gold +6%, gas +14%, +45 bps credit, geo ∝ TPS; de-escalation relief = 0.6 × shock - "
         f"unwinds run smaller than shocks). "
         f"(4) Nodes are priced with the page's regime-conditional OLS betas; escalation paths "
         f"shift toward Elevated/Crisis betas, de-escalation toward Normal/Decorrelated. "
@@ -1390,7 +1390,7 @@ def page_scenario_engine(
     except Exception:
         pass
 
-    # ── Load data in parallel — all three are @st.cache_data, no st.* calls ──
+    # ── Load data in parallel - all three are @st.cache_data, no st.* calls ──
     from concurrent.futures import ThreadPoolExecutor
     with st.spinner("Computing betas and historical tail risk…"):
         with ThreadPoolExecutor(max_workers=3) as _se_pool:
@@ -1605,7 +1605,7 @@ def page_scenario_engine(
         try:
             _render_scenario_tree(betas, regime_betas, var_es, _current_regime)
         except Exception:
-            st.caption("Scenario tree unavailable — see logs.")
+            st.caption("Scenario tree unavailable - see logs.")
         _page_footer()
         return
 
@@ -2001,18 +2001,18 @@ def page_scenario_engine(
         else:
             st.info("Sector ETF data unavailable. Check internet connectivity.")
     except Exception as _sec_err:
-        st.caption("Sector decomposition unavailable — see logs.")
+        st.caption("Sector decomposition unavailable - see logs.")
 
     # ── Historical Analog Mode ────────────────────────────────────────────
-    _section_label("Historical Analog — When Has This Happened Before?")
+    _section_label("Historical Analog - When Has This Happened Before?")
     st.markdown(
         f'<p style="font-size:0.68rem;color:{_MUTED};margin:0.1rem 0 0.5rem;line-height:1.6">'
-        f'Finds the 5 historical dates whose market state most resembled today — '
+        f'Finds the 5 historical dates whose market state most resembled today - '
         f'measured by Euclidean distance on z-scored 20-day cumulative returns across '
         f'WTI, Gold, S&amp;P 500, Copper, and Natural Gas. '
         f'Ordered by distance only; outcomes are not cherry-picked. '
         f'Conflict scores and PortWatch shipping data are live-only and are not used '
-        f'in the matching — no daily historical series exists for either. '
+        f'in the matching - no daily historical series exists for either. '
         f'This is <em>not a forecast</em>: it shows what happened next in each analog episode.</p>',
         unsafe_allow_html=True,
     )
@@ -2036,7 +2036,7 @@ def page_scenario_engine(
                 with _acol1:
                     _default_eq  = "S&P 500" if "S&P 500" in _analog_eq_opts else (_analog_eq_opts[0] if _analog_eq_opts else None)
                     _eq_pick = st.selectbox(
-                        "Equity — forward path",
+                        "Equity - forward path",
                         _analog_eq_opts,
                         index=_analog_eq_opts.index(_default_eq) if _default_eq else 0,
                         key="ha_eq_pick",
@@ -2044,7 +2044,7 @@ def page_scenario_engine(
                 with _acol2:
                     _default_cmd = "WTI Crude Oil" if "WTI Crude Oil" in _analog_cmd_opts else (_analog_cmd_opts[0] if _analog_cmd_opts else None)
                     _cmd_pick = st.selectbox(
-                        "Commodity — forward path",
+                        "Commodity - forward path",
                         _analog_cmd_opts,
                         index=_analog_cmd_opts.index(_default_cmd) if _default_cmd else 0,
                         key="ha_cmd_pick",
@@ -2063,17 +2063,17 @@ def page_scenario_engine(
                 f'Each path shows 20 trading-day cumulative returns starting from the analog date. '
                 f'Analogs are non-overlapping (±30-day exclusion zone). '
                 f'Feature window: 20-day rolling return. '
-                f'Similarity % is relative to the distance of the 20th-closest candidate — not absolute. '
+                f'Similarity % is relative to the distance of the 20th-closest candidate - not absolute. '
                 f'Paths diverge quickly; treat this as context, not prediction.</p>',
                 unsafe_allow_html=True,
             )
     except Exception:
-        st.caption("Historical analog unavailable — see logs.")
+        st.caption("Historical analog unavailable - see logs.")
 
     # ── Forward Scenario Tree ─────────────────────────────────────────────
     try:
         _render_scenario_tree(betas, regime_betas, var_es, _current_regime)
     except Exception:
-        st.caption("Scenario tree unavailable — see logs.")
+        st.caption("Scenario tree unavailable - see logs.")
 
     _page_footer()

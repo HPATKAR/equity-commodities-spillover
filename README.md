@@ -1,6 +1,6 @@
 # Equity-Commodities Spillover Monitor
 
-A research-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX — with geopolitical risk intelligence, a conflict event feed, scenario-based shock analysis, and an orchestrated AI agent workforce running on real financial data.
+A research-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX - with geopolitical risk intelligence, a conflict event feed, scenario-based shock analysis, and an orchestrated AI agent workforce running on real financial data.
 
 Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School of Business · Prof. Cinder Zhang
 
@@ -16,9 +16,9 @@ Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School
 
 ### Contributions
 
-**Heramb S. Patkar** designed and built the full system — Streamlit multi-page application, AI agent orchestrator, quantitative analytics modules (spillover, correlation, risk scoring, scenario engine), live data integrations (GDELT, ACLED, EIA, PortWatch, FRED), harness verification architecture, and the full deployment stack.
+**Heramb S. Patkar** designed and built the full system - Streamlit multi-page application, AI agent orchestrator, quantitative analytics modules (spillover, correlation, risk scoring, scenario engine), live data integrations (GDELT, ACLED, EIA, PortWatch, FRED), harness verification architecture, and the full deployment stack.
 
-**Ilian Zalomai** designed the War Impact Map scoring framework — per-war baseline scores, country-level commodity exposure weights, and concurrent-war amplification logic for Ukraine, Gaza/Red Sea, and Iran/Hormuz. He authored all 13 geopolitical event entries (2008–2025), built the Strait Watch maritime chokepoint framework, and wrote the narrative content connecting quantitative outputs to real-world market implications throughout the dashboard.
+**Ilian Zalomai** designed the War Impact Map scoring framework - per-war baseline scores, country-level commodity exposure weights, and concurrent-war amplification logic for Ukraine, Gaza/Red Sea, and Iran/Hormuz. He authored all 13 geopolitical event entries (2008–2025), built the Strait Watch maritime chokepoint framework, and wrote the narrative content connecting quantitative outputs to real-world market implications throughout the dashboard.
 
 **Jiahe Miao** designed the 4-state correlation regime taxonomy (Decorrelated / Normal / Elevated / Crisis), calibrated the rolling window thresholds and lookback methodology for regime classification, and specified the 6 regime-conditioned trade structures with entry/exit rationale. She researched the Diebold-Yilmaz FEVD methodology, contributed to network edge threshold calibration and directional spillover interpretation, defined the fixed income cross-asset stress signal framework (TLT/HYG/LQD/EMB), validated the private credit bubble proxy selection (BKLN/ARCC/OBDC/FSK/JBBB), and reviewed equity and commodity return series for data quality.
 
@@ -28,17 +28,17 @@ Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School
 
 The Spillover Monitor answers three questions that standard market dashboards do not:
 
-1. **Where is stress coming from?** — Granger causality (BIC-optimal lag, Holm-corrected), transfer entropy with shuffle significance tests, and Diebold-Yilmaz FEVD identify directional transmission paths between assets, not just correlation levels.
-2. **How severe is the current regime?** — A five-component composite risk score (0–100) and four-state correlation regime model classify market conditions with historical analogues and Markov transition forecasts.
-3. **What happens next?** — A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of this into research briefings, illustrative trade ideas, and stress assessments.
+1. **Where is stress coming from?** - Granger causality (BIC-optimal lag, Holm-corrected), transfer entropy with shuffle significance tests, and Diebold-Yilmaz FEVD identify directional transmission paths between assets, not just correlation levels.
+2. **How severe is the current regime?** - A five-component composite risk score (0–100) and four-state correlation regime model classify market conditions with historical analogues and Markov transition forecasts.
+3. **What happens next?** - A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of this into research briefings, illustrative trade ideas, and stress assessments.
 
-The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and weekly EIA petroleum inventory reports — on every session load.
+The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and weekly EIA petroleum inventory reports - on every session load.
 
 ---
 
 ## Coverage
 
-### Equity Markets — 15 Indices, 5 Regions
+### Equity Markets - 15 Indices, 5 Regions
 | Region | Indices |
 |--------|---------|
 | **USA** | S&P 500, Nasdaq 100, DJIA, Russell 2000 |
@@ -47,7 +47,7 @@ The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instr
 | **China** | Hang Seng, Shanghai Composite, CSI 300 |
 | **India** | Sensex, Nifty 50 |
 
-### Commodities — 17 Futures, 4 Groups
+### Commodities - 17 Futures, 4 Groups
 | Group | Contracts |
 |-------|-----------|
 | **Energy** | WTI Crude, Brent Crude, Natural Gas, Gasoline (RBOB), Heating Oil |
@@ -80,7 +80,7 @@ The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instr
 | **EIA** | Weekly US petroleum inventory report | Wednesday release |
 | **RSS** | 7 news sources (Reuters, BBC, NYT, WSJ, FT, AP, Al Jazeera) | 1h cache |
 
-### Geopolitical Events — 13 Tracked Shocks (2008–present)
+### Geopolitical Events - 13 Tracked Shocks (2008–present)
 *Event taxonomy designed by Ilian Zalomai*
 
 | ID | Event | Period |
@@ -109,7 +109,7 @@ All core econometric methods implement published best practices. The table below
 |--------|---------------|----------------|
 | **Granger causality** | BIC-optimal lag via `VAR(ic='bic')` before testing; Holm-Bonferroni step-down correction across the full N×M×2 test grid | Granger (1969); Lütkepohl (2005) Ch. 4 |
 | **Transfer entropy** | Schreiber (2000) directed information measure; 200-permutation shuffle test for significance; optimal lag selected by maximising TE(commodity→equity) | Schreiber (2000) |
-| **Diebold-Yilmaz FEVD** | VAR fitted with `ic='bic'` (lag_order is upper bound); 10-step forecast horizon; Cholesky-orthogonalized FEVD (statsmodels default; order-dependent — D-Y 2012 uses Pesaran-Shin generalized FEVD) | Diebold & Yilmaz (2012) |
+| **Diebold-Yilmaz FEVD** | VAR fitted with `ic='bic'` (lag_order is upper bound); 10-step forecast horizon; Cholesky-orthogonalized FEVD (statsmodels default; order-dependent - D-Y 2012 uses Pesaran-Shin generalized FEVD) | Diebold & Yilmaz (2012) |
 | **DCC-style dynamic correlation** | Two-step Engle (2002): EWMA pre-whitening (λ=0.94, RiskMetrics, fixed parameters not MLE-estimated) standardises returns before DCC(1,1) recursion; raw-return DCC is contaminated by heteroskedasticity | Engle (2002) |
 | **Correlation regime** | Adaptive percentile thresholds; 5-day median smoothing; hysteresis (exit threshold = entry − 5pp); persistence gate (Crisis requires 60% of 10-day window above elevated) | Hamilton (1989) regime-switching |
 | **Composite stress index** | Vol signals: z-score → [0,100] preserves absolute VIX level information; correlation signals: empirical percentile rank | Illing & Liu (2006) FSI design |
@@ -120,7 +120,7 @@ All core econometric methods implement published best practices. The table below
 
 ### Key Design Decisions
 
-**BIC lag selection (Granger + VAR):** Testing all lags 1..k and reporting the minimum p-value is implicit data snooping — the effective significance level exceeds the stated α. BIC selects the lag that maximises fit relative to model complexity before any hypothesis test is run.
+**BIC lag selection (Granger + VAR):** Testing all lags 1..k and reporting the minimum p-value is implicit data snooping - the effective significance level exceeds the stated α. BIC selects the lag that maximises fit relative to model complexity before any hypothesis test is run.
 
 **Holm-Bonferroni correction:** With N_eq × N_cmd × 2 simultaneous Granger tests, a naïve p < 0.05 threshold produces ~5% false positives by construction (15 equity × 17 commodity × 2 = 510 tests → ~25 spurious rejections expected). The Holm step-down procedure controls the family-wise error rate at α while being uniformly more powerful than Bonferroni.
 
@@ -133,43 +133,43 @@ All core econometric methods implement published best practices. The table below
 ## Key Features
 
 ### Quantitative Analytics
-- **Correlation regime model** — four-state classification (Decorrelated → Normal → Elevated → Crisis) with Markov transition projections, steady-state distribution, and mean days to next Crisis; *regime taxonomy designed by Jiahe Miao*
-- **Composite Global Risk Score (0–100)** — three weighted components: Conflict Intensity Score (35%), Transmission Pressure Score (30%), Market Confirmation Score (35%); EWM-normalized with 252-day span to prevent regime normalisation during sustained crises
-- **Early Warning System** — five-component composite score (correlation velocity, vol acceleration, regime duration pressure, equity vol trend, Markov crisis probability) with historical analogue matching via Euclidean nearest-neighbour on (eq_vol, cmd_vol, corr) signature
-- **Directional spillover analytics** — Granger causality (BIC-optimal lag, Holm-Bonferroni corrected), transfer entropy with 200-permutation shuffle significance test, Diebold-Yilmaz FEVD connectedness index (0–100%); *D-Y interpretation framework contributed by Jiahe Miao*
-- **CIS/TPS conflict model** — Conflict Intensity Score (7 dimensions: deadliness, civilian danger, diffusion, fragmentation, escalation trend, recency, source coverage) and Transmission Pressure Score (12 channels: oil/gas, metals, agriculture, shipping, chokepoint, sanctions, equity sector, FX, inflation, supply chain, credit, energy infra); aggregated via HHI-weighted portfolio score
-- **DCC-style dynamic correlations** — Engle (2002) two-step DCC with EWMA pre-whitening (λ=0.94, fixed); correlation clips to [−1, 1] to guard against numerical drift
-- **Correlation velocity detection** — first derivative of rolling correlation (10-day lag) for earlier regime transition detection
+- **Correlation regime model** - four-state classification (Decorrelated → Normal → Elevated → Crisis) with Markov transition projections, steady-state distribution, and mean days to next Crisis; *regime taxonomy designed by Jiahe Miao*
+- **Composite Global Risk Score (0–100)** - three weighted components: Conflict Intensity Score (35%), Transmission Pressure Score (30%), Market Confirmation Score (35%); EWM-normalized with 252-day span to prevent regime normalisation during sustained crises
+- **Early Warning System** - five-component composite score (correlation velocity, vol acceleration, regime duration pressure, equity vol trend, Markov crisis probability) with historical analogue matching via Euclidean nearest-neighbour on (eq_vol, cmd_vol, corr) signature
+- **Directional spillover analytics** - Granger causality (BIC-optimal lag, Holm-Bonferroni corrected), transfer entropy with 200-permutation shuffle significance test, Diebold-Yilmaz FEVD connectedness index (0–100%); *D-Y interpretation framework contributed by Jiahe Miao*
+- **CIS/TPS conflict model** - Conflict Intensity Score (7 dimensions: deadliness, civilian danger, diffusion, fragmentation, escalation trend, recency, source coverage) and Transmission Pressure Score (12 channels: oil/gas, metals, agriculture, shipping, chokepoint, sanctions, equity sector, FX, inflation, supply chain, credit, energy infra); aggregated via HHI-weighted portfolio score
+- **DCC-style dynamic correlations** - Engle (2002) two-step DCC with EWMA pre-whitening (λ=0.94, fixed); correlation clips to [−1, 1] to guard against numerical drift
+- **Correlation velocity detection** - first derivative of rolling correlation (10-day lag) for earlier regime transition detection
 
 ### Scenario & Stress Analysis
-- **Parametric scenario engine** — six shock inputs (oil %, gold %, yield bps, DXY %, credit spread bps, geo disruption 0–10); propagated via OLS betas to all 32 assets; VaR 95/99 and ES 95/99
-- **Preset scenarios** — Oil Supply Shock, Safe Haven Flight, Fed Policy Error, Geopolitical Escalation, Stagflation, Risk-On Rally
-- **Portfolio stress tester** — any custom allocation (indices + commodities + fixed income + individual S&P 500 stocks) tested against all 13 tracked events
+- **Parametric scenario engine** - six shock inputs (oil %, gold %, yield bps, DXY %, credit spread bps, geo disruption 0–10); propagated via OLS betas to all 32 assets; VaR 95/99 and ES 95/99
+- **Preset scenarios** - Oil Supply Shock, Safe Haven Flight, Fed Policy Error, Geopolitical Escalation, Stagflation, Risk-On Rally
+- **Portfolio stress tester** - any custom allocation (indices + commodities + fixed income + individual S&P 500 stocks) tested against all 13 tracked events
 
 ### Geopolitical Intelligence
-- **War Impact Map** — choropleth scoring 195+ countries by equity-market exposure to three simultaneous active conflict theaters; *scoring framework designed by Ilian Zalomai*
-- **Strait Watch** — live disruption monitoring for six critical maritime chokepoints (Hormuz, Suez, Panama, Bosporus, Malacca, Taiwan Strait) with IMF PortWatch vessel counts, EIA throughput, and Brent sensitivity analysis; *chokepoint framework designed by Ilian Zalomai*
-- **GDELT corroboration** — GDELT media escalation signal cross-validated against ACLED event data; agreement/contradiction surfaced as confidence score
-- **Proactive alert engine** — auto-triggered alerts on COT positioning extremes, regime transitions, and GDELT/EIA threshold breaches; routed to AI review queue
+- **War Impact Map** - choropleth scoring 195+ countries by equity-market exposure to three simultaneous active conflict theaters; *scoring framework designed by Ilian Zalomai*
+- **Strait Watch** - live disruption monitoring for six critical maritime chokepoints (Hormuz, Suez, Panama, Bosporus, Malacca, Taiwan Strait) with IMF PortWatch vessel counts, EIA throughput, and Brent sensitivity analysis; *chokepoint framework designed by Ilian Zalomai*
+- **GDELT corroboration** - GDELT media escalation signal cross-validated against ACLED event data; agreement/contradiction surfaced as confidence score
+- **Proactive alert engine** - auto-triggered alerts on COT positioning extremes, regime transitions, and GDELT/EIA threshold breaches; routed to AI review queue
 
 ### Fixed Income & Macro
-- **FI cross-asset stress signal** — TLT, HYG, LQD, EMB metrics with equity-bond divergence detection; *framework defined by Jiahe Miao*
-- **Private credit bubble monitor** — composite risk score from HY OAS, BKLN, BDC basket (ARCC/OBDC/FSK), and CDX HY; *proxy selection validated by Jiahe Miao*
-- **FRED macro dashboard** — yield curve (10Y–2Y), CPI YoY, Fed Funds Rate, GDP growth, ISM PMI; 24 series total
+- **FI cross-asset stress signal** - TLT, HYG, LQD, EMB metrics with equity-bond divergence detection; *framework defined by Jiahe Miao*
+- **Private credit bubble monitor** - composite risk score from HY OAS, BKLN, BDC basket (ARCC/OBDC/FSK), and CDX HY; *proxy selection validated by Jiahe Miao*
+- **FRED macro dashboard** - yield curve (10Y–2Y), CPI YoY, Fed Funds Rate, GDP growth, ISM PMI; 24 series total
 
 ---
 
 ## AI Workforce
 
-Seven agents run in three sequential rounds on every Overview page load. Each agent receives the typed, structured outputs of its upstream peers — never a truncated string — before generating its own analysis. The system is built on the **Agent = Model + Harness** framework.
+Seven agents run in three sequential rounds on every Overview page load. Each agent receives the typed, structured outputs of its upstream peers - never a truncated string - before generating its own analysis. The system is built on the **Agent = Model + Harness** framework.
 
 ### Pipeline
 
 | Round | Agent | Role | Depends On |
 |-------|-------|------|------------|
-| 1 | **Signal Auditor** | Granger hit rates, confidence calibration | — |
-| 1 | **Macro Strategist** | Yield curve, inflation, Fed posture | — |
-| 1 | **Geopolitical Analyst** | Active conflicts, strait disruption, GDELT signals | — |
+| 1 | **Signal Auditor** | Granger hit rates, confidence calibration | - |
+| 1 | **Macro Strategist** | Yield curve, inflation, Fed posture | - |
+| 1 | **Geopolitical Analyst** | Active conflicts, strait disruption, GDELT signals | - |
 | 2 | **Risk Officer** | Synthesises all Round 1 outputs into morning briefing | All Round 1 |
 | 2 | **Commodities Specialist** | COT positioning, supply shocks, sector rotation | Geo Analyst |
 | 3 | **Stress Engineer** | Scenario tail risk, drawdown assessment | Risk Officer |
@@ -179,14 +179,14 @@ A **Chief Quality Officer** runs separately on each page to audit data integrity
 
 ### Architecture Layers
 
-**Prompt engineering** — system prompts encode domain expertise, output format, and confidence calibration instructions per agent. Confidence scores are grounded in data completeness flags passed via `AgentHandoff`, not self-reported strings from the model.
+**Prompt engineering** - system prompts encode domain expertise, output format, and confidence calibration instructions per agent. Confidence scores are grounded in data completeness flags passed via `AgentHandoff`, not self-reported strings from the model.
 
-**Context engineering** — `AgentHandoff` TypedDict defines the explicit information contract between agents. Typed fields: `confidence (float)`, `regime (int)`, `risk_score (float)`, `cis`, `tps`, `cmd_vol_z`, `corr_pct`, `granger_hit_rate`, `yield_curve_spread`, `cpi_yoy`. Numeric precision is preserved across the full pipeline chain — no truncation, no regex parsing. `low_confidence: bool` propagates upstream uncertainty to all downstream agents when a gate is breached.
+**Context engineering** - `AgentHandoff` TypedDict defines the explicit information contract between agents. Typed fields: `confidence (float)`, `regime (int)`, `risk_score (float)`, `cis`, `tps`, `cmd_vol_z`, `corr_pct`, `granger_hit_rate`, `yield_curve_spread`, `cpi_yoy`. Numeric precision is preserved across the full pipeline chain - no truncation, no regex parsing. `low_confidence: bool` propagates upstream uncertainty to all downstream agents when a gate is breached.
 
-**Harness engineering** — the operating system around the model layer:
+**Harness engineering** - the operating system around the model layer:
 - `NUMERIC_PAIRS` divergence detection checks typed numeric fields across agent pairs (e.g. risk_score agreement within ±20 pts, regime agreement within ±1 state) for internal consistency before passing state downstream
 - `CONFIDENCE_THRESHOLDS` per-agent gates derived from measured evaluation hit rates; breach triggers `log_verification_event()` to trace CSV with `status="verification_fired"` (not just session_state)
-- `log_verification_event()` records every divergence and confidence gate check — fired or passed — to `logs/agent_traces.csv`, so the full verification loop history is auditable from the CSV without requiring a live session
+- `log_verification_event()` records every divergence and confidence gate check - fired or passed - to `logs/agent_traces.csv`, so the full verification loop history is auditable from the CSV without requiring a live session
 - One automatic retry with 1.5s backoff on LLM failure; `"unavailable:"` error strings intercepted at harness layer and never stored as output or shown to users
 - `trace_logger.py` records per-step latency, token estimates, cost estimate, and failure type to `logs/agent_traces.csv`
 - `pipeline_status` tracks `"complete"` vs. `"partial"` failure states with `failed_agents` list
@@ -207,7 +207,7 @@ Validated against 56 labeled historical cases across crisis, stress, and normal 
 | geopolitical_analyst | 11 | 0.0%† | 0.40 | ⚠ EVAL-LIMITED |
 | signal_auditor | 4 | 0.0%† | 0.40 | ⚠ EVAL-LIMITED |
 
-† CIS/TPS and Granger hit-rate fields require live API access (ACLED, GDELT, real-time prices) unavailable in the offline harness — these agents show 0.0% hit rate by construction and are excluded from pass/fail. **Gate column** = production confidence floor set in code: `max(0.80 × measured hit rate, 0.35 floor)`. **PASS** = gate is calibrated and hit rate clears it; for small-sample agents (commodities_specialist n=3) the floor gate applies.
+† CIS/TPS and Granger hit-rate fields require live API access (ACLED, GDELT, real-time prices) unavailable in the offline harness - these agents show 0.0% hit rate by construction and are excluded from pass/fail. **Gate column** = production confidence floor set in code: `max(0.80 × measured hit rate, 0.35 floor)`. **PASS** = gate is calibrated and hit rate clears it; for small-sample agents (commodities_specialist n=3) the floor gate applies.
 
 Confidence is calibrated via data completeness flags passed in `AgentHandoff`, not self-reported strings from the model.
 
@@ -223,11 +223,11 @@ Key infrastructure decisions and their measured impact on agent hit rates:
 | Apr-14 | EWM span 30 → 252 days | Context | 3 active-war cases flipped verdict; consistent with RiskMetrics long-memory specification |
 | Apr-14 | OLS residualization removed from commodity vol | Context | Oil-shock cases score correctly; supply-shock co-movement preserved |
 | Apr-14 | GDELT retry + throttle + outer cache | Harness / Tool Execution | 429 failures → 0; escalation_signal availability 40% → 100% |
-| Apr-21 | `score_all_assets()` unhashable dict parameter removed | Harness | P0 silent failure — Exposure Scoring and Trade Ideas were returning empty results |
+| Apr-21 | `score_all_assets()` unhashable dict parameter removed | Harness | P0 silent failure - Exposure Scoring and Trade Ideas were returning empty results |
 | Apr-21 | `_call_ai` TTL aligned 600s → 3600s to match `AGENT_TTL` | Harness | Eliminates stale/error string re-serving within the fresh window |
 | Apr-21 | `"unavailable:"` narrative guard at harness layer | Harness | Error strings no longer stored as agent output or shown to users |
 | Apr-21 | `pipeline_status` partial-failure tracking | Harness | Failed agents now identified and reported; were silently marked complete |
-| Apr-28 | `log_verification_event()` — divergence + confidence gate events to trace CSV | Harness / Observability | Verification loops now auditable from CSV; not lost on session restart |
+| Apr-28 | `log_verification_event()` - divergence + confidence gate events to trace CSV | Harness / Observability | Verification loops now auditable from CSV; not lost on session restart |
 | Apr-28 | Granger BIC lag selection + Holm-Bonferroni correction | Statistical | Multiple-comparison inflation corrected; effective α now at stated 5% |
 | Apr-28 | Transfer entropy shuffle significance (Schreiber 2000) | Statistical | TE cells now carry p-values; spurious non-zero TE values filterable |
 | Apr-28 | DCC-GARCH EWMA pre-whitening (Engle 2002 Step 1) | Statistical | Heteroskedasticity bias removed from dynamic correlations |
@@ -244,7 +244,7 @@ Starting point for every session. KPI strip (regime, 60d avg correlation with 1M
 Parametric shock simulator. Six inputs propagated via OLS betas to all 32 assets. Waterfall impact chart with channel attribution. VaR 95/99 and ES 95/99. AI Stress Engineer narrative assessment.
 
 ### War Impact Map
-Global choropleth — 195+ countries scored by equity-market exposure to three simultaneous active conflict theaters. Scoring framework by Ilian Zalomai.
+Global choropleth - 195+ countries scored by equity-market exposure to three simultaneous active conflict theaters. Scoring framework by Ilian Zalomai.
 
 ### Geopolitical Triggers
 Event-window forensics for 13 shocks (2008–present). Normalized price performance, volatility shift, correlation regime change at event onset/peak/recovery. Live Intelligence Feed with RSS ingestion and severity scoring.
@@ -338,7 +338,7 @@ The dashboard opens at **http://localhost:8501**. Without any API keys it runs i
 
 ### Configuration
 
-All secrets live in `.streamlit/secrets.toml` — copy the example template above and fill in your keys:
+All secrets live in `.streamlit/secrets.toml` - copy the example template above and fill in your keys:
 
 | Key | Section | Required | Purpose |
 |-----|---------|----------|---------|
@@ -347,7 +347,7 @@ All secrets live in `.streamlit/secrets.toml` — copy the example template abov
 | `fred_api_key` | `[keys]` | Optional | Macro Dashboard (yield curve, CPI, GDP) |
 | `app_key` | `[lseg]` | Optional | LSEG/Refinitiv price data (yfinance fallback if absent) |
 
-Anthropic is preferred when both AI keys are present. FRED is free — get a key at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html).
+Anthropic is preferred when both AI keys are present. FRED is free - get a key at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html).
 
 ### Running the eval harness (no Streamlit required)
 
@@ -378,10 +378,10 @@ python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 |-----------|-------|----------------------|
 | Granger p-values unreliable below n=200 despite 60-obs minimum | Spillover Analytics | Warning shown; BIC lag selection reduces false positive rate |
 | Holm correction reduces power: true links may be flagged non-significant in small grids | Spillover Analytics | Raw p<.05 column retained alongside Holm-corrected for comparison |
-| Transfer entropy shuffle test uses 200 permutations — noisy for p-values near 0.05 | Spillover Analytics | Recommend treating 0.01 < p < 0.05 as marginal significance |
-| Historical CIS/TPS are regime proxies — ACLED back-test unavailable offline | geopolitical_analyst | Forward-looking only; eval flagged as eval-limited |
-| GDELT tracks media volume, not events — lags actual conflict escalation 12–48h for non-Western conflicts | geopolitical_analyst | Corroborating signal only, not primary |
-| DCC EWMA λ=0.94 not data-estimated — RiskMetrics daily standard applied | Correlation Analysis | Insensitive to λ in [0.90, 0.97]; full MLE estimation would require `arch` package GARCH fit |
+| Transfer entropy shuffle test uses 200 permutations - noisy for p-values near 0.05 | Spillover Analytics | Recommend treating 0.01 < p < 0.05 as marginal significance |
+| Historical CIS/TPS are regime proxies - ACLED back-test unavailable offline | geopolitical_analyst | Forward-looking only; eval flagged as eval-limited |
+| GDELT tracks media volume, not events - lags actual conflict escalation 12–48h for non-Western conflicts | geopolitical_analyst | Corroborating signal only, not primary |
+| DCC EWMA λ=0.94 not data-estimated - RiskMetrics daily standard applied | Correlation Analysis | Insensitive to λ in [0.90, 0.97]; full MLE estimation would require `arch` package GARCH fit |
 | VAR BIC may select lag=1 on short rolling windows, understating persistence | Rolling D-Y | lag_order parameter acts as upper bound; minimum window kept at 200 days |
 | Scenario geo_mult outside [0.5, 3.0] may produce edge-case clipping | Risk Officer | Validated input range only |
 
@@ -404,7 +404,7 @@ python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 
 ## Disclaimers
 
-This dashboard is built for **educational and research purposes only**. Nothing on this platform constitutes investment advice. All analytics are based on historical data and statistical models — past relationships do not guarantee future behavior. Market data is sourced from Yahoo Finance and FRED and may have delays or gaps. AI agent outputs are generated by third-party language models and should not be treated as financial guidance.
+This dashboard is built for **educational and research purposes only**. Nothing on this platform constitutes investment advice. All analytics are based on historical data and statistical models - past relationships do not guarantee future behavior. Market data is sourced from Yahoo Finance and FRED and may have delays or gaps. AI agent outputs are generated by third-party language models and should not be treated as financial guidance.
 
 ---
 

@@ -341,7 +341,7 @@ div[class*="stSuccess"] {
     background: transparent !important;
 }
 
-/* ── Column divider — thin vertical rule between adjacent columns ── */
+/* ── Column divider - thin vertical rule between adjacent columns ── */
 [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] + [data-testid="stColumn"] {
     border-left: 1px solid #1a1a1a !important;
     padding-left: 1rem !important;
@@ -625,7 +625,7 @@ button[data-testid="baseButton-primary"] {
    Streamlit sets margin-bottom:-16px on stMarkdownContainer to cancel the
    final <p>'s 16px margin in ordinary markdown. Our panels are raw HTML
    with no trailing <p>, so every card's box ends 16px ABOVE its painted
-   content — panels spill over whatever follows (clipped headers, panel
+   content - panels spill over whatever follows (clipped headers, panel
    overlap). Zero the negative margin and instead zero the last <p>'s own
    margin so ordinary markdown spacing is preserved. */
 section[data-testid="stMain"] [data-testid="stMarkdownContainer"] {

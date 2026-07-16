@@ -472,7 +472,7 @@ def _spillover_lead_hit_rate(
     z_threshold: float = 1.0,
     z_lookback: int = 252,
     window: int = 150,
-    step: int = 10,          # every 10d (not 5) — st.tabs runs this on every page load
+    step: int = 10,          # every 10d (not 5) - st.tabs runs this on every page load
     per_side: int = 5,
     max_rows: int = 2000,    # cap history (~8y) so the rolling-VAR pass stays bounded
 ) -> dict:
@@ -481,13 +481,13 @@ def _spillover_lead_hit_rate(
     invariant): the net-transmitter should LEAD the net-receiver.
 
     At each point-in-time rolling-D-Y window (the VAR window ENDS on the date, so
-    the transmitter/receiver identity uses only past data — no look-ahead), the
+    the transmitter/receiver identity uses only past data - no look-ahead), the
     identified top transmitter's extreme daily move (|z| > z_threshold) is used to
     predict the top receiver's forward return direction N days out.
 
       hit_fwd  = % of transmitter→receiver signals that resolved in the predicted
                  direction  ·  edge_fwd = hit_fwd − 50
-      hit_rev  = the same test with roles SWAPPED (receiver→transmitter) — a
+      hit_rev  = the same test with roles SWAPPED (receiver→transmitter) - a
                  directionality control. If the D-Y direction carries genuine lead
                  information, edge_fwd should exceed edge_rev.
 
@@ -1341,9 +1341,9 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<p style="{_F}font-size:0.64rem;color:#8890a1;margin:0 0 8px 0">'
             f'Point-in-time, order-invariant (GFEVD) rolling D-Y: the VAR window ends on each date, '
-            f'so there is no look-ahead. Two tests. <b>(1) Connectedness → forward volatility</b> — '
+            f'so there is no look-ahead. Two tests. <b>(1) Connectedness → forward volatility</b> - '
             f'D-Y is a <i>variance</i> measure, so high total connectedness should precede elevated '
-            f'realised vol. <b>(2) Direction → return</b> — does the net-transmitter lead the '
+            f'realised vol. <b>(2) Direction → return</b> - does the net-transmitter lead the '
             f'net-receiver&#39;s return? <b>Edge (pp)</b> = hit rate − 50% baseline.</p>',
             unsafe_allow_html=True,
         )
@@ -1358,7 +1358,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         _sp = st.session_state.get("_acc_sp")
         if _sp is None:
             st.info("Press **▶ Run spillover validation** to compute the out-of-sample test. "
-                    "It is not run on page load (rolling VARs are heavy) — this keeps the page responsive.")
+                    "It is not run on page load (rolling VARs are heavy) - this keeps the page responsive.")
         elif not _sp:
             st.info("Insufficient rolling-D-Y windows for the selected asset set / range.")
         else:
@@ -1379,11 +1379,11 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                            "(receiver→transmitter) control. ~0 = no directional-return lead.")
             m4.metric("Rolling windows", _sp.get("n_windows", "–"))
             _v1 = ("<b>Validated:</b> the connectedness index carries genuine predictive information "
-                   "for forward volatility — exactly what D-Y measures (variance transmission). "
+                   "for forward volatility - exactly what D-Y measures (variance transmission). "
                    if (_cve is not None and _cve > 2) else
                    "<b>Weak</b> connectedness→volatility link on this window. ")
             _v2 = ("The directional (equity-led / commodity-led) call does <b>not</b> forecast return "
-                   "direction and shows no transmitter→receiver asymmetry — as expected, since D-Y "
+                   "direction and shows no transmitter→receiver asymmetry - as expected, since D-Y "
                    "decomposes <i>variance</i>, not returns. Read it as a volatility-transmission map, "
                    "not a return-direction predictor.")
             st.markdown(
@@ -2063,7 +2063,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
         st.markdown(
             f'<p style="{_F}font-size:0.56rem;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 5px 0">'
-            f'GRS Live Scorecard — forward accuracy log</p>',
+            f'GRS Live Scorecard - forward accuracy log</p>',
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -2119,7 +2119,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<div style="border:1px solid #2a2a2a;padding:1.2rem;text-align:center;margin:1rem 0">'
                 f'<span style="{_FM}font-size:0.63rem;color:#555960">'
-                f'No calls logged yet. Reload this page weekly — each load logs one call. '
+                f'No calls logged yet. Reload this page weekly - each load logs one call. '
                 f'First results appear after 4 weeks.</span></div>',
                 unsafe_allow_html=True,
             )
@@ -2174,7 +2174,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(
                     f'<p style="{_FM}font-size:0.50rem;color:#8E9AAA;'
                     f'letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">'
-                    f'Calibration — GRS score vs forward realized vol</p>',
+                    f'Calibration - GRS score vs forward realized vol</p>',
                     unsafe_allow_html=True,
                 )
                 if hs["resolved"]:
@@ -2230,7 +2230,7 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             st.markdown(
                 f'<p style="{_FM}font-size:0.50rem;color:#CFB991;letter-spacing:.12em;'
                 f'text-transform:uppercase;border-bottom:1px solid #1e1e1e;padding-bottom:4px;'
-                f'margin:1rem 0 .5rem">CALL LOG — {hs["n_total"]} ENTRIES</p>',
+                f'margin:1rem 0 .5rem">CALL LOG - {hs["n_total"]} ENTRIES</p>',
                 unsafe_allow_html=True,
             )
             _th = (f"{_FM}font-size:0.50rem;font-weight:700;letter-spacing:.08em;"
@@ -2240,18 +2240,18 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             for _entry in sorted(_call_log, key=lambda e: e["call_date"], reverse=True):
                 _is_res  = _entry.get("resolved", False)
                 _is_hit  = _entry.get("is_hit")
-                _call    = _entry.get("call", "—")
+                _call    = _entry.get("call", " - ")
                 _score   = _entry.get("grs_score", 0)
-                _label   = _entry.get("grs_label", "—")
-                _odate   = _entry.get("outcome_date", "—")
+                _label   = _entry.get("grs_label", " - ")
+                _odate   = _entry.get("outcome_date", " - ")
                 _fvol    = _entry.get("outcome_vol")
                 _bvol    = _entry.get("outcome_vol_base")
-                _cdate   = _entry.get("call_date", "—")
+                _cdate   = _entry.get("call_date", " - ")
 
                 if not _is_res:
                     _days_left = (
                         (pd.Timestamp(_odate) - pd.Timestamp("today")).days
-                        if _odate != "—" else "—"
+                        if _odate != " - " else " - "
                     )
                     _result_html = (
                         f'<span style="{_FM}font-size:0.50rem;color:#555960">'
@@ -2276,10 +2276,10 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
                               "#e67e22" if _score >= 50 else "#CFB991")
                 _td = f"{_FM}font-size:0.56rem;padding:5px 8px;border-bottom:1px solid #111;{_row_bg}"
                 _fvol_str = (f'{_fvol:.1f}% (base {_bvol:.1f}%)'
-                             if _fvol is not None and _bvol is not None else "—")
+                             if _fvol is not None and _bvol is not None else " - ")
                 _log_rows += (
                     f'<tr>'
-                    f'<td style="{_td}color:#555960">{_entry.get("week","—")}</td>'
+                    f'<td style="{_td}color:#555960">{_entry.get("week"," - ")}</td>'
                     f'<td style="{_td}color:#e8e9ed">{_cdate}</td>'
                     f'<td style="{_td}color:{_score_col};font-weight:700">{_score:.0f}</td>'
                     f'<td style="{_td}color:#8890a1">{_label}</td>'
@@ -2490,6 +2490,6 @@ def page_model_accuracy(start: str, end: str, fred_key: str = "") -> None:
             st.caption("VIX > 35 = Crisis ground truth · VIX > 22 = Elevated · else Normal. "
                        "CIS/TPS proxied from risk_score when conflict model can't be back-tested.")
     except Exception as _bm_err:
-        st.caption("Agent benchmark unavailable — see logs.")
+        st.caption("Agent benchmark unavailable - see logs.")
 
     _page_footer()

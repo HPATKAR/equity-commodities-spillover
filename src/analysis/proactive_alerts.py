@@ -303,7 +303,7 @@ def _check_country_exposure(cmd_r: pd.DataFrame) -> list[Alert]:
     alerts.append(Alert(
         severity="warning",
         category="country_exposure",
-        title=f"Country equity exposure elevated — {lead_idx} {lead_score}/100",
+        title=f"Country equity exposure elevated - {lead_idx} {lead_score}/100",
         body=(
             f"{len(elevated)} equity index/indices have country-level geopolitical exposure ≥ 65: "
             f"{detail}. "
@@ -346,7 +346,7 @@ def _check_gdelt_escalation() -> list[Alert]:
                     body=(
                         f"News coverage of {label} surged {trend:+.0%} in the past 7 days vs prior period. "
                         f"Tone score: {tone:+.1f} (negative = alarming). "
-                        "Sharp media surges often precede market repricing by 1–3 days — "
+                        "Sharp media surges often precede market repricing by 1–3 days - "
                         "watch energy and safe-haven assets."
                     ),
                     page_hint="conflict_intelligence",
@@ -358,7 +358,7 @@ def _check_gdelt_escalation() -> list[Alert]:
                     title=f"GDELT: {label} escalating coverage +{trend:.0%}",
                     body=(
                         f"{label} media volume up {trend:+.0%} this week. "
-                        f"GDELT tone: {tone:+.1f}. Monitor for further escalation — "
+                        f"GDELT tone: {tone:+.1f}. Monitor for further escalation - "
                         "coverage spikes above +40% historically precede conflict-driven commodity moves."
                     ),
                     page_hint="conflict_intelligence",
@@ -397,7 +397,7 @@ def _check_eia_inventory() -> list[Alert]:
                     severity="critical", category="supply",
                     title=f"EIA {commodity} stocks critically low ({p5yr:+.1f}% vs 5yr avg)",
                     body=(
-                        f"US {commodity} stocks at {level:,} {units} — {abs(p5yr):.1f}% below the "
+                        f"US {commodity} stocks at {level:,} {units} - {abs(p5yr):.1f}% below the "
                         f"5-year seasonal average. WoW change: {'+' if wow>=0 else ''}{wow:,}. "
                         "Stocks this far below seasonal norms historically precede acute price spikes. "
                         "Any supply disruption (chokepoint, weather, pipeline) could amplify sharply."
@@ -410,7 +410,7 @@ def _check_eia_inventory() -> list[Alert]:
                     severity="warning", category="supply",
                     title=f"EIA {commodity} below seasonal average ({p5yr:+.1f}%)",
                     body=(
-                        f"US {commodity} stocks at {level:,} {units} — {abs(p5yr):.1f}% below "
+                        f"US {commodity} stocks at {level:,} {units} - {abs(p5yr):.1f}% below "
                         f"5-year seasonal average. WoW: {'+' if wow>=0 else ''}{wow:,} {units}. "
                         "Tighter-than-normal inventory levels reduce the market's shock-absorption buffer."
                     ),

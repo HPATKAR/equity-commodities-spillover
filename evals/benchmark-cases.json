@@ -38,7 +38,7 @@
   },
   {
     "date": "2022-03-08",
-    "label": "Ukraine War — Peak Commodity Spike",
+    "label": "Ukraine War - Peak Commodity Spike",
     "regime": 3,
     "vix_approx": 36.0,
     "notes": "WTI $130/bbl. Wheat +40% MTD. LME nickel halted at $100k/t.",
@@ -62,7 +62,7 @@
   },
   {
     "date": "2022-06-13",
-    "label": "CPI 9.1% — Inflation Peak",
+    "label": "CPI 9.1% - Inflation Peak",
     "regime": 2,
     "vix_approx": 34.0,
     "notes": "US CPI YoY 9.1%. Fed fast-tracks 75bp hike. S&P YTD -24%.",
@@ -195,7 +195,7 @@
   },
   {
     "date": "2024-01-02",
-    "label": "2024 Start — Risk-On",
+    "label": "2024 Start - Risk-On",
     "regime": 1,
     "vix_approx": 13.0,
     "notes": "VIX 13, lowest since 2019. S&P and Nasdaq near ATH. Gold stable.",

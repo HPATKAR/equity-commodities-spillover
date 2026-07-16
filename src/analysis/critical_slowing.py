@@ -1,17 +1,17 @@
 """
-Critical Slowing Down — regime-transition early-warning signals.
+Critical Slowing Down - regime-transition early-warning signals.
 
 Tipping-point theory (Scheffer et al. 2009, Nature; Dakos et al. 2012, PLoS ONE)
 observes that as a dynamical system approaches a critical transition, it recovers
 more and more slowly from small perturbations. Two statistical fingerprints of
 that "critical slowing down" (CSD) appear BEFORE the system actually flips:
 
-  1. Rising lag-1 autocorrelation — AR(1) coefficient climbs toward 1
+  1. Rising lag-1 autocorrelation - AR(1) coefficient climbs toward 1
      (the system's memory lengthens; shocks decay slower).
-  2. Rising variance — fluctuations grow as the basin of attraction flattens.
+  2. Rising variance - fluctuations grow as the basin of attraction flattens.
 
-This module applies that machinery — imported from ecology/climate tipping-point
-research — to a market *driver* series (the Diebold-Yilmaz connectedness index or
+This module applies that machinery - imported from ecology/climate tipping-point
+research - to a market *driver* series (the Diebold-Yilmaz connectedness index or
 the average cross-asset correlation). The goal is to flag an impending correlation
 regime transition (Normal → Elevated → Crisis) some days BEFORE the terminal's
 Markov regime classifier (src/analysis/correlations.detect_correlation_regime)
@@ -22,7 +22,7 @@ Method, per Dakos et al. (2012):
     fluctuations from the slow-moving level.
   · On the residuals, compute rolling-window AR(1), variance and skewness.
   · The *early-warning signal* is not the level of an indicator but its upward
-    TREND — quantified with Kendall's rank correlation (tau) over a trailing
+    TREND - quantified with Kendall's rank correlation (tau) over a trailing
     window. tau → +1 means a strong, monotonic rise = strong warning.
   · A composite blends the standardized AR(1) and variance indicators into a
     single 0–100 warning level.
@@ -59,7 +59,7 @@ def _ar1(x: np.ndarray) -> float:
 
 
 def _kendall_tau(y: np.ndarray) -> float:
-    """Kendall rank correlation of a series against time — trend strength in [-1, 1]."""
+    """Kendall rank correlation of a series against time - trend strength in [-1, 1]."""
     y = np.asarray(y, dtype=float)
     mask = ~np.isnan(y)
     y = y[mask]
@@ -88,14 +88,14 @@ def compute_ews(
     """Rolling early-warning indicators on a driver series.
 
     Returns a DataFrame indexed like the (detrended) driver with columns:
-      · driver     — the raw input, aligned
-      · residual   — detrended driver
-      · ar1        — rolling lag-1 autocorrelation (rising = warning)
-      · variance   — rolling variance of residuals (rising = warning)
-      · skew       — rolling skewness (asymmetry grows near a transition)
-      · ar1_z      — expanding z-score of ar1
-      · var_z      — expanding z-score of variance
-      · composite  — 0–100 warning level: logistic blend of ar1_z and var_z
+      · driver - the raw input, aligned
+      · residual - detrended driver
+      · ar1 - rolling lag-1 autocorrelation (rising = warning)
+      · variance - rolling variance of residuals (rising = warning)
+      · skew - rolling skewness (asymmetry grows near a transition)
+      · ar1_z - expanding z-score of ar1
+      · var_z - expanding z-score of variance
+      · composite - 0–100 warning level: logistic blend of ar1_z and var_z
     """
     driver = driver.dropna()
     out = pd.DataFrame(index=driver.index)
@@ -119,7 +119,7 @@ def compute_ews(
         "skew": skew,
     }).dropna(subset=["ar1", "variance"])
 
-    # Expanding z-scores — each day standardized against its own history only
+    # Expanding z-scores - each day standardized against its own history only
     # (no forward leakage). min_periods keeps early estimates from exploding.
     def _exp_z(s: pd.Series) -> pd.Series:
         mu = s.expanding(min_periods=mp).mean()
@@ -135,7 +135,7 @@ def compute_ews(
 
 
 def trend_tau(ews: pd.DataFrame, window: int = 40) -> pd.DataFrame:
-    """Trailing Kendall-tau trend of each CSD indicator — the actual warning.
+    """Trailing Kendall-tau trend of each CSD indicator - the actual warning.
 
     A positive tau on ar1 AND variance is the classic CSD signature. Returns
     columns ar1_tau, var_tau, composite_tau aligned to `ews`.
@@ -269,7 +269,7 @@ def latest_reading(ews: pd.DataFrame, taus: pd.DataFrame,
     if comp >= alert_threshold and both_rising:
         status = "TRANSITION RISK BUILDING"
     elif comp >= alert_threshold or both_rising:
-        status = "WATCH — MIXED SIGNAL"
+        status = "WATCH - MIXED SIGNAL"
     else:
         status = "STABLE"
 

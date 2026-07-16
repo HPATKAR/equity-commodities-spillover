@@ -292,7 +292,7 @@ def context_confidence(agent_id: str, context: dict) -> float:
     This REPLACES regex-parsing of 'CONFIDENCE: X%' from model text.
 
     Logic: data completeness × signal strength × regime certainty.
-    All inputs are numeric fields from the context dict — never parsed from strings.
+    All inputs are numeric fields from the context dict - never parsed from strings.
     """
     score = 0.60   # neutral prior
 
@@ -348,7 +348,7 @@ def context_confidence(agent_id: str, context: dict) -> float:
             score = min(score + 0.06, 0.72)
 
     elif agent_id == "quality_officer":
-        score = 0.78   # CQO checks known failure modes — inherently high base
+        score = 0.78   # CQO checks known failure modes - inherently high base
 
     return round(float(min(max(score, 0.30), 0.90)), 3)
 
@@ -367,11 +367,11 @@ def calibrate_confidence(
         posterior  = per-agent, per-signal-class historical accuracy
                      from agent_benchmark.POSTERIOR_ACCURACY (back-tested)
         raw        = model-reported confidence (parsed from LLM output OR
-                     set explicitly by the agent — never regex-parsed here)
+                     set explicitly by the agent - never regex-parsed here)
         α          = 0.40  (weight on the empirical prior vs. model self-report)
 
     The story this tells: "this agent's historical accuracy on this signal
-    class is X%, and the model self-reports Y% — we blend them at 40/60."
+    class is X%, and the model self-reports Y% - we blend them at 40/60."
 
     signal_class: optional key into POSTERIOR_ACCURACY (e.g. "risk_score_crisis").
     Falls back to agent base rate if signal_class is None or not found.

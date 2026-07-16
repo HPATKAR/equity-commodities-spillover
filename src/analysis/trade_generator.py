@@ -124,11 +124,11 @@ def _safe_haven_pair(
     if confidence < 0.55:
         qc_flags.append("Low confidence (<55%)")
     if tps < 40:
-        qc_flags.append("Low transmission pressure — signal may be premature")
+        qc_flags.append("Low transmission pressure - signal may be premature")
 
     return {
         "name":      f"Long {hedge_asset} / Short {lead_asset}",
-        "trigger":   f"{conflict['name']} — safe-haven rotation (SAS={lead_data['sas']:.0f})",
+        "trigger":   f"{conflict['name']} - safe-haven rotation (SAS={lead_data['sas']:.0f})",
         "rationale": (
             f"{lead_asset} carries structural geo exposure of {lead_data['ses']:.2f} "
             f"to {conflict['name']} (beta={lead_beta:.2f}). "
@@ -209,10 +209,10 @@ def _supply_shock_long(
     if confidence < 0.55:
         qc_flags.append("Low confidence (<55%)")
     if beta < 0.10:
-        qc_flags.append("Low conflict beta — check structural exposure")
+        qc_flags.append("Low conflict beta - check structural exposure")
 
     return {
-        "name":      f"Long {asset} — Supply Shock ({conflict['label']})",
+        "name":      f"Long {asset} - Supply Shock ({conflict['label']})",
         "trigger":   f"{conflict['name']} disrupting {asset} supply chains",
         "rationale": (
             f"{asset} has structural exposure {s_data['ses']:.2f} to {conflict['name']}, "
@@ -289,13 +289,13 @@ def _pair_long_short(
     if confidence < 0.55:
         qc_flags.append("Low confidence (<55%)")
     if spread_beta < 0.05:
-        qc_flags.append("Low beta spread — pair differentiation is weak")
+        qc_flags.append("Low beta spread - pair differentiation is weak")
     if long_data["sas"] < 20 or short_data["sas"] < 20:
         qc_flags.append("One leg has low scenario-adjusted exposure")
 
     return {
         "name":      f"Long {long_asset} / Short {short_asset}",
-        "trigger":   f"{conflict['name']} — geo-risk beneficiary vs. victim pair",
+        "trigger":   f"{conflict['name']} - geo-risk beneficiary vs. victim pair",
         "rationale": (
             f"Both assets exposed to {conflict['name']} but in opposing directions. "
             f"{long_asset} (beta={long_beta:.2f}, SAS={long_data['sas']:.0f}) benefits from "
@@ -367,10 +367,10 @@ def _deescalation_reversal(
     if confidence < 0.55:
         qc_flags.append("Low confidence (<55%)")
     if conflict.get("escalation_trend") == "escalating":
-        qc_flags.append("Conflict trend still escalating — de-escalation thesis fragile")
+        qc_flags.append("Conflict trend still escalating - de-escalation thesis fragile")
 
     return {
-        "name":      f"Short {asset} — Geo Premium Reversal ({conflict['label']})",
+        "name":      f"Short {asset} - Geo Premium Reversal ({conflict['label']})",
         "trigger":   f"De-escalation in {conflict['name']} compresses {asset} geo premium",
         "rationale": (
             f"{asset} carries a structural geo-risk premium tied to {conflict['name']} "
@@ -500,7 +500,7 @@ def generate_conflict_trades(
 
     Returns
     -------
-    list[dict]  — trade dicts ready for apply_filters()
+    list[dict] - trade dicts ready for apply_filters()
     """
     from src.analysis.conflict_model import score_all_conflicts
     from src.analysis.exposure import score_all_assets
@@ -629,7 +629,7 @@ def merge_with_library(
     # Backfill missing fields on static library entries
     augmented_library: list[dict] = []
     for t in library:
-        t = dict(t)  # shallow copy — don't mutate original
+        t = dict(t)  # shallow copy - don't mutate original
         t.setdefault("confidence",   0.60)
         t.setdefault("qc_flags",     [])
         t.setdefault("scenarios",    ["base", "escalation", "supply_shock"])
@@ -649,7 +649,7 @@ def merge_with_library(
 
 
 # ── Individual signal-ranked candidate universe ──────────────────────────────
-# Individual (single-name / single-asset) directional trades — NOT pairs —
+# Individual (single-name / single-asset) directional trades - NOT pairs - 
 # across a LIQUID universe people actually trade: liquid macro (energy, metals,
 # major indices, safe havens; niche softs deprioritised), plus liquid single
 # stocks (S&P 500 + top India NSE + top China HK), each mapped to the macro
@@ -659,7 +659,7 @@ def merge_with_library(
 # Niche soft-ag commodities kept "lite" (excluded from generation)
 _NICHE_AG = {"Cotton", "Coffee", "Sugar #11", "Soybeans"}
 
-# Top India large-caps (NSE) — ticker → (name, sector)
+# Top India large-caps (NSE) - ticker → (name, sector)
 _INDIA_UNIVERSE: dict[str, tuple[str, str]] = {
     "RELIANCE.NS": ("Reliance Industries", "Energy"),
     "TCS.NS": ("Tata Consultancy", "Tech"),
@@ -682,7 +682,7 @@ _INDIA_UNIVERSE: dict[str, tuple[str, str]] = {
     "NTPC.NS": ("NTPC", "Utilities"),
 }
 
-# Top China large-caps (HK) — ticker → (name, sector)
+# Top China large-caps (HK) - ticker → (name, sector)
 _CHINA_UNIVERSE: dict[str, tuple[str, str]] = {
     "0700.HK": ("Tencent", "Tech"),
     "9988.HK": ("Alibaba", "Tech"),
@@ -756,15 +756,15 @@ def _macro_directional(name, d, side, conf, regime, now) -> dict:
     verb = "beneficiary" if side == "Long" else "underweight"
     return {
         "name": f"{side} {name}",
-        "trigger": f"{name} SAS {d['sas']:.0f} — {sect} {verb} on the geo-risk / spillover signal",
+        "trigger": f"{name} SAS {d['sas']:.0f} - {sect} {verb} on the geo-risk / spillover signal",
         "rationale": (
             f"Individual directional signal: {name} ({sect}) scores SAS {d['sas']:.0f} on the current "
             f"geo-risk / spillover signal, a {'top' if side == 'Long' else 'bottom'}-ranked {sect} read. "
-            f"Screened candidate, not discretionary — gated by backtest + deflated Sharpe."
+            f"Screened candidate, not discretionary - gated by backtest + deflated Sharpe."
         ),
         "entry": f"{name} SAS { 'above' if side=='Long' else 'below' } {max(12, d['sas'] + (-8 if side=='Long' else 8)):.0f}; regime {regime}",
         "exit": f"Signal rank reverts to the middle of the universe",
-        "risk": "Single-leg directional — carries full asset beta, no relative hedge.",
+        "risk": "Single-leg directional - carries full asset beta, no relative hedge.",
         "tickers": _resolve_tickers([name]),
         "assets": [name], "direction": [side],
         "regime": [1, 2, 3] if regime >= 2 else [0, 1, 2],
@@ -782,8 +782,8 @@ def _macro_directional(name, d, side, conf, regime, now) -> dict:
 def _haven(name, d, conf, regime, now) -> dict:
     hs = d.get("hedge_score", 0)
     return {
-        "name": f"Long {name} — safe-haven hedge",
-        "trigger": f"{name} hedge score {hs:.0f}/100 — portfolio crisis ballast",
+        "name": f"Long {name} - safe-haven hedge",
+        "trigger": f"{name} hedge score {hs:.0f}/100 - portfolio crisis ballast",
         "rationale": (
             f"Safe-haven hedge: {name} scores {hs:.0f}/100 on the crisis-ballast signal "
             f"(SAS {d.get('sas', 0):.0f}). Held as a hedge overlay, not an alpha bet."
@@ -799,18 +799,18 @@ def _haven(name, d, conf, regime, now) -> dict:
         "stop": "Regime falls to Normal for 5+ days",
         "target": "Outperforms risk assets during a correlation spike",
         "invalidation": "Sustained risk-on regime",
-        "holding_period": "Hedge overlay — regime-conditional", "reward_risk": "Convex / hedge",
+        "holding_period": "Hedge overlay - regime-conditional", "reward_risk": "Convex / hedge",
     }
 
 
 def _stock_trade(disp, ticker, sector, region, side, sig_sas, angle, conf, regime, now) -> dict:
     return {
         "name": f"{side} {disp} ({region})",
-        "trigger": f"{disp} · {sector} — {angle} (signal {sig_sas:.0f})",
+        "trigger": f"{disp} · {sector} - {angle} (signal {sig_sas:.0f})",
         "rationale": (
             f"Individual single-name {region} equity: {disp} is a liquid {sector} name whose earnings track "
             f"the {angle} macro signal (strength {sig_sas:.0f} on the current read). Expressed {side.lower()} "
-            f"the name directly. Screened candidate — gated by backtest + deflated Sharpe."
+            f"the name directly. Screened candidate - gated by backtest + deflated Sharpe."
         ),
         "entry": f"{sector} signal { 'elevated' if side=='Long' else 'stretched'} (≈{sig_sas:.0f}); regime {regime}",
         "exit": f"{sector} macro signal normalises",

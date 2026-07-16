@@ -2,9 +2,9 @@
 Daily snapshot for the Home "what changed" delta panel.
 
 Stores three slots:
-  snapshot_today       — latest capture, rewritten on every load
-  snapshot_yesterday   — previous calendar day's last capture, rolled over
-  snapshot_first_today — the FIRST capture of the current calendar day
+  snapshot_today - latest capture, rewritten on every load
+  snapshot_yesterday - previous calendar day's last capture, rolled over
+  snapshot_first_today - the FIRST capture of the current calendar day
 
 Baseline selection (what "today" is compared against), best available first:
   1. snapshot_yesterday    → true day-over-day move (preferred)
@@ -115,13 +115,13 @@ def update_snapshot(
 
     Returns
     -------
-    baseline : dict | None  — what today is compared against. Prior calendar
+    baseline : dict | None - what today is compared against. Prior calendar
                               day if one exists; else the first capture of the
                               current day (intraday); else None only on the
                               very first capture ever, when nothing can be
                               compared. The caller labels it by inspecting the
                               baseline's own ``date`` vs today.
-    today    : dict         — current payload
+    today    : dict - current payload
     """
     from src.utils.timeutil import today_ct
     today_str = today_ct().isoformat()
@@ -134,7 +134,7 @@ def update_snapshot(
                                geo_risk_score, mcs, news_gpr, confidence)
 
     if today_slot is None:
-        # First capture ever — seed first_today so an intraday baseline can
+        # First capture ever - seed first_today so an intraday baseline can
         # form on the next load; nothing to compare against yet.
         _write_file({"snapshot_today": new_today, "snapshot_yesterday": None,
                      "snapshot_first_today": new_today})

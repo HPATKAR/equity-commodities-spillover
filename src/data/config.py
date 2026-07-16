@@ -10,26 +10,26 @@ from datetime import date
 # Separate from GEOPOLITICAL_EVENTS (event-window analysis) - this is the live
 # conflict tracking layer for the scoring architecture.
 #
-# FIELD PROVENANCE — what is live vs manual:
+# FIELD PROVENANCE - what is live vs manual:
 #
 #   ALWAYS MANUAL SCENARIO ASSUMPTIONS (human-authored, no live replacement):
-#     civilian_danger       — humanitarian risk judgment; no reliable live proxy
-#     fragmentation         — actor-count assessment; manual update required
-#     source_coverage       — analyst estimate of data quality
-#     data_confidence       — analyst estimate of scoring reliability
-#     transmission.*        — all 12 channel weights are manual structural assumptions
-#     affected_equities, affected_commodities, affected_fx, hedge_assets — manual lists
+#     civilian_danger - humanitarian risk judgment; no reliable live proxy
+#     fragmentation - actor-count assessment; manual update required
+#     source_coverage - analyst estimate of data quality
+#     data_confidence - analyst estimate of scoring reliability
+#     transmission.* - all 12 channel weights are manual structural assumptions
+#     affected_equities, affected_commodities, affected_fx, hedge_assets - manual lists
 #
 #   LIVE-REPLACEABLE (overwritten when ACLED/GDELT respond; fall back to manual):
-#     deadliness            — ACLED: fatality/event counts (last 30d), else manual
-#     geographic_diffusion  — ACLED: event-spread index, else manual
-#     escalation_trend      — ACLED + GDELT corroboration, else GDELT alone, else manual
+#     deadliness - ACLED: fatality/event counts (last 30d), else manual
+#     geographic_diffusion - ACLED: event-spread index, else manual
+#     escalation_trend - ACLED + GDELT corroboration, else GDELT alone, else manual
 #
 #   ALWAYS COMPUTED (not stored here):
-#     recency               — derived from conflict.start vs today
-#     CIS, TPS, confidence  — computed by conflict_model.py at runtime
+#     recency - derived from conflict.start vs today
+#     CIS, TPS, confidence - computed by conflict_model.py at runtime
 #
-# scoring_basis: "manual scenario assumption" — present on every entry as a machine-
+# scoring_basis: "manual scenario assumption" - present on every entry as a machine-
 #   readable flag. When cis_source == "static" in conflict_model output, all CIS
 #   dimensions fell back to these manual values.
 #
@@ -998,7 +998,7 @@ WATCHLIST = [
     ("NG=F",  "Natural Gas",      "Energy",           "Europe energy crisis proxy"),
     ("GC=F",  "Gold",             "Precious Metals",  "Safe haven & inflation hedge"),
     ("HG=F",  "Copper",           "Industrial Metals","Global growth bellwether"),
-    # Nickel removed — NILSY delisted; no working yfinance nickel futures ticker
+    # Nickel removed - NILSY delisted; no working yfinance nickel futures ticker
     ("ZW=F",  "Wheat",            "Agriculture",      "Ukraine/Russia supply shock"),
     ("ZC=F",  "Corn",             "Agriculture",      "Ethanol & food inflation"),
     ("ZS=F",  "Soybeans",         "Agriculture",      "China-US trade war proxy"),

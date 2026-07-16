@@ -1,11 +1,11 @@
 """
-News GPR Layer — Threat Score vs Act Score.
+News GPR Layer - Threat Score vs Act Score.
 
 Extends geo_rss ingestion with fine-grained classification:
 
-  Threat Score  — rhetoric, force build-up, warnings, military signaling,
+  Threat Score - rhetoric, force build-up, warnings, military signaling,
                   sanctions threats, diplomatic breakdown, naval movements
-  Act Score     — realized adverse events: strikes, explosions, sanctions
+  Act Score - realized adverse events: strikes, explosions, sanctions
                   imposed, vessels seized, blockades, troop crossings
 
   News GPR = α·Act + (1−α)·Threat
@@ -37,7 +37,7 @@ import numpy as np
 import streamlit as st
 
 # ── Threat keyword taxonomy ───────────────────────────────────────────────────
-# Words that signal future-oriented or rhetorical risk — not yet realized.
+# Words that signal future-oriented or rhetorical risk - not yet realized.
 
 _THREAT_KEYWORDS: list[str] = [
     # Diplomatic / rhetorical escalation
@@ -63,7 +63,7 @@ _THREAT_KEYWORDS: list[str] = [
 ]
 
 # ── Act keyword taxonomy ──────────────────────────────────────────────────────
-# Words that signal a realized adverse event — something already happened.
+# Words that signal a realized adverse event - something already happened.
 
 _ACT_KEYWORDS: list[str] = [
     # Kinetic events
@@ -183,7 +183,7 @@ def classify_headline(h) -> GPRHeadline:
         getattr(h, "severity", "low"), 1.0
     )
 
-    # Raw scores — each keyword hit contributes; cap at 100
+    # Raw scores - each keyword hit contributes; cap at 100
     raw_threat = min(threat_hits * 18 * w * sev_mult, 100.0)
     raw_act    = min(act_hits    * 22 * w * sev_mult, 100.0)
 
@@ -298,7 +298,7 @@ def _per_conflict_scores(
 def get_news_gpr_layer(max_headlines: int = 60) -> dict:
     """
     Fetch, classify, and aggregate the News GPR layer.
-    Cached 15 minutes — same TTL as the RSS feed.
+    Cached 15 minutes - same TTL as the RSS feed.
 
     Returns:
         news_gpr      float   0–100  portfolio-level blended GPR
@@ -319,11 +319,11 @@ def get_news_gpr_layer(max_headlines: int = 60) -> dict:
     raw: list = []
 
     try:
-        import feedparser  # noqa: F401 — verify installed before calling
+        import feedparser  # noqa: F401 - verify installed before calling
         from src.ingestion.geo_rss import ingest_headlines
         raw = ingest_headlines()
     except ImportError:
-        feed_error = "feedparser not installed — run: pip install feedparser"
+        feed_error = "feedparser not installed - run: pip install feedparser"
     except Exception as exc:
         feed_error = f"Feed ingestion error: {exc}"
 
@@ -399,7 +399,7 @@ def get_news_gpr_layer(max_headlines: int = 60) -> dict:
 
 def debug_news_gpr() -> dict:
     """
-    Lightweight sanity-check — call this to manually verify the pipeline.
+    Lightweight sanity-check - call this to manually verify the pipeline.
 
     Returns a plain dict with pipeline state. No Streamlit required.
     Example:

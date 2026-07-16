@@ -32,8 +32,8 @@ _log = logging.getLogger(__name__)
 # instead of re-downloading 30+ tickers (~3-15s). To survive DEPLOYS/RESTARTS on
 # an ephemeral host (Render), point this at a mounted persistent disk via
 # SPILLOVER_CACHE_DIR (or reuse SPILLOVER_SNAPSHOT_DIR). Without either, it falls
-# back to ~/.cache — still helps within a process lifetime, but every redeploy is
-# cold. Max age 4 hours — acceptable staleness for daily-close return series.
+# back to ~/.cache - still helps within a process lifetime, but every redeploy is
+# cold. Max age 4 hours - acceptable staleness for daily-close return series.
 def _resolve_cache_dir() -> Path:
     root = os.environ.get("SPILLOVER_CACHE_DIR") or os.environ.get("SPILLOVER_SNAPSHOT_DIR")
     candidate = (Path(root) / "price_cache") if root else (Path.home() / ".cache" / "spillover_monitor")
@@ -81,7 +81,7 @@ def _disk_prune(path: Path, keep: int = _DISK_CACHE_KEEP) -> None:
     """Keep only the newest `keep` parquets for this series prefix.
 
     Every cache key embeds end=today, so a new parquet is written each day the
-    process runs — unbounded on a persistent disk. Prefix is the text before the
+    process runs - unbounded on a persistent disk. Prefix is the text before the
     first underscore (e.g. "equity", "commodity"); the newest few are retained
     for both fast hits and _disk_stale_fallback, the rest are removed.
     """
@@ -100,7 +100,7 @@ def _disk_prune(path: Path, keep: int = _DISK_CACHE_KEEP) -> None:
 def _disk_stale_fallback(name: str, start: str, end: str) -> pd.DataFrame | None:
     """
     Last-resort disk fallback when the live fetch returns EMPTY and there is
-    no exact-key cache hit — typical at the daily key rollover (every key
+    no exact-key cache hit - typical at the daily key rollover (every key
     embeds end=today, so all keys go stale at midnight) combined with a
     yfinance rate-limit. Serving a slightly stale frame beats rendering a
     page of silent gaps (the GAP-16 failure class).
@@ -148,7 +148,7 @@ from src.data.config import (
 # that is NOT safe for concurrent yf.download() calls. Pages fan their loaders
 # out across a ThreadPoolExecutor, so several downloads can run at once and
 # corrupt that dict ("RuntimeError: dictionary changed size during iteration").
-# Serialise every download through one process-wide lock — correctness over the
+# Serialise every download through one process-wide lock - correctness over the
 # small parallelism loss (yfinance already threads ticker fetches WITHIN a call).
 _YF_LOCK = threading.Lock()
 _orig_yf_download = yf.download
@@ -160,7 +160,7 @@ def _yf_download(*args, **kwargs):
 
 
 # Monkey-patch yfinance so EVERY yf.download() call app-wide (any module, any
-# import alias) is serialised — the shared._DFS race can fire from ANY two
+# import alias) is serialised - the shared._DFS race can fire from ANY two
 # concurrent downloads, not just the loader's. Idempotent: only patch once.
 if not getattr(yf.download, "_serialised", False):
     _yf_download._serialised = True
@@ -186,7 +186,7 @@ def fetch_ticker_news(ticker: str, max_items: int = 3, max_age_days: int = 35,
     """Recent REAL news for one ticker via yfinance (Reuters / Zacks / Barchart /
     Bloomberg / …). Returns [{title, publisher, date, url}] no older than
     max_age_days, reputable financial sources first, then newest. Empty on any
-    failure — never raises. NOT fabricated: these are live third-party headlines
+    failure - never raises. NOT fabricated: these are live third-party headlines
     carrying source, date and link, fetched at report time.
 
     `keywords` (lowercase tokens) filters out off-topic / wrong-company noise:
@@ -228,7 +228,7 @@ def fetch_ticker_news(ticker: str, max_items: int = 3, max_age_days: int = 35,
             "date": when.date().isoformat() if when else "",
             "url": url,
         })
-    # Relevance filter — keep only headlines that actually mention the name/ticker,
+    # Relevance filter - keep only headlines that actually mention the name/ticker,
     # dropping the sector-level noise yfinance mixes in (empty > wrong-company).
     if keywords:
         kws = tuple(k for k in keywords if k)
@@ -242,17 +242,17 @@ def fetch_ticker_news(ticker: str, max_items: int = 3, max_age_days: int = 35,
 
 # ── Pandera schema validation ─────────────────────────────────────────────────
 # Validates loader outputs at system boundary (external data → our pipeline).
-# Failures emit warnings — never crash the dashboard. Schema checks:
+# Failures emit warnings - never crash the dashboard. Schema checks:
 #   • log-return DataFrames: finite values, -50% < return < +50% per row
 #   • price DataFrames: strictly positive, no all-NaN columns
 #   • FRED series: numeric, non-empty index
-# Pandera is optional — validation degrades gracefully if not installed.
+# Pandera is optional - validation degrades gracefully if not installed.
 
 def _validate_returns(df: pd.DataFrame, source: str) -> pd.DataFrame:
     """
     Validate a log-return DataFrame. Emits st.warning on failure.
     Checks: column count ≥ 1, values finite, |return| < 0.50 (50%) per cell.
-    Returns df unchanged — validation is non-destructive.
+    Returns df unchanged - validation is non-destructive.
     """
     if df.empty:
         return df
@@ -263,7 +263,7 @@ def _validate_returns(df: pd.DataFrame, source: str) -> pd.DataFrame:
             checks=[
                 pa.Check(
                     lambda df: df.apply(lambda col: col.dropna().abs().lt(0.50).all()).all(),
-                    error=f"{source}: log-return magnitude ≥ 50% — likely a price error or corporate action",
+                    error=f"{source}: log-return magnitude ≥ 50% - likely a price error or corporate action",
                 ),
                 pa.Check(
                     lambda df: df.apply(lambda col: col.dropna().apply(lambda x: np.isfinite(x)).all()).all(),
@@ -274,7 +274,7 @@ def _validate_returns(df: pd.DataFrame, source: str) -> pd.DataFrame:
         )
         schema.validate(df, lazy=True)
     except ImportError:
-        pass   # pandera not installed — skip silently
+        pass   # pandera not installed - skip silently
     except Exception as _ve:
         try:
             import logging
@@ -297,7 +297,7 @@ def _validate_prices(df: pd.DataFrame, source: str) -> pd.DataFrame:
             checks=[
                 pa.Check(
                     lambda df: (df.fillna(0) >= 0).all().all(),
-                    error=f"{source}: negative prices detected — check ticker mapping",
+                    error=f"{source}: negative prices detected - check ticker mapping",
                 ),
                 pa.Check(
                     lambda df: not df.isna().all().any(),
@@ -469,7 +469,7 @@ def _fetch_lseg_snapshot(names: list[str]) -> pd.DataFrame:
 def _fetch_yf(tickers: dict[str, str], start, end) -> pd.DataFrame:
     """Download adjusted close prices for a dict of {name: ticker}."""
     reverse = {v: k for k, v in tickers.items()}
-    # yfinance end is EXCLUSIVE — add 1 day so today's close is always included.
+    # yfinance end is EXCLUSIVE - add 1 day so today's close is always included.
     # end may arrive as str or date, so normalise before arithmetic.
     if isinstance(end, str):
         end = date.fromisoformat(end)
@@ -502,7 +502,7 @@ def _log_returns(prices: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fill_gaps(df: pd.DataFrame, method: str = "ffill", limit: int = 5) -> pd.DataFrame:
-    # ffill only — bfill uses future prices to fill past gaps (look-ahead bias in returns).
+    # ffill only - bfill uses future prices to fill past gaps (look-ahead bias in returns).
     return df.ffill(limit=limit)
 
 
@@ -556,7 +556,7 @@ def load_all_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_prices, commodity_prices). Not cached — delegates to cached leaf loaders."""
+    """Return (equity_prices, commodity_prices). Not cached - delegates to cached leaf loaders."""
     eq  = load_equity_prices(start, end)
     cmd = load_commodity_prices(start, end)
     return eq, cmd
@@ -566,11 +566,11 @@ def load_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_returns, commodity_returns) as log-return DataFrames. Not cached — delegates to cached leaf loaders."""
+    """Return (equity_returns, commodity_returns) as log-return DataFrames. Not cached - delegates to cached leaf loaders."""
     eq, cmd = load_all_prices(start, end)
     eq_r  = _log_returns(eq)
     cmd_r = _log_returns(cmd)
-    # Schema validation at the system boundary — non-destructive
+    # Schema validation at the system boundary - non-destructive
     eq_r  = _validate_returns(eq_r,  "equity_returns")
     cmd_r = _validate_returns(cmd_r, "commodity_returns")
     try:
@@ -578,7 +578,7 @@ def load_returns(
         if not eq_r.empty:
             record_fetch("yfinance_prices")
         else:
-            record_failure("yfinance_prices", "Empty equity returns — yfinance may be down or tickers unavailable")
+            record_failure("yfinance_prices", "Empty equity returns - yfinance may be down or tickers unavailable")
     except Exception:
         pass
     return eq_r, cmd_r
@@ -588,7 +588,7 @@ def load_combined_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Single DataFrame: equity + commodity log returns, aligned on date index. Not cached — delegates to cached leaf loaders."""
+    """Single DataFrame: equity + commodity log returns, aligned on date index. Not cached - delegates to cached leaf loaders."""
     eq_r, cmd_r = load_returns(start, end)
     combined = pd.concat([eq_r, cmd_r], axis=1)
     return combined.dropna(how="all")
@@ -696,7 +696,7 @@ def load_hourly_prices(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_hourly_prices, commodity_hourly_prices). Not cached — delegates to cached leaf loaders."""
+    """Return (equity_hourly_prices, commodity_hourly_prices). Not cached - delegates to cached leaf loaders."""
     eq  = load_hourly_equity_prices(start, end)
     cmd = load_hourly_commodity_prices(start, end)
     return eq, cmd
@@ -706,7 +706,7 @@ def load_hourly_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (equity_hourly_returns, commodity_hourly_returns) as log-return DataFrames. Not cached — delegates to cached leaf loaders."""
+    """Return (equity_hourly_returns, commodity_hourly_returns) as log-return DataFrames. Not cached - delegates to cached leaf loaders."""
     eq, cmd = load_hourly_prices(start, end)
     return _log_returns(eq), _log_returns(cmd)
 
@@ -950,7 +950,7 @@ def load_fixed_income_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Daily log returns for fixed income ETF proxies. Not cached — delegates to cached leaf loader."""
+    """Daily log returns for fixed income ETF proxies. Not cached - delegates to cached leaf loader."""
     result = _log_returns(load_fixed_income_prices(start, end))
     return _validate_returns(result, "fixed_income_returns")
 
@@ -960,7 +960,7 @@ def load_private_credit_returns(
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
     """Daily log returns for BDC / private credit proxies, short PC_PROXY_TICKERS
-    names. Not cached — delegates to the cached price leaf loader."""
+    names. Not cached - delegates to the cached price leaf loader."""
     result = _log_returns(load_private_credit_proxies(start, end))
     return _validate_returns(result, "private_credit_returns")
 
@@ -979,7 +979,7 @@ def load_fx_returns(
     start: str = str(DEFAULT_START),
     end:   str = str(DEFAULT_END),
 ) -> pd.DataFrame:
-    """Daily log returns for FX pairs. Not cached — delegates to cached leaf loader."""
+    """Daily log returns for FX pairs. Not cached - delegates to cached leaf loader."""
     return _log_returns(load_fx_prices(start, end))
 
 

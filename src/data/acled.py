@@ -7,7 +7,7 @@ API documentation: https://acleddata.com/acleddatanerd/
 Registration: https://developer.acleddata.com/
 
 Returns event counts, fatalities, and event types for active conflict zones
-used to dynamically update CIS (Conflict Intensity Score) inputs — replacing
+used to dynamically update CIS (Conflict Intensity Score) inputs - replacing
 the static manual data that was previously the only source (GAP 17).
 
 Environment variable: ACLED_API_KEY and ACLED_EMAIL must be set.
@@ -93,23 +93,23 @@ def fetch_acled_intensity(
 
     Parameters
     ----------
-    conflict_id : str — key from _ACLED_CONFLICT_MAP
-    days        : int — lookback window in days
-    api_key     : str — ACLED API key (or set ACLED_API_KEY env var)
-    email       : str — registered ACLED email (or set ACLED_EMAIL env var)
+    conflict_id : str - key from _ACLED_CONFLICT_MAP
+    days        : int - lookback window in days
+    api_key     : str - ACLED API key (or set ACLED_API_KEY env var)
+    email       : str - registered ACLED email (or set ACLED_EMAIL env var)
 
     Returns
     -------
     dict with keys:
-        events_nd       : int   — total events in past `days` days
-        fatalities_nd   : int   — total fatalities in past `days` days
-        events_prior    : int   — events in prior `days` window (for trend)
-        events_trend    : float — events_nd / events_prior − 1 (+ = escalating)
-        escalation_signal: str — "escalating" / "stable" / "de-escalating"
-        event_types     : dict  — {type: count}
-        data_available  : bool  — False if ACLED key not set or fetch failed
-        source          : str   — "ACLED live" or "unavailable"
-        as_of           : str   — ISO date string
+        events_nd       : int - total events in past `days` days
+        fatalities_nd   : int - total fatalities in past `days` days
+        events_prior    : int - events in prior `days` window (for trend)
+        events_trend    : float - events_nd / events_prior − 1 (+ = escalating)
+        escalation_signal: str - "escalating" / "stable" / "de-escalating"
+        event_types     : dict - {type: count}
+        data_available  : bool - False if ACLED key not set or fetch failed
+        source          : str - "ACLED live" or "unavailable"
+        as_of           : str - ISO date string
     """
     _empty = {
         "events_nd":           0,
@@ -210,7 +210,7 @@ def fetch_all_conflict_intensities(
     email: Optional[str] = None,
 ) -> dict[str, dict]:
     """Fetch ACLED intensity for all tracked conflicts. Returns {conflict_id: result}.
-    Not cached — delegates to cached leaf fetch_acled_intensity()."""
+    Not cached - delegates to cached leaf fetch_acled_intensity()."""
     return {
         cid: fetch_acled_intensity(cid, days=days, api_key=api_key, email=email)
         for cid in _ACLED_CONFLICT_MAP

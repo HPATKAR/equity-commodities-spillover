@@ -40,11 +40,11 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
     _page_intro(
         "<strong>Research question for this page: is the equity-commodity channel currently open, "
         "and how strong is it?</strong> "
-        "When equity and commodity returns move together consistently, the channel is open — "
+        "When equity and commodity returns move together consistently, the channel is open - "
         "shocks in one market are propagating to the other. "
         "Rolling Pearson gives the current direction and magnitude. "
         "DCC-style dynamic correlation (EWMA pre-whitening + DCC(1,1) recursion, fixed parameters) "
-        "tracks how the relationship has evolved over time — correlation that spikes during stress "
+        "tracks how the relationship has evolved over time - correlation that spikes during stress "
         "episodes and then mean-reverts is the characteristic signature of a spillover regime. "
         "The Markov projection gives a probabilistic view of where the regime is headed next. "
         "Read this alongside the Spillover page, which tests the <em>direction</em> of that relationship."
@@ -58,7 +58,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
         _corr_agg = aggregate_portfolio_scores(_corr_cr)
         _corr_cis = _corr_agg.get("portfolio_cis", 50.0)
         _corr_tps = _corr_agg.get("portfolio_tps", 50.0)
-        _corr_top = (_corr_agg.get("top_conflict", "—") or "—").replace("_", " ").title()
+        _corr_top = (_corr_agg.get("top_conflict", " - ") or " - ").replace("_", " ").title()
 
         # Top 3 active conflicts with CIS
         _active_rows = sorted(
@@ -217,17 +217,17 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#27ae60;font-weight:700">● NO BREAKS</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
-            f'color:#555960"> — all {_n_scanned} pairs within ±2σ of their own 252d rolling norm</span>'
+            f'color:#555960"> - all {_n_scanned} pairs within ±2σ of their own 252d rolling norm</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
     with st.expander(
-        f"Correlation breakdown scan — all {_n_scanned} pairs · 63d corr vs. 252d norm",
+        f"Correlation breakdown scan - all {_n_scanned} pairs · 63d corr vs. 252d norm",
         expanded=bool(_fired),
     ):
         if not _alarms:
-            st.caption("Insufficient history — extend date range to at least 6 months.")
+            st.caption("Insufficient history - extend date range to at least 6 months.")
         else:
             _th = (
                 "font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:700;"
@@ -456,7 +456,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                             _tc = "#e05241" if _sig else "#555960"
                             _rows_g += f'<div style="background:{_bg};text-align:center;padding:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;font-weight:700;color:{_tc}">{_pv:.3f}</div>'
                         else:
-                            _rows_g += '<div style="background:rgba(136,144,161,0.05);text-align:center;padding:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#555960">—</div>'
+                            _rows_g += '<div style="background:rgba(136,144,161,0.05);text-align:center;padding:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#555960"> - </div>'
                     _rows_g += '</div>'
                 st.markdown(
                     f'<div style="background:#000000;border:1px solid #1e1e1e;padding:0.6rem;margin-bottom:0.4rem">'
@@ -471,7 +471,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
 
         # ── Current regime KPI ────────────────────────────────────────────────
         _reg_c   = _REGIME_COLORS.get(current_r, "#8890a1")
-        _reg_lbl = _REGIME_NAMES.get(current_r, "—")
+        _reg_lbl = _REGIME_NAMES.get(current_r, " - ")
         st.markdown(
             f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
             f'border-left:2px solid {_reg_c};padding:0.55rem 0.75rem;margin-top:0.4rem">'
@@ -749,7 +749,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 float(run_stats.loc[current_r, "mean"])
                 if current_r in run_stats.index else float("nan")
             )
-            avg_run_str = f"{avg_run:.0f}d" if not np.isnan(avg_run) else "—"
+            avg_run_str = f"{avg_run:.0f}d" if not np.isnan(avg_run) else " - "
             _takeaway_block(
                 f"Current regime: <b style='color:{_REGIME_COLORS[current_r]}'>"
                 f"{_REGIME_NAMES[current_r]}</b>. "
@@ -901,7 +901,7 @@ def page_correlation(start: str, end: str, fred_key: str = "") -> None:
                 "notes": [
                     "Rolling window correlation is non-stationary - window length (60d default) is arbitrary",
                     "Pearson correlation assumes linearity; equity-commodity relationships are often non-linear during crises",
-                    "DCC-style correlation (EWMA pre-whitening) uses fixed λ=0.94, not MLE-estimated; assumes elliptical distributions — tail dependence is underestimated",
+                    "DCC-style correlation (EWMA pre-whitening) uses fixed λ=0.94, not MLE-estimated; assumes elliptical distributions - tail dependence is underestimated",
                     "Markov regime model uses 2 states only - real market has continuous regime transitions",
                     "Correlation ≠ causation - no causal inference drawn from this page",
                 ],

@@ -92,7 +92,7 @@ _NAMES: dict[str, str] = {
 
 # _COUNTRY_INDICES, _WAR_DATA, _COUNTRY_WAR_WEIGHTS, _DEFAULT_WAR_WEIGHTS
 # and _war_multipliers are imported from src.analysis.war_country_scores above.
-# Edit scoring data there — this file is visualization only.
+# Edit scoring data there - this file is visualization only.
 
 
 # ── Indian administered disputed territories - centroid hover markers ────────
@@ -139,7 +139,7 @@ _HOMETURF_WARS: list[dict] = [
 # The upgrade from a static exposure choropleth to a live TRANSMISSION map. Each
 # active conflict is a SOURCE node at its epicenter; flows run along its dominant
 # TPS channels to fixed global MARKET HUBS. Nothing here invents transmission
-# math — thickness/speed/glow are read straight off CIS, TPS channel weights, and
+# math - thickness/speed/glow are read straight off CIS, TPS channel weights, and
 # the live intensity multipliers already computed on this page.
 
 _CONFLICT_EPICENTER: dict[str, tuple[float, float]] = {
@@ -182,7 +182,7 @@ def _transmission_flows(
 ) -> tuple[list[dict], list[dict], list[dict]]:
     """
     Build (sources, hubs, flows) for the transmission overlay from EXISTING
-    scores — no new transmission math.
+    scores - no new transmission math.
 
       source glow  = CIS               (per conflict)
       flow width   = Σ transmission[ch]·TPS_weight over the hub's channels
@@ -248,7 +248,7 @@ def _transmission_flows(
 
 # ── Transmission pressure matrix (fills the space under the globe) ────────────
 # The globe shows only the strongest flows; this heatmap shows the FULL
-# conflict × market matrix at a glance — same pressure numbers, nothing new.
+# conflict × market matrix at a glance - same pressure numbers, nothing new.
 
 _HUB_SHORT = {"oil": "OIL / GAS", "ship": "SHIPPING", "grain": "GRAINS",
               "metal": "METALS", "equity": "EQ VOL", "supply": "SUPPLY CH",
@@ -317,7 +317,7 @@ def _render_transmission_matrix(sources: list[dict], hubs: list[dict],
         f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
         f'margin-bottom:6px">'
         f'<span style="{M}font-size:.56rem;font-weight:700;letter-spacing:.14em;'
-        f'color:#CFB991">TRANSMISSION PRESSURE MATRIX — CONFLICT → MARKET</span>'
+        f'color:#CFB991">TRANSMISSION PRESSURE MATRIX - CONFLICT → MARKET</span>'
         f'<span style="{M}font-size:.5rem;color:#8E9AAA">every flow · pressure 0–100 · '
         f'white ring = each conflict\'s hardest-hit market</span></div>'
         f'<table style="width:100%;border-collapse:collapse">'
@@ -328,7 +328,7 @@ def _render_transmission_matrix(sources: list[dict], hubs: list[dict],
         f'<span style="{M}font-size:.5rem;color:#8E9AAA">HIGH PRESSURE</span></div>'
         f'<div style="{M}font-size:.5rem;color:#555960;margin-top:5px">'
         f'Pressure = Σ transmission-channel weight × TPS contribution into that market. '
-        f'Same numbers the globe animates — here as the full matrix the globe filters.</div>'
+        f'Same numbers the globe animates - here as the full matrix the globe filters.</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -344,7 +344,7 @@ def _render_transmission_bars(sources: list[dict], hubs: list[dict],
     src_by = {s["id"]: s for s in sources}
     hub_by = {h["id"]: h for h in hubs}
 
-    # Panel A — incoming pressure per market (column sums), sorted desc
+    # Panel A - incoming pressure per market (column sums), sorted desc
     incoming = {h["id"]: 0.0 for h in hubs}
     for f in flows:
         incoming[f["hub"]] = incoming.get(f["hub"], 0.0) + f["pressure"]
@@ -364,7 +364,7 @@ def _render_transmission_bars(sources: list[dict], hubs: list[dict],
             f'</div></div>'
         )
 
-    # Panel B — strongest individual flows (leaderboard)
+    # Panel B - strongest individual flows (leaderboard)
     top = sorted(flows, key=lambda f: -f["pressure"])[:8]
     max_p = top[0]["pressure"] if top else 1.0
     rows_b = ""
@@ -392,9 +392,9 @@ def _render_transmission_bars(sources: list[dict], hubs: list[dict],
     st.markdown(
         f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:.5rem">'
         f'<div style="border:1px solid #1e1e1e;background:#070707;padding:.6rem .8rem">'
-        f'{_hdr("MARKETS UNDER PRESSURE — total incoming, all conflicts")}{rows_a}</div>'
+        f'{_hdr("MARKETS UNDER PRESSURE - total incoming, all conflicts")}{rows_a}</div>'
         f'<div style="border:1px solid #1e1e1e;background:#070707;padding:.6rem .8rem">'
-        f'{_hdr("STRONGEST PROPAGATIONS — conflict → market")}{rows_b}</div>'
+        f'{_hdr("STRONGEST PROPAGATIONS - conflict → market")}{rows_b}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -881,7 +881,7 @@ function drawFlows() {
     fxc.fillText(h.name, xy[0] + 6, xy[1] + 3.2);
   }
 
-  /* conflict sources — radial glow sized by CIS */
+  /* conflict sources - radial glow sized by CIS */
   for (const s of SOURCES) {
     const ll = [s.lng, s.lat];
     if (!isFront(ll, front)) continue;
@@ -1012,7 +1012,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
         f'This is our core thesis made visible: <strong>conflict → channel → market</strong>. '
         f'The choropleth underneath scores each country\'s structural exposure; on top, each active '
         f'conflict is a <strong>source node</strong> (glow = CIS) with animated flows running along its '
-        f'dominant TPS transmission channels to the markets it actually hits — line width is transmission '
+        f'dominant TPS transmission channels to the markets it actually hits - line width is transmission '
         f'pressure, dash speed is how hard that channel is firing live. Only the strongest flows show by '
         f'default; <strong>click any conflict node to isolate its full propagation</strong>, or use the '
         f'filter below.</p>',
@@ -1053,7 +1053,7 @@ def page_war_impact_map(start: str, end: str, fred_key: str = "") -> None:
             f'border-left:3px solid {_wm_col};padding:.5rem .9rem;margin-bottom:.7rem">'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'font-weight:700;color:{_wm_col};letter-spacing:.15em;margin-bottom:5px">'
-            f'LIVE CONFLICT RISK SCORES — SCORING MAP BELOW</div>'
+            f'LIVE CONFLICT RISK SCORES - SCORING MAP BELOW</div>'
             f'<div style="display:flex;flex-wrap:wrap;align-items:center">'
             f'{_wm_conflict_cells}'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
@@ -1583,7 +1583,7 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E9AAA;margin:0 0 6px">Asset Exposure Overlay</p>'
         f'<p style="{_F}font-size:0.68rem;color:#8890a1;margin:0 0 10px;line-height:1.5">'
-        f'Scenario-adjusted exposure scores for tracked assets — derived from the '
+        f'Scenario-adjusted exposure scores for tracked assets - derived from the '
         f'structural conflict exposure registry, scaled by active TPS and current scenario multiplier.</p>'
         f'</div>',
         unsafe_allow_html=True,
@@ -1599,9 +1599,9 @@ All intermediate scores triangulate from these anchors, cross-checked against:
         for _ec, (_el, _ev, _ecol) in zip(
             [_es1, _es2, _es3, _es4],
             [
-                ("Top Exposed",  _exp_stats.get("top_asset","—"),      "#e67e22"),
+                ("Top Exposed",  _exp_stats.get("top_asset"," - "),      "#e67e22"),
                 ("Peak SAS",     f'{_exp_stats.get("top_asset_sas",0):.0f}', "#c0392b"),
-                ("Top Hedge",    _exp_stats.get("top_hedge","—"),       "#27ae60"),
+                ("Top Hedge",    _exp_stats.get("top_hedge"," - "),       "#27ae60"),
                 ("Mean Exposure",f'{_exp_stats.get("mean_sas",0):.1f}', "#CFB991"),
             ]
         ):

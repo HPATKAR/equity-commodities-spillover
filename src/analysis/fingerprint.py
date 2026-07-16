@@ -1,9 +1,9 @@
 """
-Pattern Memory — "the market has seen this before" engine.
+Pattern Memory - "the market has seen this before" engine.
 
 Compresses each historical day into a fingerprint of the terminal's FULL state
-— geopolitical configuration + chokepoint pressure + spillover structure +
-correlation regime + market state — then finds which past periods most
+ - geopolitical configuration + chokepoint pressure + spillover structure +
+correlation regime + market state - then finds which past periods most
 resemble RIGHT NOW across the whole configuration, not one variable.
 This is pattern-memory over the terminal's entire state space, not a price
 correlation: a day only matches if the geopolitical shape AND the market
@@ -13,29 +13,29 @@ shape both rhyme.
 FINGERPRINT BLOCKS (block weights perturbable in the UI; features z-scored,
 per-feature weight = block_weight / n_features so no block dominates by count)
 ════════════════════════════════════════════════════════════════════════════
-GEO        — from GEOPOLITICAL_EVENTS (13 events, 2008–present): active-event
+GEO - from GEOPOLITICAL_EVENTS (13 events, 2008–present): active-event
              count, recency-decayed intensity (same exp(-days/303) decay CIS
              uses), days since latest onset, crisis-type composition.
-CHOKEPOINT — daily chokepoint+shipping pressure: CONFLICTS registry
+CHOKEPOINT - daily chokepoint+shipping pressure: CONFLICTS registry
              transmission weights for conflicts active that day (2022+),
-             stated per-event mapping for earlier events. Structural proxy —
+             stated per-event mapping for earlier events. Structural proxy - 
              PortWatch has no history. Disclosed, never presented as live.
-SPILLOVER  — rolling Diebold-Yilmaz total spillover (optional, precomputed),
+SPILLOVER - rolling Diebold-Yilmaz total spillover (optional, precomputed),
              oil→S&P 60d rolling beta, avg cross-asset correlation level,
              correlation velocity (10d).
-REGIME     — correlation regime id + days spent in the current regime.
-MARKET     — GRS proxy (risk_score_history), 20d realized vols, 20d momentum
+REGIME - correlation regime id + days spent in the current regime.
+MARKET - GRS proxy (risk_score_history), 20d realized vols, 20d momentum
              for WTI / Gold / S&P.
 
 CAUSALITY: every raw feature at day t is computed from data ≤ t (rolling /
 EWM / registry state as-of t). Feature STANDARDIZATION and the regime
-percentile thresholds are full-sample — standard in-sample normalization for
+percentile thresholds are full-sample - standard in-sample normalization for
 analog recall, disclosed on-screen. tests/test_fingerprint.py asserts the raw
 causality (a day before an event's onset carries zero contribution from it;
 market features at t are unchanged by truncating the future).
 
 HONESTY: GEO and CHOKEPOINT are structural reconstructions from a registry
-calibrated recently — same hindsight caveat as Replay Mode. SPILLOVER /
+calibrated recently - same hindsight caveat as Replay Mode. SPILLOVER /
 REGIME / MARKET are genuinely historical. Match verdicts are always shown
 against the unconditional base rate: "5/7 matches went bad" means nothing
 without knowing bad's base rate is 22%.
@@ -61,7 +61,7 @@ _CATEGORY_BUCKET = {
 }
 
 # Chokepoint pressure for pre-registry events (CONFLICTS cover 2022+).
-# Stated mapping — Arab Spring priced a Suez risk premium, Aramco threatened
+# Stated mapping - Arab Spring priced a Suez risk premium, Aramco threatened
 # Hormuz throughput. Everything else: no maritime chokepoint channel.
 _EVENT_CHOKEPOINT = {
     "Arab Spring / Libya": 0.35,
@@ -92,7 +92,7 @@ _BAD_SPX, _GOOD_SPX = -0.05, 0.02
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# GEO + CHOKEPOINT blocks — day-by-day registry reconstruction
+# GEO + CHOKEPOINT blocks - day-by-day registry reconstruction
 # ═══════════════════════════════════════════════════════════════════════════
 
 def daily_geo_state(index: pd.DatetimeIndex) -> pd.DataFrame:
@@ -154,7 +154,7 @@ def daily_geo_state(index: pd.DatetimeIndex) -> pd.DataFrame:
 # ═══════════════════════════════════════════════════════════════════════════
 
 def active_event_labels(d: datetime.date) -> list[str]:
-    """Event labels active on a given date — for display next to each match."""
+    """Event labels active on a given date - for display next to each match."""
     out = []
     for e in GEOPOLITICAL_EVENTS:
         start, end = e.get("start"), e.get("end")
@@ -234,7 +234,7 @@ def build_fingerprints(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Matching — weighted distance in z-space across the whole configuration
+# Matching - weighted distance in z-space across the whole configuration
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _feature_weights(block_weights: dict[str, float], available: list[str]) -> dict[str, float]:
@@ -269,7 +269,7 @@ def match_fingerprint(
     block_weights = block_weights or DEFAULT_BLOCK_WEIGHTS
     cols = [f for feats in BLOCK_FEATURES.values() for f in feats if f in fp.columns]
     F = fp[cols].copy()
-    # dy_total may be all-NaN (DY unavailable) — drop unusable columns
+    # dy_total may be all-NaN (DY unavailable) - drop unusable columns
     cols = [c for c in cols if F[c].notna().sum() > len(F) * 0.5]
     F = F[cols].ffill().dropna()
     if len(F) < 300:
@@ -328,12 +328,12 @@ def match_fingerprint(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Outcomes — what followed each match, and the base rate that gives it meaning
+# Outcomes - what followed each match, and the base rate that gives it meaning
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _verdict(spx_fwd: float, crisis_hit: bool) -> str:
     if np.isnan(spx_fwd):
-        return "—"
+        return " - "
     if spx_fwd <= _BAD_SPX or crisis_hit:
         return "BAD"
     if spx_fwd >= _GOOD_SPX and not crisis_hit:
@@ -399,7 +399,7 @@ def base_rates(
     horizon: int = 60,
 ) -> dict:
     """
-    Unconditional GOOD/MIXED/BAD frequencies over ALL history — the yardstick
+    Unconditional GOOD/MIXED/BAD frequencies over ALL history - the yardstick
     that makes the match verdicts meaningful.
     """
     if "S&P 500" not in combined.columns:
@@ -424,7 +424,7 @@ def aggregate_verdicts(outcomes: list[dict]) -> dict:
     w_tot, acc = 0.0, {"GOOD": 0.0, "MIXED": 0.0, "BAD": 0.0}
     counts = {"GOOD": 0, "MIXED": 0, "BAD": 0}
     for o in outcomes:
-        if o["verdict"] == "—":
+        if o["verdict"] == " - ":
             continue
         w = max(o["similarity"], 1.0)
         acc[o["verdict"]] += w

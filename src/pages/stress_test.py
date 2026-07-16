@@ -233,7 +233,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                     for e in _pf.get("errors", [])[:5]:
                         st.caption(e)
                 except ValueError:
-                    st.error("Could not parse file — check format.")
+                    st.error("Could not parse file - check format.")
                 except Exception:
                     st.error("Unexpected error loading portfolio.")
 
@@ -523,7 +523,7 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
                 else:
                     st.warning("CSV must have 'ticker' and 'weight' columns.")
             except Exception as e:
-                st.warning("Could not parse CSV — check column format.")
+                st.warning("Could not parse CSV - check column format.")
 
         # Build editable weights DataFrame
         stock_rows = []

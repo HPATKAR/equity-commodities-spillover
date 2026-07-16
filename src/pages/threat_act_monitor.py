@@ -2,8 +2,8 @@
 Threat vs Act Monitor Page.
 
 Real-time split view of:
-  Threat Score  — rhetoric, force build-up, military signaling
-  Act Score     — realized adverse events (strikes, seizures, sanctions)
+  Threat Score - rhetoric, force build-up, military signaling
+  Act Score - realized adverse events (strikes, seizures, sanctions)
 
 Layout:
   Row 1: dual KPI gauges (Threat / Act) + News GPR composite
@@ -152,7 +152,7 @@ def _render_methodology() -> None:
         '(α_max 0.80); defaults to 0.55 in balanced environments. '
         'Threat Score: rhetoric, warnings, force build-up, military signaling, '
         'sanctions threats. '
-        'Act Score: realized events — strikes, seizures, sanctions imposed, '
+        'Act Score: realized events - strikes, seizures, sanctions imposed, '
         'shipping blockages. '
         'Scores are EWM-dampened to avoid spike-then-reversal overcounting. '
         'Source: Reuters, FT, WSJ, BBC, AP (15-min cache).'
@@ -174,11 +174,11 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
         from src.analysis.gpr_news import get_news_gpr_layer, render_threat_act_feed
         result = get_news_gpr_layer()
     except Exception as e:
-        st.error("News GPR layer unavailable — see logs.")
+        st.error("News GPR layer unavailable - see logs.")
         _render_methodology()
         return
 
-    # Surface data availability — never show silent zeros
+    # Surface data availability - never show silent zeros
     data_status = result.get("data_status", "live")
     feed_error  = result.get("feed_error", "")
 
@@ -192,7 +192,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
             f'<div class="nx-feed-item-body">{feed_error or "No headlines returned from feeds."}</div>'
             f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;'
             f'color:#555960;margin-top:4px">'
-            f'Scores show 0 — not a low-risk signal. Fix feed to restore.</div>'
+            f'Scores show 0 - not a low-risk signal. Fix feed to restore.</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -209,7 +209,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
             f'<span style="font-family:\'DM Sans\',sans-serif;font-size:0.63rem;'
             f'color:#8E9AAA">'
             f'{n_raw} headlines fetched · 0 matched Threat/Act taxonomy. '
-            f'This is a <b style="color:#e67e22">no-signal</b> reading — '
+            f'This is a <b style="color:#e67e22">no-signal</b> reading - '
             f'not a low-risk reading. Zero does not mean calm; it means the news '
             f'cycle currently lacks geopolitical language matching the classification taxonomy.'
             f'</span>'
@@ -230,7 +230,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#555960;letter-spacing:.16em;text-transform:uppercase">{_lbl}</span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:22px;'
-                f'font-weight:700;color:{_col};opacity:.4">— —</span>'
+                f'font-weight:700;color:{_col};opacity:.4"> -  - </span>'
                 f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
                 f'color:#555960">NO SIGNAL · {n_raw} raw headlines</span>'
                 f'</div>',
@@ -243,7 +243,7 @@ def page_threat_act_monitor(start=None, end=None, fred_key="") -> None:
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#555960;letter-spacing:.16em">α (ACT WEIGHT)</span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:18px;'
-            f'font-weight:700;color:#555960;opacity:.4">—</span>'
+            f'font-weight:700;color:#555960;opacity:.4"> - </span>'
             f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.50rem;'
             f'color:#555960">AWAITING SIGNAL</span>'
             f'</div>',

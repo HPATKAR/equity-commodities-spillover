@@ -1,5 +1,5 @@
 """
-Step 1 of 4 — trade eligibility gate.
+Step 1 of 4 - trade eligibility gate.
 
 A trade is ELIGIBLE only if every leg exists in the return data AND its
 thesis passed Stage-3 confirmation. Phantom-leg and unconfirmed trades are
@@ -81,7 +81,7 @@ def test_lock_is_provable_for_any_proposed_weight():
     assert t["is_eligible"] is False
     for proposed in (0.8, 1.0, -0.5, 1e9, 0.0):
         assert enforce_weight(t, proposed) == 0.0, (
-            f"ineligible trade received weight {proposed} — lock breached"
+            f"ineligible trade received weight {proposed} - lock breached"
         )
 
 
@@ -98,7 +98,7 @@ def test_unannotated_trade_defaults_to_locked():
 
 
 # ── Structurally dead vs merely missing ──────────────────────────────────────
-# A leg with NO loader mapping at all is structurally dead — permanently
+# A leg with NO loader mapping at all is structurally dead - permanently
 # untradeable, counted separately. A mapped leg absent from today's frame is
 # a live "missing legs" lock that heals when the data loads.
 
@@ -110,7 +110,7 @@ def test_dead_leg_marks_trade_structurally_dead():
     annotate_eligibility([t], COLS, {"X": PASSED}, loadable_universe=UNIVERSE)
     assert t["structurally_dead"] is True
     assert t["is_eligible"] is False
-    assert "structurally dead — no data source for: Imaginary Asset" \
+    assert "structurally dead - no data source for: Imaginary Asset" \
         in t["eligibility_reason"]
     assert enforce_weight(t, 0.99) == 0.0          # still zero-locked
 

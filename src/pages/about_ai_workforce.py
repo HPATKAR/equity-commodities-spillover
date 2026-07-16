@@ -89,7 +89,7 @@ def _pipeline_diagram() -> None:
         status_meta = STATUSES.get(status, STATUSES.get("idle", {}))
         s_color = status_meta.get("color", "#555960") if status_meta else "#555960"
 
-        # Confidence gate badge — harness threshold check
+        # Confidence gate badge - harness threshold check
         try:
             from src.analysis.agent_orchestrator import CONFIDENCE_THRESHOLDS
             gate = CONFIDENCE_THRESHOLDS.get(aid, 0.50)

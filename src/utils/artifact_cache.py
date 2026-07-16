@@ -5,18 +5,18 @@ scores, single-stock returns, ...).
 Why this exists
 ---------------
 The app already warms an in-memory ``@st.cache_data`` store, but that cache is
-per-process and evaporates on every deploy, scale-up, or TTL race — so a COLD
+per-process and evaporates on every deploy, scale-up, or TTL race - so a COLD
 process has to recompute ~20s of network-bound work before the first visitor
 sees anything. That is the difference between a 30-80s cold load and a fast one.
 
 This module lets a cold process read the LAST computed value from disk in
 milliseconds instead. The in-memory cache still serves warm hits; this only
-backs the cold (cache-miss) path — a classic stale-while-revalidate layer.
+backs the cold (cache-miss) path - a classic stale-while-revalidate layer.
 
 Store location is env-configurable (``ARTIFACT_CACHE_DIR``) so production can
 point it at a persistent disk / mounted volume that survives redeploys; locally
 it defaults to ``<repo>/cache/artifacts``. Writes are atomic and every function
-is failure-safe (never raises) — a bad cache must never break a page.
+is failure-safe (never raises) - a bad cache must never break a page.
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def read_artifact(key: str, max_age_s: float) -> Optional[Any]:
             return None
         with open(p, "rb") as f:
             return pickle.load(f)
-    except Exception as exc:  # corrupt / partial / version mismatch — treat as miss
+    except Exception as exc:  # corrupt / partial / version mismatch - treat as miss
         _log.debug("artifact_cache read '%s' failed: %s", key, exc)
         return None
 
@@ -63,7 +63,7 @@ def write_artifact(key: str, data: Any) -> None:
         tmp = p.with_suffix(".pkl.tmp")
         with open(tmp, "wb") as f:
             pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
-        os.replace(tmp, p)  # atomic on POSIX — readers never see a partial file
+        os.replace(tmp, p)  # atomic on POSIX - readers never see a partial file
     except Exception as exc:
         _log.debug("artifact_cache write '%s' failed: %s", key, exc)
 

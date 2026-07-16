@@ -76,7 +76,7 @@ def deflated_sharpe_probability(
     Returns
     -------
     (dsr_prob, sr_star)
-        dsr_prob : float in [0, 1] — probability the strategy has genuine edge.
+        dsr_prob : float in [0, 1] - probability the strategy has genuine edge.
         sr_star  : the multiple-testing benchmark Sharpe under H₀.
     """
     if n_obs < 2:
@@ -105,7 +105,7 @@ def deflated_sharpe_probability(
 
 
 # ── Harvey, Liu & Zhu (2016) multiple-testing cross-check ────────────────────
-# This is a DIAGNOSTIC ONLY — not a second gate on top of DSR.
+# This is a DIAGNOSTIC ONLY - not a second gate on top of DSR.
 # DSR already deflates each Sharpe for trial count N, so stacking an HLZ
 # haircut on top would double-count multiplicity and over-penalise borderline
 # genuine strategies.  HLZ is reported alongside DSR so they can be compared;
@@ -113,7 +113,7 @@ def deflated_sharpe_probability(
 #
 # Procedure: Benjamini-Hochberg-Yekutieli (BHY) at FDR 10%.
 # BHY (not Bonferroni) is recommended for finance because strategy t-stats are
-# positively correlated — Bonferroni overestimates the required adjustment.
+# positively correlated - Bonferroni overestimates the required adjustment.
 # Harvey, Liu & Zhu (2016), "…and the Cross-Section of Expected Returns",
 # RFS 29(1) pp 5–68, recommend BHY with c(N) = Σ(1/i) harmonic correction.
 #
@@ -131,7 +131,7 @@ def hlz_tstat_threshold(
     """
     BHY-adjusted minimum t-statistic for a single new discovery.
 
-    Uses the rank-1 BHY threshold — i.e., the hurdle for the single best-looking
+    Uses the rank-1 BHY threshold - i.e., the hurdle for the single best-looking
     strategy in a pool of N.  This is conservative for mid-ranked strategies but
     gives a clean scalar hurdle comparable to DSR.
 
@@ -224,7 +224,7 @@ def _uf_clusters(
 ) -> tuple[dict[str, int], list[tuple[str, str, float]]]:
     """
     Union-find over a correlation matrix: names with pairwise r > threshold
-    collapse into one cluster. THE cluster logic — shared by
+    collapse into one cluster. THE cluster logic - shared by
     compute_effective_n (effective bet count) and the Step-3 portfolio
     cluster caps so both always agree on what counts as one bet.
 
@@ -279,7 +279,7 @@ def correlation_clusters(
 def cscv_pbo_single(
     trade_returns: list[float],
     n_blocks: int = 16,
-    max_combinations: int = 12870,  # C(16,8) — full enumeration
+    max_combinations: int = 12870,  # C(16,8) - full enumeration
     rng_seed: int = 42,
 ) -> tuple[float, int]:
     """
@@ -292,7 +292,7 @@ def cscv_pbo_single(
     PBO = fraction of partitions where IS Sharpe > 0 AND OOS Sharpe ≤ 0.
 
     A PBO > 0.5 means that in more than half of all time-block splits the
-    strategy appeared profitable in-sample but failed out-of-sample — strong
+    strategy appeared profitable in-sample but failed out-of-sample - strong
     evidence of overfitting to a specific market regime.
 
     Implementation uses fully vectorised numpy operations: all C(s, s/2)
@@ -307,7 +307,7 @@ def cscv_pbo_single(
     Returns
     -------
     (pbo, n_partitions)
-        pbo           : float in [0,1] — probability of backtest overfitting.
+        pbo           : float in [0,1] - probability of backtest overfitting.
         n_partitions  : number of valid partitions evaluated.
     """
     arr = np.array(trade_returns, dtype=float)
@@ -385,7 +385,7 @@ def walk_forward_regimes(
     """
     Return an OOS regime Series aligned to avg_corr's index.
 
-    Dates in the first `min_train_days` rows are NaN — the backtest only runs
+    Dates in the first `min_train_days` rows are NaN - the backtest only runs
     on dates that have a valid OOS label.
 
     Regime codes: 0 Decorrelated, 1 Normal, 2 Elevated, 3 Crisis.
@@ -403,7 +403,7 @@ def walk_forward_regimes(
         fold_end = min(fold_start + fold_days, n)
         # Purge: exclude the last purge_days from the training window so that
         # training observations whose label windows overlap the test fold are removed.
-        # (Lopez de Prado 2018, Chapter 7 — Purged Walk-Forward CV)
+        # (Lopez de Prado 2018, Chapter 7 - Purged Walk-Forward CV)
         train_s = smoothed.iloc[:max(1, fold_start - purge_days)]
 
         td = float(np.percentile(train_s, p_decorr))
@@ -461,7 +461,7 @@ def vectorized_backtest(
     -----------
     Rising edge into any `trigger_regimes` regime triggers a new entry
     (regime[t-1] not in trigger → regime[t] in trigger).
-    Only one position at a time — a new entry while already in a trade is
+    Only one position at a time - a new entry while already in a trade is
     skipped.
 
     Exit logic
@@ -509,13 +509,13 @@ def vectorized_backtest(
     T = len(returns)
 
     # Embargo / purge mask: suppress new entries during blackout windows.
-    # Existing positions are held through blackout — only new entries are blocked.
+    # Existing positions are held through blackout - only new entries are blocked.
     if entry_blackout is not None and len(entry_blackout) == T:
         entry_signal = entry_signal & ~entry_blackout.astype(bool)
 
     position = np.zeros(T, dtype=float)
 
-    # O(T) position builder — one trade at a time, no overlapping positions
+    # O(T) position builder - one trade at a time, no overlapping positions
     in_trade = False
     entry_day = -1
     for i in range(T):
@@ -635,7 +635,7 @@ def walk_forward_backtest(
        Existing open positions are held through blackout windows.
 
     IS Sharpe is computed on the training slice using full-sample regime
-    labels (definitionally IS, no purging needed — it is diagnostic only,
+    labels (definitionally IS, no purging needed - it is diagnostic only,
     not a training signal) and is used solely for IS→OOS decay reporting.
 
     Parameters
@@ -649,7 +649,7 @@ def walk_forward_backtest(
     trigger    = trade.get("regime", [2, 3])
     holding    = _parse_holding_days(trade)
 
-    # Fail loud on missing legs — silent subset-trading produces mislabeled results
+    # Fail loud on missing legs - silent subset-trading produces mislabeled results
     # (e.g. bond ETFs absent from return data turned Gold/TLT into pure Long Gold).
     missing = [a for a in assets if a not in returns.columns]
     if missing:
@@ -693,8 +693,8 @@ def walk_forward_backtest(
     #   (a) the IS→OOS transition point, and
     #   (b) each within-OOS fold boundary (where training data is updated).
     # This prevents any return information that spans the boundary from being
-    # traded — the embargo gap exceeds a normal settlement/look-back period.
-    # (Lopez de Prado 2018, Chapter 7 — embargo after each test fold)
+    # traded - the embargo gap exceeds a normal settlement/look-back period.
+    # (Lopez de Prado 2018, Chapter 7 - embargo after each test fold)
     n_oos = len(oos_returns)
     oos_blackout = np.zeros(n_oos, dtype=bool)
 
@@ -798,7 +798,7 @@ def qc_grade_backtest(
     is_economic_prior: bool = True,
 ) -> dict:
     """
-    Grade a walk-forward backtest on OOS robustness — not raw IS performance.
+    Grade a walk-forward backtest on OOS robustness - not raw IS performance.
 
     Three axes drive the grade:
 
@@ -843,7 +843,7 @@ def qc_grade_backtest(
 
     # ── Absolute floor: too few trades to say anything ────────────────────────
     if n < _MIN_TRADES_GRADED:
-        flags.append(f"Only {n} trades — cannot compute meaningful DSR (need ≥{_MIN_TRADES_GRADED})")
+        flags.append(f"Only {n} trades - cannot compute meaningful DSR (need ≥{_MIN_TRADES_GRADED})")
         return {
             "grade": "F", "score": 0,
             "dsr_prob": 0.0, "sr_star": 0.0,
@@ -899,30 +899,30 @@ def qc_grade_backtest(
     if low_confidence and grade in ("A", "B"):
         grade = "C"
         flags.append(
-            f"LOW N: {n} trades (need ≥{_MIN_TRADES_CONFIDENT}) — "
-            f"Sharpe SE ≈ {np.sqrt((1 + sr_per_trade**2/2)/max(n-1,1)):.2f} — capped at C"
+            f"LOW N: {n} trades (need ≥{_MIN_TRADES_CONFIDENT}) - "
+            f"Sharpe SE ≈ {np.sqrt((1 + sr_per_trade**2/2)/max(n-1,1)):.2f} - capped at C"
         )
 
     # decay cap
     if decay is not None:
         if decay > 0.90 and grade not in ("D", "F"):
-            flags.append(f"IS→OOS decay {decay:.0%} (>{90}%) — capped at D")
+            flags.append(f"IS→OOS decay {decay:.0%} (>{90}%) - capped at D")
             grade = "D"
         elif decay > 0.70 and grade in ("A", "B"):
-            flags.append(f"IS→OOS decay {decay:.0%} (>{70}%) — capped at C")
+            flags.append(f"IS→OOS decay {decay:.0%} (>{70}%) - capped at C")
             grade = "C"
         if decay < 0.0:
-            flags.append(f"OOS beats IS (decay {decay:.0%}) — confirm no regime look-ahead")
+            flags.append(f"OOS beats IS (decay {decay:.0%}) - confirm no regime look-ahead")
 
     # PBO cap: CSCV shows IS/OOS performance uncorrelated in majority of block splits.
     pbo = result.get("pbo")
     if pbo is not None and np.isfinite(pbo) and pbo > 0.5 and grade not in ("D", "F"):
         flags.append(
-            f"CSCV PBO {pbo:.0%} — IS/OOS Sharpe sign flips in majority of block partitions → capped at D"
+            f"CSCV PBO {pbo:.0%} - IS/OOS Sharpe sign flips in majority of block partitions → capped at D"
         )
         grade = "D"
 
-    # ── HLZ cross-check (diagnostic only — NOT a second gate) ───────────────────
+    # ── HLZ cross-check (diagnostic only - NOT a second gate) ───────────────────
     # t-stat under H₀: mean trade return = 0.  Compared against BHY-adjusted
     # minimum t-statistic for the given N and economic-prior status.
     # A disagreement between DSR and HLZ is flagged for review; neither overrides
@@ -945,20 +945,20 @@ def qc_grade_backtest(
         if not hlz_agree_dsr:
             which = "DSR passes, HLZ fails" if dsr_pass else "HLZ passes, DSR fails"
             flags.append(
-                f"HLZ DISAGREES WITH DSR — {which} "
+                f"HLZ DISAGREES WITH DSR - {which} "
                 f"(t={t_stat:.2f} vs HLZ threshold {hlz_threshold:.2f}, "
-                f"DSR={dsr_prob:.0%}) — review manually"
+                f"DSR={dsr_prob:.0%}) - review manually"
             )
     else:
         hlz_agree_dsr = None
 
     # informational flags (don't change grade)
     if dsr_prob < 0.25:
-        flags.append(f"DSR {dsr_prob:.1%} — below 25%, likely statistical noise from {n_strategies}-strategy search")
+        flags.append(f"DSR {dsr_prob:.1%} - below 25%, likely statistical noise from {n_strategies}-strategy search")
     if sh < 0.0:
         flags.append(f"Negative OOS Sharpe ({sh:.2f})")
     if pbo is not None and np.isfinite(pbo) and pbo > 0.3:
-        flags.append(f"CSCV PBO {pbo:.0%} — IS profitability predicts OOS loss in {pbo:.0%} of block splits")
+        flags.append(f"CSCV PBO {pbo:.0%} - IS profitability predicts OOS loss in {pbo:.0%} of block splits")
 
     dsr_prob = dsr_prob if np.isfinite(dsr_prob) else 0.0
     score = round(dsr_prob * 100)
@@ -975,7 +975,7 @@ def qc_grade_backtest(
         "hlz_tstat":      round(t_stat, 3) if t_stat is not None else None,
         "hlz_threshold":  round(hlz_threshold, 3),
         "hlz_pass":       hlz_pass,        # bool or None
-        "hlz_agree_dsr":  hlz_agree_dsr,   # bool or None — False triggers review flag
+        "hlz_agree_dsr":  hlz_agree_dsr,   # bool or None - False triggers review flag
         "is_economic_prior": is_economic_prior,
         "n_strategies_used": n_strategies,
         # ───────────────────────────────────────────────────────────────────

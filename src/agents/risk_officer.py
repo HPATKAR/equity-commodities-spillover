@@ -21,7 +21,7 @@ _SYSTEM = (
     "terse research briefing. "
     "Be direct and quantitative. Name the biggest risk, its transmission path, "
     "and what to monitor today. "
-    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "You produce research analysis for an academic finance dashboard - not investment advice. "
     "Distinguish evidence from inference."
 )
 
@@ -44,7 +44,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
         "Be precise about magnitudes and direction.\n\n"
         "End with these labeled lines:\n"
         "EVIDENCE: [data points used in this assessment]\n"
-        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "CONFIDENCE: [Low/Medium/High - one-line reason]\n"
         "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
         "INVALIDATED IF: [what would contradict this view]\n"
         "ALT VIEW: [one plausible alternative interpretation]"

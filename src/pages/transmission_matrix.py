@@ -190,7 +190,7 @@ def _render_sankey(results: dict) -> None:
     MIN_WEIGHT = 0.10
     max_cis = max((r["cis"] for r in results.values()), default=100) + 1e-9
 
-    # Asset class display names — must NOT collide with any channel label.
+    # Asset class display names - must NOT collide with any channel label.
     # "FX" channel and "FX" asset class share the same string, causing a self-loop.
     _ASSET_DISPLAY = {
         "Commodities":  "Commodities",
@@ -336,7 +336,7 @@ def page_transmission_matrix(start=None, end=None, fred_key: str = "") -> None:
     try:
         results = score_all_conflicts()
     except Exception as e:
-        st.error("Error loading conflict data — see logs.")
+        st.error("Error loading conflict data - see logs.")
         _page_footer()
         return
 

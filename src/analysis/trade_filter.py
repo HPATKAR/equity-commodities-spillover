@@ -46,10 +46,10 @@ DEFAULTS = {
 # ── Investor Style Archetypes ─────────────────────────────────────────────────
 #
 # Each archetype encodes:
-#   managers    — canonical list of money managers who practice this style
-#   categories  — trade categories naturally aligned with this style
-#   description — one-line summary shown in the filter UI
-#   icon        — single emoji for compact display
+#   managers - canonical list of money managers who practice this style
+#   categories - trade categories naturally aligned with this style
+#   description - one-line summary shown in the filter UI
+#   icon - single emoji for compact display
 #
 # SCORING LOGIC (used in _score_investor_style):
 #   +2 pts per matching manager in trade["investor_lens"]
@@ -65,7 +65,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Kerr Neilson",
         ],
         "categories":  ["Macro", "Dollar Cycle", "Fixed Income", "Asia Divergence"],
-        "description": "Druckenmiller · Naren · Sharma — follow liquidity, central banks & macro cycles",
+        "description": "Druckenmiller · Naren · Sharma - follow liquidity, central banks & macro cycles",
         "geo_boost":   True,   # geo-driven ideas get +1
     },
     "Max Pessimism Contrarian": {
@@ -75,7 +75,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Anthony Bolton", "Guy Spier", "Robert Vinall",
         ],
         "categories":  ["Crisis Hedge", "Geopolitical", "India/EM", "Dollar Cycle"],
-        "description": "Templeton · Marks · Pabrai · Watsa — buy maximum pessimism, cap downside",
+        "description": "Templeton · Marks · Pabrai · Watsa - buy maximum pessimism, cap downside",
         "geo_boost":   True,
     },
     "Capital Cycle / GARP": {
@@ -85,7 +85,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Ramdeo Agrawal", "Sir John Neff", "Kenneth Andrade", "Samir Arora",
         ],
         "categories":  ["Growth", "India/EM"],
-        "description": "Lynch · Jhunjhunwala · Jain · Agrawal — growth at a reasonable price, capital cycles",
+        "description": "Lynch · Jhunjhunwala · Jain · Agrawal - growth at a reasonable price, capital cycles",
         "geo_boost":   False,
     },
     "Distressed Credit / Cycle Top": {
@@ -95,7 +95,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Walter Schloss", "Peter Cundill",
         ],
         "categories":  ["Private Credit", "Fixed Income", "Crisis Hedge"],
-        "description": "Marks · Klarman · Tepper — credit cycle awareness, distressed debt to equity",
+        "description": "Marks · Klarman · Tepper - credit cycle awareness, distressed debt to equity",
         "geo_boost":   False,
     },
     "Monastic Quality Compounder": {
@@ -105,7 +105,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Chuck Akre", "Terry Smith", "Nick Train", "Tom Gayner",
         ],
         "categories":  ["Growth"],
-        "description": "Buffett · Munger · Mukherjea · Prasad — high-moat businesses, near-zero churn",
+        "description": "Buffett · Munger · Mukherjea · Prasad - high-moat businesses, near-zero churn",
         "geo_boost":   False,
     },
     "Asia & EM Macro Specialist": {
@@ -115,7 +115,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Kerr Neilson", "Samir Arora", "Ramdeo Agrawal",
         ],
         "categories":  ["Asia Divergence", "India/EM", "Dollar Cycle", "Geopolitical"],
-        "description": "Sharma · Naren · Jain · Neilson — Asian markets, EM rotation, India macro",
+        "description": "Sharma · Naren · Jain · Neilson - Asian markets, EM rotation, India macro",
         "geo_boost":   True,
     },
     "Fed Pivot / Duration Play": {
@@ -124,7 +124,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Stanley Druckenmiller", "S Naren", "Howard Marks", "Prem Watsa",
         ],
         "categories":  ["Fixed Income", "Macro"],
-        "description": "Druckenmiller · Naren · Marks — duration + gold around Fed cycle turns",
+        "description": "Druckenmiller · Naren · Marks - duration + gold around Fed cycle turns",
         "geo_boost":   False,
     },
     "Geopolitical Risk Arbitrage": {
@@ -134,7 +134,7 @@ _INVESTOR_STYLE_ARCHETYPES: dict[str, dict] = {
             "Howard Marks",
         ],
         "categories":  ["Geopolitical", "Crisis Hedge", "Asia Divergence", "India/EM"],
-        "description": "Templeton · Sharma · Watsa — geo events create the entry, fundamentals drive the return",
+        "description": "Templeton · Sharma · Watsa - geo events create the entry, fundamentals drive the return",
         "geo_boost":   True,
     },
 }
@@ -326,7 +326,7 @@ def _passes_conflict_id_filter(trade: dict, conflict_ids: list[str]) -> bool:
         return True   # no filter active
     trade_conflict = trade.get("conflict_id")
     if not trade_conflict:
-        # Static trade — passes unless the user explicitly excluded them
+        # Static trade - passes unless the user explicitly excluded them
         return "static" in conflict_ids or len(conflict_ids) == len(_CONFLICT_DISPLAY)
     return trade_conflict in conflict_ids
 
@@ -369,7 +369,7 @@ def _passes_country_perspective(trade: dict, perspective: str) -> bool:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 1 — ELIGIBILITY GATE (allocation step 1 of 4)
+# STEP 1 - ELIGIBILITY GATE (allocation step 1 of 4)
 #
 # A trade is ELIGIBLE only if (a) every leg exists in the loaded return data
 # AND (b) its thesis passed Stage-3 confirmation. Phantom-leg trades (the
@@ -378,7 +378,7 @@ def _passes_country_perspective(trade: dict, perspective: str) -> bool:
 #
 # CONTRACT FOR STEPS 2–4 (allocation / ranking, not yet built): every weight
 # assigned to a trade MUST pass through enforce_weight() below. It is the
-# single choke point — an ineligible trade returns 0.0 regardless of the
+# single choke point - an ineligible trade returns 0.0 regardless of the
 # proposed value. Bypassing it is a bug; tests/test_trade_eligibility.py
 # pins this behaviour.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -397,14 +397,14 @@ def annotate_eligibility(
       eligibility_reason  : "eligible" | specific failure(s), comma-joined
       max_weight          : 1.0 when eligible, 0.0 when locked
       structurally_dead   : True only when a leg has NO data source at all
-                            (not merely missing from today's frame) — these
+                            (not merely missing from today's frame) - these
                             can never become tradeable and should be counted
                             separately from live non-allocatable trades
 
     Parameters
     ----------
     trades          : trade dicts carrying "assets" (leg display names)
-    available_cols  : column names of the loaded returns frame — the same
+    available_cols  : column names of the loaded returns frame - the same
                       frame the backtest runs on (no other source counts)
     thesis_results  : {trade_name: stage-3 result dict with "stage_passed"
                       and optional "rejection_reason"}. A missing entry means
@@ -428,7 +428,7 @@ def annotate_eligibility(
             reasons.append("no legs defined")
         elif dead_legs:
             reasons.append(
-                "structurally dead — no data source for: " + ", ".join(dead_legs))
+                "structurally dead - no data source for: " + ", ".join(dead_legs))
             live_missing = [a for a in missing if a not in dead_legs]
             if live_missing:
                 reasons.append("missing legs: " + ", ".join(live_missing))
@@ -454,7 +454,7 @@ def enforce_weight(trade: dict, proposed_weight: float) -> float:
     """
     THE hard zero-weight lock. All downstream allocation must route weights
     through this function. An ineligible (or un-annotated) trade gets 0.0
-    no matter what weight is proposed — positive, negative, or otherwise.
+    no matter what weight is proposed - positive, negative, or otherwise.
     """
     if not trade.get("is_eligible", False):
         return 0.0
@@ -552,7 +552,7 @@ def score_trade_quality(trade: dict) -> dict:
 
     assets = trade.get("assets", [])
     if len(assets) < 2:
-        flags.append("Single-asset trade — no pair structure")
+        flags.append("Single-asset trade - no pair structure")
         score -= 10
 
     if not trade.get("entry"):
@@ -587,12 +587,12 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
     """
     import streamlit as st
 
-    with st.expander("Set Filters — War, Country Perspective & Quality Criteria",
+    with st.expander("Set Filters - War, Country Perspective & Quality Criteria",
                      expanded=True):
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
             'color:#555960;letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">'
-            'FILTER CRITERIA — SET BEFORE REVIEWING TRADES</p>',
+            'FILTER CRITERIA - SET BEFORE REVIEWING TRADES</p>',
             unsafe_allow_html=True,
         )
 
@@ -640,14 +640,14 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
         st.markdown(
             '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7px;'
             'color:#555960;letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px">'
-            'INVESTING PHILOSOPHY — FILTER BY MONEY MANAGER ARCHETYPE</p>',
+            'INVESTING PHILOSOPHY - FILTER BY MONEY MANAGER ARCHETYPE</p>',
             unsafe_allow_html=True,
         )
         selected_styles = st.multiselect(
             "Investing philosophy",
             options=list(_INVESTOR_STYLE_ARCHETYPES.keys()),
             default=[],
-            format_func=lambda s: f"{_INVESTOR_STYLE_ARCHETYPES[s]['icon']}  {s}  —  {_INVESTOR_STYLE_ARCHETYPES[s]['description']}",
+            format_func=lambda s: f"{_INVESTOR_STYLE_ARCHETYPES[s]['icon']}  {s} - {_INVESTOR_STYLE_ARCHETYPES[s]['description']}",
             placeholder="All philosophies (leave empty for no restriction)",
             key=f"{key_prefix}_investor_styles",
             help=(
@@ -734,7 +734,7 @@ def build_filter_ui(key_prefix: str = "ti") -> dict:
             st.markdown(
                 '<p style="font-family:\'JetBrains Mono\',monospace;font-size:7.5px;'
                 'color:#555960;margin-top:4px">'
-                'No active restrictions — showing all eligible trades</p>',
+                'No active restrictions - showing all eligible trades</p>',
                 unsafe_allow_html=True,
             )
 

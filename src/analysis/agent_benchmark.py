@@ -1,5 +1,5 @@
 """
-Agent-Level Benchmark — Historical Snapshot Validation.
+Agent-Level Benchmark - Historical Snapshot Validation.
 
 Freezes 20 real market dates with known ground-truth conditions and
 specifies what each agent *should* produce. Run against the current agent
@@ -74,7 +74,7 @@ SNAPSHOTS: list[dict] = [
     },
     {
         "date":   "2022-03-08",
-        "label":  "Ukraine War — Peak Commodity Spike",
+        "label":  "Ukraine War - Peak Commodity Spike",
         "regime": 3,
         "vix_approx": 36.0,
         "notes": "WTI $130/bbl. Wheat +40% MTD. LME nickel halted at $100k/t.",
@@ -98,7 +98,7 @@ SNAPSHOTS: list[dict] = [
     },
     {
         "date":   "2022-06-13",
-        "label":  "CPI 9.1% — Inflation Peak",
+        "label":  "CPI 9.1% - Inflation Peak",
         "regime": 2,
         "vix_approx": 34.0,
         "notes": "US CPI YoY 9.1%. Fed fast-tracks 75bp hike. S&P YTD -24%.",
@@ -233,7 +233,7 @@ SNAPSHOTS: list[dict] = [
     },
     {
         "date":   "2024-01-02",
-        "label":  "2024 Start — Risk-On",
+        "label":  "2024 Start - Risk-On",
         "regime": 1,
         "vix_approx": 13.0,
         "notes": "VIX 13, lowest since 2019. S&P and Nasdaq near ATH. Gold stable.",
@@ -330,7 +330,7 @@ def evaluate_snapshot(agent_id: str, agent_output: dict) -> dict:
 def run_historical_snapshot(snapshot: dict) -> dict:
     """
     Load real historical market data for a snapshot date and run the model.
-    Returns a typed output dict with the model's ACTUAL computed values —
+    Returns a typed output dict with the model's ACTUAL computed values - 
     not session state, not hardcoded: real prices → real signal outputs.
 
     For each snapshot we load a 252-trading-day window ending at the snapshot
@@ -408,7 +408,7 @@ def run_historical_snapshot(snapshot: dict) -> dict:
             pass
 
         # VIX cross-check: use vix_approx from snapshot as ground-truth label
-        # (actual VIX data may not load for old dates — use stored approx instead)
+        # (actual VIX data may not load for old dates - use stored approx instead)
         vix_approx = snapshot.get("vix_approx")
         if vix_approx:
             # Derive implied regime from VIX: >35=Crisis, >22=Elevated, else Normal
@@ -450,7 +450,7 @@ def run_full_benchmark(
         # For geo assertions: if model's regime matches VIX-derived regime → count CIS/TPS
         # as elevated when snapshot regime is Crisis/Elevated (proxy for geo risk)
         if model_output.get("_vix_regime_gt", 1) >= 2:
-            # Geo risk was elevated on this date — proxy CIS/TPS from risk_score
+            # Geo risk was elevated on this date - proxy CIS/TPS from risk_score
             rs = model_output.get("risk_score") or 50.0
             model_output["cis"] = round(rs * 0.85, 1)  # CIS slightly discounted from composite
             model_output["tps"] = round(rs * 0.75, 1)
@@ -503,7 +503,7 @@ def run_full_benchmark(
 def compute_dynamic_posteriors(benchmark_results: dict[str, dict]) -> dict[str, float]:
     """
     Derive per-agent posterior accuracy directly from benchmark run results.
-    Returns {agent_id: hit_rate} — feeds calibrate_confidence() as the
+    Returns {agent_id: hit_rate} - feeds calibrate_confidence() as the
     empirical prior rather than the hardcoded POSTERIOR_ACCURACY table.
     Falls back to POSTERIOR_ACCURACY base rate when benchmark has < 3 assertions.
     """
@@ -552,7 +552,7 @@ def score_agent(agent_id: str) -> dict:
 
 # ── Per-agent posterior accuracy table ───────────────────────────────────────
 # Used by calibrate_confidence() in agent_state.py.
-# These are the STATIC back-test priors — updated as benchmarks accumulate.
+# These are the STATIC back-test priors - updated as benchmarks accumulate.
 # Interpretation: "on historically similar regime signals, this agent's
 # primary field assertion has hit X% of the time."
 

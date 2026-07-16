@@ -52,10 +52,10 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     _page_intro(
         "<strong>Research question for this page: what do historical geopolitical events tell us "
         "about how the current conflict regime is likely to affect equity-commodity relationships?</strong> "
-        "Geopolitical shocks are the most potent external trigger of equity-commodity decoupling — "
+        "Geopolitical shocks are the most potent external trigger of equity-commodity decoupling - "
         "wars disrupt commodity supply chains (oil embargoes, grain blockades, metal sanctions), "
         "causing commodities to reprice independently of equity fundamentals. "
-        "Select an event to see how equities and commodities behaved before, during, and after — "
+        "Select an event to see how equities and commodities behaved before, during, and after - "
         "and whether the spillover relationship strengthened, weakened, or reversed. "
         "The pre/during/post windows here are the empirical basis for the geopolitical risk multipliers "
         "used in the Scenario Engine and Conflict Intelligence pages."
@@ -175,7 +175,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
             )
 
     with row1_r:
-        _label("Cumulative Abnormal Return (CAR) — vs S&P 500 Market Model")
+        _label("Cumulative Abnormal Return (CAR) - vs S&P 500 Market Model")
         try:
             with st.spinner(""):
                 _es = _event_study_cached(all_returns, n_rows=len(all_returns))
@@ -220,9 +220,9 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                     "Day 0 marks event start; window is [−5, +20] trading days."
                 )
             else:
-                st.caption("No CAR data — select non-benchmark assets or check data coverage.")
+                st.caption("No CAR data - select non-benchmark assets or check data coverage.")
         except Exception as _car_err:
-            st.caption("CAR unavailable — see logs.")
+            st.caption("CAR unavailable - see logs.")
 
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
@@ -316,7 +316,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
     st.markdown('<div style="margin:0.5rem 0;border-top:1px solid #1a1a1a"></div>',
                 unsafe_allow_html=True)
     with st.expander(
-        f"CAAR — Aggregate Across All {len(GEOPOLITICAL_EVENTS)} Events  ·  "
+        f"CAAR - Aggregate Across All {len(GEOPOLITICAL_EVENTS)} Events  ·  "
         f"Market Model  ·  Window [−5, +20]",
         expanded=False,
     ):
@@ -390,10 +390,10 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                     _star = "★" if (not np.isnan(_ts) and abs(_ts) > 1.96) else ""
                     _stat_rows.append({
                         "Asset": _a,
-                        "CAAR Day+20": f"{_caar_terminal:+.2f}%" if not np.isnan(_caar_terminal) else "—",
-                        "95% CI": f"[{_lo_t:+.2f}%, {_hi_t:+.2f}%]" if not np.isnan(_lo_t) else "—",
-                        "t-stat": f"{_ts:.2f}{_star}" if not np.isnan(_ts) else "—",
-                        "Sign p": f"{_ps:.3f}" if not np.isnan(_ps) else "—",
+                        "CAAR Day+20": f"{_caar_terminal:+.2f}%" if not np.isnan(_caar_terminal) else " - ",
+                        "95% CI": f"[{_lo_t:+.2f}%, {_hi_t:+.2f}%]" if not np.isnan(_lo_t) else " - ",
+                        "t-stat": f"{_ts:.2f}{_star}" if not np.isnan(_ts) else " - ",
+                        "Sign p": f"{_ps:.3f}" if not np.isnan(_ps) else " - ",
                         "N": str(_n),
                     })
                 if _stat_rows:
@@ -405,18 +405,18 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                     "Shaded band = 95% bootstrap CI (500 resamples of the event cross-section). "
                     "t-stat tests H₀: CAAR=0 at day+20; ★ = significant at 5% (|t|>1.96). "
                     "Sign p = probability of observing ≥ this many positive-CAR events by chance (H₀: 50%). "
-                    "Bootstrap and sign test are joint robustness checks — both should reject for strong inference."
+                    "Bootstrap and sign test are joint robustness checks - both should reject for strong inference."
                 )
             else:
-                st.caption("No CAAR data — select non-benchmark assets.")
+                st.caption("No CAAR data - select non-benchmark assets.")
         except Exception as _caar_err:
-            st.caption("CAAR aggregation unavailable — see logs.")
+            st.caption("CAAR aggregation unavailable - see logs.")
 
     # ── Conflict Scorecard Strip ──────────────────────────────────────────
     st.markdown(
         f'<p style="{_F}font-size:0.58rem;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:0.14em;color:#8E9AAA;margin:1.4rem 0 0.4rem">'
-        f'Active Conflict Scores — CIS: Conflict Intensity · TPS: Transmission Pressure · 0–100</p>',
+        f'Active Conflict Scores - CIS: Conflict Intensity · TPS: Transmission Pressure · 0–100</p>',
         unsafe_allow_html=True,
     )
     try:
@@ -605,7 +605,7 @@ def page_geopolitical(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown("---")
                 render_agent_output_block("geopolitical_analyst", _ga_result)
     except Exception as _ga_err:
-        st.caption("AI Geopolitical Analyst unavailable — see logs.")
+        st.caption("AI Geopolitical Analyst unavailable - see logs.")
 
     # CQO runs silently - output visible in About > AI Workforce
     try:

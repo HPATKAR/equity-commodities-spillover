@@ -612,7 +612,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     # ══════════════════════════════════════════════════════════════════════════
     _h2("5 · Market Confirmation Score (MCS)")
     _prose(
-        "The MCS is a <em>confirmatory</em> layer only (10% of GRS) — it uses two geo-specific "
+        "The MCS is a <em>confirmatory</em> layer only (10% of GRS) - it uses two geo-specific "
         "market signals to verify what news flow and conflict events already indicate. "
         "Equity vol, rates vol, safe-haven bid, and correlation acceleration were removed: "
         "all four fire on rate cycles, earnings shocks, and COVID-style demand crashes that are "
@@ -644,12 +644,12 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "cmd_vol", "Commodity Vol", 0.30, "#8E9AAA",
             "20d annualized realized vol across energy/metals basket "
             "(WTI, Brent, NatGas, Gold, Silver, Copper). EWM z-scored (span=252). "
-            "No OLS residualization — removing equity beta eliminates the legitimate co-movement "
+            "No OLS residualization - removing equity beta eliminates the legitimate co-movement "
             "during war/blockade, when oil vol and equity fear rise together.",
             "rv_cmd = mean annualized 20d vol  [energy/metals basket]\n"
             "z      = EWM_zscore(rv_cmd, span=252)\n"
             "CmdVol = (50 + z × 14).clip(0, 100)",
-            "Symmetric: fires on price crash as well as spike — both indicate supply disruption."
+            "Symmetric: fires on price crash as well as spike - both indicate supply disruption."
         )
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -681,9 +681,9 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
              "prevents inflation when multiple low-intensity conflicts coexist."),
             ("CP",       "Chokepoint Stress", "20%", "#2980b9", 20,
              "PortWatch live Hormuz disruption + active conflict transmission pressure. "
-             "Explicit physical channel — not a judgment about future impact."),
+             "Explicit physical channel - not a judgment about future impact."),
             ("MCS",      "Market Conf.",      "10%", _G,        10,
-             "Oil-gold joint signal + commodity vol. Confirmatory only — "
+             "Oil-gold joint signal + commodity vol. Confirmatory only - "
              "not primary. Geo supply-shock signature, not generic market stress."),
         ]:
             st.markdown(
@@ -712,8 +712,8 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
                 for band, lo, hi, c, interp in [
                     ("HIGH/CRISIS", 75, 100, "#c0392b", "Active conflict confirmed by news flow + chokepoint disruption"),
                     ("ELEVATED",    50,  75, "#e67e22", "Significant news activity or chokepoint stress building"),
-                    ("MODERATE",    25,  50, _G,        "Latent risk — news background noise or isolated events"),
-                    ("LOW",          0,  25, "#27ae60", "Quiet — minimal news, no chokepoint disruption"),
+                    ("MODERATE",    25,  50, _G,        "Latent risk - news background noise or isolated events"),
+                    ("LOW",          0,  25, "#27ae60", "Quiet - minimal news, no chokepoint disruption"),
                 ]
             )
             + f'</div>',
@@ -857,13 +857,13 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
 
     _h3("Historical Score  (risk_score_history)")
     _prose(
-        "The historical chart plots a daily VIX-mimic index — cross-asset realized volatility "
+        "The historical chart plots a daily VIX-mimic index - cross-asset realized volatility "
         "z-scored against a 3-year trailing baseline. Structural CIS/News GPR/Chokepoint layers "
         "are not available at daily historical frequency, so the series uses realized fear directly: "
         "when markets are calm, the score is low; when they are in distress, it spikes."
     )
     _weight_table([
-        ("eq_vol",  "Equity Realized Vol",     0.55, "20d annualized realized vol across all equity indices. Core VIX analogue — spikes during GFC, COVID, Ukraine selloffs."),
+        ("eq_vol",  "Equity Realized Vol",     0.55, "20d annualized realized vol across all equity indices. Core VIX analogue - spikes during GFC, COVID, Ukraine selloffs."),
         ("cmd_vol", "Commodity Realized Vol",  0.45, "20d annualized realized vol across WTI, Brent, NatGas, Gold, Silver, Copper. Captures geo supply shocks and energy crises."),
     ])
     _formula(
@@ -876,7 +876,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "span=252 adapted in ~12 months, normalising Ukraine 2023 to z≈0."
     )
     _section_note(
-        "HistScore ≠ live GRS on any given day — the live model uses news flow, conflict events, "
+        "HistScore ≠ live GRS on any given day - the live model uses news flow, conflict events, "
         "and chokepoint data unavailable historically. Treat HistScore as a market fear proxy: "
         "2008 GFC and 2020 COVID score highest; 2012-13 QE era (VIX ~15) scores low; "
         "2022 Ukraine invasion spikes; recent active war environment reads Elevated."
@@ -1011,7 +1011,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _prose(
         "The regime engine classifies the current equity-commodity relationship into one of four states "
         "using rolling Pearson correlation. DCC-GARCH is computed separately as a supplementary "
-        "visualization — it does not feed into the regime state variable. Rolling correlation provides "
+        "visualization - it does not feed into the regime state variable. Rolling correlation provides "
         "a fast, interpretable regime signal that maps directly to the four-state ladder below."
     )
 
@@ -1067,7 +1067,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         _h3("DCC  (Engle, 2002)  ·  EWMA Pre-whitening")
         _prose(
             "Two-step procedure: (1) EWMA volatility pre-whitening (λ=0.94, RiskMetrics daily standard) "
-            "standardises returns before the DCC recursion — equivalent to GARCH(1,1) with ω=0, α=0.06, β=0.94 "
+            "standardises returns before the DCC recursion - equivalent to GARCH(1,1) with ω=0, α=0.06, β=0.94 "
             "but with fixed rather than MLE-estimated parameters; "
             "(2) DCC(1,1) recursion on the standardised residuals to obtain time-varying conditional correlation R_t."
         )
@@ -1209,7 +1209,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             f'Total SI = (Σᵢ≠ⱼ θᵢⱼ) / N × 100</code></div>'
             f'<p style="{_S}font-size:0.62rem;color:{_MUT};margin:.35rem 0 0;line-height:1.4;font-style:italic">'
             f'H = 10d horizon. VAR lag by BIC. Cholesky is order-dependent; '
-            f'D-Y (2012) uses Pesaran-Shin generalized FEVD (order-invariant) — '
+            f'D-Y (2012) uses Pesaran-Shin generalized FEVD (order-invariant) - '
             f'that extension requires custom implementation beyond statsmodels.</p>'
             f'</div>',
             unsafe_allow_html=True,
@@ -1243,7 +1243,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     _prose(
         "The Local-Projection IRF (Jordà 2005) measures how asset returns respond to an unexpected "
         "conflict escalation shock over horizons h = 0..20 trading days. Unlike VAR-based IRFs, "
-        "local projections are robust to dynamic misspecification — each horizon is a separate "
+        "local projections are robust to dynamic misspecification - each horizon is a separate "
         "OLS regression, so mis-specifying the lag structure at one horizon does not contaminate others. "
         "The shock is the standardised AR residual of daily GDELT news-volume, capturing <em>unexpected</em> "
         "escalation rather than anticipated conflict intensity level."
@@ -1294,7 +1294,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     )
 
     _se_spec_rows = [
-        ("h = 0",  "HC3",           "No overlap — cumulative return = single-period return. HC3 corrects heteroscedasticity; no autocorrelation correction needed.", "#2e7d32"),
+        ("h = 0",  "HC3",           "No overlap - cumulative return = single-period return. HC3 corrects heteroscedasticity; no autocorrelation correction needed.", "#2e7d32"),
         ("h ≥ 1",  "NW-HAC  bw=h",  "Overlapping h+1-day sums → MA(h-1) residual structure. NW with maxlags=h is uniformly valid (MOP 2021). Bands widen monotonically.", _G),
     ]
     _se_html = '<div style="border:1px solid #1e1e1e;overflow:hidden;margin:.3rem 0 .6rem">'
@@ -1337,7 +1337,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
             "For each conflict, the <code>affected_equities</code> and "
             "<code>affected_commodities</code> fields in the CONFLICTS registry "
             "define the response-asset universe. Only assets present in the loaded "
-            "return data are included. The mapping is static — update the registry to "
+            "return data are included. The mapping is static - update the registry to "
             "add or remove assets from a conflict's IRF panel."
         )
         st.markdown(
@@ -1359,7 +1359,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
     with col_lpa:
         _h3("Assumptions")
         _assumption("GDELT article volume is a noisy but unbiased proxy for conflict news intensity at daily frequency.")
-        _assumption("AR(p) BIC-selected residuals are approximately white noise — conflict media dynamics are linear and stationary within the 1-year window.")
+        _assumption("AR(p) BIC-selected residuals are approximately white noise - conflict media dynamics are linear and stationary within the 1-year window.")
         _assumption("Lag controls (4 shock lags + 2 return lags) are sufficient to condition out confounders at each horizon independently.")
         _assumption("1-year GDELT window (~250 trading days) provides adequate statistical power for the maximum horizon h=20.")
     with col_lpb:
@@ -1717,7 +1717,7 @@ def page_methodology(start: str = "", end: str = "", fred_key: str = "") -> None
         "News flow leads as the primary signal; conflict event intensity, chokepoint disruption, "
         "and oil-gold market confirmation follow. All formulae, weights, "
         "and assumptions are fully transparent and documented above. The model is designed "
-        "to be challenged, stress-tested, and improved — contributions to the conflict registry "
+        "to be challenged, stress-tested, and improved - contributions to the conflict registry "
         "and news GPR keyword taxonomy are the highest-leverage points of intervention."
     )
 

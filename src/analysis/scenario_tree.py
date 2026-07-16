@@ -1,11 +1,11 @@
 """
-Forward Scenario Tree — branching conditional forecast for a chosen conflict.
+Forward Scenario Tree - branching conditional forecast for a chosen conflict.
 
 From today's state, branch into escalate / hold / de-escalate with probabilities
 seeded by the live ACLED+GDELT escalation signal, then branch each node once
 more (two 15-trading-day steps ≈ 30-day horizon, 3² = 9 terminal paths).
 
-Every node is priced with the EXISTING machinery — regime-conditional OLS betas
+Every node is priced with the EXISTING machinery - regime-conditional OLS betas
 and fixed sensitivity tables from the Scenario Engine, branch shock sizes scaled
 by the conflict's transmission channels (conflict_commodity_matrix) and TPS.
 Nothing new is estimated here; this module only chains what already exists.
@@ -16,7 +16,7 @@ historical-simulation VaR (var95 → σ_daily), scaled by √horizon, so the mix
 is continuous rather than 9 point masses.
 
 This is a conditional forecast under stated, on-screen, perturbable assumptions
-— NOT a point prediction. Probability bands widen with depth by construction;
+ - NOT a point prediction. Probability bands widen with depth by construction;
 that widening is the feature, not a defect.
 
 ASSUMPTION NOTE: branch priors, the persistence tilt, per-step shock sizes, and
@@ -40,7 +40,7 @@ BRANCH_PRIORS: dict[str, dict[str, float]] = {
     "de-escalating": {"escalate": 0.15, "hold": 0.35, "deescalate": 0.50},
 }
 
-# Persistence: conflicts trend — an escalation step raises the odds of another.
+# Persistence: conflicts trend - an escalation step raises the odds of another.
 # Multiplicative tilt on the base priors, renormalised; strength ∈ [0, 1] in UI.
 _PERSISTENCE_WEIGHTS: dict[str, dict[str, float]] = {
     "escalate":   {"escalate": 1.6, "hold": 1.0, "deescalate": 0.6},
@@ -121,8 +121,8 @@ def branch_step_shocks(
     relevance (conflict_commodity_matrix row) and TPS.
 
     Returns (proxy_shocks, fixed_shocks):
-      proxy_shocks — {asset_name: decimal_return} for _propagate_shock()
-      fixed_shocks — {yield_bps, dxy_pct, credit_bps, geo} for
+      proxy_shocks - {asset_name: decimal_return} for _propagate_shock()
+      fixed_shocks - {yield_bps, dxy_pct, credit_bps, geo} for
                      _apply_fixed_sensitivity()
     """
     if branch == "hold":
@@ -131,7 +131,7 @@ def branch_step_shocks(
     sign = 1.0 if branch == "escalate" else -_RELIEF_RATIO
     oil_rel = float(matrix_row.get("WTI Crude Oil", 0.0))
     gas_rel = float(matrix_row.get("Natural Gas", 0.0))
-    # Gold is a safe-haven bid, not a channel commodity — floor at 0.5 so any
+    # Gold is a safe-haven bid, not a channel commodity - floor at 0.5 so any
     # active conflict moves it; metals channel lifts it further.
     metals_rel = max(
         float(matrix_row.get(m, 0.0)) for m in ("Copper", "Silver", "Platinum")
@@ -185,7 +185,7 @@ def build_tree(
 ) -> dict:
     """
     Two-step tree. Each node prices its step shock with the betas of the
-    regime it lands in — escalation paths shift toward Elevated/Crisis betas,
+    regime it lands in - escalation paths shift toward Elevated/Crisis betas,
     de-escalation paths toward Normal/Decorrelated (GAP 19 machinery).
 
     Returns {"step1": [3 nodes], "leaves": [9 nodes]}; every node carries
@@ -242,7 +242,7 @@ def collapse_distribution(
     """
     Probability-weighted mixture over the given nodes.
     Each node contributes a normal centred on its cumulative impact with
-    σ = σ_daily × √days (existing VaR-implied dispersion — no new estimation).
+    σ = σ_daily × √days (existing VaR-implied dispersion - no new estimation).
 
     Returns {asset: {p5, p25, p50, p75, p95, mean}} in decimal returns.
     """
@@ -308,7 +308,7 @@ def worst_plausible_path(
 def early_signals(worst_path: tuple[str, ...], current_signal: str, source: str) -> list[dict]:
     """
     Observables that distinguish the worst path's first branch from the
-    alternatives — the "you are on this path if you see X" list.
+    alternatives - the "you are on this path if you see X" list.
     Static descriptions; the UI attaches live current readings where available.
     """
     first = worst_path[0]
@@ -327,13 +327,13 @@ def early_signals(worst_path: tuple[str, ...], current_signal: str, source: str)
         {
             "signal": "ACLED event acceleration",
             "watch": "weekly event count and fatalities rising vs 30-day baseline "
-                     "— the direct measure GDELT media volume proxies with a 12–48h lag",
-            "current": "live" if "acled" in source else "not configured — GDELT/static proxy in use",
+                     " - the direct measure GDELT media volume proxies with a 12–48h lag",
+            "current": "live" if "acled" in source else "not configured - GDELT/static proxy in use",
         },
         {
             "signal": "Energy futures curve",
             "watch": "front-month WTI/Brent basis moving into (or deepening) "
-                     "backwardation — the market pricing near-term supply tightness "
+                     "backwardation - the market pricing near-term supply tightness "
                      "corroborates the escalation branch",
             "current": "",   # UI fills from fetch_curve_snapshot()
         },

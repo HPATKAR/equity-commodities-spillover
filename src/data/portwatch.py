@@ -1,7 +1,7 @@
 """
 IMF PortWatch chokepoint transit data loader.
 
-Data source: IMF PortWatch (portwatch.imf.org) — ArcGIS Feature Service.
+Data source: IMF PortWatch (portwatch.imf.org) - ArcGIS Feature Service.
 Public endpoint, no API key required.
 
 Forensically confirmed endpoints (2026-04-14):
@@ -11,16 +11,16 @@ Forensically confirmed endpoints (2026-04-14):
              Daily_Chokepoints_Data/FeatureServer/0/query
 
 Confirmed portid mapping (from live _discover_portids() call):
-  chokepoint1  — Suez Canal
-  chokepoint2  — Panama Canal
-  chokepoint3  — Bosporus Strait
-  chokepoint4  — Bab el-Mandeb Strait
-  chokepoint5  — Malacca Strait
-  chokepoint6  — Strait of Hormuz   ← used here
-  chokepoint7  — Cape of Good Hope
-  chokepoint8  — Gibraltar Strait
-  chokepoint9  — Dover Strait
-  chokepoint10 — Oresund Strait
+  chokepoint1 - Suez Canal
+  chokepoint2 - Panama Canal
+  chokepoint3 - Bosporus Strait
+  chokepoint4 - Bab el-Mandeb Strait
+  chokepoint5 - Malacca Strait
+  chokepoint6 - Strait of Hormuz   ← used here
+  chokepoint7 - Cape of Good Hope
+  chokepoint8 - Gibraltar Strait
+  chokepoint9 - Dover Strait
+  chokepoint10 - Oresund Strait
   ... (14 more global chokepoints)
 
 Date filter note: the 'date' field rejects epoch-ms WHERE clauses (400 error).
@@ -125,7 +125,7 @@ def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
     cutoff_year  = cutoff.year
     cutoff_month = cutoff.month
 
-    # Date filter via year/month integers — epoch-ms on 'date' field returns 400
+    # Date filter via year/month integers - epoch-ms on 'date' field returns 400
     where = (
         f"portid='{portid}' AND ("
         f"year>{cutoff_year} OR "
@@ -150,7 +150,7 @@ def load_hormuz_tankers(days: int = 365) -> pd.DataFrame:
     except Exception:
         try:
             from src.analysis.freshness import record_failure
-            record_failure("portwatch", "Hormuz fetch failed — network or endpoint error")
+            record_failure("portwatch", "Hormuz fetch failed - network or endpoint error")
         except Exception:
             pass
         return pd.DataFrame()
@@ -189,8 +189,8 @@ def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
 
     Parameters
     ----------
-    portid : str — e.g. "chokepoint1", "chokepoint4", "chokepoint6"
-    days   : int — lookback window
+    portid : str - e.g. "chokepoint1", "chokepoint4", "chokepoint6"
+    days   : int - lookback window
 
     Returns DataFrame columns: date, n_tanker, oil_tanker, n_total, capacity_tanker
     """
@@ -243,7 +243,7 @@ def load_strait_tankers(portid: str, days: int = 30) -> pd.DataFrame:
 def load_all_straits_live(days_lookback: int = 7) -> dict[str, dict]:
     """
     Fetch live ship count snapshot for all mapped straits via PortWatch.
-    Not cached — delegates to cached leaf load_strait_tankers().
+    Not cached - delegates to cached leaf load_strait_tankers().
 
     Returns {strait_id: {ships_current, ships_prior, ships_24h_change,
                          ships_7d_avg, source, as_of}}
@@ -295,8 +295,8 @@ def brent_sensitivity_table(base_price: float) -> pd.DataFrame:
     Brent crude disruption sensitivity.
     Formula: new_price = base × (1 + ε × (−disruption_fraction))
 
-    Positive ε (0.004, 0.014): empirical OLS — captures demand co-movement,
-      not supply shock. Price falls with disruption — counterintuitive but correct
+    Positive ε (0.004, 0.014): empirical OLS - captures demand co-movement,
+      not supply shock. Price falls with disruption - counterintuitive but correct
       for the regression context (COVID/demand collapses dominate the sample).
     Negative ε (−0.25/−0.35/−0.50): structural EIA/IEA range for supply shocks.
     """

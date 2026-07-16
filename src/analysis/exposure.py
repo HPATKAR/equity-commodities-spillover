@@ -174,7 +174,7 @@ def score_all_assets(
     direction: "long_geo_risk" | "safe_haven" | "neutral"
 
     Note: conflict_results are always fetched internally via score_all_conflicts()
-    (itself cached). Passing a dict here was removed — dicts are unhashable and
+    (itself cached). Passing a dict here was removed - dicts are unhashable and
     would break @st.cache_data.
     """
     # Cold-start fast path: a fresh process reads the last computed scores from
@@ -190,7 +190,7 @@ def score_all_assets(
     )
     from src.analysis.scenario_state import get_scenario
 
-    # Use __wrapped__ to bypass @st.cache_data — avoids nested cached call
+    # Use __wrapped__ to bypass @st.cache_data - avoids nested cached call
     # (Streamlit 1.35+ raises StreamlitAPIException when a cached function calls
     # another cached function on cache miss). The underlying ACLED/GDELT I/O
     # is still cached at the lower level, so this only re-runs the aggregation loop.

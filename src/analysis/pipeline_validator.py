@@ -1,7 +1,7 @@
 """
 Walk-forward validation of the five-stage thesis-first pipeline as a decision rule.
 
-The unit of analysis is a (thesis, time-window) pair — NOT a trade's P&L.
+The unit of analysis is a (thesis, time-window) pair - NOT a trade's P&L.
 
 At each window the pipeline classifies every thesis as:
   admit   → Stage 3 confirmed + DSR ≥ 0.50 (the gate says "tradeable edge exists")
@@ -10,8 +10,8 @@ At each window the pipeline classifies every thesis as:
   reject  → Stage 3 not confirmed or wrong OOS sign
 
 The pipeline passes only if all three hold out of sample:
-  1. admitted_vs_rejected_gap > 0  — the gates discriminate
-  2. admitted_vs_random_gap > 0    — the gates beat random selection of the same size
+  1. admitted_vs_rejected_gap > 0 - the gates discriminate
+  2. admitted_vs_random_gap > 0 - the gates beat random selection of the same size
   3. MT and IE bucket means behave as labeled:
        MT  ≈ small positive (mechanism real, edge arbitraged)
        IE  ≈ high variance, no reliable sign (not enough signal, not a verdict)
@@ -131,7 +131,7 @@ def _run_stage3_on_window(
     """
     from src.analysis.thesis_engine import ThesisStrategy, run_stage3
 
-    # Build a clean copy — do not mutate the original
+    # Build a clean copy - do not mutate the original
     tmp = ThesisStrategy(
         name=thesis.name,
         category=thesis.category,
@@ -161,7 +161,7 @@ def _run_stage5_decision(
     Estimate training-window Sharpe, compute DSR, apply gate logic.
     Returns (decision, n_trades, sharpe, dsr_prob).
 
-    The Sharpe here is an in-sample estimate over the training window —
+    The Sharpe here is an in-sample estimate over the training window - 
     slightly optimistic relative to a nested walk-forward, but sufficient
     to test whether the gate classification predicts OOS direction.
     """
@@ -290,7 +290,7 @@ def walk_forward_pipeline_validation(
     Walk the five-stage pipeline forward through history.
 
     Gate sequence at each window (strictly past data only):
-      Stage 1+2 : pre-verified once (static — thesis completeness and leg presence)
+      Stage 1+2 : pre-verified once (static - thesis completeness and leg presence)
       Stage 3   : sign confirmation on training slice (time-varying)
       Stage 5   : DSR on training-window Sharpe (time-varying)
 
@@ -313,11 +313,11 @@ def walk_forward_pipeline_validation(
         if tmp.stage1_passed and tmp.stage2_passed:
             gradeable.append(t)
         else:
-            _log.info("Thesis excluded from validation: %s — %s",
+            _log.info("Thesis excluded from validation: %s - %s",
                       t.name, tmp.stage2_reason or tmp.stage1_reason)
 
     if not gradeable:
-        _log.warning("No theses passed Stage 1+2 — validation cannot run")
+        _log.warning("No theses passed Stage 1+2 - validation cannot run")
         return PipelineValidationResult(
             buckets={}, admitted_vs_rejected_gap=None, admitted_vs_rejected_pval=None,
             admitted_vs_random_gap=None, random_p_value=None, random_distribution=[],
@@ -453,7 +453,7 @@ def walk_forward_pipeline_validation(
 
     if adm_mean_oos is not None and random_means:
         gap2 = float(adm_mean_oos - np.mean(random_means))
-        # P(random >= admitted) — fraction of random draws that beat the pipeline
+        # P(random >= admitted) - fraction of random draws that beat the pipeline
         p2   = float(np.mean([m >= adm_mean_oos for m in random_means]))
     else:
         gap2, p2 = None, None

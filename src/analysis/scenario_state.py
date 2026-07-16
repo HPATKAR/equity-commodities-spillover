@@ -1,12 +1,12 @@
 """
-Scenario State — global scenario switch and helpers.
+Scenario State - global scenario switch and helpers.
 
 The scenario switch is persisted in st.session_state["scenario"] and read
 by every page that adjusts its framing, multipliers, or trade generation.
 Call init_scenario() once per session (idempotent).
 
 ASSUMPTION NOTE: All multipliers (geo_mult, vol_mult, cis_mult, tps_mult) are
-manual scenario assumptions — they are not derived from a statistical model or
+manual scenario assumptions - they are not derived from a statistical model or
 calibrated against historical data. They represent plausible directional scaling
 factors authored by the analyst for illustrative scenario simulation only.
 """
@@ -57,7 +57,7 @@ SCENARIOS: dict[str, dict] = {
     },
     "supply_shock": {
         "label":            "Supply Shock",
-        "desc":             "Major commodity supply disruption — production cuts, infrastructure damage.",
+        "desc":             "Major commodity supply disruption - production cuts, infrastructure damage.",
         "geo_mult":         1.20,
         "vol_mult":         1.40,
         "color":            "#e67e22",
@@ -66,7 +66,7 @@ SCENARIOS: dict[str, dict] = {
         "safe_haven":       False,
         "short_bias":       False,
         "assumption_basis": "manual scenario assumption",
-        "calibration_note": "TPS amplified more than CIS — supply disruption transmits through commodity channels.",
+        "calibration_note": "TPS amplified more than CIS - supply disruption transmits through commodity channels.",
     },
     "sanctions_shock": {
         "label":            "Sanctions Shock",
@@ -83,7 +83,7 @@ SCENARIOS: dict[str, dict] = {
     },
     "shipping_shock": {
         "label":            "Shipping Shock",
-        "desc":             "Major chokepoint disruption — Hormuz, Suez, or Malacca closure/blockade.",
+        "desc":             "Major chokepoint disruption - Hormuz, Suez, or Malacca closure/blockade.",
         "geo_mult":         1.25,
         "vol_mult":         1.15,
         "color":            "#2980b9",
@@ -92,11 +92,11 @@ SCENARIOS: dict[str, dict] = {
         "safe_haven":       False,
         "short_bias":       False,
         "assumption_basis": "manual scenario assumption",
-        "calibration_note": "TPS amplified heavily — shipping disruption primarily affects transmission channels.",
+        "calibration_note": "TPS amplified heavily - shipping disruption primarily affects transmission channels.",
     },
     "risk_off": {
         "label":            "Risk-Off",
-        "desc":             "Broad market risk aversion — equities sell off; safe havens bid.",
+        "desc":             "Broad market risk aversion - equities sell off; safe havens bid.",
         "geo_mult":         1.10,
         "vol_mult":         1.50,
         "color":            "#c0392b",
@@ -105,7 +105,7 @@ SCENARIOS: dict[str, dict] = {
         "safe_haven":       True,
         "short_bias":       True,
         "assumption_basis": "manual scenario assumption",
-        "calibration_note": "Vol amplified more than geo/CIS — market-fear channel dominates.",
+        "calibration_note": "Vol amplified more than geo/CIS - market-fear channel dominates.",
     },
     "recovery": {
         "label":            "Recovery",
@@ -128,24 +128,24 @@ SCENARIO_ORDER = [
     "risk_off", "recovery",
 ]
 
-# Compatible scenario combinations — these can be compounded
+# Compatible scenario combinations - these can be compounded
 # e.g., "escalation AND shipping_shock" = Iran blockade + military escalation
 SCENARIO_COMPOUNDS: list[dict] = [
     {
         "label":    "Escalation + Shipping Shock",
-        "desc":     "Military escalation AND major chokepoint blockade — realistic Iran/Hormuz scenario.",
+        "desc":     "Military escalation AND major chokepoint blockade - realistic Iran/Hormuz scenario.",
         "scenarios": ["escalation", "shipping_shock"],
         "color":    "#c0392b",
     },
     {
         "label":    "Supply Shock + Sanctions",
-        "desc":     "Supply disruption compounded by financial sanctions — energy + financial channel hit.",
+        "desc":     "Supply disruption compounded by financial sanctions - energy + financial channel hit.",
         "scenarios": ["supply_shock", "sanctions_shock"],
         "color":    "#8e44ad",
     },
     {
         "label":    "Risk-Off + Supply Shock",
-        "desc":     "Risk aversion AND supply tightness — stagflationary shock pattern (2022 analog).",
+        "desc":     "Risk aversion AND supply tightness - stagflationary shock pattern (2022 analog).",
         "scenarios": ["risk_off", "supply_shock"],
         "color":    "#e67e22",
     },
@@ -208,7 +208,7 @@ def init_scenario() -> None:
         st.session_state["scenario"] = "base"
     if "scenario_compound" not in st.session_state:
         st.session_state["scenario_compound"] = []
-    # Validate — reset if stored value is no longer in registry
+    # Validate - reset if stored value is no longer in registry
     if st.session_state["scenario"] not in SCENARIOS:
         st.session_state["scenario"] = "base"
 

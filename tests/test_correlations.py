@@ -1,7 +1,7 @@
 """
 Unit tests for src/analysis/correlations.py.
 
-All tests use deterministic synthetic data — no network calls, no Streamlit state.
+All tests use deterministic synthetic data - no network calls, no Streamlit state.
 Run with: python -m pytest tests/test_correlations.py -v
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ def _dates(n: int) -> pd.DatetimeIndex:
 
 
 def _iid(n: int = 300, k: int = 1, seed: int = 42) -> pd.DataFrame:
-    """IID N(0,1) — zero true correlation between any pair."""
+    """IID N(0,1) - zero true correlation between any pair."""
     rng = np.random.default_rng(seed)
     data = rng.standard_normal((n, k))
     cols = [f"X{i}" for i in range(k)]
@@ -45,14 +45,14 @@ def _correlated_pair(n: int = 300, rho: float = 0.9, seed: int = 7) -> tuple[pd.
 
 
 def _high_corr_regime_data(n: int = 300, seed: int = 1) -> pd.Series:
-    """Avg cross-corr series stuck near 0.8 — should classify as Elevated/Crisis."""
+    """Avg cross-corr series stuck near 0.8 - should classify as Elevated/Crisis."""
     rng = np.random.default_rng(seed)
     base = np.full(n, 0.8) + rng.standard_normal(n) * 0.03
     return pd.Series(np.clip(base, 0, 1), index=_dates(n))
 
 
 def _low_corr_regime_data(n: int = 300, seed: int = 2) -> pd.Series:
-    """Avg cross-corr series stuck near 0.05 — should classify as Decorrelated/Normal."""
+    """Avg cross-corr series stuck near 0.05 - should classify as Decorrelated/Normal."""
     rng = np.random.default_rng(seed)
     base = np.full(n, 0.05) + rng.standard_normal(n) * 0.01
     return pd.Series(np.clip(base, 0, 1), index=_dates(n))
@@ -215,7 +215,7 @@ class TestDetectCorrelationRegime:
     def test_low_correlation_data_skews_toward_decorrelated(self):
         """Low-corr series should have more regime 0/1 than a high-corr series.
 
-        detect_correlation_regime uses percentile-based adaptive thresholds — it
+        detect_correlation_regime uses percentile-based adaptive thresholds - it
         classifies by relative position within each series, not absolute level.
         A near-constant 0.05 series cannot be guaranteed to exceed 50% in regime
         0/1 by absolute count, but it must produce fewer high-regime points than
@@ -285,7 +285,7 @@ class TestRegimeTransitionMatrix:
 
 class TestRegimeSteadyState:
     def _uniform_transition(self) -> pd.DataFrame:
-        """Uniform 4x4 matrix — steady state = [0.25, 0.25, 0.25, 0.25]."""
+        """Uniform 4x4 matrix - steady state = [0.25, 0.25, 0.25, 0.25]."""
         data = np.full((4, 4), 0.25)
         return pd.DataFrame(data, index=[0, 1, 2, 3], columns=[0, 1, 2, 3])
 

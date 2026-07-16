@@ -303,8 +303,8 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     _page_intro(
         "<strong>Research question for this page: which equity markets and sectors carry the most "
         "exposure to the active geopolitical shock?</strong> "
-        "The Scenario-adjusted Exposure Score (SES) combines conflict beta — how sensitive each "
-        "asset has historically been to commodity-driven shocks — with the current conflict intensity "
+        "The Scenario-adjusted Exposure Score (SES) combines conflict beta - how sensitive each "
+        "asset has historically been to commodity-driven shocks - with the current conflict intensity "
         "(CIS) and transmission pressure (TPS) to produce a single ranked exposure number. "
         "High-scoring assets are the equity markets most at risk when a commodity channel opens. "
         "Hedge rankings invert the logic: which assets have historically decoupled or appreciated "
@@ -334,7 +334,7 @@ def page_exposure_scoring(start=None, end=None, fred_key="") -> None:
     try:
         all_assets       = score_all_assets()
     except Exception as e:
-        st.error("Exposure model error — see logs.")
+        st.error("Exposure model error - see logs.")
         return
 
     stats = exposure_summary_stats(all_assets)

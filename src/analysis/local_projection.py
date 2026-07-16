@@ -3,7 +3,7 @@ Jordà (2005) local-projection impulse-response functions.
 
 Shock identification: AR(p) residual on daily GDELT news-volume series for each
 conflict (log1p-transformed, BIC lag selection p=1..5, standardised to unit
-variance). The shock is orthogonal to conflict's own past — it captures
+variance). The shock is orthogonal to conflict's own past - it captures
 unexpected escalation, not anticipated intensity level.
 
 Regression at horizon h (h = 0..20 trading days):
@@ -13,7 +13,7 @@ Regression at horizon h (h = 0..20 trading days):
                      + Σ_{j=1}^{p_r} δ_{h,j} · ret_{a,t-j}  +  ε_{h,t}
 
 β_h is the h-day cumulative IRF coefficient.
-SEs: Newey-West HAC, bandwidth = max(h, 2) — covers the MA(h-1) structure
+SEs: Newey-West HAC, bandwidth = max(h, 2) - covers the MA(h-1) structure
 introduced by using overlapping h-step cumulative returns as the dependent
 variable (Jordà 2005, footnote 4; also Montiel Olea & Plagborg-Møller 2021).
 
@@ -97,7 +97,7 @@ def _fetch_gdelt_volume(conflict_id: str, timespan: str) -> pd.Series:
                 data = resp.json()
                 break
             except (ValueError, requests.exceptions.JSONDecodeError):
-                # GDELT returned empty/HTML body — timespan not supported
+                # GDELT returned empty/HTML body - timespan not supported
                 return _empty
         else:
             return _empty
@@ -138,7 +138,7 @@ def _build_shock_series(
     """
     Build standardised AR-residual shock series aligned to trading_idx.
 
-    1. GDELT daily volumes — cascade: 2y → 1y → 3m until ≥ 90 days
+    1. GDELT daily volumes - cascade: 2y → 1y → 3m until ≥ 90 days
     2. Forward-fill gaps (weekends, low-news days)
     3. Reindex to trading days
     4. log1p-transform (stabilises count-data variance)
@@ -148,7 +148,7 @@ def _build_shock_series(
     Returns None if < 120 trading-day observations remain after AR trimming.
     """
     gdelt_id = _gdelt_id(conflict_id)   # translate registry ID → GDELT key
-    # Single TIMESPAN=1y fetch — GDELT enforces 5-s/request; no cascade here.
+    # Single TIMESPAN=1y fetch - GDELT enforces 5-s/request; no cascade here.
     # Inter-conflict sleep is enforced at the lp_irf_all_conflicts call site.
     daily = _fetch_gdelt_volume(gdelt_id, "1y")
 
@@ -282,7 +282,7 @@ def compute_lp_irf(
             try:
                 # Bandwidth = h (canonical Jordà 2005 / MOP 2021 choice).
                 # At h=0 there is no window overlap so no MA structure in
-                # residuals — use HC3 (heteroscedasticity-only). At h≥1 the
+                # residuals - use HC3 (heteroscedasticity-only). At h≥1 the
                 # dependent variable is a sum of h+1 overlapping returns,
                 # inducing MA(h-1) serial correlation → NW with maxlags=h.
                 if h == 0:
@@ -354,7 +354,7 @@ def lp_irf_all_conflicts(
             out[cid] = {**base, "error": "No affected assets in loaded return data"}
             continue
 
-        # 6-s gap between conflicts — GDELT enforces 1 request/5 s.
+        # 6-s gap between conflicts - GDELT enforces 1 request/5 s.
         # Cached results return instantly so this only costs time on cold start.
         if _ci > 0:
             time.sleep(6.0)

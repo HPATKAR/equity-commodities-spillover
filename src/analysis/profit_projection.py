@@ -20,7 +20,7 @@ Aggregated trade metrics:
   - Payoff table             : {scenario_id: {expected_pnl, drawdown, prob}}
   - Break-even probability   : fraction of scenarios with positive P&L
 
-All outputs are for institutional framing — explicitly labeled as model-
+All outputs are for institutional framing - explicitly labeled as model-
 derived estimates, not investment advice.
 
 Usage:
@@ -40,7 +40,7 @@ from src.analysis.scenario_state import SCENARIOS, get_scenario_id
 
 
 # ── Per-asset return assumptions (annualised vol, base return by direction) ──
-# These are model priors — calibrated from historical ranges, not forecasts.
+# These are model priors - calibrated from historical ranges, not forecasts.
 # Format: {asset_name: {"vol": annualised_vol_pct, "base_return": directional_drift}}
 
 _ASSET_PARAMS: dict[str, dict] = {
@@ -93,7 +93,7 @@ _ASSET_PARAMS: dict[str, dict] = {
     "USD/INR":                {"vol": 6.0,  "base_return":  3.0},
     "DXY (Dollar Index)":     {"vol": 8.0,  "base_return":  0.0},
 
-    # Fixed Income — additional
+    # Fixed Income - additional
     "IG Corporate (LQD)":     {"vol":  8.0, "base_return":  3.5},  # investment-grade bonds
     "EM USD Bonds (EMB)":     {"vol": 12.0, "base_return":  4.5},  # EM USD sovereign/quasi
     "US 1-3Y Treasury (SHY)": {"vol":  2.5, "base_return":  4.5},  # short-duration safety
@@ -140,7 +140,7 @@ _SCENARIO_RETURN_ADJUSTMENTS: dict[str, dict[str, float]] = {
         "Heating Oil": +20.0, "Gasoline (RBOB)": +18.0,
         "Gold": +8.0, "Wheat": +18.0, "Corn": +12.0,
         "S&P 500": -10.0, "Eurostoxx 50": -14.0,
-        # India/Japan are major energy importers — supply shock hurts both
+        # India/Japan are major energy importers - supply shock hurts both
         "Nifty 50": -9.0, "Sensex": -9.0, "Nikkei 225": -10.0,
         "TIPS / Inflation (TIP)": +6.0,
         "EM USD Bonds (EMB)":    -6.0,
@@ -203,9 +203,9 @@ _SCENARIO_PROBS: dict[str, float] = {
 
 # Scenario probability weights conditioned on the current correlation regime.
 # Regime 3 (Crisis): dramatically higher escalation/risk_off, near-zero recovery/de_escalation.
-# Regime 0 (Decorrelated): opposite — recovery/de_escalation dominate.
+# Regime 0 (Decorrelated): opposite - recovery/de_escalation dominate.
 _REGIME_SCENARIO_WEIGHTS: dict[int, dict[str, float]] = {
-    0: {  # Decorrelated — benign macro conditions
+    0: {  # Decorrelated - benign macro conditions
         "base":            0.42,
         "recovery":        0.18,
         "de_escalation":   0.14,
@@ -215,7 +215,7 @@ _REGIME_SCENARIO_WEIGHTS: dict[int, dict[str, float]] = {
         "shipping_shock":  0.04,
         "risk_off":        0.01,
     },
-    1: {  # Normal — balanced
+    1: {  # Normal - balanced
         "base":            0.32,
         "recovery":        0.10,
         "de_escalation":   0.12,
@@ -225,7 +225,7 @@ _REGIME_SCENARIO_WEIGHTS: dict[int, dict[str, float]] = {
         "shipping_shock":  0.06,
         "risk_off":        0.03,
     },
-    2: {  # Elevated — stress building
+    2: {  # Elevated - stress building
         "base":            0.18,
         "recovery":        0.04,
         "de_escalation":   0.06,
@@ -235,7 +235,7 @@ _REGIME_SCENARIO_WEIGHTS: dict[int, dict[str, float]] = {
         "shipping_shock":  0.08,
         "risk_off":        0.06,
     },
-    3: {  # Crisis — adverse scenarios dominate
+    3: {  # Crisis - adverse scenarios dominate
         "base":            0.10,
         "recovery":        0.02,
         "de_escalation":   0.03,
@@ -267,7 +267,7 @@ def _leg_return(
     adj      = adj_map.get(asset, 0.0)
 
     # Long legs: capture unconditional drift + scenario alpha
-    # Short legs: zero unconditional drift — pair trade alpha comes from spread divergence,
+    # Short legs: zero unconditional drift - pair trade alpha comes from spread divergence,
     # not from betting against the long-run equity premium
     is_long  = direction.lower() == "long"
     base_r   = (params["base_return"] if is_long else 0.0) * holding_years
@@ -311,7 +311,7 @@ def _trade_stats(
     portfolio_r = float(np.mean(leg_returns))
 
     # Naive independent-leg vol (no cross-asset correlation adjustment)
-    # In crisis regimes, correlation goes to 1 — use max leg vol as conservative estimate
+    # In crisis regimes, correlation goes to 1 - use max leg vol as conservative estimate
     portfolio_v = float(np.mean(leg_vols))
 
     return {

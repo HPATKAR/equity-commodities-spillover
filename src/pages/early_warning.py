@@ -1,10 +1,10 @@
 """
-Early-Warning Radar — critical slowing down before a regime flips.
+Early-Warning Radar - critical slowing down before a regime flips.
 
 Imports tipping-point theory from ecology/climate (Scheffer 2009; Dakos 2012):
 as a system nears a critical transition it recovers ever more slowly from
-shocks, leaving two statistical fingerprints — rising lag-1 autocorrelation and
-rising variance — that appear BEFORE it flips. This page runs those indicators on
+shocks, leaving two statistical fingerprints - rising lag-1 autocorrelation and
+rising variance - that appear BEFORE it flips. This page runs those indicators on
 a market driver (average cross-asset correlation or D-Y connectedness) to flag an
 impending correlation-regime transition ahead of the terminal's Markov classifier,
 and validates the lead time honestly against realized flips (false alarms shown).
@@ -41,7 +41,7 @@ _REGIME_NAMES = {0: "Decorrelated", 1: "Normal", 2: "Elevated", 3: "Crisis"}
 _REGIME_COL   = {0: "#3d566e", 1: _MUTED, 2: _AMBER, 3: _RED}
 _STATUS_COL   = {
     "TRANSITION RISK BUILDING": _RED,
-    "WATCH — MIXED SIGNAL":     _AMBER,
+    "WATCH - MIXED SIGNAL":     _AMBER,
     "STABLE":                   _GREEN,
     "INSUFFICIENT DATA":        _MUTED,
 }
@@ -67,7 +67,7 @@ def _avg_corr_driver(start: str, end: str, window: int) -> pd.Series:
 
 @st.cache_data(ttl=86400, show_spinner=False, max_entries=2)
 def _dy_driver(start: str, end: str) -> pd.Series:
-    """Rolling D-Y total spillover connectedness — slow first run, cached daily."""
+    """Rolling D-Y total spillover connectedness - slow first run, cached daily."""
     from src.analysis.spillover import rolling_diebold_yilmaz
     eq_r, cmd_r = load_returns(start, end)
     cols = [c for c in ("S&P 500", "DAX", "Nikkei 225",
@@ -96,7 +96,7 @@ _AI_SYSTEM = (
     "at Purdue University Daniels School of Business. You read a critical-slowing-down "
     "early-warning signal (rising lag-1 autocorrelation + rising variance ahead of a "
     "correlation-regime flip) and explain, in plain language, what it currently implies. "
-    "You produce research analysis for an academic dashboard — not investment advice. "
+    "You produce research analysis for an academic dashboard - not investment advice. "
     "Critical slowing down is a LEADING but NOISY precursor: never state a flip is coming, "
     "only that transition risk is elevated or not, and always respect the historical "
     "false-alarm rate you are given. Distinguish evidence from inference."
@@ -113,12 +113,12 @@ def _ai_transition_read(context_str: str, provider: str, api_key: str) -> str:
         "1) whether critical slowing down is genuinely present right now "
         "(both AR(1) autocorrelation AND variance rising) or only partial, "
         "2) how much weight it deserves given the historical hit rate, median lead "
-        "time, and false-alarm rate shown above — be explicit that this is a noisy "
+        "time, and false-alarm rate shown above - be explicit that this is a noisy "
         "precursor, not a forecast, "
         "3) one specific thing to watch that would confirm or kill the signal. "
         "Be quantitative and terse. Do not give trade advice.\n\n"
         "End with these labeled lines:\n"
-        "VERDICT: [one line — elevated transition risk / mixed / stable, and why]\n"
+        "VERDICT: [one line - elevated transition risk / mixed / stable, and why]\n"
         "INVALIDATED IF: [what reading would contradict this]"
     )
     try:
@@ -141,7 +141,7 @@ def _ai_transition_read(context_str: str, provider: str, api_key: str) -> str:
             )
             return resp.choices[0].message.content.strip()
     except Exception:
-        return ""   # silent — section is skipped rather than surfacing API errors
+        return ""   # silent - section is skipped rather than surfacing API errors
 
 
 # ── Charts ───────────────────────────────────────────────────────────────────
@@ -193,14 +193,14 @@ def _driver_chart(ews: pd.DataFrame, regime: pd.Series, flips: pd.Series,
         line=dict(color=_BLUE, width=1.0), opacity=0.75,
         hovertemplate="%{x|%Y-%m-%d}: " + driver_name + " %{y:.3f}<extra></extra>",
     ))
-    # Realized regime flips into stress — vertical markers
+    # Realized regime flips into stress - vertical markers
     for fdate, target in flips.items():
         fig.add_vline(x=fdate, line=dict(color=_REGIME_COL.get(int(target), _MUTED),
                                          width=0.8, dash="dot"), opacity=0.5)
     fig.update_layout(
         template="plotly_dark", height=340, paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text=f"Warning level vs {driver_name} — dotted lines = realized flips into Elevated/Crisis",
+        title=dict(text=f"Warning level vs {driver_name} - dotted lines = realized flips into Elevated/Crisis",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
         xaxis=dict(showgrid=False),
@@ -230,7 +230,7 @@ def _indicator_chart(ews: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         template="plotly_dark", height=300, paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text="Critical-slowing-down indicators — both rising together is the signal",
+        title=dict(text="Critical-slowing-down indicators - both rising together is the signal",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
         xaxis=dict(showgrid=False),
@@ -259,18 +259,18 @@ def _stat_card(label: str, value: str, col: str, sub: str = "") -> str:
 
 def page_early_warning(start: str, end: str, fred_key: str | None = None) -> None:
     _page_header(
-        "Early-Warning Radar — Critical Slowing Down",
+        "Early-Warning Radar - Critical Slowing Down",
         "Tipping-point theory · rising autocorrelation + variance · lead-time validated · false alarms shown",
     )
     _page_intro(
         "Borrowed from ecology and climate science (Scheffer et al., <em>Nature</em> 2009; "
         "Dakos et al., <em>PLoS ONE</em> 2012): as a system approaches a critical transition it "
-        "recovers more and more slowly from small shocks — <strong>critical slowing down</strong>. "
+        "recovers more and more slowly from small shocks - <strong>critical slowing down</strong>. "
         "Two statistical fingerprints of that appear <em>before</em> the system actually flips: "
         "lag-1 autocorrelation climbs toward 1 (memory lengthens) and variance rises (the basin "
         "of attraction flattens). This page runs those indicators on a market driver and asks "
         "whether they build ahead of a correlation-regime flip that the Markov classifier "
-        "(Correlation page) only confirms after the fact. The honest catch — CSD is a noisy "
+        "(Correlation page) only confirms after the fact. The honest catch - CSD is a noisy "
         "leading signal, so the validation panel below reports false alarms, not just hits."
     )
 
@@ -327,7 +327,7 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
         f'<span style="font-size:0.62rem;color:{_MUTED}">as of '
         f'<b style="color:{_GOLD}">{reading["date"].date()}</b> · driver: {driver_name} · '
         f'Markov regime currently: <b style="color:{_REGIME_COL.get(int(regime.iloc[-1]),_MUTED)}">'
-        f'{_REGIME_NAMES.get(int(regime.iloc[-1]),"—")}</b></span></div>',
+        f'{_REGIME_NAMES.get(int(regime.iloc[-1])," - ")}</b></span></div>',
         unsafe_allow_html=True,
     )
 
@@ -369,7 +369,7 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
     _chart(_indicator_chart(ews))
 
     # ── Validation scorecard ────────────────────────────────────────────────
-    _section_label("Did it actually lead the flips? — honest scorecard")
+    _section_label("Did it actually lead the flips? - honest scorecard")
     hr = ev["hit_rate"]
     far = ev["false_alarm_rate"]
     ml = ev["median_lead"]
@@ -377,10 +377,10 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
     far_col = _GREEN if (far == far and far <= 0.4) else (_AMBER if (far == far and far <= 0.6) else _RED)
     cards = "".join([
         _stat_card("Flips caught", f'{ev["n_caught"]}/{ev["n_flips"]}', hr_col,
-                   f'{hr*100:.0f}% hit rate' if hr == hr else "—"),
-        _stat_card("Median lead", f'{ml:.0f}d' if ml == ml else "—", _GOLD,
+                   f'{hr*100:.0f}% hit rate' if hr == hr else " - "),
+        _stat_card("Median lead", f'{ml:.0f}d' if ml == ml else " - ", _GOLD,
                    "calendar days before flip"),
-        _stat_card("False-alarm rate", f'{far*100:.0f}%' if far == far else "—", far_col,
+        _stat_card("False-alarm rate", f'{far*100:.0f}%' if far == far else " - ", far_col,
                    f'{ev["n_false_alarms"]}/{ev["n_alert_episodes"]} alert episodes'),
         _stat_card("Realized flips", f'{ev["n_flips"]}', _MUTED,
                    "into Elevated/Crisis since 2008"),
@@ -397,13 +397,13 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
         for f in reversed(recent):
             caught = f["caught"]
             v_col = _GREEN if caught else _RED
-            lead = f'{f["lead_days"]}d' if f["lead_days"] is not None else "—"
+            lead = f'{f["lead_days"]}d' if f["lead_days"] is not None else " - "
             rows += (
                 f'<tr>'
                 f'<td style="padding:.3rem .6rem;font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.7rem;color:{_GOLD}">{f["date"].date()}</td>'
                 f'<td style="padding:.3rem .6rem;font-size:.66rem;text-align:center;'
-                f'color:{_REGIME_COL.get(f["regime"],_MUTED)}">{_REGIME_NAMES.get(f["regime"],"—")}</td>'
+                f'color:{_REGIME_COL.get(f["regime"],_MUTED)}">{_REGIME_NAMES.get(f["regime"]," - ")}</td>'
                 f'<td style="padding:.3rem .6rem;font-family:\'JetBrains Mono\',monospace;'
                 f'font-size:.7rem;text-align:right;color:#c8c8c8">{lead}</td>'
                 f'<td style="padding:.3rem .6rem;font-size:.66rem;font-weight:700;'
@@ -470,7 +470,7 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
             )
 
     _definition_block(
-        "What this engine is — and is not",
+        "What this engine is - and is not",
         "The indicators are computed exactly as in the tipping-point literature: detrend the "
         "driver with a centred rolling mean, then measure lag-1 autocorrelation and variance in a "
         "rolling window; the warning is their upward trend (Kendall's tau), squashed into a 0–100 "
@@ -478,7 +478,7 @@ def page_early_warning(start: str, end: str, fred_key: str | None = None) -> Non
         "which is the same in-sample normalization the terminal's other analog engines use. This is "
         "a genuinely LEADING but NOISY signal: the false-alarm rate above is deliberately shown "
         "because critical slowing down produces precursors that sometimes fizzle without a flip. "
-        "Raising the alert threshold cuts false alarms at the cost of lead time — the slider lets you "
+        "Raising the alert threshold cuts false alarms at the cost of lead time - the slider lets you "
         "see that trade-off. Treat it as a heightened-vigilance flag that stacks with the Correlation "
         "regime model and Pattern Memory, not a standalone forecast."
     )

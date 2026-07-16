@@ -1,5 +1,5 @@
 """
-Cache warm-up — runs once per process start in a background daemon thread.
+Cache warm-up - runs once per process start in a background daemon thread.
 
 Populates the in-process @st.cache_data store for Trade Ideas page
 before any user visits, so the first real visitor always hits a warm cache.
@@ -24,7 +24,7 @@ _timer: threading.Timer | None = None
 # ── Core warm-up logic ────────────────────────────────────────────────────────
 
 def _run(reschedule: bool = True) -> None:
-    """Execute all pre-warm calls. Never raises — errors are logged and swallowed.
+    """Execute all pre-warm calls. Never raises - errors are logged and swallowed.
 
     reschedule=True (default) re-arms the background timer for the in-process
     daemon. The standalone precompute entrypoint calls _run(reschedule=False):
@@ -35,7 +35,7 @@ def _run(reschedule: bool = True) -> None:
         from src.data.loader import load_equity_prices, load_commodity_prices, load_returns
         from src.analysis.correlations import average_cross_corr_series, detect_correlation_regime
 
-        # 1. Data pipeline — network-heavy, cached 1800 s.
+        # 1. Data pipeline - network-heavy, cached 1800 s.
         # Warm both the default key (2005-01-01) and the app's typical key
         # (2010-01-01) so the Trade Ideas page primary @st.cache_data call hits
         # a warm cache rather than a cold yfinance download.
@@ -52,7 +52,7 @@ def _run(reschedule: bool = True) -> None:
             eq_r, cmd_r = load_returns()
 
         if eq_r.empty or cmd_r.empty:
-            _log.warning("warmup: return data empty — aborting")
+            _log.warning("warmup: return data empty - aborting")
             _reschedule()
             return
 
@@ -62,16 +62,16 @@ def _run(reschedule: bool = True) -> None:
         detect_correlation_regime(avg_corr)
         n_corr   = len(avg_corr)
 
-        # Guarded warmer — one slow source can't abort the rest. (Background
+        # Guarded warmer - one slow source can't abort the rest. (Background
         # thread has no ScriptRunContext; @st.cache_data still populates the
-        # shared process cache — the "missing ScriptRunContext" warning is benign.)
+        # shared process cache - the "missing ScriptRunContext" warning is benign.)
         def _warm(fn, *a, **k):
             try:
                 fn(*a, **k)
             except Exception as exc:
                 _log.debug("warmup: %s skipped: %s", getattr(fn, "__name__", fn), exc)
 
-        # 3. LANDING-PAGE essentials FIRST — the deployed link opens on the
+        # 3. LANDING-PAGE essentials FIRST - the deployed link opens on the
         # command center, so warm what it renders (conflict scores, portfolio
         # aggregate, the yfinance market tape, exposure) BEFORE the heavier
         # Trade-Ideas backtests, so the first visitor to the landing page hits
@@ -88,7 +88,7 @@ def _run(reschedule: bool = True) -> None:
         except Exception:
             pass
 
-        # Full Command Center render essentials — the 3-layer risk score and the
+        # Full Command Center render essentials - the 3-layer risk score and the
         # hot-stocks RSS feed, the two remaining home cold calls (both disk-backed
         # now, so this also persists their artifacts for a cold web process).
         try:
@@ -119,11 +119,11 @@ def _run(reschedule: bool = True) -> None:
             except Exception as exc:
                 _log.debug("warmup: backtest skipped for '%s': %s", trade["name"], exc)
 
-        # 5. Stock-price fetch — warms the yfinance connection for the full universe
+        # 5. Stock-price fetch - warms the yfinance connection for the full universe
         from src.pages.trade_ideas import _fetch_stock_prices
         _fetch_stock_prices(sectors=())
 
-        # 5b. Single-stock log-returns (184-ticker fetch) — the heaviest Trade-
+        # 5b. Single-stock log-returns (184-ticker fetch) - the heaviest Trade-
         # Ideas cold cost. _warm both hydrates the in-memory cache AND persists
         # the frame to the artifact cache, so a cold process reads it from disk.
         from src.pages.trade_ideas import _load_stock_returns
@@ -159,7 +159,7 @@ def _reschedule() -> None:
 
 def start() -> None:
     """
-    Launch the warm-up daemon. Idempotent — safe to call on every Streamlit
+    Launch the warm-up daemon. Idempotent - safe to call on every Streamlit
     rerun because the module-level _started flag is set only once per process.
     """
     global _started

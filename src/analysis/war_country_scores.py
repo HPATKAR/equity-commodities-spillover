@@ -1,5 +1,5 @@
 """
-War country scoring — single source of truth.
+War country scoring - single source of truth.
 
 Canonical data (base scores, weights, index mapping) and scoring functions
 used by both war_impact_map.py (visualization) and proactive_alerts.py (alerts).
@@ -34,7 +34,7 @@ COUNTRY_INDICES: dict[str, list[str]] = {
 
 
 # ── War impact base scores (0–100) ────────────────────────────────────────────
-# Static structural exposure — proximity, energy dependency, trade routes.
+# Static structural exposure - proximity, energy dependency, trade routes.
 # Multiplied by live commodity z-score multipliers at scoring time.
 
 WAR_DATA: list[dict] = [
@@ -118,7 +118,7 @@ WAR_DATA: list[dict] = [
 
 
 # ── Country-specific conflict relevance weights ────────────────────────────────
-# (ukraine_weight, hamas_weight, iran_weight) — must sum to 1.0
+# (ukraine_weight, hamas_weight, iran_weight) - must sum to 1.0
 # Reflects structural conflict driver per country: proximity, energy dependency,
 # alliance, hometurf.
 
@@ -306,8 +306,8 @@ def war_multipliers(cmd_r: pd.DataFrame) -> dict:
     #     stays intact (Iran ~93 falls to ~76 in calm, still highest in the region).
     #   - Ceiling 1.45: allows full +45% uplift when markets are fully pricing the conflict.
     #     Practical effect: Germany (Ukraine-score=74) rises to ~107 (capped at 100),
-    #     or Japan (Iran-score=68) rises to ~99 — live signal becomes analytically visible.
-    #   - Previous range [0.92, 1.15] only allowed ±8-15% — commodity z-scores were
+    #     or Japan (Iran-score=68) rises to ~99 - live signal becomes analytically visible.
+    #   - Previous range [0.92, 1.15] only allowed ±8-15% - commodity z-scores were
     #     decorative, not analytical. The natural formula output at z=3.5 is ~1.43,
     #     which is now no longer clipped away.
     ukraine_raw = 1.0 + 0.55*(gas_z/3.5)*0.45 + 0.30*(oil_z/3.5)*0.45 + 0.15*(gold_z/3.5)*0.30

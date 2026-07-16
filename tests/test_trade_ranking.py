@@ -1,5 +1,5 @@
 """
-Step 4 of 4 — ranking + desk-report feed.
+Step 4 of 4 - ranking + desk-report feed.
 
 Pins: ranking is attractiveness (DSR + conviction + constraint room), never
 raw Sharpe/P&L; the book changes when state changes; locked trades never
@@ -121,7 +121,7 @@ def test_feed_cash_book_leads_with_desk_call():
     ranked = rank_trades([_t("A", 0.3, 0.5), _t("B", 0.1, 0.5)])  # zero gross
     feed = desk_report_feed(ranked)
     assert len(feed) == 3                  # lead card + 2 watchlist entries
-    assert feed[0]["name"] == "DESK CALL — 0% DEPLOYED · 100% CASH"
+    assert feed[0]["name"] == "DESK CALL - 0% DEPLOYED · 100% CASH"
     assert "0.50 deploy bar" in feed[0]["rationale"]     # strict default bar
     assert "best 0.30" in feed[0]["rationale"]
     for k in _GENERATOR_KEYS:              # lead card renders through the
@@ -132,7 +132,7 @@ def test_feed_cash_book_labels_trades_as_watchlist():
     ranked = rank_trades([_t("A", 0.3, 0.5)])
     f = desk_report_feed(ranked)[1]
     assert f["name"].startswith(
-        "WATCHLIST #1 — NOT YET ALLOCATABLE · 0.0% wt · A")
+        "WATCHLIST #1 - NOT YET ALLOCATABLE · 0.0% wt · A")
 
 
 def test_feed_deployed_book_has_no_cash_card():

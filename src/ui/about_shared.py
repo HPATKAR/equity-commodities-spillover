@@ -17,7 +17,7 @@ Typography scale mirrors the global design system (shared.py + palette.py):
   1.25rem  JetBrains Mono  hero name
   1.38rem  JetBrains Mono  stat numbers
 
-Colours: palette.py — GOLD #CFB991 · TEXT #e8e9ed · TEXT_SOFT #c8c8c8
+Colours: palette.py - GOLD #CFB991 · TEXT #e8e9ed · TEXT_SOFT #c8c8c8
          TEXT_MUTED #b8b8b8 · LABEL #8890a1 · TICK #555960
          BG #000000 · CARD #0d0d0d · BORDER #1e1e1e
 """
@@ -32,11 +32,11 @@ _ASSETS = Path(__file__).resolve().parents[2] / "assets"
 # ── Shared CSS ────────────────────────────────────────────────────────────────
 
 _ABOUT_STYLE = """<style>
-/* ── About Pages — shared design system ──────────────────────────────────────
+/* ── About Pages - shared design system ──────────────────────────────────────
    Single source of truth. Import via _ABOUT_STYLE in each bio page.
 ──────────────────────────────────────────────────────────────────────────── */
 
-/* Section label — gold uppercase with bottom rule */
+/* Section label - gold uppercase with bottom rule */
 .abt-label{
   font-family:'JetBrains Mono',monospace!important;
   font-size:0.50rem!important;font-weight:700!important;

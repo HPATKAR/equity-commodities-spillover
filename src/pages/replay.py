@@ -1,9 +1,9 @@
 """
-Replay Mode — point-in-time case studies.
+Replay Mode - point-in-time case studies.
 
 Points the whole terminal at a past date (preset: the tracked conflict
-breakouts) and shows what it WOULD have said then — GRS, regime, transmission
-channels, trade theses — computed strictly from data available up to that
+breakouts) and shows what it WOULD have said then - GRS, regime, transmission
+channels, trade theses - computed strictly from data available up to that
 timestamp, next to what actually happened.
 
 Cutoff enforcement lives in src/analysis/replay.py (pit_slice / pit_assert /
@@ -52,7 +52,7 @@ def _replay_call_cached(cutoff_iso: str, focus: str) -> dict:
     """Load history ending at cutoff and compute the frozen terminal call."""
     cutoff = datetime.date.fromisoformat(cutoff_iso)
     start = str(cutoff - datetime.timedelta(days=int(365.25 * _LOOKBACK_YEARS)))
-    # Loader is asked for end=cutoff but terminal_call re-slices + asserts —
+    # Loader is asked for end=cutoff but terminal_call re-slices + asserts - 
     # the fetch layer is never trusted (see replay.py, THE ONE RULE).
     eq_r, cmd_r = load_returns(start, str(cutoff))
     return terminal_call(eq_r, cmd_r, cutoff, focus_conflict=focus or None)
@@ -91,7 +91,7 @@ def _grs_chart(series: pd.Series, cutoff: datetime.date, grs: float) -> go.Figur
         template="plotly_dark", height=240,
         paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text=f"GRS (market-confirmation proxy) — trailing year to {cutoff}",
+        title=dict(text=f"GRS (market-confirmation proxy) - trailing year to {cutoff}",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
         xaxis=dict(showgrid=False),
@@ -118,7 +118,7 @@ def _forward_path_chart(paths: dict[str, pd.Series], cutoff: datetime.date) -> g
         template="plotly_dark", height=300,
         paper_bgcolor="#000", plot_bgcolor="#080808",
         font=dict(family="DM Sans, sans-serif", color="#c8c8c8", size=10),
-        title=dict(text=f"What actually happened — trading days after {cutoff}",
+        title=dict(text=f"What actually happened - trading days after {cutoff}",
                    x=0, xanchor="left",
                    font=dict(family="JetBrains Mono, monospace", size=11, color=_MUTED)),
         xaxis=dict(title="Trading days after cutoff", showgrid=False),
@@ -132,11 +132,11 @@ def _forward_path_chart(paths: dict[str, pd.Series], cutoff: datetime.date) -> g
 
 
 def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
-    _page_header("Replay Mode — Point-in-Time Case Studies",
+    _page_header("Replay Mode - Point-in-Time Case Studies",
                  "Strict PIT reconstruction · No lookahead · Frozen call vs. actual outcome")
     _page_intro(
-        "Point the terminal at a past date and see what it WOULD have said — GRS, "
-        "correlation regime, transmission channels, and trade theses — computed strictly "
+        "Point the terminal at a past date and see what it WOULD have said - GRS, "
+        "correlation regime, transmission channels, and trade theses - computed strictly "
         "from data available up to that timestamp, then fast-forward to what actually "
         "happened. Every input passes a hard cutoff assertion: a single post-date "
         "observation raises LookaheadError and the replay refuses to render. "
@@ -147,7 +147,7 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
     presets = replay_presets()
     today = datetime.date.today()
     usable = [p for p in presets if p["date"] < today - datetime.timedelta(days=7)]
-    options = [f"{p['label']} breakout — {p['date']}" for p in usable] + ["Custom date"]
+    options = [f"{p['label']} breakout - {p['date']}" for p in usable] + ["Custom date"]
     pick = st.selectbox("Replay date", options, index=0, key="replay_pick")
 
     if pick == "Custom date":
@@ -165,10 +165,10 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
 
     # ── Frozen terminal call (PIT side) ────────────────────────────────────
     try:
-        with st.spinner(f"Reconstructing the terminal as of {cutoff} — strict point-in-time…"):
+        with st.spinner(f"Reconstructing the terminal as of {cutoff} - strict point-in-time…"):
             call = _replay_call_cached(str(cutoff), focus_id)
     except LookaheadError as e:
-        st.error(f"REPLAY ABORTED — {e}")
+        st.error(f"REPLAY ABORTED - {e}")
         st.markdown(
             f'<p style="font-size:0.7rem;color:{_MUTED}">This is the enforcement working as '
             f'designed: post-cutoff data reached a PIT computation and the replay refused to '
@@ -178,21 +178,21 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
         _page_footer()
         return
 
-    # PIT proof banner — newest observation per source, all ≤ cutoff by assertion
+    # PIT proof banner - newest observation per source, all ≤ cutoff by assertion
     pit_bits = " · ".join(f"{k}: {v}" for k, v in call["pit"].items())
     st.markdown(
         f'<div style="background:#080808;border:1px solid #1e1e1e;border-left:3px solid {_GREEN};'
         f'padding:.45rem .9rem;margin:.4rem 0 .8rem;font-family:\'JetBrains Mono\',monospace;'
         f'font-size:0.58rem;color:{_MUTED}">'
-        f'<b style="color:{_GREEN}">CUTOFF ENFORCED — {cutoff}</b>&nbsp;·&nbsp;'
+        f'<b style="color:{_GREEN}">CUTOFF ENFORCED - {cutoff}</b>&nbsp;·&nbsp;'
         f'newest observation per source: {pit_bits}&nbsp;·&nbsp;'
         f'enforced in <b style="color:{_GOLD}">src/analysis/replay.py :: pit_slice / pit_assert</b> '
-        f'(LookaheadError on violation — never silent)</div>',
+        f'(LookaheadError on violation - never silent)</div>',
         unsafe_allow_html=True,
     )
 
     # ── The call ───────────────────────────────────────────────────────────
-    _section_label(f"What the terminal said — {focus_label} · {cutoff}")
+    _section_label(f"What the terminal said - {focus_label} · {cutoff}")
 
     m1, m2, m3, m4, m5 = st.columns(5)
     grs = call["grs"]
@@ -282,9 +282,9 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
         st.info("No trade theses cleared the CIS ≥ 45 gate at this date.")
 
     # ══════════════════════════════════════════════════════════════════════
-    # Fast-forward — post-cutoff data, structurally separate from the call
+    # Fast-forward - post-cutoff data, structurally separate from the call
     # ══════════════════════════════════════════════════════════════════════
-    _section_label("Fast-forward — what actually happened")
+    _section_label("Fast-forward - what actually happened")
     st.markdown(
         f'<p style="font-size:0.62rem;color:{_MUTED};margin:0 0 .6rem">Everything below is '
         f'post-cutoff data, loaded by a separate function (actual_outcome) whose output never '
@@ -309,7 +309,7 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
                 v = vals.get(h, float("nan"))
                 if np.isnan(v):
                     cells += (f'<td style="padding:.28rem .7rem;font-size:.72rem;'
-                              f'color:{_MUTED};text-align:right">—</td>')
+                              f'color:{_MUTED};text-align:right"> - </td>')
                 else:
                     col = _GREEN if v > 0 else _RED
                     cells += (f'<td style="padding:.28rem .7rem;font-family:\'JetBrains Mono\','
@@ -335,13 +335,13 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
         if tr_out:
             _section_label("Did the theses pay? (+30 trading days, equal-weight legs)")
             for r in tr_out:
-                v_col = {"PAID": _GREEN, "LOST": _RED, "FLAT": "#e67e22", "—": _MUTED}[r["verdict"]]
+                v_col = {"PAID": _GREEN, "LOST": _RED, "FLAT": "#e67e22", " - ": _MUTED}[r["verdict"]]
                 legs_txt = " · ".join(
                     f'{l["direction"]} {l["asset"]} '
-                    + ("—" if np.isnan(l["ret"]) else f'{l["ret"] * 100:+.1f}%')
+                    + (" - " if np.isnan(l["ret"]) else f'{l["ret"] * 100:+.1f}%')
                     for l in r["legs"]
                 )
-                pnl_txt = "—" if np.isnan(r["pnl"]) else f'{r["pnl"] * 100:+.1f}%'
+                pnl_txt = " - " if np.isnan(r["pnl"]) else f'{r["pnl"] * 100:+.1f}%'
                 st.markdown(
                     f'<div style="background:#0d0d0d;border:1px solid #1e1e1e;'
                     f'border-left:3px solid {v_col};padding:.5rem .9rem;margin-bottom:.4rem">'
@@ -381,12 +381,12 @@ def page_replay(start: str, end: str, fred_key: str | None = None) -> None:
     # ── Honesty block ──────────────────────────────────────────────────────
     _definition_block(
         "What is and is not point-in-time here",
-        "STRICTLY PIT: all price/return series — sliced to ≤ cutoff and asserted via "
+        "STRICTLY PIT: all price/return series - sliced to ≤ cutoff and asserted via "
         "pit_slice()/pit_assert() in src/analysis/replay.py; any post-date observation raises "
         "LookaheadError and the replay refuses to render. The GRS shown is the market-confirmation "
         "proxy layer (risk_score_history), the only GRS layer computable from historical data. "
         "NOT REPLAYABLE (excluded, never substituted with today's values): GDELT, ACLED, "
-        "PortWatch, EIA, COT, RSS — no historical API snapshots exist. "
+        "PortWatch, EIA, COT, RSS - no historical API snapshots exist. "
         "DISCLOSED HINDSIGHT: the CONFLICTS registry's structural transmission weights were "
         "calibrated recently, with knowledge of how these conflicts played out; conflict CIS/TPS "
         "at the cutoff are therefore structural reconstructions (recency and escalation are "

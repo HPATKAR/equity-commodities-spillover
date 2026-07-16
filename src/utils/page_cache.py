@@ -45,7 +45,7 @@ def save_cache(key: str, data: dict) -> None:
         path.write_text(json.dumps(payload, default=str), encoding="utf-8")
         _log.debug("page_cache: saved %s (%d bytes)", key, path.stat().st_size)
     except Exception as exc:
-        _log.warning("page_cache: could not save %s — %s", key, exc)
+        _log.warning("page_cache: could not save %s - %s", key, exc)
 
 
 def load_cache(key: str) -> tuple[dict | None, datetime | None]:
@@ -65,7 +65,7 @@ def load_cache(key: str) -> tuple[dict | None, datetime | None]:
         )
         return payload, saved_at
     except Exception as exc:
-        _log.warning("page_cache: could not load %s — %s", key, exc)
+        _log.warning("page_cache: could not load %s - %s", key, exc)
         return None, None
 
 

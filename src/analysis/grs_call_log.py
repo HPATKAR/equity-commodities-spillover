@@ -1,5 +1,5 @@
 """
-GRS Live Call Log — forward-looking accuracy tracker.
+GRS Live Call Log - forward-looking accuracy tracker.
 
 Every week, logs the live GRS score as a directional call (STRESS / CALM).
 Four weeks later, grades the call against what realized vol actually did.
@@ -17,7 +17,7 @@ Hit definition:
 Why rolling median instead of fixed threshold:
   The baseline shifts with the vol regime, so a 15% annualized vol week in the
   Covid era reads as calm while the same in 2018 reads as elevated. By construction
-  ~50% of outcomes are STRESSED and ~50% CALM, making 50% the no-skill baseline —
+  ~50% of outcomes are STRESSED and ~50% CALM, making 50% the no-skill baseline - 
   any hit rate above 50% is genuine edge from the model.
 
 File: logs/grs_call_log.json (project-relative, gitignored)

@@ -19,7 +19,7 @@ _SYSTEM = (
     "You interpret CFTC COT positioning, supply dynamics, and sector rotation. "
     "Write terse, quantitative commodity research analysis. "
     "Be quantitative. "
-    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "You produce research analysis for an academic finance dashboard - not investment advice. "
     "Distinguish evidence from inference."
 )
 
@@ -36,7 +36,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
         "3) which commodity-equity pair shows the highest spillover association right now.\n\n"
         "End with these labeled lines:\n"
         "EVIDENCE: [data points used in this assessment]\n"
-        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "CONFIDENCE: [Low/Medium/High - one-line reason]\n"
         "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
         "INVALIDATED IF: [what would contradict this view]\n"
         "ALT VIEW: [one plausible alternative interpretation]"

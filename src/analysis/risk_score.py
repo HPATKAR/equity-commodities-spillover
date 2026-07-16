@@ -1,16 +1,16 @@
 """
-Geopolitical Risk Score — 3-Layer Architecture.
+Geopolitical Risk Score - 3-Layer Architecture.
 
 Top-level score:
   Global Geo Risk = 35% Conflict Intensity + 30% Transmission Pressure + 35% Market Confirmation
 
-Layer 1 — Conflict Intensity (35%)
+Layer 1 - Conflict Intensity (35%)
   Delegated to conflict_model.py (CIS/TPS per-conflict, then portfolio aggregate).
 
-Layer 2 — Transmission Pressure (30%)
+Layer 2 - Transmission Pressure (30%)
   Portfolio TPS from conflict_model.py.
 
-Layer 3 — Market Confirmation (35%)
+Layer 3 - Market Confirmation (35%)
   Market signals: equity vol, rates vol, commodity vol, safe-haven behavior,
   oil-gold joint signal, correlation velocity.
   EWM z-scores (span=252) against a one-year baseline.
@@ -44,7 +44,7 @@ _MODEL_CONFIG: dict = {
     #   Primary: news-flow (most responsive, least market-contaminated)
     #   Secondary: conflict events intensity (ACLED-calibrated, not manual judgment)
     #   Tertiary: physical transmission via chokepoints (PortWatch throughput)
-    #   Confirmation: oil-gold only — geo supply-shock signature, not generic vol
+    #   Confirmation: oil-gold only - geo supply-shock signature, not generic vol
     "weights": {
         "news_gpr":   0.40,  # News GPR (C&I-style threat+act classification)
         "cis":        0.30,  # Conflict Events Intensity (ACLED-calibrated CIS)
@@ -57,18 +57,18 @@ _MODEL_CONFIG: dict = {
         "spot":    0.50,   # Oil-Gold + Commodity Vol (spot)
         "implied": 0.50,   # OVX + GVZ + VIX term-structure slope
     },
-    # Spot sub-signal weights (within mcs_blend["spot"]) — sum to 1.0.
+    # Spot sub-signal weights (within mcs_blend["spot"]) - sum to 1.0.
     "mcs_spot_weights": {
         "oil_gold": 0.70,   # war/supply-shock signature: gold+oil dual elevation
         "cmd_vol":  0.30,   # geo-linked commodity vol: captures supply disruptions
     },
-    # Implied sub-signal weights (within mcs_blend["implied"]) — sum to 1.0.
+    # Implied sub-signal weights (within mcs_blend["implied"]) - sum to 1.0.
     "mcs_implied_weights": {
-        "ovx":        0.40,   # CBOE Crude Oil Vol — geo/energy supply shocks
-        "gvz":        0.30,   # CBOE Gold Vol — safe-haven demand stress
-        "term_slope": 0.30,   # VIX/VIX3M backwardation — near-term fear spike
+        "ovx":        0.40,   # CBOE Crude Oil Vol - geo/energy supply shocks
+        "gvz":        0.30,   # CBOE Gold Vol - safe-haven demand stress
+        "term_slope": 0.30,   # VIX/VIX3M backwardation - near-term fear spike
     },
-    # risk_score_history() weights — MCS-proxy only (CIS/news not available historically)
+    # risk_score_history() weights - MCS-proxy only (CIS/news not available historically)
     # eq_vol removed: fires on any market stress, not geo-specific.
     "history_weights": {
         "oil_gold":   0.60,  # level-blended: momentum + price-history rank
@@ -100,9 +100,9 @@ def _fetch_implied_vol_signals() -> dict:
     Options-implied volatility signals for the MCS implied sub-score.
 
     Signals:
-      OVX  (^OVX)   — CBOE Crude Oil Volatility; geo/energy supply shocks
-      GVZ  (^GVZ)   — CBOE Gold Volatility; safe-haven demand stress
-      Term slope    — ^VIX / ^VIX3M; backwardation (>1) = short-term fear spike
+      OVX  (^OVX) - CBOE Crude Oil Volatility; geo/energy supply shocks
+      GVZ  (^GVZ) - CBOE Gold Volatility; safe-haven demand stress
+      Term slope - ^VIX / ^VIX3M; backwardation (>1) = short-term fear spike
 
     EWM z-score (span=252) on 3-year history → sigmoid [0, 100].
     Adaptive weights: failed tickers redistribute proportionally to survivors.
@@ -201,7 +201,7 @@ def _zscore_to_score(z: float, scale: float = 15.0) -> float:
 
     z=0 → 50.0 (by construction)
     z=+2 → ~77 (scale=15), ~69 (scale=10)  [linear was 80, 70]
-    z=+5 → ~95+ — saturates smoothly instead of hard-capping at 100
+    z=+5 → ~95+ - saturates smoothly instead of hard-capping at 100
     """
     k = scale / 25.0
     return float(100.0 / (1.0 + np.exp(-k * float(z))))
@@ -273,7 +273,7 @@ def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
     Safe-haven signal: Gold 20d cumulative return z-score (span=252).
 
     Geopolitical premium: when both gold AND oil are elevated simultaneously,
-    this is the market signature of a war/supply-shock — distinct from a pure
+    this is the market signature of a war/supply-shock - distinct from a pure
     risk-off growth scare (gold up, oil down).  Boost is a smooth ramp
     proportional to the joint magnitude, no binary threshold.
 
@@ -298,7 +298,7 @@ def _safe_haven_score(cmd_r: pd.DataFrame, eq_r: pd.DataFrame | None) -> float:
     raw_score = _zscore_to_score(g_z, scale=16.0)
 
     # Geopolitical premium: gold + oil joint elevation (war/supply-shock signature)
-    # Proportional ramp — no hardcoded on/off threshold
+    # Proportional ramp - no hardcoded on/off threshold
     geo_boost = 0.0
     oil_col = next((c for c in ["WTI Crude Oil", "Brent Crude"] if c in cmd_r.columns), None)
     if oil_col:
@@ -368,7 +368,7 @@ def _oil_gold_signal(cmd_r: pd.DataFrame, window: int = 20) -> tuple[float, dict
 
 def _corr_accel_score(avg_corr: pd.Series, span: int = 20) -> float:
     """
-    Correlation velocity score — first derivative of rolling correlation.
+    Correlation velocity score - first derivative of rolling correlation.
 
     Changed from 2nd derivative (acceleration) to 1st derivative (velocity):
     triple EWM smoothing created ~30d of lag, meaning the signal fired AFTER
@@ -397,7 +397,7 @@ def _chokepoint_stress_score() -> float:
     Combines live PortWatch disruption (from session_state._hormuz_disruption)
     with structural transmission pressure from active CONFLICTS registry.
 
-    This is the explicit physical-transmission layer of the GRS — representing
+    This is the explicit physical-transmission layer of the GRS - representing
     how much actual throughput disruption exists at critical chokepoints right now,
     not a judgment about transmission probabilities.
 
@@ -439,7 +439,7 @@ def _news_gpr_fallback(conflict_detail: dict) -> float:
     Returns 0–100 calibrated to approximate the live News GPR range.
     """
     if not conflict_detail:
-        return 35.0  # neutral prior — neither high nor low
+        return 35.0  # neutral prior - neither high nor low
     esc_map = {"escalating": 80.0, "stable": 42.0, "de-escalating": 18.0}
     w_sum = tot = 0.0
     for detail in conflict_detail.values():
@@ -458,21 +458,21 @@ def _market_confirmation_score(
     eq_r: pd.DataFrame | None = None,
 ) -> tuple[float, dict, dict]:
     """
-    Market Confirmation Score (MCS) — geo-specific signals ONLY.
+    Market Confirmation Score (MCS) - geo-specific signals ONLY.
 
     50% Spot sub-score:
         70% Oil-Gold joint signal (war/supply-shock signature)
         30% Commodity Vol (geo-linked supply disruptions)
     50% Implied sub-score:
-        40% OVX — crude oil implied vol; energy supply shocks
-        30% GVZ — gold implied vol; safe-haven demand stress
-        30% VIX term slope — VIX/VIX3M backwardation; near-term fear spike
+        40% OVX - crude oil implied vol; energy supply shocks
+        30% GVZ - gold implied vol; safe-haven demand stress
+        30% VIX term slope - VIX/VIX3M backwardation; near-term fear spike
 
     Falls back to 100% spot if all implied tickers fail (graceful degradation).
 
     Returns: (score, components, meta)
-      components — numeric dict for agreement scoring and display
-      meta       — source stamp, backwardation flag, raw levels
+      components - numeric dict for agreement scoring and display
+      meta - source stamp, backwardation flag, raw levels
     """
     og_score, og_detail = _oil_gold_signal(cmd_r)
     cmd_vol              = _commodity_vol_score(cmd_r)
@@ -525,10 +525,10 @@ def compute_risk_score(
     Compute composite Geopolitical Risk Score (GRS), 0–100.
 
     4-Layer Architecture (Caldara-Iacoviello + ACLED-style):
-      40% News GPR      — RSS threat+act classification (C&I-style)
-      30% Conflict CIS  — ACLED-calibrated event intensity (conflict_model.py)
-      20% Chokepoint    — PortWatch throughput disruption + transmission pressure
-      10% Market Conf   — oil-gold + commodity vol (geo-specific signals only)
+      40% News GPR - RSS threat+act classification (C&I-style)
+      30% Conflict CIS - ACLED-calibrated event intensity (conflict_model.py)
+      20% Chokepoint - PortWatch throughput disruption + transmission pressure
+      10% Market Conf - oil-gold + commodity vol (geo-specific signals only)
 
     The previous architecture used 35% generic market vol (eq_vol, rates_vol),
     which inflated scores during rate cycles and earnings events unrelated to
@@ -720,7 +720,7 @@ def risk_score_history(
 
     series = []
 
-    # Equity realized vol (55% weight) — the core VIX signal
+    # Equity realized vol (55% weight) - the core VIX signal
     if eq_r is not None and not eq_r.empty:
         eq_rv = (
             eq_r.rolling(VOL_WIN, min_periods=10).std()
@@ -729,7 +729,7 @@ def risk_score_history(
         if not eq_rv.empty:
             series.append((eq_rv, 0.55))
 
-    # Commodity realized vol (45% weight) — geo supply shocks, energy crises
+    # Commodity realized vol (45% weight) - geo supply shocks, energy crises
     cmd_cols = [c for c in ["WTI Crude Oil", "Brent Crude", "Natural Gas",
                              "Gold", "Silver", "Copper"] if c in cmd_r.columns]
     if cmd_cols:
@@ -838,12 +838,12 @@ def bootstrap_risk_history_ci(
 @st.cache_data(ttl=3600, show_spinner=False, max_entries=3)
 def market_fear_index(period: str = "3y") -> pd.Series:
     """
-    Market Fear Index (MFI) — CBOE implied volatility composite, 0–100.
+    Market Fear Index (MFI) - CBOE implied volatility composite, 0–100.
 
     Weights:
-        80%  VIX  (^VIX)  — S&P 500 implied vol; the canonical fear gauge
-        10%  OVX  (^OVX)  — Crude oil implied vol; geo/energy supply shocks
-        10%  GVZ  (^GVZ)  — Gold implied vol; safe-haven demand and monetary stress
+        80%  VIX  (^VIX) - S&P 500 implied vol; the canonical fear gauge
+        10%  OVX  (^OVX) - Crude oil implied vol; geo/energy supply shocks
+        10%  GVZ  (^GVZ) - Gold implied vol; safe-haven demand and monetary stress
 
     Construction:
         1. Fetch each index from Yahoo Finance (daily Close).
@@ -981,7 +981,7 @@ def plot_risk_history(
         fig.add_hline(y=y0, line=dict(color="rgba(150,150,150,0.25)", width=0.5, dash="dot"))
 
     # ── Proxy boundary annotation ──────────────────────────────────────────
-    # risk_score_history() uses only the MCS (market confirmation) layer —
+    # risk_score_history() uses only the MCS (market confirmation) layer - 
     # CIS and TPS cannot be reconstructed at daily frequency from public data.
     # Make this explicit so a reviewer is not misled into thinking the full
     # 3-layer model applies to the entire historical series.
@@ -1008,20 +1008,20 @@ def plot_risk_history(
                 bgcolor="rgba(10,12,20,0.75)", borderpad=2,
             )
         else:
-            # Entire series is proxy — add a single corner label
+            # Entire series is proxy - add a single corner label
             fig.add_annotation(
                 x=0.01, y=0.03, xref="paper", yref="paper",
-                text="Historical: MCS proxy only (market signals — conflict layer excluded)",
+                text="Historical: MCS proxy only (market signals - conflict layer excluded)",
                 showarrow=False,
                 font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
                 xanchor="left", yanchor="bottom",
                 bgcolor="rgba(10,12,20,0.65)", borderpad=2,
             )
     else:
-        # No boundary provided — label the whole chart as a proxy
+        # No boundary provided - label the whole chart as a proxy
         fig.add_annotation(
             x=0.01, y=0.03, xref="paper", yref="paper",
-            text="Historical: MCS proxy only (market signals — conflict layer excluded)",
+            text="Historical: MCS proxy only (market signals - conflict layer excluded)",
             showarrow=False,
             font=dict(size=7, color="#8E9AAA", family="JetBrains Mono, monospace"),
             xanchor="left", yanchor="bottom",

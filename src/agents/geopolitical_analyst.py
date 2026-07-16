@@ -18,7 +18,7 @@ _SYSTEM = (
     "You monitor active conflict zones, sanctions regimes, and commodity supply disruption risks. "
     "Analyse how geopolitical events transmit to commodity and equity markets. "
     "Be precise. "
-    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "You produce research analysis for an academic finance dashboard - not investment advice. "
     "Distinguish evidence from inference."
 )
 
@@ -35,7 +35,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
         "3) which equity regions are most exposed to current geopolitical stress.\n\n"
         "End with these labeled lines:\n"
         "EVIDENCE: [data points used in this assessment]\n"
-        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "CONFIDENCE: [Low/Medium/High - one-line reason]\n"
         "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
         "INVALIDATED IF: [what would contradict this view]\n"
         "ALT VIEW: [one plausible alternative interpretation]"

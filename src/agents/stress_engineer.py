@@ -18,7 +18,7 @@ _SYSTEM = (
     "You design and interpret stress scenarios: commodity supply shocks, equity crashes, "
     "rate spikes, and combined tail events. "
     "Be quantitative and concise. Identify the most dangerous transmission path. "
-    "You produce research analysis for an academic finance dashboard — not investment advice. "
+    "You produce research analysis for an academic finance dashboard - not investment advice. "
     "Distinguish evidence from inference."
 )
 
@@ -35,7 +35,7 @@ def _call_ai(context_str: str, provider: str, api_key: str) -> str:
         "3) which risk-reduction approach is most analytically relevant in this scenario.\n\n"
         "End with these labeled lines:\n"
         "EVIDENCE: [data points used in this assessment]\n"
-        "CONFIDENCE: [Low/Medium/High — one-line reason]\n"
+        "CONFIDENCE: [Low/Medium/High - one-line reason]\n"
         "KEY UNCERTAINTY: [what the available data cannot resolve]\n"
         "INVALIDATED IF: [what would contradict this view]\n"
         "ALT VIEW: [one plausible alternative interpretation]"

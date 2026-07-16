@@ -29,11 +29,11 @@ _THRESHOLDS: dict[str, dict] = {
     "rss_headlines":      {"warn_h": 1,    "stale_h": 4},
     "conflict_manual":    {"warn_h": 168,  "stale_h": 720},   # 7d warn, 30d stale
     "cot_positioning":    {"warn_h": 72,   "stale_h": 240},
-    "fred_spreads":       {"warn_h": 4,    "stale_h": 26},   # yfinance proxy — same cadence as prices
+    "fred_spreads":       {"warn_h": 4,    "stale_h": 26},   # yfinance proxy - same cadence as prices
     "risk_score":         {"warn_h": 4,    "stale_h": 26},
     "conflict_model":     {"warn_h": 24,   "stale_h": 72},
     # Live API sources added 2026-04-19
-    "portwatch":          {"warn_h": 6,    "stale_h": 30},    # IMF ArcGIS — daily cadence
+    "portwatch":          {"warn_h": 6,    "stale_h": 30},    # IMF ArcGIS - daily cadence
     "gdelt":              {"warn_h": 4,    "stale_h": 12},    # 3h cache, media volume
     "acled":              {"warn_h": 8,    "stale_h": 48},    # 6h cache, conflict events
     "eia_inventory":      {"warn_h": 24,   "stale_h": 168},   # weekly Wednesday update
@@ -59,10 +59,10 @@ _SOURCE_LABELS: dict[str, str] = {
 _FETCH_TIMES:   dict[str, datetime.datetime] = {}
 _FAIL_REGISTRY: dict[str, dict] = {}   # source → {ts, message, count}
 
-# Critical sources — if any fail, show a visible warning banner
+# Critical sources - if any fail, show a visible warning banner
 _CRITICAL_SOURCES = {"yfinance_prices", "yfinance_vix"}
 
-# Optional enrichment sources — failures are tracked internally but never shown in the banner
+# Optional enrichment sources - failures are tracked internally but never shown in the banner
 _BANNER_SUPPRESSED = {"gdelt", "acled", "portwatch", "eia_inventory"}
 
 
@@ -77,7 +77,7 @@ def record_failure(source: str, message: str = "") -> None:
     Record a data fetch failure for a named source.
 
     Call this in except blocks where data is absent or fetch failed.
-    Replaces the silent `except: pass` pattern — failures become visible
+    Replaces the silent `except: pass` pattern - failures become visible
     on the dashboard via get_failures() / data_health_html().
     """
     existing = _FAIL_REGISTRY.get(source, {})

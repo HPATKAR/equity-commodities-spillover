@@ -50,12 +50,12 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
         "<strong>Research question for this page: which commodity markets moved today, "
         "and is the move large enough to be analytically significant?</strong> "
         "Crude oil, gold, copper, and agricultural futures are the primary conduits through which "
-        "geopolitical shocks transmit into equity markets — price moves here often Granger-precede "
+        "geopolitical shocks transmit into equity markets - price moves here often Granger-precede "
         "equity effects by one to five days in the historical sample. "
         "A large move in a commodity with an active conflict transmission channel (see Conflict Intel) "
         "is the clearest early signal. "
         "The CFTC COT positioning data adds a second layer: when speculative positioning reaches a "
-        "historical extreme, mean-reversion is the base case — and that reversal typically generates "
+        "historical extreme, mean-reversion is the base case - and that reversal typically generates "
         "its own downstream spillover into correlated equity sectors. "
         "Read this before Correlation and Spillover."
     )
@@ -572,7 +572,7 @@ def page_watchlist(start: str, end: str, fred_key: str = "") -> None:
                 st.markdown(html_cot, unsafe_allow_html=True)
                 _insight_note(
                     "Flags when speculative traders are all-in on one side of a commodity. "
-                    "A 'Crowded Long' means speculative positioning is skewed toward price rises — "
+                    "A 'Crowded Long' means speculative positioning is skewed toward price rises - "
                     "historically, these positions unwind and the price falls. "
                     "A 'Crowded Short' is the opposite: historically associated with short-covering reversals."
                 )
