@@ -2454,18 +2454,22 @@ def _load_factor_panel(start: str, end: str) -> pd.DataFrame:
     return F[_order].dropna(how="all")
 
 
-def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
-                               start: str, end: str) -> None:
-    """Factor & alpha attribution for the deployed book (see section banner)."""
+def _compute_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
+                                start: str, end: str) -> "dict | None":
+    """Factor & alpha attribution of the deployed book. Regresses the weight-
+    normalised book return on a market factor plus market-orthogonalised thematic
+    factors (HAC/Newey-West), separating market beta, sector tilts and genuine
+    idiosyncratic return. Returns a dict of results (or None if insufficient data)
+    so both the on-screen panel and the PDF desk report render from one source."""
     try:
         import statsmodels.api as sm
         from src.analysis.trade_allocator import trade_leg_series
     except Exception:
-        return
+        return None
 
     deployed = [t for t in book if float(t.get("alloc_weight", 0.0)) > 0]
     if len(deployed) < 2:
-        return
+        return None
 
     # Weight-normalised daily book return from the signed leg series.
     gross = sum(float(t["alloc_weight"]) for t in deployed) or 1.0
@@ -2478,20 +2482,20 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
             legs[nm] = s
             wts[nm] = float(t["alloc_weight"]) / gross
     if len(legs) < 2:
-        return
+        return None
     L = pd.concat(legs, axis=1).dropna()
     if len(L) < 250:
-        return
+        return None
     w = np.array([wts[c] for c in L.columns], dtype=float)
     w = w / w.sum()
     book_r = pd.Series(L.values @ w, index=L.index, name="book")
 
     F = _load_factor_panel(start, end)
     if F.empty:
-        return
+        return None
     df = pd.concat([book_r, F], axis=1).dropna()
     if len(df) < 250:
-        return
+        return None
     y = df["book"]
     mkt = F.columns[0]
     sectors = [c for c in F.columns if c != mkt]
@@ -2531,23 +2535,54 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
     idio_share = max(0.0, 1.0 - r2_full) * 100
 
     # Verdict
-    _sig = abs(alpha_mf_t) >= 2.0
-    if _sig and alpha_mf > 0:
-        verdict, vcol = "ALPHA PRESENT", "#27ae60"
+    sig = abs(alpha_mf_t) >= 2.0
+    if sig and alpha_mf > 0:
+        verdict = "ALPHA PRESENT"
     elif r2_full >= 0.60:
-        verdict, vcol = "BETA BOOK", "#c0392b"
+        verdict = "BETA BOOK"
     elif sect_share >= 15:
-        verdict, vcol = "SECTOR-TILT BOOK", "#e67e22"
+        verdict = "SECTOR-TILT BOOK"
     else:
-        verdict, vcol = "INCONCLUSIVE", "#8890a1"
+        verdict = "INCONCLUSIVE"
 
     # Dominant sector tilts (by |t|), significant only
     _sig_sectors = sorted(
         [(c, load[c][0], load[c][1]) for c in sectors if abs(load[c][1]) >= 2.0],
         key=lambda x: -abs(x[2]))
-    _lead_txt = ", ".join(
-        f'{c.split("·")[0]} (β{v:+.2f}, t{tt:.1f})' for c, v, tt in _sig_sectors[:2]
-    ) or "no sector loading clears t≥2"
+    lead_txt = ", ".join(
+        f'{c.split("·")[0]} (b{v:+.2f}, t{tt:.1f})' for c, v, tt in _sig_sectors[:2]
+    ) or "no sector loading clears t>=2"
+
+    return {
+        "n_positions": int(L.shape[1]), "obs": int(len(df)),
+        "n_factors": len(sectors) + 1, "mkt_name": mkt,
+        "beta_mkt": beta_mkt, "r2_mkt": r2_mkt, "r2_full": r2_full,
+        "alpha_capm": alpha_capm, "alpha_capm_t": alpha_t,
+        "alpha_mf": alpha_mf, "alpha_mf_t": alpha_mf_t, "sig": sig,
+        "te": te, "ir": ir, "enb": enb,
+        "loadings": [(c, load[c][0], load[c][1]) for c in [mkt] + sectors],
+        "mkt_share": mkt_share, "sect_share": sect_share, "idio_share": idio_share,
+        "verdict": verdict, "lead_txt": lead_txt,
+    }
+
+
+def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
+                               start: str, end: str) -> None:
+    """On-screen factor & alpha attribution panel for the deployed book."""
+    d = _compute_book_factor_decomp(book, all_r_gate, start, end)
+    if not d:
+        return
+    beta_mkt, r2_mkt, r2_full = d["beta_mkt"], d["r2_mkt"], d["r2_full"]
+    alpha_mf, alpha_mf_t, _sig = d["alpha_mf"], d["alpha_mf_t"], d["sig"]
+    te, ir, enb = d["te"], d["ir"], d["enb"]
+    mkt, loadings = d["mkt_name"], d["loadings"]
+    mkt_share, sect_share, idio_share = d["mkt_share"], d["sect_share"], d["idio_share"]
+    verdict, _lead_txt = d["verdict"], d["lead_txt"]
+    vcol = {"ALPHA PRESENT": "#27ae60", "BETA BOOK": "#c0392b",
+            "SECTOR-TILT BOOK": "#e67e22"}.get(verdict, "#8890a1")
+    load = {c: (b, tt) for c, b, tt in loadings}
+    sectors = [c for c, _, _ in loadings if c != mkt]
+    n_pos, obs, n_fac = d["n_positions"], d["obs"], d["n_factors"]
 
     _M = "font-family:'JetBrains Mono',monospace;"
     _lbl = f"{_M}font-size:.5rem;letter-spacing:.1em;color:#8890a1"
@@ -2569,7 +2604,7 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
         + _stat("INFO RATIO", f"{ir:.2f}",
                 f"TE&nbsp;{te:.1f}%/yr vs S&P")
         + _stat("EFF. BETS", f"{enb:.1f}",
-                f"of&nbsp;{L.shape[1]} positions")
+                f"of&nbsp;{n_pos} positions")
         + f'</div>')
 
     # factor loading bars (market + sectors), scaled to the largest |β|
@@ -2609,13 +2644,13 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
                   if (_sig and alpha_mf > 0) else
                   "so the book is a factor tilt, not demonstrated stock-selection alpha.")
     read = (
-        f'This {L.shape[1]}-position book carries <b style="color:#e8e9ed">'
+        f'This {n_pos}-position book carries <b style="color:#e8e9ed">'
         f'{beta_mkt:.2f} market beta</b>; <b style="color:#e8e9ed">'
         f'{r2_full*100:.0f}%</b> of its daily variance is market + sector beta '
         f'(dominated by {_lead_txt}). Jensen alpha is <b style="color:{_acol}">'
         f'{alpha_mf:+.1f}%/yr</b> and is <b>{_sig_word}</b> '
         f'(t&nbsp;{alpha_mf_t:.1f}) — {_skill_txt}'
-        f' The {L.shape[1]} positions span ~<b style="color:#e8e9ed">{enb:.1f}</b> '
+        f' The {n_pos} positions span ~<b style="color:#e8e9ed">{enb:.1f}</b> '
         f'independent bets.')
 
     st.markdown(
@@ -2625,7 +2660,7 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
         f'<span style="{_M}font-size:.6rem;font-weight:700;letter-spacing:.14em;'
         f'color:#e8e9ed">BOOK FACTOR &amp; ALPHA DECOMPOSITION</span>'
         f'<span style="{_M}font-size:.5rem;color:#8890a1">'
-        f'HAC/Newey-West · {len(df)} obs · alpha vs {len(sectors)+1} factors '
+        f'HAC/Newey-West · {obs} obs · alpha vs {n_fac} factors '
         f'<span style="background:{vcol};color:#000;font-weight:700;padding:1px 7px;'
         f'margin-left:6px;letter-spacing:.08em">{verdict}</span></span></div>'
         f'{stats}'
@@ -3480,6 +3515,14 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 _feed = desk_report_feed(_ranked_book)
                 _attach_recent_news(_feed)
                 _attach_logos(_feed)   # company marks for single-name legs
+                # Factor & alpha attribution of the deployed book → carried into
+                # the report so the "alpha or beta?" verdict travels with the PDF.
+                _fd = None
+                try:
+                    _fd = _compute_book_factor_decomp(_ranked_book, _all_r_gate,
+                                                      start, end)
+                except Exception:
+                    _fd = None
                 pdf_bytes = generate_report(
                     start=start,
                     end=end,
@@ -3494,6 +3537,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     cmd_r=cmd_r,
                     stress_series=stress,
                     geopolitical_events=GEOPOLITICAL_EVENTS,
+                    factor_decomp=_fd,
                 )
             st.session_state["_ti_pdf_bytes"] = pdf_bytes
             st.session_state["_ti_pdf_name"] = (

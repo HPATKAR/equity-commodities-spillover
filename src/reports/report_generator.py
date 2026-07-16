@@ -817,6 +817,169 @@ def _trade_card(trade: dict) -> list:
 
 # ── Main generator ──────────────────────────────────────────────────────────
 
+def _fa_bar(frac: float, color, w: float = 104, h: float = 6.5):
+    """Horizontal magnitude bar (reportlab Drawing) for a factor loading."""
+    from reportlab.graphics.shapes import Drawing, Rect
+    frac = max(0.0, min(1.0, float(frac)))
+    d = Drawing(w, h)
+    d.add(Rect(0, 0, w, h, fillColor=colors.HexColor("#efeee9"), strokeColor=None))
+    if frac > 0:
+        d.add(Rect(0, 0, max(1.0, w * frac), h, fillColor=color, strokeColor=None))
+    return d
+
+
+def _factor_attribution_section(d: dict, S: dict, cw: float) -> list:
+    """One-page 'Book Risk Character' section for the desk report — the buy-side
+    alpha-vs-beta verdict, rendered from the decomposition dict computed on the
+    trade page (_compute_book_factor_decomp). Returns reportlab flowables."""
+    from reportlab.graphics.shapes import Drawing, Rect
+
+    def _esc(s):
+        return (str(s) or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    _VMAP = {"ALPHA PRESENT": GREEN, "BETA BOOK": RED,
+             "SECTOR-TILT BOOK": ORANGE, "INCONCLUSIVE": GRAY}
+    vcol = _VMAP.get(d["verdict"], GRAY)
+    n, obs = d["n_positions"], d["obs"]
+    a_mf, a_t, sig = d["alpha_mf"], d["alpha_mf_t"], d["sig"]
+    acol = GREEN if (a_mf > 0 and sig) else (DARK if a_mf >= 0 else RED)
+
+    story = _section_header("Book Risk Character — Factor & Alpha Attribution")
+    story.append(Paragraph(
+        "Ex-post attribution of the deployed book over the sample window. The "
+        "weight-normalised book return is regressed on the market (S&amp;P 500) plus "
+        "market-orthogonalised thematic factors with HAC/Newey-West standard errors, "
+        "separating <b>market beta</b>, <b>sector tilts</b> and genuine "
+        "<b>idiosyncratic</b> return. This is descriptive of the current book, not a "
+        "forward forecast.", S["body"]))
+    story.append(Spacer(1, 7))
+
+    # Verdict strip
+    story.append(Table(
+        [[Paragraph(f'VERDICT&nbsp;&nbsp;<b>{_esc(d["verdict"])}</b>',
+                    _ps("fav", fontName="Helvetica", fontSize=9, textColor=colors.white,
+                        leading=12)),
+          Paragraph(f'HAC/Newey-West · {obs} obs · {d["n_factors"]} factors',
+                    _ps("fas", fontName="Helvetica", fontSize=7.5, textColor=colors.white,
+                        alignment=TA_RIGHT, leading=12))]],
+        colWidths=[cw * 0.5, cw * 0.5],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 8))
+
+    # KPI row (4 cells)
+    def _kpi(lbl, val, sub, vc=DARK):
+        _vc = "#" + vc.hexval()[2:]
+        return Paragraph(
+            f'<font size=6 color="#8a8f98">{_esc(lbl)}</font><br/>'
+            f'<font size=15 color="{_vc}"><b>{val}</b></font><br/>'
+            f'<font size=6 color="#8a8f98">{sub}</font>',
+            _ps(f"k{lbl}", fontName="Helvetica", fontSize=8, leading=12))
+    _ir = d["ir"]
+    kpis = [
+        _kpi("MARKET BETA", f'{d["beta_mkt"]:.2f}', f'vs S&amp;P &nbsp;R² {d["r2_mkt"]*100:.0f}%'),
+        _kpi("JENSEN ALPHA", f'{a_mf:+.1f}%/yr', f't {a_t:.1f} · {"significant" if sig else "not sig"}', acol),
+        _kpi("INFO RATIO", f'{_ir:.2f}', f'TE {d["te"]:.1f}%/yr vs S&amp;P'),
+        _kpi("EFFECTIVE BETS", f'{d["enb"]:.1f}', f'of {n} positions'),
+    ]
+    story.append(Table(
+        [kpis], colWidths=[cw / 4] * 4,
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("BOX", (0, 0), (-1, -1), 0.5, LGRAY),
+            ("LINEBEFORE", (1, 0), (-1, -1), 0.5, LGRAY),
+            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 12))
+
+    # Factor loadings table
+    story.append(Paragraph("Factor Loadings — market-orthogonalised", S["h3"]))
+    _bmax = max((abs(b) for _, b, _ in d["loadings"]), default=1.0) or 1.0
+    _rows = [[Paragraph("<b>FACTOR</b>", S["body_sm"]),
+              Paragraph("<b>BETA</b>", _ps("lh1", fontName="Helvetica-Bold", fontSize=7.5,
+                                           alignment=TA_RIGHT)),
+              Paragraph("<b>t</b>", _ps("lh2", fontName="Helvetica-Bold", fontSize=7.5,
+                                        alignment=TA_RIGHT)),
+              Paragraph("", S["body_sm"])]]
+    for name, b, tt in d["loadings"]:
+        _is_mkt = name == d["mkt_name"]
+        bc = BLUE if _is_mkt else (GREEN if b >= 0 else RED)
+        _tcol = DARK if abs(tt) >= 2 else colors.HexColor("#9aa0a8")
+        _rows.append([
+            Paragraph(_esc(name), _ps(f"ln{name}", fontName="Helvetica-Bold", fontSize=8,
+                                      textColor=_tcol)),
+            Paragraph(f"{b:+.2f}", _ps(f"lb{name}", fontName="Helvetica", fontSize=8,
+                                       textColor=_tcol, alignment=TA_RIGHT)),
+            Paragraph(f"{tt:+.1f}", _ps(f"lt{name}", fontName="Helvetica", fontSize=8,
+                                        textColor=_tcol, alignment=TA_RIGHT)),
+            _fa_bar(abs(b) / _bmax, bc, w=min(150, cw * 0.30)),
+        ])
+    story.append(Table(
+        _rows, colWidths=[cw * 0.30, cw * 0.14, cw * 0.14, cw * 0.42],
+        style=TableStyle([
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, LGRAY),
+            ("LINEBELOW", (0, 1), (-1, -2), 0.25, colors.HexColor("#f0efeb")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Paragraph("Faded rows are statistically insignificant (|t| &lt; 2). "
+                           "Market bar in blue; sector tilts green (long) / red (short).",
+                           S["caption"]))
+    story.append(Spacer(1, 12))
+
+    # Variance-explained stacked bar
+    story.append(Paragraph("Variance Explained", S["h3"]))
+    ms, ss, ids = d["mkt_share"], d["sect_share"], d["idio_share"]
+    _sw = cw * 0.9
+    stack = Drawing(_sw, 12)
+    _x = 0.0
+    for _sh, _c in [(ms, BLUE), (ss, ORANGE), (ids, colors.HexColor("#c9ccd4"))]:
+        _seg = _sw * max(0.0, _sh) / 100.0
+        if _seg > 0.5:
+            stack.add(Rect(_x, 0, _seg, 12, fillColor=_c, strokeColor=None))
+        _x += _seg
+    story.append(stack)
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(
+        f'<font color="#2980b9">■</font> market {ms:.0f}% &nbsp;&nbsp;'
+        f'<font color="#e67e22">■</font> sector tilts {ss:.0f}% &nbsp;&nbsp;'
+        f'<font color="#9aa0a8">■</font> idiosyncratic {ids:.0f}%', S["caption"]))
+    story.append(Spacer(1, 10))
+
+    # Plain-English read
+    _sig_word = "statistically significant" if sig else "not statistically significant"
+    _skill = ("evidence of selection skill beyond the factor tilts."
+              if (sig and a_mf > 0) else
+              "so the book is a factor tilt, not demonstrated stock-selection alpha.")
+    story.append(Table(
+        [[Paragraph(
+            f'This {n}-position book carries <b>{d["beta_mkt"]:.2f} market beta</b>; '
+            f'<b>{d["r2_full"]*100:.0f}%</b> of its daily variance is market + sector '
+            f'beta (dominated by {_esc(d["lead_txt"])}). Jensen alpha is '
+            f'<b>{a_mf:+.1f}%/yr</b> and is <b>{_sig_word}</b> (t {a_t:.1f}) — {_skill} '
+            f'The {n} positions span ~<b>{d["enb"]:.1f}</b> independent bets.',
+            S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    story.append(Paragraph(
+        "Beta from HAC-robust OLS on daily returns; Jensen alpha = multi-factor "
+        "intercept (annualised); effective bets = participation ratio of the position "
+        "correlation spectrum. Ex-post attribution, not a forward forecast.",
+        S["caption"]))
+    return story
+
+
 def generate_report(
     start: str,
     end: str,
@@ -829,6 +992,7 @@ def generate_report(
     cmd_r: pd.DataFrame,
     stress_series: Optional[pd.Series] = None,
     geopolitical_events: Optional[list[dict]] = None,
+    factor_decomp: Optional[dict] = None,
 ) -> bytes:
     """Build and return the full PDF as bytes."""
     buf = io.BytesIO()
@@ -1106,6 +1270,16 @@ def generate_report(
         ]
         for trade in other:
             story += _trade_card(trade)
+
+    # ── 6b. BOOK RISK CHARACTER — FACTOR & ALPHA ATTRIBUTION ────────────────
+    # Is the book alpha or beta? Rendered from the decomposition computed on the
+    # trade page. Best-effort: a bad/absent dict just omits the section.
+    if factor_decomp:
+        try:
+            story += [PageBreak()]
+            story += _factor_attribution_section(factor_decomp, S, cw)
+        except Exception:
+            pass
 
     # ── 7. GEOPOLITICAL CONTEXT ─────────────────────────────────────────────
     if geopolitical_events:
