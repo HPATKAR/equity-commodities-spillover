@@ -4104,12 +4104,16 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 # the report so the "alpha or beta?" verdict travels with the PDF.
                 _fd = None
                 _skill = None
+                _roll = None
+                _cost = None
                 try:
                     _fd = _compute_book_factor_decomp(_ranked_book, _all_r_gate,
                                                       start, end)
                     _n_th = st.session_state.get("_effective_n") or len(_TRADE_LIBRARY) or 9
                     _skill = _compute_factor_neutral_skill(_ranked_book, _all_r_gate,
                                                            start, end, _n_th)
+                    _roll = _compute_rolling_exposures(_ranked_book, _all_r_gate, start, end)
+                    _cost = _compute_book_costs_capacity(_ranked_book, _all_r_gate, end)
                 except Exception:
                     _fd = _fd
                 pdf_bytes = generate_report(
@@ -4128,6 +4132,8 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     geopolitical_events=GEOPOLITICAL_EVENTS,
                     factor_decomp=_fd,
                     skill_decomp=_skill,
+                    rolling_decomp=_roll,
+                    cost_decomp=_cost,
                 )
             st.session_state["_ti_pdf_bytes"] = pdf_bytes
             st.session_state["_ti_pdf_name"] = (

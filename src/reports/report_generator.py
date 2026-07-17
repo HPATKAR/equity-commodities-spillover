@@ -1097,6 +1097,204 @@ def _factor_neutral_section(d: dict, S: dict, cw: float) -> list:
     return story
 
 
+def _rolling_chart(d: dict, w_mm: float, h_mm: float) -> RLImage:
+    """Line chart of the book's rolling factor betas (market + top thematic)."""
+    _mpl_theme()
+    fig, ax = plt.subplots(figsize=(w_mm / 25.4, h_mm / 25.4))
+    facs, mkt, summ = d["facs"], d["mkt"], d["summ"]
+    _plot = [mkt] + sorted([f for f in facs if f != mkt],
+                           key=lambda f: -abs(summ[f]["current"]))[:3]
+    _cols = ["#8E6F3E", "#2980b9", "#2e7d32", "#c0392b"]
+    for i, f in enumerate(_plot):
+        ax.plot(d["dates"], d["betas"][f], label=f.replace("·", " "),
+                color=_cols[i % len(_cols)], lw=1.7 if f == mkt else 1.1)
+    ax.axhline(0, color="#999999", lw=0.6)
+    ax.set_ylabel("rolling beta")
+    ax.legend(loc="upper left", ncol=2, framealpha=0.9)
+    ax.margins(x=0.01)
+    fig.tight_layout(pad=0.4)
+    return _fig_to_rl(fig, w_mm, h_mm)
+
+
+def _rolling_exposure_section(d: dict, S: dict, cw: float) -> list:
+    """Rolling factor-exposure section: are the book's betas stable or drifting?"""
+    def _esc(s):
+        return (str(s) or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    _VMAP = {"STABLE": GREEN, "SHIFTING": ORANGE}
+    vcol = _VMAP.get(d["stability"], RED)
+
+    story = _section_header("Book Risk Character - Exposure Stability & Capacity")
+    story.append(Paragraph(
+        "A single-window attribution can average two different books. Rolling "
+        f"{d['window']}-day betas show how the exposures actually move over time.", S["body"]))
+    story.append(Spacer(1, 4))
+    story.append(Table(
+        [[Paragraph(f'ROLLING FACTOR EXPOSURE&nbsp;&nbsp;<b>{_esc(d["stability"])}</b>',
+                    _ps("rev", fontName="Helvetica", fontSize=9, textColor=colors.white, leading=12)),
+          Paragraph(f'{d["window"]}-day window · {d["n"]} windows',
+                    _ps("res", fontName="Helvetica", fontSize=7.5, textColor=colors.white,
+                        alignment=TA_RIGHT, leading=12))]],
+        colWidths=[cw * 0.5, cw * 0.5],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 8))
+    try:
+        story.append(_rolling_chart(d, w_mm=cw / mm, h_mm=62))
+    except Exception:
+        pass
+    story.append(Spacer(1, 8))
+
+    # summary table
+    _rows = [[Paragraph("<b>FACTOR</b>", S["body_sm"]),
+              Paragraph("<b>CURRENT β</b>", _ps("rh1", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("<b>RANGE</b>", _ps("rh2", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("<b>SPAN</b>", _ps("rh3", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT))]]
+    for f in d["facs"]:
+        s = d["summ"][f]
+        _sc = RED if s["range"] >= 0.5 else ORANGE if s["range"] >= 0.3 else GREEN
+        _rows.append([
+            Paragraph(_esc(f.replace("·", " ")), _ps(f"rn{f}", fontName="Helvetica-Bold", fontSize=8)),
+            Paragraph(f'{s["current"]:+.2f}', _ps(f"rc{f}", fontName="Helvetica", fontSize=8, alignment=TA_RIGHT)),
+            Paragraph(f'[{s["min"]:+.2f}, {s["max"]:+.2f}]',
+                      _ps(f"rr{f}", fontName="Helvetica", fontSize=8, textColor=GRAY, alignment=TA_RIGHT)),
+            Paragraph(f'{s["range"]:.2f}', _ps(f"rs{f}", fontName="Helvetica", fontSize=8, textColor=_sc, alignment=TA_RIGHT)),
+        ])
+    story.append(Table(
+        _rows, colWidths=[cw * 0.34, cw * 0.20, cw * 0.30, cw * 0.16],
+        style=TableStyle([
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, LGRAY),
+            ("LINEBELOW", (0, 1), (-1, -2), 0.25, colors.HexColor("#f0efeb")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ])))
+    story.append(Spacer(1, 8))
+    _mk, _dm = d["summ"][d["mkt"]], d["summ"][d["dom"]]
+    story.append(Table(
+        [[Paragraph(
+            f'Rolling betas show the book\'s factor character is <b>{d["stability"].lower()}</b>. '
+            f'Market beta ranged <b>{_mk["min"]:+.2f}</b> to <b>{_mk["max"]:+.2f}</b>; the '
+            f'{_esc(d["dom"].replace(chr(183), " "))} loading moved from <b>{_dm["min"]:+.2f}</b> to '
+            f'<b>{_dm["max"]:+.2f}</b>. A single-window attribution averages these, so the current '
+            f'exposures are what matter for hedging today, not the full-sample number.', S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    return story
+
+
+def _cost_capacity_section(d: dict, S: dict, cw: float) -> list:
+    """Cost and capacity section: net-of-cost Sharpe and days-to-exit per name."""
+    def _esc(s):
+        return (str(s) or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    _VMAP = {"LIQUID": GREEN, "MODERATE CAPACITY": ORANGE}
+    vcol = _VMAP.get(d["verdict"], RED)
+
+    story = [Spacer(1, 14), _rule(LGRAY, 0.4)]
+    story.append(Paragraph("Cost and Capacity", S["h3"]))
+    story.append(Paragraph(
+        "Even if there were alpha, costs and capacity decide whether it is real money: "
+        "net-of-cost performance, and how many days it takes to exit each name.", S["body"]))
+    story.append(Spacer(1, 6))
+    story.append(Table(
+        [[Paragraph(f'CAPACITY&nbsp;&nbsp;<b>{_esc(d["verdict"])}</b>',
+                    _ps("ccv", fontName="Helvetica", fontSize=9, textColor=colors.white, leading=12)),
+          Paragraph(f'liquidity at {d["participation"]*100:.0f}% of ADV · {d["exit_days"]:.0f}-day exit',
+                    _ps("ccs", fontName="Helvetica", fontSize=7.5, textColor=colors.white,
+                        alignment=TA_RIGHT, leading=12))]],
+        colWidths=[cw * 0.5, cw * 0.5],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 8))
+
+    def _kpi(lbl, val, sub, vc=DARK):
+        _vc = "#" + vc.hexval()[2:]
+        return Paragraph(
+            f'<font size=6 color="#8a8f98">{_esc(lbl)}</font><br/>'
+            f'<font size=15 color="{_vc}"><b>{val}</b></font><br/>'
+            f'<font size=6 color="#8a8f98">{sub}</font>',
+            _ps(f"cck{lbl}", fontName="Helvetica", fontSize=8, leading=12))
+    _cap = f'${d["book_cap"]/1e6:.0f}M' if d["book_cap"] else "n/a"
+    story.append(Table(
+        [[_kpi("GROSS SHARPE", f'{d["g_sharpe"]:.2f}', f'{d["g_ret"]:+.1f}%/yr gross'),
+          _kpi("NET SHARPE", f'{d["n_sharpe"]:.2f}', f'{d["n_ret"]:+.1f}%/yr after costs'),
+          _kpi("COST DRAG", f'-{d["drag"]:.2f}%/yr', f'{d["rt_yr"]:.1f} r/t · {d["rt_bps"]:.0f}bps', ORANGE),
+          _kpi("BOOK CAPACITY", _cap, f'{d["exit_days"]:.0f}d exit · {d["participation"]*100:.0f}% ADV', vcol)]],
+        colWidths=[cw / 4] * 4,
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("BOX", (0, 0), (-1, -1), 0.5, LGRAY),
+            ("LINEBEFORE", (1, 0), (-1, -1), 0.5, LGRAY),
+            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 10))
+
+    story.append(Paragraph(f'Days-to-Exit at a ${d["aum"]/1e6:.0f}M Sleeve', S["h3"]))
+    _rows = [[Paragraph("<b>POSITION</b>", S["body_sm"]),
+              Paragraph("<b>WT</b>", _ps("ch1", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("<b>$ADV</b>", _ps("ch2", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("<b>DAYS</b>", _ps("ch3", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("", S["body_sm"])]]
+    for r in d["rows"]:
+        _adv = f'${r["adv"]/1e6:.0f}M' if r["adv"] else "n/a"
+        _dte = f'{r["dte"]:.1f}d' if r["dte"] is not None else "-"
+        _flag = "?data" if r["suspect"] else ("binding" if (d["binding"] and r is d["binding"]) else "")
+        _fc = RED if r["suspect"] else ORANGE
+        _dc = (RED if (r["dte"] and r["dte"] > 10) else ORANGE if (r["dte"] and r["dte"] > 3) else DARK)
+        _rows.append([
+            Paragraph(_esc((r["name"] or "?")[:26]), _ps(f"cn{r['name']}", fontName="Helvetica-Bold", fontSize=8)),
+            Paragraph(f'{r["weight"]*100:.0f}%', _ps(f"cw{r['name']}", fontName="Helvetica", fontSize=8, textColor=GRAY, alignment=TA_RIGHT)),
+            Paragraph(_adv, _ps(f"ca{r['name']}", fontName="Helvetica", fontSize=8, textColor=GRAY, alignment=TA_RIGHT)),
+            Paragraph(_dte, _ps(f"cd{r['name']}", fontName="Helvetica", fontSize=8, textColor=_dc, alignment=TA_RIGHT)),
+            Paragraph(_flag, _ps(f"cf{r['name']}", fontName="Helvetica-Bold", fontSize=6.5, textColor=_fc)),
+        ])
+    story.append(Table(
+        _rows, colWidths=[cw * 0.40, cw * 0.10, cw * 0.16, cw * 0.14, cw * 0.20],
+        style=TableStyle([
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, LGRAY),
+            ("LINEBELOW", (0, 1), (-1, -2), 0.25, colors.HexColor("#f0efeb")),
+            ("TOPPADDING", (0, 0), (-1, -1), 2.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ])))
+    story.append(Spacer(1, 8))
+    _bind_name = d["binding"]["name"] if d["binding"] else "n/a"
+    _bind_dte = f'{d["binding"]["dte"]:.1f}d' if d["binding"] else "n/a"
+    story.append(Table(
+        [[Paragraph(
+            f'At a ${d["aum"]/1e6:.0f}M sleeve the book exits in a few days per name except the '
+            f'binding position (<b>{_esc(_bind_name)}</b>, {_bind_dte}). Cost drag is a modest '
+            f'<b>{d["drag"]:.2f}%/yr</b> at {d["rt_yr"]:.1f} round-trips and a {d["rt_bps"]:.0f}bps '
+            f'assumption, trimming the Sharpe from {d["g_sharpe"]:.2f} to {d["n_sharpe"]:.2f}. '
+            f'Capacity is set by the least-liquid name, not the average.', S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    _cav = ("Round-trip cost is a stated assumption for liquid US large-caps; turnover from the "
+            f"book's ~{d['hp']:.0f}-day holding period. ADV is median trailing-60d volume x price, "
+            "best-effort market data")
+    if d["n_suspect"]:
+        _cav += f'; {d["n_suspect"]} name(s) flagged ?data (implausibly thin, verify before sizing)'
+    story.append(Paragraph(_cav + ". Verify ADV against live venue data before sizing real capital.",
+                           S["caption"]))
+    return story
+
+
 def generate_report(
     start: str,
     end: str,
@@ -1111,6 +1309,8 @@ def generate_report(
     geopolitical_events: Optional[list[dict]] = None,
     factor_decomp: Optional[dict] = None,
     skill_decomp: Optional[dict] = None,
+    rolling_decomp: Optional[dict] = None,
+    cost_decomp: Optional[dict] = None,
 ) -> bytes:
     """Build and return the full PDF as bytes."""
     buf = io.BytesIO()
@@ -1416,6 +1616,14 @@ def generate_report(
             story += _factor_attribution_section(factor_decomp, S, cw)
             if skill_decomp:
                 story += _factor_neutral_section(skill_decomp, S, cw)
+            if rolling_decomp:
+                story += [PageBreak()]
+                story += _rolling_exposure_section(rolling_decomp, S, cw)
+                if cost_decomp:
+                    story += _cost_capacity_section(cost_decomp, S, cw)
+            elif cost_decomp:
+                story += [PageBreak()]
+                story += _cost_capacity_section(cost_decomp, S, cw)
         except Exception:
             pass
 
