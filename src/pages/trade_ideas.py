@@ -3224,6 +3224,146 @@ def _render_book_costs_capacity(book: list, all_r_gate: pd.DataFrame, end: str) 
     )
 
 
+def _compute_hedge_overlay(book: list, all_r_gate: pd.DataFrame, start: str, end: str,
+                           borrow_bps: float = 40.0, erp: float = 5.0) -> "dict | None":
+    """Turn the diagnosis into a product: the tradeable ETF basket that neutralises
+    the book's systematic exposure. Sequential hedge (market via SPY, then the
+    residual sector tilts via ITA/GLD/XLE/TLT/UUP), with the variance removed, the
+    carry cost, the market return forgone, and the residual Sharpe (which the skill
+    test already showed is ~0, so the overlay is exposure control, not alpha)."""
+    try:
+        import statsmodels.api as sm
+    except Exception:
+        return None
+    book_r, L = _deployed_book_return(book, all_r_gate)
+    if book_r is None:
+        return None
+    _ROLE = {"SPY": "market (S&P 500)", "ITA": "defense (aerospace)", "GLD": "gold",
+             "XLE": "energy", "TLT": "duration (long Tsy)", "UUP": "US dollar"}
+    etfs: dict = {}
+    for tk in ["SPY", "ITA", "GLD", "XLE", "TLT", "UUP"]:
+        s = _load_etf_returns(tk, start, end)
+        if s is not None and len(s) > 250:
+            etfs[tk] = s
+    if "SPY" not in etfs or len(etfs) < 2:
+        return None
+    E = pd.concat(etfs, axis=1)
+    df = pd.concat([book_r, E], axis=1).dropna()
+    if len(df) < 250:
+        return None
+    _HAC = dict(cov_type="HAC", cov_kwds={"maxlags": 5})
+    bm = sm.OLS(df["book"], sm.add_constant(df[["SPY"]])).fit(**_HAC)
+    beta_m = float(bm.params["SPY"])
+    mkt_hedged = df["book"] - beta_m * df["SPY"]
+    sect = [c for c in E.columns if c != "SPY"]
+    smf = sm.OLS(mkt_hedged, sm.add_constant(df[sect])).fit(**_HAC)
+    sb = {c: (float(smf.params[c]), float(smf.tvalues[c])) for c in sect}
+    fac_hedged = mkt_hedged - sum(sb[c][0] * df[c] for c in sect)
+
+    ann = np.sqrt(252)
+    vg = float(df["book"].std() * ann * 100)
+    vm = float(mkt_hedged.std() * ann * 100)
+    vf = float(fac_hedged.std() * ann * 100)
+    var_mkt = 1 - (vm / vg) ** 2 if vg > 0 else 0.0
+    var_full = 1 - (vf / vg) ** 2 if vg > 0 else 0.0
+    short_total = abs(beta_m) + sum(abs(b) for b, _ in sb.values())
+    carry = short_total * borrow_bps / 100.0
+    beta_forgone = beta_m * erp
+    res_sharpe = float(fac_hedged.mean() / fac_hedged.std() * ann) if fac_hedged.std() > 0 else 0.0
+
+    basket = [("SPY", beta_m, _ROLE["SPY"], None)]
+    for c in sect:
+        b, t = sb[c]
+        if abs(t) >= 2 and abs(b) >= 0.03:
+            basket.append((c, b, _ROLE.get(c, c), t))
+    return {"beta_mkt": beta_m, "basket": basket, "vol_gross": vg, "vol_mkt": vm,
+            "vol_fac": vf, "var_mkt": var_mkt * 100, "var_full": var_full * 100,
+            "carry": carry, "beta_forgone": beta_forgone, "short_total": short_total,
+            "res_sharpe": res_sharpe, "borrow_bps": borrow_bps, "erp": erp,
+            "obs": len(df), "n_legs": len(basket)}
+
+
+def _render_hedge_overlay(book: list, all_r_gate: pd.DataFrame, start: str, end: str) -> None:
+    """On-screen hedge-overlay panel: the ETF basket that neutralises the book."""
+    d = _compute_hedge_overlay(book, all_r_gate, start, end)
+    if not d:
+        return
+    _M = "font-family:'JetBrains Mono',monospace;"
+    _lbl = f"{_M}font-size:.5rem;letter-spacing:.1em;color:#8890a1"
+    _GOLD = "#CFB991"
+
+    def _stat(lbl, val, sub, col="#e8e9ed"):
+        return (f'<div style="flex:1;padding:.45rem .7rem;border-right:1px solid #1e1e1e">'
+                f'<div style="{_lbl}">{lbl}</div>'
+                f'<div style="{_M}font-size:1.05rem;font-weight:700;color:{col};'
+                f'margin:1px 0">{val}</div>'
+                f'<div style="{_M}font-size:.48rem;color:#555960">{sub}</div></div>')
+
+    _rs_col = "#c0392b" if d["res_sharpe"] < 0.1 else "#e8e9ed"
+    stats = (
+        f'<div style="display:flex;border-bottom:1px solid #1e1e1e">'
+        + _stat("VARIANCE REMOVED", f'{d["var_full"]:.0f}%',
+                f'market {d["var_mkt"]:.0f}% + sectors', "#27ae60")
+        + _stat("HEDGED VOL", f'{d["vol_fac"]:.1f}%',
+                f'from {d["vol_gross"]:.1f}% gross')
+        + _stat("CARRY COST", f'{d["carry"]:.2f}%<span style="font-size:.5rem">/yr</span>',
+                f'+{d["beta_forgone"]:.1f}% beta forgone', "#e67e22")
+        + _stat("RESIDUAL SHARPE", f'{d["res_sharpe"]:.2f}',
+                'no alpha to unlock', _rs_col)
+        + f'</div>')
+
+    _bmax = max((abs(b) for _, b, _, _ in d["basket"]), default=1.0) or 1.0
+    rows = ""
+    for tk, b, role, t in d["basket"]:
+        _w = abs(b) / _bmax * 100
+        _side = "SHORT" if b >= 0 else "LONG"
+        _sc = "#c0392b" if b >= 0 else "#27ae60"
+        rows += (
+            f'<div style="display:flex;align-items:center;gap:8px;padding:2px 0">'
+            f'<span style="{_M}font-size:.58rem;font-weight:700;color:#e8e9ed;min-width:42px">{tk}</span>'
+            f'<span style="{_M}font-size:.5rem;color:#8890a1;min-width:122px">{role}</span>'
+            f'<span style="{_M}font-size:.52rem;font-weight:700;color:{_sc};min-width:44px">{_side}</span>'
+            f'<div style="flex:1;height:8px;background:#141414"><div style="width:{_w:.0f}%;'
+            f'height:8px;background:{_sc}"></div></div>'
+            f'<span style="{_M}font-size:.56rem;color:#e8e9ed;min-width:52px;text-align:right">'
+            f'{abs(b)*100:.0f}%</span></div>')
+
+    read = (
+        f'To hold this book <b style="color:#e8e9ed">factor-neutral</b>, short the basket above per '
+        f'dollar of book notional. It removes <b style="color:#27ae60">{d["var_full"]:.0f}%</b> of the '
+        f'book\'s variance (vol {d["vol_gross"]:.1f}% to {d["vol_fac"]:.1f}%) for about '
+        f'<b style="color:#e8e9ed">{d["carry"]:.2f}%/yr</b> of borrow carry, plus roughly '
+        f'<b style="color:#e8e9ed">{d["beta_forgone"]:.1f}%/yr</b> of market return you give up on the '
+        f'S&amp;P hedge. What is left has a <b style="color:{_rs_col}">{d["res_sharpe"]:.2f}</b> Sharpe, '
+        f'so this is <b>exposure control, not a source of return</b>. Its use: a parent portfolio can '
+        f'hold the intended defense-and-gold view without adding the ~{d["beta_mkt"]:.1f} market beta it '
+        f'likely already owns.')
+
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;margin:.2rem 0 .8rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+        f'padding:.4rem .8rem;border-bottom:1px solid #1e1e1e">'
+        f'<span style="{_M}font-size:.6rem;font-weight:700;letter-spacing:.14em;'
+        f'color:#e8e9ed">HEDGE OVERLAY</span>'
+        f'<span style="{_M}font-size:.5rem;color:#8890a1">'
+        f'tradeable ETF basket · {d["obs"]} obs'
+        f'<span style="background:{_GOLD};color:#000;font-weight:700;padding:1px 7px;'
+        f'margin-left:6px;letter-spacing:.08em">EXPOSURE CONTROL</span></span></div>'
+        f'{stats}'
+        f'<div style="display:flex;gap:16px;padding:.55rem .8rem;flex-wrap:wrap">'
+        f'<div style="flex:1.15;min-width:320px">'
+        f'<div style="{_lbl};margin-bottom:3px">THE OVERLAY · per $1 of book notional</div>{rows}</div>'
+        f'<div style="flex:1;min-width:240px;{_M}font-size:.56rem;color:#c9ccd4;'
+        f'line-height:1.55">{read}</div></div>'
+        f'<div style="padding:.3rem .8rem;border-top:1px solid #1e1e1e;{_M}'
+        f'font-size:.48rem;color:#555960">Sequential hedge: market beta on SPY, then residual sector '
+        f'tilts on ITA/GLD/XLE/TLT/UUP (HAC errors, significant legs only). Carry assumes '
+        f'{d["borrow_bps"]:.0f}bps ETF borrow; beta forgone assumes a {d["erp"]:.0f}% equity risk '
+        f'premium. Exposures drift, so re-estimate before trading.</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -3810,6 +3950,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # money: net-of-cost Sharpe, turnover drag, and days-to-exit per name.
         try:
             _render_book_costs_capacity(_ranked_book, _all_r_gate, end)
+        except Exception:
+            pass
+        # The product the diagnosis points at: the ETF basket that neutralises the
+        # book's systematic exposure, and what it removes and costs.
+        try:
+            _render_hedge_overlay(_ranked_book, _all_r_gate, start, end)
         except Exception:
             pass
 
