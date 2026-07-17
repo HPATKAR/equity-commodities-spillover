@@ -3010,6 +3010,220 @@ def _render_rolling_exposures(book: list, all_r_gate: pd.DataFrame,
     )
 
 
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=4)
+def _load_book_adv(tickers: tuple, end: str) -> dict:
+    """Median trailing-60d dollar ADV (volume x close) per ticker via yfinance,
+    disk-cached. Best-effort; tickers that fail are simply absent from the dict."""
+    if not tickers:
+        return {}
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _key = f"adv_{'_'.join(tickers)}_{end}"
+    _hit = read_artifact(_key, max_age_s=3600)
+    if _hit is not None:
+        return _hit
+    out: dict = {}
+    try:
+        import datetime as _dt
+        from src.data.loader import _yf_download
+        _s = str(_dt.date.today() - _dt.timedelta(days=140))
+        raw = _yf_download(list(tickers), start=_s, end=end, auto_adjust=True, progress=False)
+        close, vol = raw["Close"], raw["Volume"]
+        for tk in tickers:
+            try:
+                c = close[tk] if hasattr(close, "columns") else close
+                v = vol[tk] if hasattr(vol, "columns") else vol
+                dollar = (c * v).dropna().tail(60)
+                if len(dollar) >= 20:
+                    out[tk] = float(dollar.median())
+            except Exception:
+                continue
+    except Exception:
+        return {}
+    if out:
+        try:
+            write_artifact(_key, out)
+        except Exception:
+            pass
+    return out
+
+
+def _avg_holding_days(deployed: list) -> float:
+    """Average holding period of the book in trading days, parsed from each
+    trade's holding_period text. Defaults to ~40 days when unparseable."""
+    import re
+    vals = []
+    for t in deployed:
+        hp = str(t.get("holding_period", "")).lower()
+        nums = [float(x) for x in re.findall(r"\d+\.?\d*", hp)]
+        if not nums:
+            continue
+        mid = sum(nums) / len(nums)
+        if "month" in hp:
+            mid *= 21
+        elif "day" in hp:
+            pass
+        else:                          # weeks (explicit or assumed)
+            mid *= 5
+        vals.append(mid)
+    return float(np.mean(vals)) if vals else 40.0
+
+
+def _compute_book_costs_capacity(book: list, all_r_gate: pd.DataFrame, end: str,
+                                 aum: float = 250e6, participation: float = 0.15,
+                                 exit_days: float = 5.0, rt_bps: float = 10.0) -> "dict | None":
+    """Net-of-cost performance and liquidity capacity of the deployed book. Cost
+    drag = turnover (from holding period) x a stated round-trip cost; capacity =
+    days-to-exit per position at a share of ADV. ADV is best-effort market data,
+    so suspiciously thin values are flagged rather than trusted."""
+    book_r, L = _deployed_book_return(book, all_r_gate)
+    if book_r is None:
+        return None
+    deployed = [t for t in book if float(t.get("alloc_weight", 0.0)) > 0]
+    gross = sum(float(t["alloc_weight"]) for t in deployed) or 1.0
+
+    g_ret = float(book_r.mean() * 252 * 100)
+    g_vol = float(book_r.std() * np.sqrt(252) * 100)
+    g_sharpe = g_ret / g_vol if g_vol > 0 else 0.0
+    hp = _avg_holding_days(deployed)
+    rt_yr = 252.0 / max(5.0, hp)                       # round-trips per year
+    drag = rt_yr * rt_bps / 100.0                      # %/yr
+    n_ret = g_ret - drag
+    n_sharpe = n_ret / g_vol if g_vol > 0 else 0.0
+
+    try:
+        from src.analysis.trade_generator import all_stock_universe
+        d2t = {disp: tk for disp, (tk, *_r) in all_stock_universe().items()}
+    except Exception:
+        d2t = {}
+    positions = []
+    for t in deployed:
+        a = (t.get("assets") or [None])[0]
+        positions.append({"name": a or t.get("name", "?"),
+                          "ticker": d2t.get(a), "weight": float(t["alloc_weight"]) / gross})
+    tks = tuple(sorted({p["ticker"] for p in positions if p["ticker"]}))
+    adv = _load_book_adv(tks, end) if tks else {}
+
+    rows = []
+    for p in positions:
+        a = adv.get(p["ticker"]) if p["ticker"] else None
+        pos_usd = p["weight"] * aum
+        dte = (pos_usd / (participation * a)) if (a and a > 0) else None
+        rows.append({**p, "adv": a, "pos_usd": pos_usd, "dte": dte,
+                     "suspect": bool(a is not None and a < 20e6)})
+    rows.sort(key=lambda r: (r["dte"] is None, -(r["dte"] or 0)))
+    measured = [r for r in rows if r["dte"] is not None and not r["suspect"]]
+    binding = measured[0] if measured else None
+    caps = [participation * r["adv"] * exit_days / r["weight"]
+            for r in measured if r["adv"] and r["weight"] > 0]
+    book_cap = min(caps) if caps else None
+    worst = binding["dte"] if binding else 0.0
+    n_suspect = sum(1 for r in rows if r["suspect"])
+    n_priced = sum(1 for r in rows if r["dte"] is not None)
+
+    if worst > 10:
+        verdict = "CAPACITY-CONSTRAINED"
+    elif worst > 3:
+        verdict = "MODERATE CAPACITY"
+    else:
+        verdict = "LIQUID"
+
+    return {"g_ret": g_ret, "g_vol": g_vol, "g_sharpe": g_sharpe, "n_ret": n_ret,
+            "n_sharpe": n_sharpe, "drag": drag, "hp": hp, "rt_yr": rt_yr, "rt_bps": rt_bps,
+            "aum": aum, "participation": participation, "exit_days": exit_days,
+            "rows": rows, "binding": binding, "book_cap": book_cap, "verdict": verdict,
+            "n_suspect": n_suspect, "n_priced": n_priced, "n_positions": len(rows)}
+
+
+def _render_book_costs_capacity(book: list, all_r_gate: pd.DataFrame, end: str) -> None:
+    """On-screen cost and capacity panel for the deployed book."""
+    d = _compute_book_costs_capacity(book, all_r_gate, end)
+    if not d:
+        return
+    _M = "font-family:'JetBrains Mono',monospace;"
+    _lbl = f"{_M}font-size:.5rem;letter-spacing:.1em;color:#8890a1"
+    vcol = {"LIQUID": "#27ae60", "MODERATE CAPACITY": "#e67e22"}.get(d["verdict"], "#c0392b")
+
+    def _stat(lbl, val, sub, col="#e8e9ed"):
+        return (f'<div style="flex:1;padding:.45rem .7rem;border-right:1px solid #1e1e1e">'
+                f'<div style="{_lbl}">{lbl}</div>'
+                f'<div style="{_M}font-size:1.05rem;font-weight:700;color:{col};'
+                f'margin:1px 0">{val}</div>'
+                f'<div style="{_M}font-size:.48rem;color:#555960">{sub}</div></div>')
+
+    _cap_txt = (f'${d["book_cap"]/1e6:.0f}M' if d["book_cap"] else "n/a")
+    stats = (
+        f'<div style="display:flex;border-bottom:1px solid #1e1e1e">'
+        + _stat("GROSS SHARPE", f'{d["g_sharpe"]:.2f}', f'{d["g_ret"]:+.1f}%/yr gross')
+        + _stat("NET SHARPE", f'{d["n_sharpe"]:.2f}', f'{d["n_ret"]:+.1f}%/yr after costs')
+        + _stat("COST DRAG", f'-{d["drag"]:.2f}%<span style="font-size:.5rem">/yr</span>',
+                f'{d["rt_yr"]:.1f} round-trips · {d["rt_bps"]:.0f}bps', "#e67e22")
+        + _stat("BOOK CAPACITY", _cap_txt,
+                f'{d["exit_days"]:.0f}d exit · {d["participation"]*100:.0f}% ADV', vcol)
+        + f'</div>')
+
+    # per-position liquidity rows
+    _rows = ""
+    for r in d["rows"]:
+        _adv = f'${r["adv"]/1e6:.0f}M' if r["adv"] else "n/a"
+        _dte = f'{r["dte"]:.1f}d' if r["dte"] is not None else "-"
+        _flag = ' <span style="color:#c0392b">?data</span>' if r["suspect"] else (
+            ' <span style="color:#e67e22">◄ binding</span>' if (d["binding"] and r is d["binding"]) else "")
+        _dcol = ("#c0392b" if (r["dte"] and r["dte"] > 10) else
+                 "#e67e22" if (r["dte"] and r["dte"] > 3) else "#e8e9ed")
+        _nm = (r["name"] or "?")[:22]
+        _rows += (
+            f'<div style="display:flex;align-items:center;gap:8px;padding:1.5px 0">'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:150px;white-space:nowrap;'
+            f'overflow:hidden;text-overflow:ellipsis">{_nm}</span>'
+            f'<span style="{_M}font-size:.52rem;color:#8890a1;min-width:40px;text-align:right">'
+            f'{r["weight"]*100:.0f}%</span>'
+            f'<span style="{_M}font-size:.52rem;color:#8890a1;min-width:60px;text-align:right">'
+            f'{_adv}</span>'
+            f'<span style="{_M}font-size:.54rem;color:{_dcol};min-width:52px;text-align:right">'
+            f'{_dte}</span><span style="{_M}font-size:.5rem">{_flag}</span></div>')
+
+    _bind_name = d["binding"]["name"] if d["binding"] else "n/a"
+    _bind_dte = f'{d["binding"]["dte"]:.1f}d' if d["binding"] else "n/a"
+    read = (
+        f'At an illustrative <b style="color:#e8e9ed">${d["aum"]/1e6:.0f}M</b> sleeve, the book '
+        f'exits in a few days per name except the binding position '
+        f'(<b style="color:#e8e9ed">{_bind_name}</b>, {_bind_dte}). Cost drag is modest for '
+        f'liquid large-caps: ~<b style="color:#e8e9ed">{d["drag"]:.2f}%/yr</b> at '
+        f'{d["rt_yr"]:.1f} round-trips and a {d["rt_bps"]:.0f}bps assumption, trimming the Sharpe '
+        f'from {d["g_sharpe"]:.2f} to {d["n_sharpe"]:.2f}. Capacity is set by the least-liquid '
+        f'name, not the average.')
+
+    _caveat = (f'<div style="border-top:1px solid #1e1e1e;margin-top:.4rem;padding-top:.3rem;'
+               f'{_M}font-size:.48rem;color:#555960">Round-trip cost is a stated {d["rt_bps"]:.0f}bps '
+               f'assumption (half-spread + impact for liquid US large-caps); turnover from the '
+               f'book\'s ~{d["hp"]:.0f}-day holding period. ADV is median trailing-60d volume x price '
+               f'and best-effort market data'
+               + (f'; {d["n_suspect"]} name(s) flagged ?data (implausibly thin, verify before sizing)'
+                  if d["n_suspect"] else "")
+               + '. Verify ADV against live venue data before sizing real capital.</div>')
+
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;margin:.2rem 0 .8rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+        f'padding:.4rem .8rem;border-bottom:1px solid #1e1e1e">'
+        f'<span style="{_M}font-size:.6rem;font-weight:700;letter-spacing:.14em;'
+        f'color:#e8e9ed">COST &amp; CAPACITY</span>'
+        f'<span style="{_M}font-size:.5rem;color:#8890a1">'
+        f'net of costs · liquidity at {d["participation"]*100:.0f}% of ADV'
+        f'<span style="background:{vcol};color:#000;font-weight:700;padding:1px 7px;'
+        f'margin-left:6px;letter-spacing:.08em">{d["verdict"]}</span></span></div>'
+        f'{stats}'
+        f'<div style="display:flex;gap:16px;padding:.55rem .8rem;flex-wrap:wrap">'
+        f'<div style="flex:1;min-width:300px">'
+        f'<div style="{_lbl};margin-bottom:3px">DAYS-TO-EXIT · {d["n_priced"]}/{d["n_positions"]} '
+        f'priced · at ${d["aum"]/1e6:.0f}M sleeve</div>{_rows}</div>'
+        f'<div style="flex:1;min-width:230px;{_M}font-size:.56rem;color:#c9ccd4;'
+        f'line-height:1.55">{read}</div></div>'
+        f'{_caveat}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -3576,6 +3790,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         # of two different books? Rolling betas over time.
         try:
             _render_rolling_exposures(_ranked_book, _all_r_gate, start, end)
+        except Exception:
+            pass
+        # Even if there were alpha, costs and capacity decide whether it is real
+        # money: net-of-cost Sharpe, turnover drag, and days-to-exit per name.
+        try:
+            _render_book_costs_capacity(_ranked_book, _all_r_gate, end)
         except Exception:
             pass
 
