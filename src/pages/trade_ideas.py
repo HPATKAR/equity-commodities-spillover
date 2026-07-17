@@ -2889,6 +2889,127 @@ def _render_factor_neutral_skill(book: list, all_r_gate: pd.DataFrame,
     )
 
 
+def _compute_rolling_exposures(book: list, all_r_gate: pd.DataFrame,
+                               start: str, end: str, window: int = 126) -> "dict | None":
+    """Rolling univariate factor betas of the deployed book over time, so a static
+    single-window attribution is not mistaken for a stable exposure. Uses pandas
+    rolling cov/var (fast, no per-window regression loop). Returns dict or None."""
+    book_r, L = _deployed_book_return(book, all_r_gate)
+    if book_r is None:
+        return None
+    F = _load_factor_panel(start, end)
+    if F.empty:
+        return None
+    df = pd.concat([book_r, F], axis=1).dropna()
+    if len(df) < window + 60:
+        return None
+    facs = list(F.columns)                    # market first, then thematic
+    B = pd.DataFrame(
+        {f: df["book"].rolling(window).cov(df[f]) / df[f].rolling(window).var()
+         for f in facs}
+    ).replace([np.inf, -np.inf], np.nan).dropna()
+    if len(B) < 20:
+        return None
+    summ = {f: {"current": float(B[f].iloc[-1]), "min": float(B[f].min()),
+                "max": float(B[f].max()), "range": float(B[f].max() - B[f].min())}
+            for f in facs}
+    mkt = facs[0]
+    dom = max((f for f in facs if f != mkt), key=lambda f: abs(summ[f]["current"]))
+    _drift = max(summ[mkt]["range"], summ[dom]["range"])
+    stability = "DRIFTING" if _drift >= 0.5 else "SHIFTING" if _drift >= 0.3 else "STABLE"
+    return {"dates": list(B.index), "betas": {f: B[f].values for f in facs},
+            "facs": facs, "summ": summ, "window": window, "mkt": mkt, "dom": dom,
+            "stability": stability, "n": len(B)}
+
+
+def _render_rolling_exposures(book: list, all_r_gate: pd.DataFrame,
+                              start: str, end: str) -> None:
+    """On-screen rolling factor-exposure panel: are the book's betas stable?"""
+    d = _compute_rolling_exposures(book, all_r_gate, start, end)
+    if not d:
+        return
+    import plotly.graph_objects as go
+    _M = "font-family:'JetBrains Mono',monospace;"
+    vcol = {"STABLE": "#27ae60", "SHIFTING": "#e67e22"}.get(d["stability"], "#c0392b")
+    facs, mkt, summ = d["facs"], d["mkt"], d["summ"]
+
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;border-bottom:none;background:#0a0a0a;'
+        f'display:flex;justify-content:space-between;align-items:baseline;'
+        f'padding:.4rem .8rem;margin-top:.2rem">'
+        f'<span style="{_M}font-size:.6rem;font-weight:700;letter-spacing:.14em;'
+        f'color:#e8e9ed">ROLLING FACTOR EXPOSURE · {d["window"]}D</span>'
+        f'<span style="{_M}font-size:.5rem;color:#8890a1">'
+        f'{d["n"]} windows · is the factor character stable?'
+        f'<span style="background:{vcol};color:#000;font-weight:700;padding:1px 7px;'
+        f'margin-left:6px;letter-spacing:.08em">{d["stability"]}</span></span></div>',
+        unsafe_allow_html=True,
+    )
+
+    # chart: market + top 3 thematic factors by |current beta|
+    _plot = [mkt] + sorted([f for f in facs if f != mkt],
+                           key=lambda f: -abs(summ[f]["current"]))[:3]
+    _cyc = ["#3a9bdc", "#27ae60", "#c0392b"]
+    fig = go.Figure()
+    for i, f in enumerate(_plot):
+        col = "#CFB991" if f == mkt else _cyc[(i - 1) % len(_cyc)]
+        fig.add_trace(go.Scatter(
+            x=d["dates"], y=d["betas"][f], name=f.replace("·", " "), mode="lines",
+            line=dict(width=2.4 if f == mkt else 1.7, color=col),
+            hovertemplate="%{x|%b %Y}<br>β %{y:.2f}<extra>" + f.replace("·", " ") + "</extra>"))
+    fig.add_hline(y=0, line=dict(color="#333", width=1))
+    fig.update_layout(
+        template="plotly_dark", height=290, plot_bgcolor="#0a0a0a", paper_bgcolor="#0a0a0a",
+        margin=dict(l=8, r=8, t=8, b=6),
+        legend=dict(orientation="h", y=1.14, x=0, font=dict(size=10, color="#c8c8c8"),
+                    bgcolor="rgba(0,0,0,0)"),
+        yaxis=dict(title=dict(text="rolling β", font=dict(size=10, color="#8890a1")),
+                   gridcolor="#161616", zeroline=False),
+        xaxis=dict(gridcolor="#161616"))
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+
+    # summary rows + read
+    def _drift_col(rng):
+        return "#c0392b" if rng >= 0.5 else "#e67e22" if rng >= 0.3 else "#27ae60"
+    _rows = ""
+    for f in facs:
+        s = summ[f]
+        _rows += (
+            f'<div style="display:flex;align-items:center;gap:8px;padding:1.5px 0">'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:108px">{f.replace("·"," ")}</span>'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:60px;text-align:right">'
+            f'β&nbsp;{s["current"]:+.2f}</span>'
+            f'<span style="{_M}font-size:.5rem;color:#8890a1;min-width:118px;text-align:right">'
+            f'range&nbsp;[{s["min"]:+.2f}, {s["max"]:+.2f}]</span>'
+            f'<span style="{_M}font-size:.5rem;color:{_drift_col(s["range"])};min-width:64px;'
+            f'text-align:right">span&nbsp;{s["range"]:.2f}</span></div>')
+    _dm = summ[d["dom"]]
+    _mk = summ[mkt]
+    read = (
+        f'Rolling {d["window"]}-day betas show the book\'s factor character is '
+        f'<b style="color:{vcol}">{d["stability"].lower()}</b>. Market beta ranged '
+        f'<b style="color:#e8e9ed">{_mk["min"]:+.2f}</b> to '
+        f'<b style="color:#e8e9ed">{_mk["max"]:+.2f}</b>; the '
+        f'{d["dom"].replace("·"," ")} loading moved from '
+        f'<b style="color:#e8e9ed">{_dm["min"]:+.2f}</b> to '
+        f'<b style="color:#e8e9ed">{_dm["max"]:+.2f}</b>. A single-window attribution '
+        f'averages these, so the <b>current</b> exposures are what matter for hedging '
+        f'today, not the full-sample number.')
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;border-top:none;background:#0a0a0a;'
+        f'padding:.5rem .8rem .6rem">'
+        f'<div style="display:flex;gap:16px;flex-wrap:wrap">'
+        f'<div style="flex:1;min-width:280px">{_rows}</div>'
+        f'<div style="flex:1;min-width:230px;{_M}font-size:.56rem;color:#c9ccd4;'
+        f'line-height:1.55">{read}</div></div>'
+        f'<div style="border-top:1px solid #1e1e1e;margin-top:.4rem;padding-top:.3rem;'
+        f'{_M}font-size:.48rem;color:#555960">Univariate rolling beta = '
+        f'cov(book, factor) / var(factor) over a trailing {d["window"]}-day window. '
+        f'Gross exposure over time, not a variance decomposition.</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     # ── Stale-while-revalidate: pre-populate session state from disk cache ───
     # Runs once per session. If a prior run saved results to disk, the user
@@ -3449,6 +3570,12 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
         try:
             _n_th = st.session_state.get("_effective_n") or len(_TRADE_LIBRARY) or 9
             _render_factor_neutral_skill(_ranked_book, _all_r_gate, start, end, _n_th)
+        except Exception:
+            pass
+        # Are those factor exposures stable, or is the static attribution a blur
+        # of two different books? Rolling betas over time.
+        try:
+            _render_rolling_exposures(_ranked_book, _all_r_gate, start, end)
         except Exception:
             pass
 
