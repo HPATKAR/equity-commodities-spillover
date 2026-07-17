@@ -980,6 +980,123 @@ def _factor_attribution_section(d: dict, S: dict, cw: float) -> list:
     return story
 
 
+def _factor_neutral_section(d: dict, S: dict, cw: float) -> list:
+    """Companion to the attribution section: does any edge survive stripping the
+    academic risk factors (FF5 + Momentum)? Rendered from the skill dict computed
+    on the trade page (_compute_factor_neutral_skill)."""
+    def _esc(s):
+        return (str(s) or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    _VMAP = {"SKILL SURVIVES": GREEN, "MARGINAL": ORANGE}
+    vcol = _VMAP.get(d["verdict"], RED)
+    dsr = d["dsr"]
+    dsr_txt = f'{dsr*100:.0f}%' if dsr == dsr else "n/a"
+    rs_col = GREEN if d["res_sharpe"] > 0.2 else (DARK if d["res_sharpe"] >= 0 else RED)
+
+    story = [Spacer(1, 14), _rule(LGRAY, 0.4)]
+    story.append(Paragraph("Factor-Neutral Skill Test (Fama-French 5 + Momentum)", S["h3"]))
+    story.append(Paragraph(
+        "The attribution above shows the book's tilts. This asks the harder question: after "
+        "regressing the excess book return on the academic risk factors (market, size, value, "
+        "profitability, investment, momentum) and removing them, does any Sharpe survive? A "
+        "residual Sharpe near zero means the raw performance was factor exposure, not selection "
+        "skill.", S["body"]))
+    story.append(Spacer(1, 6))
+
+    # Verdict strip
+    story.append(Table(
+        [[Paragraph(f'VERDICT&nbsp;&nbsp;<b>{_esc(d["verdict"])}</b>',
+                    _ps("fnv", fontName="Helvetica", fontSize=9, textColor=colors.white, leading=12)),
+          Paragraph(f'FF5 + Momentum · {d["obs"]} obs · deflated by {d["n_theses"]} theses',
+                    _ps("fns", fontName="Helvetica", fontSize=7.5, textColor=colors.white,
+                        alignment=TA_RIGHT, leading=12))]],
+        colWidths=[cw * 0.5, cw * 0.5],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 8))
+
+    def _kpi(lbl, val, sub, vc=DARK):
+        _vc = "#" + vc.hexval()[2:]
+        return Paragraph(
+            f'<font size=6 color="#8a8f98">{_esc(lbl)}</font><br/>'
+            f'<font size=15 color="{_vc}"><b>{val}</b></font><br/>'
+            f'<font size=6 color="#8a8f98">{sub}</font>',
+            _ps(f"fk{lbl}", fontName="Helvetica", fontSize=8, leading=12))
+    a_col = GREEN if (d["alpha"] > 0 and abs(d["alpha_t"]) >= 2) else (DARK if d["alpha"] >= 0 else RED)
+    story.append(Table(
+        [[_kpi("RAW SHARPE", f'{d["raw_sharpe"]:.2f}', "book excess, annualised"),
+          _kpi("FACTOR-NEUTRAL SHARPE", f'{d["res_sharpe"]:.2f}',
+               f'{d["retained"]:.0f}% of raw survives', rs_col),
+          _kpi("FF5+MOM ALPHA", f'{d["alpha"]:+.1f}%/yr',
+               f't {d["alpha_t"]:.1f} · R² {d["r2"]*100:.0f}%', a_col),
+          _kpi("DEFLATED SHARPE", dsr_txt, "P(skill real)", vcol)]],
+        colWidths=[cw / 4] * 4,
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("BOX", (0, 0), (-1, -1), 0.5, LGRAY),
+            ("LINEBEFORE", (1, 0), (-1, -1), 0.5, LGRAY),
+            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 10))
+
+    # FF5+MOM loadings table
+    story.append(Paragraph("Risk-Factor Loadings", S["h3"]))
+    _bmax = max((abs(b) for _, b, _ in d["loadings"]), default=1.0) or 1.0
+    _rows = [[Paragraph("<b>FACTOR</b>", S["body_sm"]),
+              Paragraph("<b>BETA</b>", _ps("fh1", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("<b>t</b>", _ps("fh2", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("", S["body_sm"])]]
+    for name, b, tt in d["loadings"]:
+        bc = GREEN if b >= 0 else RED
+        _tc = DARK if abs(tt) >= 2 else colors.HexColor("#9aa0a8")
+        _rows.append([
+            Paragraph(_esc(name), _ps(f"fn{name}", fontName="Helvetica-Bold", fontSize=8, textColor=_tc)),
+            Paragraph(f"{b:+.2f}", _ps(f"fb{name}", fontName="Helvetica", fontSize=8, textColor=_tc, alignment=TA_RIGHT)),
+            Paragraph(f"{tt:+.1f}", _ps(f"ft{name}", fontName="Helvetica", fontSize=8, textColor=_tc, alignment=TA_RIGHT)),
+            _fa_bar(abs(b) / _bmax, bc, w=min(150, cw * 0.30)),
+        ])
+    story.append(Table(
+        _rows, colWidths=[cw * 0.34, cw * 0.12, cw * 0.12, cw * 0.42],
+        style=TableStyle([
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, LGRAY),
+            ("LINEBELOW", (0, 1), (-1, -2), 0.25, colors.HexColor("#f0efeb")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 10))
+
+    _skill = ("selection skill that survives every known factor."
+              if d["verdict"] == "SKILL SURVIVES" else
+              "no demonstrated selection skill once the known factors are removed.")
+    story.append(Table(
+        [[Paragraph(
+            f'The book\'s raw excess Sharpe of <b>{d["raw_sharpe"]:.2f}</b> is mostly factor '
+            f'exposure. Neutralising FF5 + Momentum leaves a <b>{d["res_sharpe"]:.2f}</b> residual '
+            f'Sharpe ({d["retained"]:.0f}% of the raw). The deflated-Sharpe probability of real '
+            f'skill, after correcting for {d["n_theses"]} theses searched, is <b>{dsr_txt}</b>. '
+            f'The dominant hidden exposure the thematic panel missed is '
+            f'<b>{_esc(d["lead_factor"])}</b>. In short: {_skill}',
+            S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, vcol),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    story.append(Paragraph(
+        "Ken French FF5 + Momentum daily factors, HAC errors. Residual Sharpe is the factor-neutral "
+        "information ratio; deflated-Sharpe probability follows Bailey and Lopez de Prado, deflated "
+        "by the thesis count. The real test of selection skill, not a forward forecast.", S["caption"]))
+    return story
+
+
 def generate_report(
     start: str,
     end: str,
@@ -993,6 +1110,7 @@ def generate_report(
     stress_series: Optional[pd.Series] = None,
     geopolitical_events: Optional[list[dict]] = None,
     factor_decomp: Optional[dict] = None,
+    skill_decomp: Optional[dict] = None,
 ) -> bytes:
     """Build and return the full PDF as bytes."""
     buf = io.BytesIO()
@@ -1278,6 +1396,8 @@ def generate_report(
         try:
             story += [PageBreak()]
             story += _factor_attribution_section(factor_decomp, S, cw)
+            if skill_decomp:
+                story += _factor_neutral_section(skill_decomp, S, cw)
         except Exception:
             pass
 

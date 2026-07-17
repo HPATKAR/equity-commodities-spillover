@@ -2454,24 +2454,17 @@ def _load_factor_panel(start: str, end: str) -> pd.DataFrame:
     return F[_order].dropna(how="all")
 
 
-def _compute_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
-                                start: str, end: str) -> "dict | None":
-    """Factor & alpha attribution of the deployed book. Regresses the weight-
-    normalised book return on a market factor plus market-orthogonalised thematic
-    factors (HAC/Newey-West), separating market beta, sector tilts and genuine
-    idiosyncratic return. Returns a dict of results (or None if insufficient data)
-    so both the on-screen panel and the PDF desk report render from one source."""
+def _deployed_book_return(book: list, all_r_gate: pd.DataFrame):
+    """(weight-normalised daily book return Series, per-position return frame L),
+    or (None, None) if the deployed book is too thin. Shared by the factor
+    attribution and the factor-neutral skill test so both use one book series."""
     try:
-        import statsmodels.api as sm
         from src.analysis.trade_allocator import trade_leg_series
     except Exception:
-        return None
-
+        return None, None
     deployed = [t for t in book if float(t.get("alloc_weight", 0.0)) > 0]
     if len(deployed) < 2:
-        return None
-
-    # Weight-normalised daily book return from the signed leg series.
+        return None, None
     gross = sum(float(t["alloc_weight"]) for t in deployed) or 1.0
     legs: dict = {}
     wts: dict = {}
@@ -2482,13 +2475,30 @@ def _compute_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
             legs[nm] = s
             wts[nm] = float(t["alloc_weight"]) / gross
     if len(legs) < 2:
-        return None
+        return None, None
     L = pd.concat(legs, axis=1).dropna()
     if len(L) < 250:
-        return None
+        return None, None
     w = np.array([wts[c] for c in L.columns], dtype=float)
     w = w / w.sum()
-    book_r = pd.Series(L.values @ w, index=L.index, name="book")
+    return pd.Series(L.values @ w, index=L.index, name="book"), L
+
+
+def _compute_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
+                                start: str, end: str) -> "dict | None":
+    """Factor & alpha attribution of the deployed book. Regresses the weight-
+    normalised book return on a market factor plus market-orthogonalised thematic
+    factors (HAC/Newey-West), separating market beta, sector tilts and genuine
+    idiosyncratic return. Returns a dict of results (or None if insufficient data)
+    so both the on-screen panel and the PDF desk report render from one source."""
+    try:
+        import statsmodels.api as sm
+    except Exception:
+        return None
+
+    book_r, L = _deployed_book_return(book, all_r_gate)
+    if book_r is None:
+        return None
 
     F = _load_factor_panel(start, end)
     if F.empty:
@@ -2678,6 +2688,202 @@ def _render_book_factor_decomp(book: list, all_r_gate: pd.DataFrame,
         f'over the sample window · β from HAC-robust OLS · Jensen α = multi-factor '
         f'intercept (annualised) · eff. bets = participation ratio of the position '
         f'correlation spectrum · not a forward forecast</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+@st.cache_data(show_spinner=False, ttl=7 * 86400, max_entries=2)
+def _load_ff_factors(start: str, end: str) -> pd.DataFrame:
+    """Daily Fama-French 5 factors + Momentum (as decimals) from the Ken French
+    data library, disk-cached. Columns: MktRF, SMB, HML, RMW, CMA, RF, MOM. These
+    are the academic risk factors the thematic panel omits (size, value, quality,
+    investment, momentum). Empty frame on failure so the skill test degrades."""
+    from src.utils.artifact_cache import read_artifact, write_artifact
+    _key = f"ff5_mom_{end}"
+    _hit = read_artifact(_key, max_age_s=7 * 86400)
+    if _hit is not None:
+        return _hit if len(_hit) else pd.DataFrame()
+    import io as _io, zipfile as _zip
+    _BASE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+
+    def _pull(name, cols):
+        import requests
+        r = requests.get(_BASE + name, timeout=25)
+        r.raise_for_status()
+        z = _zip.ZipFile(_io.BytesIO(r.content))
+        raw = z.read(z.namelist()[0]).decode("latin-1").splitlines()
+        rows, started = [], False
+        for ln in raw:
+            s = ln.strip()
+            if len(s) >= 8 and s[:8].isdigit():
+                started = True
+                rows.append(s)
+            elif started:
+                break
+        df = pd.read_csv(_io.StringIO("\n".join(rows)), header=None).dropna(axis=1, how="all")
+        df.columns = ["date"] + cols[:df.shape[1] - 1]
+        df["date"] = pd.to_datetime(df["date"].astype(int).astype(str), format="%Y%m%d")
+        return df.set_index("date")[cols[:df.shape[1] - 1]] / 100.0
+
+    try:
+        ff5 = _pull("F-F_Research_Data_5_Factors_2x3_daily_CSV.zip",
+                    ["MktRF", "SMB", "HML", "RMW", "CMA", "RF"])
+        mom = _pull("F-F_Momentum_Factor_daily_CSV.zip", ["MOM"])
+        F = ff5.join(mom, how="inner").dropna()
+    except Exception:
+        return pd.DataFrame()
+    if not F.empty:
+        try:
+            write_artifact(_key, F)
+        except Exception:
+            pass
+    return F
+
+
+def _compute_factor_neutral_skill(book: list, all_r_gate: pd.DataFrame,
+                                  start: str, end: str,
+                                  n_theses: int = 9) -> "dict | None":
+    """Does the book's edge survive stripping the known risk factors? Regresses
+    the excess book return on FF5 + Momentum (HAC), takes the residual, and asks
+    whether the factor-neutral Sharpe clears a deflated-Sharpe bar. This is the
+    real test of selection skill; the thematic decomposition only shows tilts."""
+    try:
+        import statsmodels.api as sm
+    except Exception:
+        return None
+    book_r, L = _deployed_book_return(book, all_r_gate)
+    if book_r is None:
+        return None
+    F = _load_ff_factors(start, end)
+    if F.empty or "RF" not in F.columns:
+        return None
+    df = pd.concat([book_r, F], axis=1).dropna()
+    if len(df) < 250:
+        return None
+    facs = [c for c in ["MktRF", "SMB", "HML", "RMW", "CMA", "MOM"] if c in df.columns]
+    exc = df["book"] - df["RF"]                       # excess book return
+    m = sm.OLS(exc, sm.add_constant(df[facs])).fit(cov_type="HAC", cov_kwds={"maxlags": 5})
+    resid = m.resid
+    _ann = np.sqrt(252)
+    raw_sharpe = float(exc.mean() / exc.std() * _ann) if exc.std() > 0 else 0.0
+    res_sharpe = float(resid.mean() / resid.std() * _ann) if resid.std() > 0 else 0.0
+    alpha = float(m.params["const"]) * 252 * 100      # %/yr
+    alpha_t = float(m.tvalues["const"])
+    r2 = float(m.rsquared)
+
+    from src.analysis.backtest import deflated_sharpe_probability
+    sr_daily = float(resid.mean() / resid.std()) if resid.std() > 0 else 0.0
+    try:
+        dsr, sr_star = deflated_sharpe_probability(
+            sr_daily, len(resid), float(pd.Series(resid).skew()),
+            float(pd.Series(resid).kurt()), n_strategies=max(1, int(n_theses)))
+    except Exception:
+        dsr, sr_star = float("nan"), float("nan")
+
+    _LBL = {"MktRF": "Market", "SMB": "Size (SMB)", "HML": "Value (HML)",
+            "RMW": "Profitability (RMW)", "CMA": "Investment (CMA)", "MOM": "Momentum"}
+    loadings = [(_LBL.get(c, c), float(m.params[c]), float(m.tvalues[c])) for c in facs]
+
+    if dsr >= 0.95 and res_sharpe > 0:
+        verdict = "SKILL SURVIVES"
+    elif dsr >= 0.75:
+        verdict = "MARGINAL"
+    else:
+        verdict = "NO SKILL AFTER FACTORS"
+    _sig = [l for l in loadings if abs(l[2]) >= 2]
+    lead = max(_sig, key=lambda x: abs(x[2]))[0] if _sig else "no factor clears t>=2"
+    retained = (res_sharpe / raw_sharpe * 100) if raw_sharpe > 0.05 else 0.0
+
+    return {"obs": len(df), "raw_sharpe": raw_sharpe, "res_sharpe": res_sharpe,
+            "alpha": alpha, "alpha_t": alpha_t, "r2": r2, "dsr": dsr,
+            "sr_star": sr_star, "n_theses": int(n_theses), "loadings": loadings,
+            "verdict": verdict, "retained": retained, "lead_factor": lead}
+
+
+def _render_factor_neutral_skill(book: list, all_r_gate: pd.DataFrame,
+                                 start: str, end: str, n_theses: int = 9) -> None:
+    """On-screen factor-neutral skill test panel (FF5 + Momentum)."""
+    d = _compute_factor_neutral_skill(book, all_r_gate, start, end, n_theses)
+    if not d:
+        return
+    _M = "font-family:'JetBrains Mono',monospace;"
+    _lbl = f"{_M}font-size:.5rem;letter-spacing:.1em;color:#8890a1"
+    vcol = {"SKILL SURVIVES": "#27ae60", "MARGINAL": "#e67e22"}.get(d["verdict"], "#c0392b")
+    dsr = d["dsr"]
+    _dsr_txt = f"{dsr*100:.0f}%" if dsr == dsr else "n/a"      # NaN guard
+    _rs_col = "#27ae60" if d["res_sharpe"] > 0.2 else ("#e8e9ed" if d["res_sharpe"] >= 0 else "#c0392b")
+    _a_col = "#27ae60" if (d["alpha"] > 0 and abs(d["alpha_t"]) >= 2) else ("#e8e9ed" if d["alpha"] >= 0 else "#c0392b")
+
+    def _stat(lbl, val, sub, col="#e8e9ed"):
+        return (f'<div style="flex:1;padding:.45rem .7rem;border-right:1px solid #1e1e1e">'
+                f'<div style="{_lbl}">{lbl}</div>'
+                f'<div style="{_M}font-size:1.05rem;font-weight:700;color:{col};'
+                f'margin:1px 0">{val}</div>'
+                f'<div style="{_M}font-size:.48rem;color:#555960">{sub}</div></div>')
+
+    stats = (
+        f'<div style="display:flex;border-bottom:1px solid #1e1e1e">'
+        + _stat("RAW SHARPE", f'{d["raw_sharpe"]:.2f}', "book excess, annualised")
+        + _stat("FACTOR-NEUTRAL SHARPE", f'{d["res_sharpe"]:.2f}',
+                f'{d["retained"]:.0f}% of raw survives', _rs_col)
+        + _stat("FF5+MOM ALPHA", f'{d["alpha"]:+.1f}%<span style="font-size:.5rem">/yr</span>',
+                f't {d["alpha_t"]:.1f} · R² {d["r2"]*100:.0f}%', _a_col)
+        + _stat("DEFLATED SHARPE", _dsr_txt,
+                f'P(skill real) · {d["n_theses"]} theses', vcol)
+        + f'</div>')
+
+    _bmax = max((abs(b) for _, b, _ in d["loadings"]), default=1.0) or 1.0
+    rows = ""
+    for name, b, tt in d["loadings"]:
+        _w = abs(b) / _bmax * 100
+        _bc = "#27ae60" if b >= 0 else "#c0392b"
+        _sg = "" if abs(tt) >= 2 else "opacity:.45;"
+        rows += (
+            f'<div style="display:flex;align-items:center;gap:8px;padding:1.5px 0;{_sg}">'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:118px">{name}</span>'
+            f'<div style="flex:1;height:9px;background:#141414"><div style="width:{_w:.0f}%;'
+            f'height:9px;background:{_bc}"></div></div>'
+            f'<span style="{_M}font-size:.54rem;color:#e8e9ed;min-width:52px;'
+            f'text-align:right">β&nbsp;{b:+.2f}</span>'
+            f'<span style="{_M}font-size:.5rem;color:#8890a1;min-width:44px;'
+            f'text-align:right">t&nbsp;{tt:+.1f}</span></div>')
+
+    _skill = ("selection skill that survives every known factor."
+              if d["verdict"] == "SKILL SURVIVES" else
+              "no demonstrated selection skill once the known factors are removed.")
+    read = (
+        f'The book\'s raw excess Sharpe of <b style="color:#e8e9ed">{d["raw_sharpe"]:.2f}</b> '
+        f'is mostly factor exposure. Neutralising the FF5 + Momentum factors leaves a '
+        f'<b style="color:{_rs_col}">{d["res_sharpe"]:.2f}</b> residual Sharpe '
+        f'({d["retained"]:.0f}% of the raw). The deflated-Sharpe probability of real skill, '
+        f'after correcting for {d["n_theses"]} theses searched, is '
+        f'<b style="color:{vcol}">{_dsr_txt}</b>. The dominant hidden exposure the thematic '
+        f'panel missed is <b style="color:#e8e9ed">{d["lead_factor"]}</b>. In short: {_skill}')
+
+    st.markdown(
+        f'<div style="border:1px solid #1e1e1e;background:#0a0a0a;margin:.2rem 0 .8rem">'
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;'
+        f'padding:.4rem .8rem;border-bottom:1px solid #1e1e1e">'
+        f'<span style="{_M}font-size:.6rem;font-weight:700;letter-spacing:.14em;'
+        f'color:#e8e9ed">FACTOR-NEUTRAL SKILL TEST</span>'
+        f'<span style="{_M}font-size:.5rem;color:#8890a1">'
+        f'FF5 + Momentum · {d["obs"]} obs · does edge survive the known factors?'
+        f'<span style="background:{vcol};color:#000;font-weight:700;padding:1px 7px;'
+        f'margin-left:6px;letter-spacing:.08em">{d["verdict"]}</span></span></div>'
+        f'{stats}'
+        f'<div style="display:flex;gap:16px;padding:.55rem .8rem;flex-wrap:wrap">'
+        f'<div style="flex:1.2;min-width:300px">'
+        f'<div style="{_lbl};margin-bottom:3px">FACTOR LOADINGS · Fama-French 5 + Momentum · '
+        f'faded = t&lt;2</div>{rows}</div>'
+        f'<div style="flex:1;min-width:230px">'
+        f'<div style="{_M}font-size:.56rem;color:#c9ccd4;line-height:1.55">{read}</div></div>'
+        f'</div>'
+        f'<div style="padding:.3rem .8rem;border-top:1px solid #1e1e1e;{_M}'
+        f'font-size:.48rem;color:#555960">Excess book return regressed on the Ken French '
+        f'FF5 + Momentum daily factors (HAC errors). Residual Sharpe is the factor-neutral '
+        f'information ratio; deflated-Sharpe probability follows Bailey and Lopez de Prado, '
+        f'deflated by the thesis count. Ex-post, not a forward forecast.</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -3238,6 +3444,13 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
             _render_book_factor_decomp(_ranked_book, _all_r_gate, start, end)
         except Exception:
             pass
+        # Does any edge survive stripping the known risk factors (FF5 + Momentum)?
+        # The real test of selection skill, run on the factor-neutral residual.
+        try:
+            _n_th = st.session_state.get("_effective_n") or len(_TRADE_LIBRARY) or 9
+            _render_factor_neutral_skill(_ranked_book, _all_r_gate, start, end, _n_th)
+        except Exception:
+            pass
 
     # ── Download report ─────────────────────────────────────────────────────
     _n_theses  = len(_TRADE_LIBRARY)
@@ -3529,11 +3742,15 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 # Factor & alpha attribution of the deployed book → carried into
                 # the report so the "alpha or beta?" verdict travels with the PDF.
                 _fd = None
+                _skill = None
                 try:
                     _fd = _compute_book_factor_decomp(_ranked_book, _all_r_gate,
                                                       start, end)
+                    _n_th = st.session_state.get("_effective_n") or len(_TRADE_LIBRARY) or 9
+                    _skill = _compute_factor_neutral_skill(_ranked_book, _all_r_gate,
+                                                           start, end, _n_th)
                 except Exception:
-                    _fd = None
+                    _fd = _fd
                 pdf_bytes = generate_report(
                     start=start,
                     end=end,
@@ -3549,6 +3766,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     stress_series=stress,
                     geopolitical_events=GEOPOLITICAL_EVENTS,
                     factor_decomp=_fd,
+                    skill_decomp=_skill,
                 )
             st.session_state["_ti_pdf_bytes"] = pdf_bytes
             st.session_state["_ti_pdf_name"] = (
