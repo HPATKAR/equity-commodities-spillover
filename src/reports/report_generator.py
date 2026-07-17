@@ -1149,6 +1149,24 @@ def generate_report(
 
     story += _section_header("Executive Summary")
 
+    story.append(Table(
+        [[Paragraph(
+            "<b>Mandate.</b> This report is cross-asset risk and hedging intelligence, not a claim of "
+            "stock-selection alpha. The regime-driven book is audited against its own factors on the "
+            "Book Risk Character pages: it is market and factor beta, with no statistically significant "
+            "factor-neutral alpha and exposures that drift over time. Read the trade ideas as structured "
+            "expressions of regime and contagion risk to size and hedge, not as a forecast of forward "
+            "returns.",
+            S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, GOLD),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    story.append(Spacer(1, 9))
+
     regime_panel = Table(
         [[
             Table(

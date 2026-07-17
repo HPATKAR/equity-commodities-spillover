@@ -3265,23 +3265,37 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
     _ti_intro_col, _ti_pdf_col = st.columns([4, 1.2], gap="medium")
     with _ti_intro_col:
         _page_intro(
-            "Spillover analysis is most useful when it connects to positioning hypotheses. "
-            "<strong>Each structure here is a research-oriented translation of a spillover or regime signal into an illustrative trade idea.</strong> "
-            "Static library theses fire when the current regime matches their structural trigger. "
-            "The five-stage pipeline (Signal, Prior Validation, Confidence-weighted sizing) "
-            "is walk-forward validated: the pipeline's admit/reject decisions are the deliverable, not individual trade grades. "
-            "<strong>The constructed book is a fully-invested equity sleeve</strong> (the cash / hedge overlay is the parent portfolio's decision), sized by risk-adjusted expected edge."
+            "This page is a disciplined research book <strong>and a rigorous audit of that book</strong>. "
+            "It builds a regime-driven equity sleeve from a walk-forward-validated pipeline, then holds it "
+            "to the standard a real desk would apply. The audit that follows (factor attribution, a "
+            "factor-neutral skill test on Fama-French 5 plus Momentum, rolling exposures, and cost and "
+            "capacity) reaches one verdict: <strong>the book is market and factor beta, not selection "
+            "alpha</strong>. So read this as risk and hedging intelligence, not a stock-picking signal. "
+            "The deliverable is knowing exactly what the book is exposed to, and what it is not."
         )
         _definition_block(
-            "Selection caveat: validation controls execution, not thesis selection",
-            "The static thesis library was authored with knowledge of market history. The walk-forward "
-            "validation removes <strong>execution</strong> look-ahead (entry and exit timing at each "
-            "window use only prior data), but it cannot remove <strong>selection</strong> look-ahead: "
-            "the choice of which theses exist in the library was made after seeing the sample. Read the "
-            "admit/reject results as evidence about the theses that are here, not as proof that this was "
-            "the right library to test. The book is also long-only and fully invested, so its market "
-            "beta and sector tilts are a deliberate feature, quantified in the Book Factor and Alpha "
-            "Decomposition below."
+            "What this book is, and is not",
+            "<strong>What it is:</strong> a cross-asset risk-monitoring and hedge-overlay tool. The four "
+            "analyses below show the book carries roughly 0.7 market beta across only a handful of "
+            "effective bets, no statistically significant Jensen or factor-neutral alpha, exposures that "
+            "drift over time, and capacity set by its least-liquid name. That is a factor tilt, honestly "
+            "measured. <strong>What it is not:</strong> an alpha engine. Two structural reasons reinforce "
+            "this: the book is long-only and fully invested, so its beta and tilts are deliberate rather "
+            "than skill; and the static thesis library was chosen with hindsight, so the walk-forward "
+            "validation controls execution look-ahead but not thesis selection. Use the terminal to map "
+            "regime and contagion risk and to size hedges, not to claim a stock-selection edge the "
+            "terminal itself disproves."
+        )
+        _definition_block(
+            "The one accountable call",
+            "A research tool that hedges every claim is just a disclaimer generator, so here is the single "
+            "falsifiable view this terminal will stake its name on. <strong>With cross-asset connectedness "
+            "elevated and the book carrying about 0.7 market beta across only a handful of independent "
+            "bets, this book will lose more than its beta implies in the next equity drawdown of 5 percent "
+            "or more</strong>, because correlations spike and diversification fails exactly when it is "
+            "needed most. <strong>Invalidated if</strong>, in that next drawdown, the book's peak-to-trough "
+            "loss comes in below 0.7 times the S&amp;P 500's. That is testable on the next risk-off event, "
+            "and the terminal is on record."
         )
     with _ti_pdf_col:
         # Desk-report PDF - fills the blank space beside the intro. The book is
