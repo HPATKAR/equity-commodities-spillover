@@ -1295,6 +1295,109 @@ def _cost_capacity_section(d: dict, S: dict, cw: float) -> list:
     return story
 
 
+def _hedge_overlay_section(d: dict, S: dict, cw: float) -> list:
+    """The product the audit points at: the tradeable ETF basket that neutralises
+    the book's systematic exposure. Rendered from the hedge dict computed on the
+    trade page (_compute_hedge_overlay)."""
+    def _esc(s):
+        return (str(s) or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    story = _section_header("Hedge Overlay - Neutralising the Systematic Exposure")
+    story.append(Paragraph(
+        "The audit concludes the book is beta. This is the tradeable ETF basket that strips it. "
+        "Short each leg per dollar of book notional to hold the intended thematic view without the "
+        "market and sector exposure a parent portfolio likely already owns.", S["body"]))
+    story.append(Spacer(1, 6))
+    story.append(Table(
+        [[Paragraph('HEDGE OVERLAY&nbsp;&nbsp;<b>EXPOSURE CONTROL</b>',
+                    _ps("hov", fontName="Helvetica", fontSize=9, textColor=BLACK, leading=12)),
+          Paragraph(f'tradeable ETF basket · {d["obs"]} obs',
+                    _ps("hos", fontName="Helvetica", fontSize=7.5, textColor=BLACK,
+                        alignment=TA_RIGHT, leading=12))]],
+        colWidths=[cw * 0.5, cw * 0.5],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), GOLD),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 8))
+
+    def _kpi(lbl, val, sub, vc=DARK):
+        _vc = "#" + vc.hexval()[2:]
+        return Paragraph(
+            f'<font size=6 color="#8a8f98">{_esc(lbl)}</font><br/>'
+            f'<font size=15 color="{_vc}"><b>{val}</b></font><br/>'
+            f'<font size=6 color="#8a8f98">{sub}</font>',
+            _ps(f"hk{lbl}", fontName="Helvetica", fontSize=8, leading=12))
+    _rs_col = RED if d["res_sharpe"] < 0.1 else DARK
+    story.append(Table(
+        [[_kpi("VARIANCE REMOVED", f'{d["var_full"]:.0f}%', f'market {d["var_mkt"]:.0f}% + sectors', GREEN),
+          _kpi("HEDGED VOL", f'{d["vol_fac"]:.1f}%', f'from {d["vol_gross"]:.1f}% gross'),
+          _kpi("CARRY COST", f'{d["carry"]:.2f}%/yr', f'+{d["beta_forgone"]:.1f}% beta forgone', ORANGE),
+          _kpi("RESIDUAL SHARPE", f'{d["res_sharpe"]:.2f}', "no alpha to unlock", _rs_col)]],
+        colWidths=[cw / 4] * 4,
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("BOX", (0, 0), (-1, -1), 0.5, LGRAY),
+            ("LINEBEFORE", (1, 0), (-1, -1), 0.5, LGRAY),
+            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("The Overlay - per $1 of Book Notional", S["h3"]))
+    _bmax = max((abs(b) for _, b, _, _ in d["basket"]), default=1.0) or 1.0
+    _rows = [[Paragraph("<b>ETF</b>", S["body_sm"]),
+              Paragraph("<b>ROLE</b>", S["body_sm"]),
+              Paragraph("<b>SIDE</b>", S["body_sm"]),
+              Paragraph("<b>RATIO</b>", _ps("hh4", fontName="Helvetica-Bold", fontSize=7.5, alignment=TA_RIGHT)),
+              Paragraph("", S["body_sm"])]]
+    for tk, b, role, t in d["basket"]:
+        _side = "SHORT" if b >= 0 else "LONG"
+        _sc = RED if b >= 0 else GREEN
+        _rows.append([
+            Paragraph(_esc(tk), _ps(f"ht{tk}", fontName="Helvetica-Bold", fontSize=8.5)),
+            Paragraph(_esc(role), _ps(f"hr{tk}", fontName="Helvetica", fontSize=8, textColor=GRAY)),
+            Paragraph(f'<b>{_side}</b>', _ps(f"hs{tk}", fontName="Helvetica-Bold", fontSize=8, textColor=_sc)),
+            Paragraph(f'{abs(b)*100:.0f}%', _ps(f"hp{tk}", fontName="Helvetica", fontSize=8.5, alignment=TA_RIGHT)),
+            _fa_bar(abs(b) / _bmax, _sc, w=min(120, cw * 0.24)),
+        ])
+    story.append(Table(
+        _rows, colWidths=[cw * 0.10, cw * 0.34, cw * 0.14, cw * 0.14, cw * 0.28],
+        style=TableStyle([
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, LGRAY),
+            ("LINEBELOW", (0, 1), (-1, -2), 0.25, colors.HexColor("#f0efeb")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ])))
+    story.append(Spacer(1, 10))
+
+    story.append(Table(
+        [[Paragraph(
+            f'To hold this book factor-neutral, short the basket above per dollar of book notional. It '
+            f'removes <b>{d["var_full"]:.0f}%</b> of the book\'s variance (vol {d["vol_gross"]:.1f}% to '
+            f'{d["vol_fac"]:.1f}%) for about <b>{d["carry"]:.2f}%/yr</b> of borrow carry, plus roughly '
+            f'<b>{d["beta_forgone"]:.1f}%/yr</b> of market return forgone on the S&amp;P hedge. What is '
+            f'left has a <b>{d["res_sharpe"]:.2f}</b> Sharpe, so this is <b>exposure control, not a '
+            f'source of return</b>: a parent portfolio can hold the intended defense-and-gold view '
+            f'without adding the ~{d["beta_mkt"]:.1f} market beta it likely already owns.', S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, GOLD),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    story.append(Paragraph(
+        f'Sequential hedge: market beta on SPY, then residual sector tilts on ITA/GLD/XLE/TLT/UUP '
+        f'(HAC errors, significant legs only). Carry assumes {d["borrow_bps"]:.0f}bps ETF borrow; beta '
+        f'forgone assumes a {d["erp"]:.0f}% equity risk premium. Exposures drift, so re-estimate before '
+        f'trading. Illustrative overlay, not investment advice.', S["caption"]))
+    return story
+
+
 def generate_report(
     start: str,
     end: str,
@@ -1311,6 +1414,7 @@ def generate_report(
     skill_decomp: Optional[dict] = None,
     rolling_decomp: Optional[dict] = None,
     cost_decomp: Optional[dict] = None,
+    hedge_decomp: Optional[dict] = None,
 ) -> bytes:
     """Build and return the full PDF as bytes."""
     buf = io.BytesIO()
@@ -1616,14 +1720,15 @@ def generate_report(
             story += _factor_attribution_section(factor_decomp, S, cw)
             if skill_decomp:
                 story += _factor_neutral_section(skill_decomp, S, cw)
-            if rolling_decomp:
+            if rolling_decomp or cost_decomp:
                 story += [PageBreak()]
-                story += _rolling_exposure_section(rolling_decomp, S, cw)
+                if rolling_decomp:
+                    story += _rolling_exposure_section(rolling_decomp, S, cw)
                 if cost_decomp:
                     story += _cost_capacity_section(cost_decomp, S, cw)
-            elif cost_decomp:
+            if hedge_decomp:
                 story += [PageBreak()]
-                story += _cost_capacity_section(cost_decomp, S, cw)
+                story += _hedge_overlay_section(hedge_decomp, S, cw)
         except Exception:
             pass
 
