@@ -4435,6 +4435,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                 _roll = None
                 _cost = None
                 _hedge = None
+                _hoos = None
                 try:
                     _fd = _compute_book_factor_decomp(_ranked_book, _all_r_gate,
                                                       start, end)
@@ -4444,6 +4445,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     _roll = _compute_rolling_exposures(_ranked_book, _all_r_gate, start, end)
                     _cost = _compute_book_costs_capacity(_ranked_book, _all_r_gate, end)
                     _hedge = _compute_hedge_overlay(_ranked_book, _all_r_gate, start, end)
+                    _hoos = _compute_hedge_oos(_ranked_book, _all_r_gate, start, end)
                 except Exception:
                     _fd = _fd
                 pdf_bytes = generate_report(
@@ -4465,6 +4467,7 @@ def page_trade_ideas(start: str, end: str, fred_key: str = "") -> None:
                     rolling_decomp=_roll,
                     cost_decomp=_cost,
                     hedge_decomp=_hedge,
+                    hedge_oos_decomp=_hoos,
                 )
             st.session_state["_ti_pdf_bytes"] = pdf_bytes
             st.session_state["_ti_pdf_name"] = (
