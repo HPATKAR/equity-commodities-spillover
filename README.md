@@ -1,6 +1,6 @@
 # Equity-Commodities Spillover Monitor
 
-A research-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX - with geopolitical risk intelligence, a conflict event feed, scenario-based shock analysis, and an orchestrated AI agent workforce running on real financial data. Its trade book is not just generated but **rigorously self-audited** (factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity) and paired with a tradeable, out-of-sample-validated hedge overlay - so the terminal reports exactly what its book is (risk and factor exposure) and is honest about what it is not (selection alpha).
+This is the research terminal I built to track cross-asset spillover between global equity markets, commodity futures, fixed income, and FX, wired to real financial data, a live conflict feed, scenario shock analysis, and an AI agent workforce I orchestrated on top. The part I care most about: I don't just generate a trade book, I **prosecute it**. Factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity, and a tradeable hedge overlay I validated out of sample. So the terminal tells you exactly what my book is (factor and risk exposure) and stays honest about what it is not (selection alpha). I would rather ship the tool that indicts my own book than one more dashboard that claims an edge it can't defend.
 
 Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School of Business · Prof. Cinder Zhang
 
@@ -26,14 +26,14 @@ Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School
 
 ## What This Does
 
-The Spillover Monitor answers three questions that standard market dashboards do not:
+I built this to answer four questions a standard market dashboard doesn't:
 
-1. **Where is stress coming from?** - Granger causality (BIC-optimal lag, Holm-corrected), transfer entropy with shuffle significance tests, and Diebold-Yilmaz FEVD identify directional transmission paths between assets, not just correlation levels.
-2. **How severe is the current regime?** - A five-component composite risk score (0–100) and four-state correlation regime model classify market conditions with historical analogues and Markov transition forecasts.
-3. **What happens next?** - A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of this into research briefings, illustrative trade ideas, and stress assessments.
-4. **Is the trade book actually any good?** - The constructed book is prosecuted against its own factors (attribution with HAC errors, a Fama-French 5 + Momentum factor-neutral skill test with a Deflated Sharpe on the residual, rolling exposures, cost and capacity) and the verdict is reported honestly rather than hidden: it is factor beta, not selection alpha. The terminal then reframes itself around what the evidence supports (a risk-monitoring and hedge-overlay tool), ships the tradeable ETF overlay that neutralises the book, and validates that overlay out of sample. See [Book Risk Character](#book-risk-character-prosecuting-the-book).
+1. **Where is stress coming from?** - Granger causality (BIC-optimal lag, Holm-corrected), transfer entropy with shuffle significance tests, and a Diebold-Yilmaz generalized FEVD identify directional transmission paths between assets, not just correlation levels.
+2. **How severe is the current regime?** - A five-component composite risk score (0–100) and a four-state correlation regime model classify market conditions with historical analogues and Markov transition forecasts.
+3. **What happens next?** - A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of it into research briefings, illustrative trade ideas, and stress assessments.
+4. **Is my trade book actually any good?** - This is the question I chased hardest. I prosecute the book against its own factors (attribution with HAC errors, a Fama-French 5 + Momentum factor-neutral skill test with a Deflated Sharpe on the residual, rolling exposures, cost and capacity) and I report the verdict instead of hiding it: it is factor beta, not selection alpha. So I reframed the terminal around what the evidence supports (a risk-monitoring and hedge-overlay tool), built the ETF overlay that neutralises the book, and backtested that overlay out of sample. See [Book Risk Character](#book-risk-character-prosecuting-the-book).
 
-The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and weekly EIA petroleum inventory reports - on every session load.
+On every session load it pulls 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and the weekly EIA petroleum inventory report.
 
 ---
 
@@ -104,7 +104,7 @@ The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instr
 
 ## Statistical Methodology
 
-All core econometric methods implement published best practices. The table below documents each method, the key design choice, and the academic basis.
+I wasn't going to hand-wave the econometrics, so every core method here implements published best practice. The table documents each one, the key design choice I made, and the academic basis.
 
 | Method | Implementation | Academic Basis |
 |--------|---------------|----------------|
@@ -165,7 +165,7 @@ All core econometric methods implement published best practices. The table below
 
 ## Book Risk Character: Prosecuting the Book
 
-Most trade-idea tools stop at "here is a book." The Trade Ideas page goes further: it holds the constructed book to the standard a real desk applies, and reports the verdict in plain language on the page and in the desk report. The book is regime-driven and walk-forward validated, but the terminal does not claim it is alpha. It proves what it is. Six audits run on the deployed book, all reusing one weight-normalised book-return series.
+Most trade-idea tools stop at "here's a book." I didn't want to. On the Trade Ideas page I hold my own book to the standard a real desk would apply, and I report the verdict in plain language, on the page and in the desk report. The book is regime-driven and walk-forward validated, but I don't claim it's alpha. I prove what it actually is. Six audits run on the deployed book, all off one weight-normalised book-return series.
 
 | # | Audit | Method | Answers |
 |---|-------|--------|---------|
@@ -176,17 +176,17 @@ Most trade-idea tools stop at "here is a book." The Trade Ideas page goes furthe
 | 5 | **Hedge Overlay** | Sequential hedge: market beta on SPY, then residual sector tilts on ITA/GLD/XLE/TLT/UUP | The tradeable ETF basket that neutralises the book's systematic exposure, what it removes, and what it costs |
 | 6 | **Out-of-Sample Validation** | Walk-forward: hedge ratios re-fit on a trailing 252-day window, applied only to the following unseen month, across dozens of rebalances | Does the overlay work forward, or is it an in-sample fit? |
 
-**The honest finding.** For the current book the verdict is unanimous across all four diagnostics: roughly 0.7 market beta, no statistically significant Jensen or factor-neutral alpha, exposures that drift, and modest capacity. So the terminal reframes the Trade Ideas page around what the evidence supports - a **cross-asset risk-monitoring and hedge-overlay tool, not an alpha engine**. The page states the identity plainly, discloses that the static thesis library carries selection look-ahead (walk-forward validation controls execution look-ahead only), and makes one falsifiable call the terminal is on record for.
+**What I found.** The verdict came back unanimous across all four diagnostics: my book carries roughly 0.7 market beta, no statistically significant Jensen or factor-neutral alpha, exposures that drift, and modest capacity. That's a factor tilt, not skill, so I stopped pretending otherwise and reframed the page around what the evidence actually supports: a **cross-asset risk-monitoring and hedge-overlay tool, not an alpha engine**. I state that identity plainly, I disclose that my static thesis library carries selection look-ahead (the walk-forward validation only controls execution look-ahead), and I put one falsifiable call on the record.
 
-**The product.** The Hedge Overlay is the deliverable the diagnosis implies: the exact ETF basket that strips the book's systematic risk so a parent portfolio can hold the intended thematic view without the market beta it already owns. The out-of-sample test confirms it is not an in-sample artifact - re-fit forward and applied to unseen months, it removes variance and neutralises market beta toward zero, while staying honest about its limits (the sector legs over-hedge as exposures drift; the residual has no alpha, so it is exposure control inside a portfolio, not a standalone strategy).
+**The product.** The Hedge Overlay is the thing that honesty points at: the exact ETF basket that strips my book's systematic risk, so a parent portfolio can hold the thematic view I intended without the market beta it already owns. I didn't just propose it, I backtested it out of sample. Re-fit on trailing data and applied to unseen months, it removes variance and pulls market beta toward zero, and I keep it honest about the limits (the sector legs over-hedge as exposures drift; the residual has no alpha, so it's exposure control inside a portfolio, not a standalone strategy).
 
-**Desk report.** *Generate Desk Report (PDF)* produces a ~20-page institutional document carrying all six audits, company logos on each position, and an Executive-Summary **Mandate** that leads with the honest positioning. The screen and the document tell the identical story.
+**Desk report.** *Generate Desk Report (PDF)* exports all six audits as a ~20-page institutional document, company logos on each position, with an Executive-Summary **Mandate** that leads on the honest positioning. I made sure the screen and the document tell the identical story.
 
 ---
 
 ## AI Workforce
 
-Seven agents run in three sequential rounds on every Overview page load. Each agent receives the typed, structured outputs of its upstream peers - never a truncated string - before generating its own analysis. The system is built on the **Agent = Model + Harness** framework.
+I run seven agents in three sequential rounds on every Overview page load. Each one receives the typed, structured outputs of its upstream peers, never a truncated string, before it generates its own analysis. I built the whole thing on the **Agent = Model + Harness** framework.
 
 ### Pipeline
 
@@ -290,7 +290,7 @@ Live snapshot (price, 1d/5d return, annualized vol, regime label). Intraday and 
 Six chokepoints: Hormuz, Suez, Taiwan Strait, Bosporus, Malacca, Panama. Disruption score (0–100), vessel traffic vs. baseline, commodity channels at risk, estimated trade value at risk. Framework by Ilian Zalomai.
 
 ### Trade Ideas
-A regime-driven equity book **and a rigorous audit of that book**. A signal-ranked candidate universe is filtered through a five-stage, walk-forward-validated pipeline (Deflated Sharpe deploy gate, effective-N multiple-testing correction) into a sized book, with company logos and recent third-party coverage per name. Below the book, the full **[Book Risk Character](#book-risk-character-prosecuting-the-book)** suite runs: factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity, the hedge overlay, and its out-of-sample validation. The page owns the honest verdict (factor beta, not alpha), makes one falsifiable call, and a hard staleness guard flags the validated book once it is over 24h old. *Generate Desk Report (PDF)* exports the whole thing as a ~20-page institutional document. Base regime-conditioned structures by Jiahe Miao; AI Trade Structurer (Pydantic-validated) for the narrative layer.
+My regime-driven equity book, and a rigorous audit of it. I filter a signal-ranked candidate universe through a five-stage, walk-forward-validated pipeline (Deflated Sharpe deploy gate, effective-N multiple-testing correction) into a sized book, with company logos and recent third-party coverage per name. Below the book I run the full **[Book Risk Character](#book-risk-character-prosecuting-the-book)** suite: factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity, the hedge overlay, and its out-of-sample validation. I own the honest verdict (factor beta, not alpha), put one falsifiable call on record, and a hard staleness guard flags the validated book once it's over 24h old. *Generate Desk Report (PDF)* exports the whole thing as a ~20-page institutional document. Base regime-conditioned structures by Jiahe Miao; AI Trade Structurer (Pydantic-validated) for the narrative layer.
 
 ### Exposure Scoring
 Per-asset Structural Exposure Score (SES), Transmission-Adjusted Exposure (TAE), and Scenario-Adjusted Score (SAS) across all tracked conflicts. Geo multiplier applied via scenario state.
@@ -442,6 +442,8 @@ python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 ## Disclaimers
 
 This dashboard is built for **educational and research purposes only**. Nothing on this platform constitutes investment advice. All analytics are based on historical data and statistical models - past relationships do not guarantee future behavior. Market data is sourced from Yahoo Finance and FRED and may have delays or gaps. AI agent outputs are generated by third-party language models and should not be treated as financial guidance.
+
+**On AI assistance.** I built this with an AI pair-programmer (Claude / Claude Code): I owned the architecture, the econometrics, and every design decision, and used the AI to implement, refactor, and pressure-test the code faster. The methodology, the honest self-audit framing, and the findings are mine. Fitting, for a course called AI for Finance.
 
 ---
 
