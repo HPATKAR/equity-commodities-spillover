@@ -8,6 +8,8 @@ Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School
 
 ## Team
 
+*This README is written in the first person, in my voice as the system's architect and lead builder. That voice reflects my ownership of the full build; the table and Contributions below credit each teammate's specific work precisely, and the July post-submission extensions ([`docs/POST_SUBMISSION_EXTENSIONS.md`](docs/POST_SUBMISSION_EXTENSIONS.md)) were my individual work.*
+
 | Member | Program | Role |
 |--------|---------|------|
 | **Heramb S. Patkar** | MSF, Financial Analytics Track | Architecture, AI pipeline, quantitative analytics, full-stack build |
