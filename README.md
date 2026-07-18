@@ -1,6 +1,6 @@
 # Equity-Commodities Spillover Monitor
 
-A research-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX - with geopolitical risk intelligence, a conflict event feed, scenario-based shock analysis, and an orchestrated AI agent workforce running on real financial data.
+A research-grade, multi-page analytical dashboard for tracking cross-asset spillover dynamics between global equity markets, commodity futures, fixed income, and FX - with geopolitical risk intelligence, a conflict event feed, scenario-based shock analysis, and an orchestrated AI agent workforce running on real financial data. Its trade book is not just generated but **rigorously self-audited** (factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity) and paired with a tradeable, out-of-sample-validated hedge overlay - so the terminal reports exactly what its book is (risk and factor exposure) and is honest about what it is not (selection alpha).
 
 Built for **MGMT 69000-120: AI for Finance** · Purdue University Daniels School of Business · Prof. Cinder Zhang
 
@@ -31,6 +31,7 @@ The Spillover Monitor answers three questions that standard market dashboards do
 1. **Where is stress coming from?** - Granger causality (BIC-optimal lag, Holm-corrected), transfer entropy with shuffle significance tests, and Diebold-Yilmaz FEVD identify directional transmission paths between assets, not just correlation levels.
 2. **How severe is the current regime?** - A five-component composite risk score (0–100) and four-state correlation regime model classify market conditions with historical analogues and Markov transition forecasts.
 3. **What happens next?** - A parametric scenario engine propagates shocks forward via OLS betas; seven AI agents in a dependency-ordered pipeline synthesise all of this into research briefings, illustrative trade ideas, and stress assessments.
+4. **Is the trade book actually any good?** - The constructed book is prosecuted against its own factors (attribution with HAC errors, a Fama-French 5 + Momentum factor-neutral skill test with a Deflated Sharpe on the residual, rolling exposures, cost and capacity) and the verdict is reported honestly rather than hidden: it is factor beta, not selection alpha. The terminal then reframes itself around what the evidence supports (a risk-monitoring and hedge-overlay tool), ships the tradeable ETF overlay that neutralises the book, and validates that overlay out of sample. See [Book Risk Character](#book-risk-character-prosecuting-the-book).
 
 The system ingests 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and weekly EIA petroleum inventory reports - on every session load.
 
@@ -109,7 +110,10 @@ All core econometric methods implement published best practices. The table below
 |--------|---------------|----------------|
 | **Granger causality** | BIC-optimal lag via `VAR(ic='bic')` before testing; Holm-Bonferroni step-down correction across the full N×M×2 test grid | Granger (1969); Lütkepohl (2005) Ch. 4 |
 | **Transfer entropy** | Schreiber (2000) directed information measure; 200-permutation shuffle test for significance; optimal lag selected by maximising TE(commodity→equity) | Schreiber (2000) |
-| **Diebold-Yilmaz FEVD** | VAR fitted with `ic='bic'` (lag_order is upper bound); 10-step forecast horizon; Cholesky-orthogonalized FEVD (statsmodels default; order-dependent - D-Y 2012 uses Pesaran-Shin generalized FEVD) | Diebold & Yilmaz (2012) |
+| **Diebold-Yilmaz GFEVD** | VAR fitted with `ic='bic'` (lag_order is upper bound); 10-step horizon; **order-invariant generalized FEVD (Pesaran-Shin 1998 / KPPS)** across all four FEVD sites, replacing the order-dependent Cholesky FEVD that had biased the headline direction call toward "equity-led". Cross-checked against an independent Baruník-Křehlík spectral GFEVD (gap ~0) | Diebold & Yilmaz (2012); Pesaran & Shin (1998) |
+| **Book factor attribution** | Weight-normalised book return regressed on market (S&P 500) plus market-orthogonalised thematic factors, HAC/Newey-West errors; Jensen alpha, tracking error / information ratio, and effective number of bets (participation ratio of the position correlation spectrum) | Jensen (1968); Newey & West (1987) |
+| **Factor-neutral skill test** | Excess book return regressed on Fama-French 5 + Momentum daily factors (Ken French library); Deflated Sharpe Ratio on the residual, deflated by the thesis count | Fama & French (2015); Carhart (1997); Bailey & López de Prado (2014) |
+| **Hedge overlay (walk-forward)** | Sequential hedge (market beta on SPY, residual sector tilts on ITA/GLD/XLE/TLT/UUP); validated out of sample by re-fitting on a trailing 252-day window and applying only to the next unseen month | López de Prado (2018) walk-forward |
 | **DCC-style dynamic correlation** | Two-step Engle (2002): EWMA pre-whitening (λ=0.94, RiskMetrics, fixed parameters not MLE-estimated) standardises returns before DCC(1,1) recursion; raw-return DCC is contaminated by heteroskedasticity | Engle (2002) |
 | **Correlation regime** | Adaptive percentile thresholds; 5-day median smoothing; hysteresis (exit threshold = entry − 5pp); persistence gate (Crisis requires 60% of 10-day window above elevated) | Hamilton (1989) regime-switching |
 | **Composite stress index** | Vol signals: z-score → [0,100] preserves absolute VIX level information; correlation signals: empirical percentile rank | Illing & Liu (2006) FSI design |
@@ -156,6 +160,27 @@ All core econometric methods implement published best practices. The table below
 - **FI cross-asset stress signal** - TLT, HYG, LQD, EMB metrics with equity-bond divergence detection; *framework defined by Jiahe Miao*
 - **Private credit bubble monitor** - composite risk score from HY OAS, BKLN, BDC basket (ARCC/OBDC/FSK), and CDX HY; *proxy selection validated by Jiahe Miao*
 - **FRED macro dashboard** - yield curve (10Y–2Y), CPI YoY, Fed Funds Rate, GDP growth, ISM PMI; 24 series total
+
+---
+
+## Book Risk Character: Prosecuting the Book
+
+Most trade-idea tools stop at "here is a book." The Trade Ideas page goes further: it holds the constructed book to the standard a real desk applies, and reports the verdict in plain language on the page and in the desk report. The book is regime-driven and walk-forward validated, but the terminal does not claim it is alpha. It proves what it is. Six audits run on the deployed book, all reusing one weight-normalised book-return series.
+
+| # | Audit | Method | Answers |
+|---|-------|--------|---------|
+| 1 | **Factor Attribution** | Book return regressed on market (S&P 500) plus market-orthogonalised thematic factors (Defense/ITA, Energy, Gold, Rates, USD), HAC/Newey-West errors | Market beta vs sector tilts vs idiosyncratic; effective number of bets |
+| 2 | **Factor-Neutral Skill Test** | Excess book return on Fama-French 5 + Momentum (Ken French daily factors); Deflated Sharpe Ratio on the residual, deflated by the thesis count | Does any Sharpe survive stripping the academic risk factors, i.e. is there selection alpha or only factor beta? |
+| 3 | **Rolling Exposure** | Univariate rolling 126-day factor betas (pandas rolling cov/var) | Are the exposures stable, or is a single-window attribution a blur of different books? |
+| 4 | **Cost & Capacity** | Turnover-driven cost drag (holding period × stated round-trip bps); per-position days-to-exit at a share of dollar ADV, with a data-quality guard on implausibly thin volume | Net-of-cost Sharpe; the least-liquid name that sets book capacity |
+| 5 | **Hedge Overlay** | Sequential hedge: market beta on SPY, then residual sector tilts on ITA/GLD/XLE/TLT/UUP | The tradeable ETF basket that neutralises the book's systematic exposure, what it removes, and what it costs |
+| 6 | **Out-of-Sample Validation** | Walk-forward: hedge ratios re-fit on a trailing 252-day window, applied only to the following unseen month, across dozens of rebalances | Does the overlay work forward, or is it an in-sample fit? |
+
+**The honest finding.** For the current book the verdict is unanimous across all four diagnostics: roughly 0.7 market beta, no statistically significant Jensen or factor-neutral alpha, exposures that drift, and modest capacity. So the terminal reframes the Trade Ideas page around what the evidence supports - a **cross-asset risk-monitoring and hedge-overlay tool, not an alpha engine**. The page states the identity plainly, discloses that the static thesis library carries selection look-ahead (walk-forward validation controls execution look-ahead only), and makes one falsifiable call the terminal is on record for.
+
+**The product.** The Hedge Overlay is the deliverable the diagnosis implies: the exact ETF basket that strips the book's systematic risk so a parent portfolio can hold the intended thematic view without the market beta it already owns. The out-of-sample test confirms it is not an in-sample artifact - re-fit forward and applied to unseen months, it removes variance and neutralises market beta toward zero, while staying honest about its limits (the sector legs over-hedge as exposures drift; the residual has no alpha, so it is exposure control inside a portfolio, not a standalone strategy).
+
+**Desk report.** *Generate Desk Report (PDF)* produces a ~20-page institutional document carrying all six audits, company logos on each position, and an Executive-Summary **Mandate** that leads with the honest positioning. The screen and the document tell the identical story.
 
 ---
 
@@ -265,7 +290,7 @@ Live snapshot (price, 1d/5d return, annualized vol, regime label). Intraday and 
 Six chokepoints: Hormuz, Suez, Taiwan Strait, Bosporus, Malacca, Panama. Disruption score (0–100), vessel traffic vs. baseline, commodity channels at risk, estimated trade value at risk. Framework by Ilian Zalomai.
 
 ### Trade Ideas
-Regime-triggered illustrative trade structures. AI Trade Structurer generates research ideas using full typed peer context. Pydantic-validated structured output. Six base regime-conditioned structures by Jiahe Miao.
+A regime-driven equity book **and a rigorous audit of that book**. A signal-ranked candidate universe is filtered through a five-stage, walk-forward-validated pipeline (Deflated Sharpe deploy gate, effective-N multiple-testing correction) into a sized book, with company logos and recent third-party coverage per name. Below the book, the full **[Book Risk Character](#book-risk-character-prosecuting-the-book)** suite runs: factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity, the hedge overlay, and its out-of-sample validation. The page owns the honest verdict (factor beta, not alpha), makes one falsifiable call, and a hard staleness guard flags the validated book once it is over 24h old. *Generate Desk Report (PDF)* exports the whole thing as a ~20-page institutional document. Base regime-conditioned structures by Jiahe Miao; AI Trade Structurer (Pydantic-validated) for the narrative layer.
 
 ### Exposure Scoring
 Per-asset Structural Exposure Score (SES), Transmission-Adjusted Exposure (TAE), and Scenario-Adjusted Score (SAS) across all tracked conflicts. Geo multiplier applied via scenario state.
@@ -384,6 +409,11 @@ python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 | DCC EWMA λ=0.94 not data-estimated - RiskMetrics daily standard applied | Correlation Analysis | Insensitive to λ in [0.90, 0.97]; full MLE estimation would require `arch` package GARCH fit |
 | VAR BIC may select lag=1 on short rolling windows, understating persistence | Rolling D-Y | lag_order parameter acts as upper bound; minimum window kept at 200 days |
 | Scenario geo_mult outside [0.5, 3.0] may produce edge-case clipping | Risk Officer | Validated input range only |
+| CIS is analyst-assessed, not market-calibrated or back-tested | Conflict Intelligence | Disclosed on-page as a monitoring / hedge-sizing input, never a return forecast |
+| Static thesis library carries selection look-ahead (chosen with hindsight) | Trade Ideas | Walk-forward validation controls execution look-ahead only; disclosed on-page |
+| Dollar ADV from yfinance can be unreliable; naive capacity would mislead | Cost & Capacity | Implausibly thin ADV flagged `?data` and excluded from the binding calc; verify against live venue data before sizing |
+| The book has no demonstrated factor-neutral alpha | Trade Ideas | This is a reported finding, not a hidden flaw; the terminal is positioned as a risk / hedge tool accordingly |
+| Hedge-overlay sector legs over-hedge as exposures drift | Hedge Overlay | Re-estimate monthly; the market (SPY) leg carries the reliable, OOS-validated benefit |
 
 ---
 
@@ -399,6 +429,13 @@ python evals/run_eval.py --output evals/results-$(date +%Y-%m).md
 | Holm, S. (1979). "A Simple Sequentially Rejective Multiple Test Procedure." *Scandinavian Journal of Statistics* 6(2): 65–70. | Bonferroni-Holm correction for Granger grid |
 | Hamilton, J.D. (1989). "A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle." *Econometrica* 57(2): 357–384. | Regime-switching framework |
 | J.P. Morgan / Reuters (1996). *RiskMetrics Technical Document*, 4th ed. | EWMA λ=0.94 for DCC pre-whitening |
+| Pesaran, H.H. & Shin, Y. (1998). "Generalized Impulse Response Analysis in Linear Multivariate Models." *Economics Letters* 58(1): 17–29. | Order-invariant generalized FEVD (Diebold-Yilmaz) |
+| Fama, E.F. & French, K.R. (2015). "A Five-Factor Asset Pricing Model." *Journal of Financial Economics* 116(1): 1–22. | Factor-neutral skill test |
+| Carhart, M.M. (1997). "On Persistence in Mutual Fund Performance." *Journal of Finance* 52(1): 57–82. | Momentum factor in the skill test |
+| Bailey, D.H. & López de Prado, M. (2014). "The Deflated Sharpe Ratio." *Journal of Portfolio Management* 40(5): 94–107. | DSR deploy gate + factor-neutral residual test |
+| López de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley. | Walk-forward validation; multiple-testing discipline |
+| Newey, W.K. & West, K.D. (1987). "A Simple, Positive Semi-Definite, Heteroskedasticity and Autocorrelation Consistent Covariance Matrix." *Econometrica* 55(3): 703–708. | HAC standard errors in all book regressions |
+| Jensen, M.C. (1968). "The Performance of Mutual Funds in the Period 1945–1964." *Journal of Finance* 23(2): 389–416. | Jensen's alpha in factor attribution |
 
 ---
 
