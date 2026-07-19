@@ -37,6 +37,8 @@ I built this to answer four questions a standard market dashboard doesn't:
 
 On every session load it pulls 15 equity indices, 17 commodity futures, 6 fixed income instruments, 6 FX pairs, 4 implied volatility indices, 24 FRED macro series, live conflict event data from GDELT and ACLED, maritime traffic from IMF PortWatch, and the weekly EIA petroleum inventory report.
 
+**Where it is headed.** Since submission I have extended the terminal toward a product: six buyer-facing capabilities (Portfolio X-Ray, Commodity Hedge Desk, a white-label tearsheet, a dollar-priced Alert Center, a plain-language Client Brief, and a Signals Export feed), each documented in the page guide below. The buyer-facing summary, personas and honest limits included, lives in [`docs/COMMERCIAL_OVERVIEW.md`](docs/COMMERCIAL_OVERVIEW.md), rendered as a designed one-page brief here: **[Commercial Overview](https://claude.ai/code/artifact/6517c141-d31d-4dde-a83f-2299676c62e6)**.
+
 ---
 
 ## Coverage
