@@ -3500,6 +3500,7 @@ def _render_hedge_oos(book: list, all_r_gate: pd.DataFrame, start: str, end: str
                    gridcolor="#161616", zeroline=False),
         xaxis=dict(gridcolor="#161616"))
 
+    _yrs = f'{d["span"][0].year} to {d["span"][1].year}'
     read = (
         f'Fitting the hedge on a trailing {d["train"]}-day window and applying it to the next month, '
         f'over {d["n_rebal"]} out-of-sample rebalances, removes <b style="color:#27ae60">'
@@ -3507,12 +3508,13 @@ def _render_hedge_oos(book: list, all_r_gate: pd.DataFrame, start: str, end: str
         f'<b style="color:#e8e9ed">{d["retention"]:.0f}%</b> of the in-sample figure) and neutralises '
         f'market beta from <b style="color:#e8e9ed">{d["beta_b"]:+.2f}</b> to '
         f'<b style="color:{_bcol}">{d["beta_m"]:+.2f}</b>. The overlay is <b>not an in-sample '
-        f'artifact, it works forward</b>. Two honest caveats. The sector legs slightly over-hedge as '
+        f'artifact, it works forward</b>. Three honest caveats. The sector legs slightly over-hedge as '
         f'exposures drift (fully-hedged beta {d["beta_f"]:+.2f}), so the market leg carries the '
-        f'reliable benefit. And the residual the overlay isolates has no alpha, so held on its own it '
+        f'reliable benefit. The residual the overlay isolates has no alpha, so held on its own it '
         f'bleeds (a <b style="color:#c0392b">{d["dd_f"]:.0f}%</b> drawdown over the sample): the '
-        f'overlay is exposure control <b>inside</b> a parent portfolio, not a standalone strategy. '
-        f'Re-estimate monthly.')
+        f'overlay is exposure control <b>inside</b> a parent portfolio, not a standalone strategy. And '
+        f'this window ({_yrs}) is a <b>single macro era</b>, so this is temporal robustness, not proof '
+        f'the hedge survives a regime break where the correlation structure inverts. Re-estimate monthly.')
 
     st.markdown(
         f'<div style="border:1px solid #1e1e1e;border-bottom:none;background:#0a0a0a;'

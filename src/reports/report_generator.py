@@ -1477,11 +1477,14 @@ def _hedge_oos_section(d: dict, S: dict, cw: float) -> list:
             f'Over {d["n_rebal"]} out-of-sample rebalances the overlay removes <b>{d["var_full"]:.0f}%</b> '
             f'of the book\'s variance ({d["retention"]:.0f}% of the in-sample figure) and neutralises '
             f'market beta from <b>{d["beta_b"]:+.2f}</b> to <b>{d["beta_m"]:+.2f}</b>. It is not an '
-            f'in-sample artifact; it works forward. Two honest caveats: the sector legs over-hedge as '
+            f'in-sample artifact; it works forward. Three honest caveats: the sector legs over-hedge as '
             f'exposures drift (fully-hedged beta {d["beta_f"]:+.2f}), so the market leg carries the '
-            f'reliable benefit; and the residual has no alpha, so held on its own it bleeds (a '
-            f'{d["dd_f"]:.0f}% drawdown). The overlay is exposure control <b>inside</b> a parent '
-            f'portfolio, not a standalone strategy.', S["body"])]],
+            f'reliable benefit; the residual has no alpha, so held on its own it bleeds (a '
+            f'{d["dd_f"]:.0f}% drawdown), making this exposure control <b>inside</b> a parent portfolio '
+            f'rather than a standalone strategy; and this window ({d["span"][0].year} to '
+            f'{d["span"][1].year}) is a <b>single macro era</b>, so this is temporal robustness, not '
+            f'proof the hedge survives a regime break where the correlation structure inverts.',
+            S["body"])]],
         colWidths=[cw],
         style=TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
