@@ -297,6 +297,9 @@ Live snapshot (price, 1d/5d return, annualized vol, regime label). Intraday and 
 ### Strait Watch
 Six chokepoints: Hormuz, Suez, Taiwan Strait, Bosporus, Malacca, Panama. Disruption score (0–100), vessel traffic vs. baseline, commodity channels at risk, estimated trade value at risk. Framework by Ilian Zalomai.
 
+### Alert Center
+Runs the terminal's proactive-alert engine (market-stress score, correlation regime, commodity volatility, COT positioning, country exposure, GDELT conflict media, EIA inventory) against live data, then does the thing a signal feed usually will not: it prices each fired alert as an **estimated dollar impact on your exposure**. Give it a notional and a coarse allocation across five sleeves (Equities, Energy, Metals, Agriculture, Rates/FX); each alert maps to the sleeve it hits and an adverse move drawn from the signal itself, ranks by cost, and composes a downloadable briefing. Figures are simple sizing estimates with the assumption stated on every card, not a joint VaR. In-terminal today; email/Slack/SMS push is on the roadmap.
+
 ### Trade Ideas
 My regime-driven equity book, and a rigorous audit of it. I filter a signal-ranked candidate universe through a five-stage, walk-forward-validated pipeline (Deflated Sharpe deploy gate, effective-N multiple-testing correction) into a sized book, with company logos and recent third-party coverage per name. Below the book I run the full **[Book Risk Character](#book-risk-character-prosecuting-the-book)** suite: factor attribution, a Fama-French factor-neutral skill test, rolling exposures, cost and capacity, the hedge overlay, and its out-of-sample validation. I own the honest verdict (factor beta, not alpha), put one falsifiable call on record, and a hard staleness guard flags the validated book once it's over 24h old. *Generate Desk Report (PDF)* exports the whole thing as a ~20-page institutional document. Base regime-conditioned structures by Jiahe Miao; AI Trade Structurer (Pydantic-validated) for the narrative layer.
 
@@ -342,7 +345,8 @@ Command Center
 │   └── Scenario Engine
 ├── Monitor
 │   ├── Commodities to Watch
-│   └── Strait Watch
+│   ├── Early-Warning Radar
+│   └── Alert Center
 ├── Research
 │   ├── Performance Review
 │   └── AI Analyst

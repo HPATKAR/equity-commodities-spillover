@@ -1036,7 +1036,7 @@ _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "portfolio_xray", "commodity_hedge", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "methodology", "insights", "strait_watch", "replay",
-    "pattern_memory", "early_warning",
+    "pattern_memory", "early_warning", "alert_center",
     # Intelligence pages
     "conflict_intelligence", "threat_act_monitor", "transmission_matrix", "exposure_scoring",
     "about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce",
@@ -1746,7 +1746,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var ANALYSIS =['correlation','spillover','transmission_matrix','exposure_scoring','macro_dashboard'];
     var GEO      =['geopolitical','war_impact_map','strait_watch','conflict_intelligence','threat_act_monitor'];
     var STRATEGY =['trade_ideas','portfolio_xray','commodity_hedge','stress_test','scenario_engine'];
-    var MONITOR  =['watchlist','early_warning'];
+    var MONITOR  =['watchlist','early_warning','alert_center'];
     var RESEARCH =['ai_chat','model_accuracy','methodology','replay','pattern_memory'];
     var ABOUT    =['about_heramb','about_jiahe','about_ilian','about_ai_workforce'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
@@ -1829,6 +1829,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       <ul class="drop">
         <li><a data-pg="watchlist"     class="{'active' if current=='watchlist' else ''}">Commodity Watchlist</a></li>
         <li><a data-pg="early_warning" class="{'active' if current=='early_warning' else ''}">Early-Warning Radar</a></li>
+        <li><a data-pg="alert_center"  class="{'active' if current=='alert_center' else ''}">Alert Center</a></li>
       </ul>
     </li>
 
@@ -1931,6 +1932,7 @@ from src.pages.model_accuracy   import page_model_accuracy
 from src.pages.replay           import page_replay
 from src.pages.pattern_memory   import page_pattern_memory
 from src.pages.early_warning    import page_early_warning
+from src.pages.alert_center     import page_alert_center
 from src.pages.ai_chat         import page_ai_chat, open_chat_dialog
 from src.pages.insights        import page_insights
 from src.pages.strait_watch    import page_strait_watch
@@ -2044,6 +2046,7 @@ _PAGE_MAP = {
     "replay":         lambda: page_replay(_start, _end, _FRED_KEY),
     "pattern_memory": lambda: page_pattern_memory(_start, _end, _FRED_KEY),
     "early_warning":  lambda: page_early_warning(_start, _end, _FRED_KEY),
+    "alert_center":   lambda: page_alert_center(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "methodology":    lambda: page_methodology(_start, _end, _FRED_KEY),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
