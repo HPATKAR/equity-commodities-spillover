@@ -2129,3 +2129,293 @@ def generate_report(
 
     doc.build(story)
     return buf.getvalue()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WHITE-LABEL PORTFOLIO RISK TEARSHEET  (commercialization #3, persona 2/3)
+# A client- / IC- / LP-ready risk-character audit of the USER's book. Reuses the
+# Book Risk Character section builders; only the cover, running header and the
+# executive framing are white-labelled to the manager's firm.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _tearsheet_cover(canvas, doc):
+    wl = getattr(doc, "_wl", {})
+    firm   = wl.get("firm", "Your Firm")
+    label  = wl.get("book_label", "Portfolio")
+    prep   = wl.get("prepared_for", "Investment Committee")
+    as_of  = wl.get("as_of", datetime.now().strftime("%d %b %Y"))
+    period = wl.get("period", "-")
+    pos    = wl.get("positions", [])
+    n_pos  = wl.get("n_pos", len(pos))
+
+    c = canvas
+    c.saveState()
+    c.setFillColor(BGWARM); c.rect(0, 0, W, H, fill=1, stroke=0)
+    c.setFillColor(GOLD)
+    c.rect(0, H - 9*mm, W, 9*mm, fill=1, stroke=0)
+    c.rect(0, 0, W, 9*mm, fill=1, stroke=0)
+    c.setFillColor(AGED); c.rect(0, 9*mm, 3.5*mm, H - 18*mm, fill=1, stroke=0)
+
+    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(W / 2, H - 6*mm, firm.upper())
+
+    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 30)
+    c.drawString(18*mm, H - 52*mm, "PORTFOLIO RISK")
+    c.drawString(18*mm, H - 66*mm, "TEARSHEET")
+    c.setFillColor(AGED); c.setFont("Helvetica-Bold", 14)
+    c.drawString(18*mm, H - 80*mm, label[:60])
+    c.setStrokeColor(GOLD); c.setLineWidth(1.2)
+    c.line(18*mm, H - 86*mm, W - 18*mm, H - 86*mm)
+
+    panel_y = H - 128*mm
+    c.setFillColor(WHITE); c.setStrokeColor(LGRAY); c.setLineWidth(0.8)
+    c.rect(18*mm, panel_y, W - 36*mm, 34*mm, fill=1, stroke=1)
+    for lbl, val, x in zip(
+        ["PREPARED FOR", "AS OF", "ANALYSIS PERIOD", "POSITIONS"],
+        [prep[:26], as_of, period, str(n_pos)],
+        [24*mm, 82*mm, 120*mm, 168*mm],
+    ):
+        c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 6.5)
+        c.drawString(x, panel_y + 25*mm, lbl)
+        c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 9.5)
+        c.drawString(x, panel_y + 17*mm, val)
+    c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 6.5)
+    c.drawString(24*mm, panel_y + 8.5*mm, "TOP HOLDINGS")
+    hold = "   ".join(f"{t} {w:.0f}%" for t, w in pos[:8])
+    if len(pos) > 8:
+        hold += f"   +{len(pos) - 8} more"
+    c.setFillColor(DARK); c.setFont("Helvetica", 8)
+    c.drawString(24*mm, panel_y + 2.5*mm, hold[:118])
+
+    c.setFillColor(GRAY); c.setFont("Helvetica", 8.5)
+    for i, line in enumerate([
+        "A risk-character audit of the book above: its factor and market exposure, whether any",
+        "return survives as factor-neutral skill, how those exposures drift, what it costs to trade",
+        "at scale, and a tradeable hedge overlay with its out-of-sample test. Risk intelligence,",
+        "not a claim of stock-selection alpha.",
+    ]):
+        c.drawString(18*mm, panel_y - 9*mm - i * 5.2*mm, line)
+
+    c.setFillColor(AGED); c.setFont("Helvetica-Bold", 7.5)
+    c.drawString(18*mm, 16*mm,
+                 "Powered by the Cross-Asset Spillover Monitor  ·  Purdue Daniels School of Business")
+    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 6.5)
+    c.drawCentredString(W / 2, 3.5*mm,
+                        "CONFIDENTIAL · FOR THE NAMED RECIPIENT · NOT INVESTMENT ADVICE")
+    c.restoreState()
+
+
+def _tearsheet_interior(canvas, doc):
+    wl = getattr(doc, "_wl", {})
+    firm  = wl.get("firm", "Your Firm")
+    label = wl.get("book_label", "")
+    c = canvas
+    c.saveState()
+    c.setStrokeColor(LGRAY); c.setLineWidth(0.4)
+    c.line(15*mm, H - 14*mm, W - 15*mm, H - 14*mm)
+    c.setFillColor(GRAY); c.setFont("Helvetica", 7)
+    c.drawString(15*mm, H - 11.5*mm, (firm.upper() + " · PORTFOLIO RISK TEARSHEET")[:70])
+    c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 7)
+    c.drawRightString(W - 15*mm, H - 11.5*mm, label[:40])
+    c.setStrokeColor(LGRAY); c.setLineWidth(0.4)
+    c.line(15*mm, 12*mm, W - 15*mm, 12*mm)
+    c.setFillColor(GRAY); c.setFont("Helvetica", 7)
+    c.drawString(15*mm, 7*mm, "Confidential · Not investment advice")
+    c.drawRightString(W - 15*mm, 7*mm, f"Page {doc.page}")
+    c.setFillColor(GOLD); c.rect(0, 12*mm, 2.5*mm, H - 24*mm, fill=1, stroke=0)
+    c.restoreState()
+
+
+def _tearsheet_kpi_band(skill: dict, factor: dict, cw: float) -> Table:
+    """Risk-character-at-a-glance: 6 KPI cells drawn from the skill + factor decomps.
+    Every field is guarded; the factor-neutral / deflated Sharpe cells go red when
+    the book shows no residual skill (the honest, common outcome)."""
+    sk, fd = skill or {}, factor or {}
+
+    def _fmt(v, s="{:.2f}"):
+        try:
+            return s.format(float(v))
+        except Exception:
+            return "-"
+
+    raw = _fmt(sk.get("raw_sharpe"))
+    res = _fmt(sk.get("res_sharpe"))
+    dsr = _fmt(sk.get("dsr"), "{:.0%}")
+    beta = _fmt(fd.get("beta_mkt"))
+    r2 = _fmt(fd.get("r2_full"), "{:.0%}")
+    domf = str(fd.get("mkt_name") or sk.get("lead_factor") or "-")[:16]
+    domf = domf.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    try:
+        _res_bad = float(sk.get("res_sharpe", 1)) < 0.10
+    except Exception:
+        _res_bad = False
+    try:
+        _dsr_bad = float(sk.get("dsr", 1)) < 0.50
+    except Exception:
+        _dsr_bad = False
+
+    cells = [
+        ("RAW SHARPE", raw, BLACK),
+        ("FACTOR-NEUTRAL SHARPE", res, RED if _res_bad else BLACK),
+        ("DEFLATED SHARPE", dsr, RED if _dsr_bad else BLACK),
+        ("MARKET BETA", beta, BLACK),
+        ("R² TO FACTORS", r2, BLACK),
+        ("DOMINANT FACTOR", domf, BLACK),
+    ]
+    lab = [Paragraph(l, _ps("kl", fontName="Helvetica-Bold", fontSize=6,
+                            textColor=GRAY, leading=8)) for l, _, _ in cells]
+    val = [Paragraph(v, _ps("kv", fontName="Helvetica-Bold",
+                            fontSize=12 if len(v) < 8 else 9,
+                            textColor=col, leading=15)) for _, v, col in cells]
+    n = len(cells)
+    cwd = cw / n
+    return Table(
+        [lab, val], colWidths=[cwd] * n,
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("BOX", (0, 0), (-1, -1), 0.5, LGRAY),
+            ("LINEAFTER", (0, 0), (-2, -1), 0.4, LGRAY),
+            ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
+            ("TOPPADDING", (0, 1), (-1, 1), 0), ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]),
+    )
+
+
+def generate_tearsheet(
+    *,
+    book_rows: list,
+    firm: str,
+    prepared_for: str,
+    book_label: str,
+    start: str,
+    end: str,
+    factor_decomp: Optional[dict] = None,
+    skill_decomp: Optional[dict] = None,
+    rolling_decomp: Optional[dict] = None,
+    cost_decomp: Optional[dict] = None,
+    hedge_decomp: Optional[dict] = None,
+    hedge_oos_decomp: Optional[dict] = None,
+) -> bytes:
+    """White-label portfolio risk tearsheet for the user's own book. `book_rows` is
+    a list of (ticker, weight_pct). Only the audit sections with data are included."""
+    buf = io.BytesIO()
+    S = _S()
+    cw = W - 30*mm
+    firm = (firm or "Your Firm").strip() or "Your Firm"
+    book_label = (book_label or "Portfolio").strip() or "Portfolio"
+    prepared_for = (prepared_for or "Investment Committee").strip() or "Investment Committee"
+
+    doc = BaseDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=15*mm, rightMargin=15*mm, topMargin=20*mm, bottomMargin=18*mm,
+        title=f"{firm} - Portfolio Risk Tearsheet", author=firm,
+        subject="Portfolio Risk Tearsheet",
+    )
+    doc._wl = {
+        "firm": firm, "book_label": book_label, "prepared_for": prepared_for,
+        "as_of": datetime.now().strftime("%d %b %Y"),
+        "period": f"{start}  →  {end}",
+        "positions": list(book_rows), "n_pos": len(book_rows),
+    }
+    doc.addPageTemplates([
+        PageTemplate(id="Cover",
+                     frames=[Frame(0, 0, W, H, leftPadding=0, rightPadding=0,
+                                   topPadding=0, bottomPadding=0)],
+                     onPage=_tearsheet_cover),
+        PageTemplate(id="Normal",
+                     frames=[Frame(15*mm, 18*mm, cw, H - 40*mm, leftPadding=0,
+                                   rightPadding=0, topPadding=0, bottomPadding=0)],
+                     onPage=_tearsheet_interior),
+    ])
+
+    story = [NextPageTemplate("Normal"), PageBreak()]
+
+    # ── Executive Summary ────────────────────────────────────────────────────
+    story += _section_header("Executive Summary")
+    story.append(Table(
+        [[Paragraph(
+            "<b>What this is.</b> A risk-character audit of the book below, not a claim of "
+            "stock-selection alpha. It states what the portfolio actually is, its market and "
+            "factor exposure, whether any return survives once those factors are neutralised, "
+            "how the exposures drift, what it costs to trade at scale, and a tradeable hedge "
+            "overlay validated out of sample. Read the sections that follow as risk intelligence "
+            "for sizing and hedging, not as a forecast of forward returns.",
+            S["body"])]],
+        colWidths=[cw],
+        style=TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BGWARM),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, GOLD),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ])))
+    story.append(Spacer(1, 9))
+
+    if skill_decomp or factor_decomp:
+        story.append(Paragraph("Risk Character at a Glance", S["h3"]))
+        story.append(_tearsheet_kpi_band(skill_decomp, factor_decomp, cw))
+        story.append(Spacer(1, 10))
+
+    # ── Book composition ─────────────────────────────────────────────────────
+    if book_rows:
+        story.append(Paragraph("Book Composition", S["h3"]))
+        _hdr = [Paragraph("<b>Ticker</b>", S["body_sm"]),
+                Paragraph("<b>Weight</b>", S["body_sm"])]
+        _rows = [_hdr]
+        for t, w in book_rows:
+            _rows.append([Paragraph(str(t), S["body_sm"]),
+                          Paragraph(f"{float(w):.1f}%", S["body_sm"])])
+        story.append(Table(
+            _rows, colWidths=[cw * 0.5, cw * 0.5],
+            style=TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), DARK),
+                ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, BGWARM]),
+                ("BOX", (0, 0), (-1, -1), 0.5, LGRAY),
+                ("INNERGRID", (0, 0), (-1, -1), 0.3, LGRAY),
+                ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"), ("RIGHTPADDING", (1, 0), (1, -1), 8),
+            ])))
+        story.append(Spacer(1, 6))
+
+    # ── The six Book Risk Character sections (only those with data) ───────────
+    if factor_decomp:
+        story += _factor_attribution_section(factor_decomp, S, cw)
+    if skill_decomp:
+        story += _factor_neutral_section(skill_decomp, S, cw)
+    if rolling_decomp:
+        story += _rolling_exposure_section(rolling_decomp, S, cw)
+    if cost_decomp:
+        story += _cost_capacity_section(cost_decomp, S, cw)
+    if hedge_decomp:
+        story += _hedge_overlay_section(hedge_decomp, S, cw)
+    if hedge_oos_decomp:
+        story += _hedge_oos_section(hedge_oos_decomp, S, cw)
+
+    # ── Methodology + disclaimer (compact) ───────────────────────────────────
+    story += _section_header("Methodology & Data")
+    story.append(Paragraph(
+        "Returns are daily log-returns from public market data over the analysis period. "
+        "Factor attribution regresses the weighted book on the market and orthogonalised "
+        "style factors with Newey-West (HAC) standard errors; the factor-neutral test uses "
+        "Fama-French 5 plus Momentum and reports the deflated Sharpe ratio (Bailey and "
+        "Lopez de Prado) to adjust for multiple-testing. Rolling exposures use a 126-day "
+        "window. Cost and capacity assume a stated AUM, participation and round-trip cost. "
+        "The hedge overlay is a HAC-fitted ETF basket, validated walk-forward out of sample. "
+        "All figures are estimates that drift with the data and should be re-run before use.",
+        S["body_sm"]))
+    story += _section_header("Disclaimer")
+    story.append(Paragraph(
+        "This document is confidential and prepared for the named recipient only. It is for "
+        "information and risk-monitoring purposes and is not investment advice, an offer, or a "
+        "solicitation to buy or sell any security. Past performance and any modelled or "
+        "out-of-sample result are not indicative of future results. The analysis is generated "
+        "from public data and third-party libraries that are not warranted for institutional "
+        "use, and it explicitly makes no claim of stock-selection alpha. The preparer accepts "
+        "no liability for decisions taken in reliance on it.",
+        S["disclaimer"]))
+
+    doc.build(story)
+    return buf.getvalue()

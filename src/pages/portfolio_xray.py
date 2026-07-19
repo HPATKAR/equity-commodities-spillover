@@ -23,6 +23,9 @@ from src.pages.trade_ideas import (
     _render_book_factor_decomp, _render_factor_neutral_skill,
     _render_rolling_exposures, _render_book_costs_capacity,
     _render_hedge_overlay, _render_hedge_oos,
+    _compute_book_factor_decomp, _compute_factor_neutral_skill,
+    _compute_rolling_exposures, _compute_book_costs_capacity,
+    _compute_hedge_overlay, _compute_hedge_oos,
 )
 
 _M = "font-family:'JetBrains Mono',monospace;"
@@ -105,6 +108,7 @@ def page_portfolio_xray(start: str, end: str, fred_key: str = "") -> None:
                         help="Fetches returns and runs the full audit (~10-20s first time)")
         if _go:
             st.session_state["_pxr_run"] = edited.copy()
+            st.session_state.pop("_pxr_pdf", None)      # invalidate stale tearsheet
 
     _run = st.session_state.get("_pxr_run")
     if _run is None:
@@ -184,4 +188,58 @@ def page_portfolio_xray(start: str, end: str, fred_key: str = "") -> None:
 
     st.caption("Each panel is the same computation the Trade Ideas page runs on the "
                "terminal's book. Illustrative, not investment advice.")
+
+    # ── White-label client / IC / LP tearsheet (PDF export) ──────────────────
+    st.markdown(
+        f'<div style="border-top:1px solid #1e1e1e;margin:1.1rem 0 .5rem;padding-top:.7rem">'
+        f'<span style="{_M}font-size:.7rem;font-weight:700;letter-spacing:.1em;'
+        f'color:#e8e9ed">CLIENT TEARSHEET</span>'
+        f'<div style="{_M}font-size:.56rem;color:#8890a1;margin-top:2px">Export this '
+        f'audit as a white-label, client- or IC-ready PDF risk tearsheet on your own '
+        f'firm name. Same numbers, your letterhead.</div></div>',
+        unsafe_allow_html=True)
+    _t1, _t2, _t3, _t4 = st.columns([1.4, 1.3, 1.3, 1.0], gap="medium")
+    with _t1:
+        _firm = st.text_input("Firm name", value=st.session_state.get("_pxr_firm", ""),
+                              placeholder="Your Firm LLP", key="_pxr_firm")
+    with _t2:
+        _prep = st.text_input("Prepared for", value="Investment Committee",
+                             key="_pxr_prep")
+    with _t3:
+        _blab = st.text_input("Book label", value="Portfolio", key="_pxr_blab")
+    with _t4:
+        st.markdown('<div style="height:1.75rem"></div>', unsafe_allow_html=True)
+        _mk = st.button("Generate Tearsheet (PDF)", width="stretch",
+                        help="Builds a 6-page white-label risk tearsheet of this book")
+
+    if _mk:
+        try:
+            with st.spinner("Building the tearsheet (~10s)..."):
+                from src.reports.report_generator import generate_tearsheet
+                _fd = _compute_book_factor_decomp(book, all_r_gate, start, end)
+                _sk = _compute_factor_neutral_skill(book, all_r_gate, start, end,
+                                                    max(len(good), 1))
+                _ro = _compute_rolling_exposures(book, all_r_gate, start, end)
+                _co = _compute_book_costs_capacity(book, all_r_gate, end)
+                _he = _compute_hedge_overlay(book, all_r_gate, start, end)
+                _oos = _compute_hedge_oos(book, all_r_gate, start, end)
+                _pdf = generate_tearsheet(
+                    book_rows=[(t, float(w[t] * 100)) for t in good],
+                    firm=_firm or "Your Firm", prepared_for=_prep, book_label=_blab,
+                    start=start, end=end,
+                    factor_decomp=_fd, skill_decomp=_sk, rolling_decomp=_ro,
+                    cost_decomp=_co, hedge_decomp=_he, hedge_oos_decomp=_oos)
+            st.session_state["_pxr_pdf"] = _pdf
+            st.session_state["_pxr_pdf_name"] = (
+                (_blab or "portfolio").strip().replace(" ", "_").lower()
+                + "_risk_tearsheet.pdf")
+        except Exception as _e:
+            st.error(f"Could not build the tearsheet: {_e}")
+
+    if st.session_state.get("_pxr_pdf"):
+        st.download_button(
+            "Download Tearsheet (PDF)", data=st.session_state["_pxr_pdf"],
+            file_name=st.session_state.get("_pxr_pdf_name", "risk_tearsheet.pdf"),
+            mime="application/pdf", width="stretch")
+
     _page_footer()
