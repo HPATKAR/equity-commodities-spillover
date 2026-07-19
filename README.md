@@ -303,6 +303,9 @@ My regime-driven equity book, and a rigorous audit of it. I filter a signal-rank
 ### Exposure Scoring
 Per-asset Structural Exposure Score (SES), Transmission-Adjusted Exposure (TAE), and Scenario-Adjusted Score (SAS) across all tracked conflicts. Geo multiplier applied via scenario state.
 
+### Portfolio X-Ray
+Point the full [Book Risk Character](#book-risk-character-prosecuting-the-book) suite at *your own* book. Enter holdings as tickers and weights; the terminal runs the identical audit it runs on its own book (factor attribution, Fama-French factor-neutral skill test, rolling exposures, cost and capacity, hedge overlay, out-of-sample validation) on your portfolio. The audit compute already accepts a generic book, so this is the same engine, your input. It is deliberately discriminating: a book the thematic model calls "alpha present" the FF5+Momentum skill test will still overrule as factor beta if that is what it is.
+
 ### Portfolio Stress Test
 Custom multi-asset allocation (indices, commodity futures, fixed income ETFs, individual stocks) tested against all 13 events. Per-event return, max drawdown, Sharpe. Heatmap and normalized portfolio path charts.
 
@@ -330,6 +333,7 @@ Command Center
 │   └── Spillover Analytics
 ├── Strategy
 │   ├── Trade Ideas
+│   ├── Portfolio X-Ray
 │   ├── Portfolio Stress Test
 │   └── Scenario Engine
 ├── Monitor

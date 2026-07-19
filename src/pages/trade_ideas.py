@@ -3098,8 +3098,11 @@ def _compute_book_costs_capacity(book: list, all_r_gate: pd.DataFrame, end: str,
     positions = []
     for t in deployed:
         a = (t.get("assets") or [None])[0]
+        # Prefer an explicit ticker (user-portfolio path where name IS the ticker);
+        # fall back to the display-name -> ticker map for the terminal's own book.
         positions.append({"name": a or t.get("name", "?"),
-                          "ticker": d2t.get(a), "weight": float(t["alloc_weight"]) / gross})
+                          "ticker": t.get("ticker") or d2t.get(a),
+                          "weight": float(t["alloc_weight"]) / gross})
     tks = tuple(sorted({p["ticker"] for p in positions if p["ticker"]}))
     adv = _load_book_adv(tks, end) if tks else {}
 
