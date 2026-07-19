@@ -1034,7 +1034,7 @@ def _validate_api_keys() -> None:
 _VALID_PAGES = {
     "home",
     "overview", "war_impact_map", "geopolitical", "correlation",
-    "spillover", "watchlist", "macro_dashboard", "trade_ideas", "portfolio_xray", "stress_test", "scenario_engine",
+    "spillover", "watchlist", "macro_dashboard", "trade_ideas", "portfolio_xray", "commodity_hedge", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "methodology", "insights", "strait_watch", "replay",
     "pattern_memory", "early_warning",
     # Intelligence pages
@@ -1745,7 +1745,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var OVERVIEW =['overview','insights'];
     var ANALYSIS =['correlation','spillover','transmission_matrix','exposure_scoring','macro_dashboard'];
     var GEO      =['geopolitical','war_impact_map','strait_watch','conflict_intelligence','threat_act_monitor'];
-    var STRATEGY =['trade_ideas','portfolio_xray','stress_test','scenario_engine'];
+    var STRATEGY =['trade_ideas','portfolio_xray','commodity_hedge','stress_test','scenario_engine'];
     var MONITOR  =['watchlist','early_warning'];
     var RESEARCH =['ai_chat','model_accuracy','methodology','replay','pattern_memory'];
     var ABOUT    =['about_heramb','about_jiahe','about_ilian','about_ai_workforce'];
@@ -1818,6 +1818,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       <ul class="drop">
         <li><a data-pg="trade_ideas" class="{'active' if current=='trade_ideas' else ''}">Structured Trade Ideas</a></li>
         <li><a data-pg="portfolio_xray" class="{'active' if current=='portfolio_xray' else ''}">Portfolio X-Ray</a></li>
+        <li><a data-pg="commodity_hedge" class="{'active' if current=='commodity_hedge' else ''}">Commodity Hedge Desk</a></li>
         <li><a data-pg="stress_test" class="{'active' if current=='stress_test' else ''}">Stress Lab</a></li>
         <li><a data-pg="scenario_engine" class="{'active' if current=='scenario_engine' else ''}">Geopolitical Scenario Simulator</a></li>
       </ul>
@@ -1922,6 +1923,7 @@ from src.pages.spillover       import page_spillover
 from src.pages.watchlist       import page_watchlist
 from src.pages.trade_ideas     import page_trade_ideas
 from src.pages.portfolio_xray  import page_portfolio_xray
+from src.pages.commodity_hedge  import page_commodity_hedge
 from src.pages.stress_test     import page_stress_test
 from src.pages.scenario_engine import page_scenario_engine
 from src.pages.macro_dashboard  import page_macro_dashboard
@@ -2035,6 +2037,7 @@ _PAGE_MAP = {
     "macro_dashboard":  lambda: page_macro_dashboard(_start, _end, _FRED_KEY),
     "trade_ideas":      lambda: page_trade_ideas(_start, _end, _FRED_KEY),
     "portfolio_xray":   lambda: page_portfolio_xray(_start, _end, _FRED_KEY),
+    "commodity_hedge":  lambda: page_commodity_hedge(_start, _end, _FRED_KEY),
     "stress_test":    lambda: page_stress_test(_start, _end, _FRED_KEY),
     "scenario_engine": lambda: page_scenario_engine(_start, _end, _FRED_KEY),
     "model_accuracy": lambda: page_model_accuracy(_start, _end, _FRED_KEY),

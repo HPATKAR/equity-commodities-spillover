@@ -306,6 +306,9 @@ Per-asset Structural Exposure Score (SES), Transmission-Adjusted Exposure (TAE),
 ### Portfolio X-Ray
 Point the full [Book Risk Character](#book-risk-character-prosecuting-the-book) suite at *your own* book. Enter holdings as tickers and weights; the terminal runs the identical audit it runs on its own book (factor attribution, Fama-French factor-neutral skill test, rolling exposures, cost and capacity, hedge overlay, out-of-sample validation) on your portfolio. The audit compute already accepts a generic book, so this is the same engine, your input. It is deliberately discriminating: a book the thematic model calls "alpha present" the FF5+Momentum skill test will still overrule as factor beta if that is what it is.
 
+### Commodity Hedge Desk
+The commodity-native sibling of the equity hedge overlay, built for physical hedgers (fuel buyers, grain merchants, metals treasuries) who think in barrels, bushels and tonnes, not ETFs. Enter a physical exposure in native units and pick consumer (long hedge) or producer (short hedge); the desk returns a hedge ticket in the real listed future (contract, direction, contract count), the parametric horizon VaR before and after the hedge, and the **roll carry read off the actual forward curve** (live dated contracts): contango costs a long and pays a short, backwardation the reverse. The differentiator is the geopolitical overlay: a per-commodity Geopolitical Stress Index unions each active conflict's transmission relevance with its live CIS, and scales the recommended hedge ratio up when the conflicts that transmit to that commodity are hot. Real example: WTI reads GSI 96 (Iran/Hormuz, Ukraine) so the ratio lifts to 98%, and the backwardated curve means the long hedge *earns* about 12%/yr of roll.
+
 ### Portfolio Stress Test
 Custom multi-asset allocation (indices, commodity futures, fixed income ETFs, individual stocks) tested against all 13 events. Per-event return, max drawdown, Sharpe. Heatmap and normalized portfolio path charts.
 
@@ -334,6 +337,7 @@ Command Center
 ├── Strategy
 │   ├── Trade Ideas
 │   ├── Portfolio X-Ray
+│   ├── Commodity Hedge Desk
 │   ├── Portfolio Stress Test
 │   └── Scenario Engine
 ├── Monitor
