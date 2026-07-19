@@ -2419,3 +2419,112 @@ def generate_tearsheet(
 
     doc.build(story)
     return buf.getvalue()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WHITE-LABEL CLIENT BRIEF  (commercialization #5, persona 3)
+# A one-page, plain-language market brief for an end client, on the adviser's firm
+# name. Lighter than the tearsheet: a letter-style header, narrative sections, no
+# quant tables. The narrative is built by src/pages/client_brief.py and passed in.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _brief_interior(canvas, doc):
+    wl = getattr(doc, "_wl", {})
+    firm = wl.get("firm", "Market & Risk Brief")
+    c = canvas
+    c.saveState()
+    c.setStrokeColor(LGRAY); c.setLineWidth(0.4)
+    c.line(18*mm, 12*mm, W - 18*mm, 12*mm)
+    c.setFillColor(GRAY); c.setFont("Helvetica", 7)
+    c.drawString(18*mm, 7*mm, "General market commentary · Not personalised investment advice")
+    c.drawRightString(W - 18*mm, 7*mm, f"Page {doc.page}")
+    c.setFillColor(GOLD); c.rect(0, 12*mm, 2.5*mm, H - 24*mm, fill=1, stroke=0)
+    c.restoreState()
+
+
+def generate_client_brief(
+    *,
+    firm: str,
+    client_name: str,
+    prepared_by: str,
+    profile: str,
+    headline: str,
+    sections: list,
+    stress: float,
+    regime: str,
+    as_of: str,
+) -> bytes:
+    """One-page plain-language client brief. `sections` is a list of
+    (title, [paragraph, ...]); a section with more than one paragraph renders as
+    bullets. Returns the PDF as bytes."""
+    buf = io.BytesIO()
+    S = _S()
+    firm = (firm or "Market & Risk Brief").strip() or "Market & Risk Brief"
+    client_name = (client_name or "Valued Client").strip() or "Valued Client"
+    cw = W - 36*mm
+
+    doc = BaseDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=18*mm, rightMargin=18*mm, topMargin=22*mm, bottomMargin=20*mm,
+        title=f"{firm} - Market & Risk Brief", author=firm,
+        subject="Client Market & Risk Brief",
+    )
+    doc._wl = {"firm": firm}
+    doc.addPageTemplates([
+        PageTemplate(id="Normal",
+                     frames=[Frame(18*mm, 20*mm, cw, H - 42*mm, leftPadding=0,
+                                   rightPadding=0, topPadding=0, bottomPadding=0)],
+                     onPage=_brief_interior),
+    ])
+
+    _cbody = _ps("cbody", fontName="Helvetica", fontSize=10.5, leading=15.5,
+                 textColor=DARK, spaceAfter=7)
+
+    story = []
+    story.append(HRFlowable(width="100%", thickness=2.2, color=GOLD, spaceAfter=7))
+    story.append(Paragraph(firm, _ps("cbf", fontName="Helvetica-Bold", fontSize=18,
+                                     textColor=BLACK, leading=22)))
+    story.append(Paragraph("Market &amp; Risk Brief",
+                           _ps("cbs", fontName="Helvetica-Bold", fontSize=11,
+                               textColor=AGED, leading=15, spaceAfter=2)))
+    _meta = (f"Prepared for {client_name}"
+             + (f" by {prepared_by}" if (prepared_by or "").strip() else "")
+             + f"  ·  {profile} profile  ·  "
+             + datetime.now().strftime("%d %B %Y"))
+    story.append(Paragraph(_meta, _ps("cbm", fontName="Helvetica", fontSize=8.5,
+                                      textColor=GRAY, leading=12)))
+    story.append(HRFlowable(width="100%", thickness=0.8, color=LGRAY,
+                            spaceBefore=6, spaceAfter=10))
+
+    story.append(Paragraph(headline, _ps("cbh", fontName="Helvetica-Bold",
+                                         fontSize=15, textColor=BLACK, leading=19,
+                                         spaceAfter=8)))
+
+    for title, paras in sections:
+        story.append(Paragraph(
+            str(title).upper(),
+            _ps("cbst", fontName="Helvetica-Bold", fontSize=9, textColor=AGED,
+                leading=12, spaceBefore=9, spaceAfter=4)))
+        if len(paras) > 1:
+            for p in paras:
+                story.append(Paragraph("&bull;&nbsp; " + str(p), _cbody))
+        else:
+            story.append(Paragraph(str(paras[0]), _cbody))
+
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        f"Reference: cross-asset stress {float(stress):.0f}/100, {regime} correlation "
+        f"regime, data to {as_of}.",
+        _ps("cbref", fontName="Helvetica-Oblique", fontSize=8, textColor=GRAY,
+            leading=11)))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=LGRAY,
+                            spaceBefore=8, spaceAfter=5))
+    story.append(Paragraph(
+        "This brief is general market commentary for educational purposes, prepared "
+        "from public data. It is not personalised investment advice or a recommendation "
+        "to buy or sell any security, and it does not account for your specific "
+        "circumstances. Past conditions do not predict future results.",
+        S["disclaimer"]))
+
+    doc.build(story)
+    return buf.getvalue()

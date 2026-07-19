@@ -324,6 +324,9 @@ Private credit bubble risk monitor, India macro framework (crude oil dependency,
 ### AI Analyst
 Claude Sonnet / GPT-4o chatbot with full live dashboard context injected into every query. Agent Activity Log with structured feed of all pipeline events and routing decisions.
 
+### Client Brief
+The terminal's intelligence in plain English, for advisers who have to *explain* risk to an end client, not read Greek letters. Pick a risk profile (Conservative / Balanced / Growth) and a rule-based translation layer turns the live stress score, correlation regime, active-conflict intensity and alert feed into a short, jargon-free brief: the market environment, what is driving it, what it means for a portfolio like theirs, and what to watch. Exports as a clean one-page **white-label PDF** on the adviser's own firm name. The translation is deterministic (no AI key required), so it always runs and reads the same way for the same data.
+
 ---
 
 ## Navigation
@@ -349,6 +352,7 @@ Command Center
 │   └── Alert Center
 ├── Research
 │   ├── Performance Review
+│   ├── Client Brief
 │   └── AI Analyst
 ├── Insights
 └── About

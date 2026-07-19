@@ -1036,7 +1036,7 @@ _VALID_PAGES = {
     "overview", "war_impact_map", "geopolitical", "correlation",
     "spillover", "watchlist", "macro_dashboard", "trade_ideas", "portfolio_xray", "commodity_hedge", "stress_test", "scenario_engine",
     "model_accuracy", "ai_chat", "methodology", "insights", "strait_watch", "replay",
-    "pattern_memory", "early_warning", "alert_center",
+    "pattern_memory", "early_warning", "alert_center", "client_brief",
     # Intelligence pages
     "conflict_intelligence", "threat_act_monitor", "transmission_matrix", "exposure_scoring",
     "about_heramb", "about_jiahe", "about_ilian", "about_ai_workforce",
@@ -1747,7 +1747,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
     var GEO      =['geopolitical','war_impact_map','strait_watch','conflict_intelligence','threat_act_monitor'];
     var STRATEGY =['trade_ideas','portfolio_xray','commodity_hedge','stress_test','scenario_engine'];
     var MONITOR  =['watchlist','early_warning','alert_center'];
-    var RESEARCH =['ai_chat','model_accuracy','methodology','replay','pattern_memory'];
+    var RESEARCH =['ai_chat','client_brief','model_accuracy','methodology','replay','pattern_memory'];
     var ABOUT    =['about_heramb','about_jiahe','about_ilian','about_ai_workforce'];
     document.querySelectorAll('[data-pg]').forEach(function(a){{
       if(a.dataset.pg===cur) a.classList.add('active');
@@ -1837,6 +1837,7 @@ ul.drop li a.active{{color:#CFB991;background:rgba(207,185,145,.07);border-left-
       <span class="lnk">Research <span class="ct">&#9660;</span></span>
       <ul class="drop">
         <li><a data-pg="ai_chat"        class="{'active' if current=='ai_chat' else ''}">AI Research Desk</a></li>
+        <li><a data-pg="client_brief"   class="{'active' if current=='client_brief' else ''}">Client Brief</a></li>
         <li><a data-pg="model_accuracy" class="{'active' if current=='model_accuracy' else ''}">Model Signal Audit</a></li>
         <li><a data-pg="methodology"    class="{'active' if current=='methodology' else ''}">Model Methodology</a></li>
         <li><a data-pg="replay"         class="{'active' if current=='replay' else ''}">Replay Mode</a></li>
@@ -1941,6 +1942,7 @@ from src.pages.about_jiahe        import page_about_jiahe
 from src.pages.about_ilian        import page_about_ilian
 from src.pages.about_ai_workforce import page_about_ai_workforce
 from src.pages.methodology        import page_methodology
+from src.pages.client_brief       import page_client_brief
 
 # Intelligence pages (lazy import - stubs until full implementation)
 try:
@@ -2049,6 +2051,7 @@ _PAGE_MAP = {
     "alert_center":   lambda: page_alert_center(_start, _end, _FRED_KEY),
     "ai_chat":        lambda: page_ai_chat(_start, _end),
     "methodology":    lambda: page_methodology(_start, _end, _FRED_KEY),
+    "client_brief":   lambda: page_client_brief(_start, _end, _FRED_KEY),
     "insights":       lambda: page_insights(_start, _end, _FRED_KEY),
     "strait_watch":   lambda: page_strait_watch(_start, _end),
     # Intelligence
