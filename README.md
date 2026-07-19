@@ -327,6 +327,9 @@ Claude Sonnet / GPT-4o chatbot with full live dashboard context injected into ev
 ### Client Brief
 The terminal's intelligence in plain English, for advisers who have to *explain* risk to an end client, not read Greek letters. Pick a risk profile (Conservative / Balanced / Growth) and a rule-based translation layer turns the live stress score, correlation regime, active-conflict intensity and alert feed into a short, jargon-free brief: the market environment, what is driving it, what it means for a portfolio like theirs, and what to watch. Exports as a clean one-page **white-label PDF** on the adviser's own firm name. The translation is deterministic (no AI key required), so it always runs and reads the same way for the same data.
 
+### Signals Export
+A machine-readable feed of the terminal's headline signals: Conflict Intensity and Transmission Propensity per conflict and in aggregate, the Diebold-Yilmaz total connectedness index, the cross-asset stress score and correlation regime, and a per-commodity Geopolitical Stress Index. Download as versioned JSON or tidy long-form CSV against a documented schema (`spillover-signals/v1`). The payload is assembled by one pure function (`src/analysis/signals_feed.build_signals_payload`), so the page shows the exact `GET /v1/signals` contract a future HTTP endpoint would return. Honest scope: this ships as a download, not a live service; real-time serving needs the API gateway, auth and licensed data.
+
 ---
 
 ## Navigation
@@ -353,6 +356,7 @@ Command Center
 ├── Research
 │   ├── Performance Review
 │   ├── Client Brief
+│   ├── Signals Export
 │   └── AI Analyst
 ├── Insights
 └── About
