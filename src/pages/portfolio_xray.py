@@ -11,6 +11,7 @@ analytics.
 from __future__ import annotations
 
 import datetime as _dt
+import re
 
 import numpy as np
 import pandas as pd
@@ -29,6 +30,36 @@ from src.pages.trade_ideas import (
 )
 
 _M = "font-family:'JetBrains Mono',monospace;"
+
+
+def _parse_holdings(text: str) -> pd.DataFrame:
+    """Parse a 'TICKER, WEIGHT' per-line block into a DataFrame with columns
+    ['Ticker', 'Weight %']. Tolerant of commas, spaces, tabs, %, blank lines and
+    '#' comments, so a user can paste straight from a spreadsheet. A line with no
+    weight gets 0 (dropped downstream); if NO line carries a weight, the book is
+    equal-weighted so a bare ticker list still runs."""
+    rows: list[tuple[str, float]] = []
+    any_weight = False
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [p for p in re.split(r"[,\t ]+", line) if p]
+        if not parts:
+            continue
+        tk = parts[0].upper()
+        wt = 0.0
+        if len(parts) > 1:
+            try:
+                wt = float(parts[1].replace("%", ""))
+                any_weight = True
+            except ValueError:
+                wt = 0.0
+        rows.append((tk, wt))
+    df = pd.DataFrame(rows, columns=["Ticker", "Weight %"])
+    if not df.empty and not any_weight:          # bare ticker list -> equal weight
+        df["Weight %"] = 100.0 / len(df)
+    return df
 
 
 @st.cache_data(show_spinner=False, ttl=3600, max_entries=6)
@@ -85,29 +116,27 @@ def page_portfolio_xray(start: str, end: str, fred_key: str = "") -> None:
         "alpha; the out-of-sample window is a single macro era)."
     )
 
-    # ── Input: ticker + weight table ─────────────────────────────────────────
-    if "_pxr_rows" not in st.session_state:
-        st.session_state["_pxr_rows"] = pd.DataFrame({
-            "Ticker": ["AAPL", "MSFT", "NVDA", "JPM", "XOM", "GLD", "TLT"],
-            "Weight %": [18.0, 16.0, 16.0, 14.0, 12.0, 14.0, 10.0],
-        })
+    # ── Input: one holding per line (TICKER, WEIGHT) ─────────────────────────
+    # A plain text area, deliberately, not st.data_editor: the glide-data-grid
+    # canvas renders blank under the terminal's dark theme, and this input is
+    # commercial-critical. Pasting from a spreadsheet is also the natural motion.
+    _DEFAULT_HOLDINGS = ("AAPL, 18\nMSFT, 16\nNVDA, 16\nJPM, 14\n"
+                         "XOM, 12\nGLD, 14\nTLT, 10")
     _c1, _c2 = st.columns([3, 1.1], gap="medium")
     with _c1:
-        edited = st.data_editor(
-            st.session_state["_pxr_rows"], num_rows="dynamic", width="stretch",
-            key="_pxr_editor",
-            column_config={
-                "Ticker": st.column_config.TextColumn("Ticker", width="medium",
-                                                      help="e.g. AAPL, SPY, GLD"),
-                "Weight %": st.column_config.NumberColumn("Weight %", min_value=0.0,
-                                                          step=1.0, format="%.1f"),
-            })
+        _txt = st.text_area(
+            "Holdings", value=st.session_state.get("_pxr_text", _DEFAULT_HOLDINGS),
+            key="_pxr_text", height=200,
+            help=("One holding per line: TICKER, WEIGHT (for example: AAPL, 18). "
+                  "Commas, spaces or tabs all work, so you can paste straight from "
+                  "a spreadsheet. Weights need not sum to 100; they are normalised."))
     with _c2:
-        st.markdown('<div style="height:.2rem"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height:1.7rem"></div>', unsafe_allow_html=True)
         _go = st.button("Run X-Ray", type="primary", width="stretch",
                         help="Fetches returns and runs the full audit (~10-20s first time)")
+        st.caption("One per line:  `TICKER, WEIGHT`")
         if _go:
-            st.session_state["_pxr_run"] = edited.copy()
+            st.session_state["_pxr_run"] = _parse_holdings(_txt)
             st.session_state.pop("_pxr_pdf", None)      # invalidate stale tearsheet
 
     _run = st.session_state.get("_pxr_run")
