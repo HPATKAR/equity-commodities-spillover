@@ -58,6 +58,18 @@ _ETF_NAMES = {
 }
 
 
+def _norm_ticker(raw: str) -> str:
+    """Normalise a user-typed ticker to the yfinance convention. US class shares use
+    a dash (BRK.B -> BRK-B); exchange suffixes like 2628.HK or RELIANCE.NS keep the
+    dot (the segment after the dot is longer than one character)."""
+    tk = str(raw).strip().upper()
+    if "." in tk:
+        head, _, tail = tk.rpartition(".")
+        if head and len(tail) == 1:
+            tk = f"{head}-{tail}"
+    return tk
+
+
 @st.cache_data(show_spinner=False, ttl=86400, max_entries=8)
 def _resolve_names(tickers: tuple) -> dict:
     """Map each ticker to a full company / fund name for the tearsheet. Order of
@@ -109,7 +121,7 @@ def _parse_holdings(text: str) -> pd.DataFrame:
         parts = [p for p in re.split(r"[,\t ]+", line) if p]
         if not parts:
             continue
-        tk = parts[0].upper()
+        tk = _norm_ticker(parts[0])
         wt = 0.0
         if len(parts) > 1:
             try:
