@@ -62,8 +62,14 @@ _FAIL_REGISTRY: dict[str, dict] = {}   # source → {ts, message, count}
 # Critical sources - if any fail, show a visible warning banner
 _CRITICAL_SOURCES = {"yfinance_prices", "yfinance_vix"}
 
-# Optional enrichment sources - failures are tracked internally but never shown in the banner
-_BANNER_SUPPRESSED = {"gdelt", "acled", "portwatch", "eia_inventory"}
+# Optional enrichment sources - failures are tracked internally but never shown in the banner.
+# conflict_manual is the hand-authored conflict scenario baseline (structural transmission
+# weights + CIS assumptions), not a live pipeline. Its live counterparts, acled and gdelt,
+# are already suppressed here, so an aging manual baseline (its expected steady state, since
+# the live feeds carry no data for this scenario timeline) must not raise a DEGRADED banner
+# either. Its age is still tracked internally and surfaced as a calm per-chart "Manual · as of"
+# freshness badge and the per-conflict scoring_basis disclosure, so the fact is kept, not hidden.
+_BANNER_SUPPRESSED = {"gdelt", "acled", "portwatch", "eia_inventory", "conflict_manual"}
 
 
 def record_fetch(source: str, ts: Optional[datetime.datetime] = None) -> None:

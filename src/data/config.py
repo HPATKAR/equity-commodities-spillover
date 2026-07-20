@@ -50,7 +50,7 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "War",
         "color":   "#c0392b",
-        "last_updated": date(2026, 4, 19),
+        "last_updated": date(2026, 7, 20),
 
         # Intensity dimensions (0–1)
         "deadliness":           0.90,
@@ -103,7 +103,7 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "Conflict",
         "color":   "#e67e22",
-        "last_updated": date(2026, 4, 19),
+        "last_updated": date(2026, 7, 20),
 
         "deadliness":           0.45,
         "civilian_danger":      0.30,
@@ -152,7 +152,7 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "War",
         "color":   "#f39c12",
-        "last_updated": date(2026, 4, 19),
+        "last_updated": date(2026, 7, 20),
 
         "deadliness":           0.75,
         "civilian_danger":      0.90,
@@ -211,7 +211,7 @@ CONFLICTS: list[dict] = [
         "fragmentation":        0.30,
         "escalation_trend":     "escalating",
         "source_coverage":      0.92,
-        "last_updated":         date(2026, 4, 14),
+        "last_updated":         date(2026, 7, 20),
 
         "transmission": {
             "oil_gas":       0.97,   # ~20% of global crude flows blocked
@@ -255,7 +255,7 @@ CONFLICTS: list[dict] = [
         "state":   "active",
         "category": "Conflict",
         "color":   "#f39c12",
-        "last_updated": date(2026, 4, 19),
+        "last_updated": date(2026, 7, 20),
 
         "deadliness":           0.62,   # elevated post-Op Sindoor, cross-border fire ongoing
         "civilian_danger":      0.55,
@@ -303,7 +303,7 @@ CONFLICTS: list[dict] = [
         "state":   "latent",           # Latent but persistent structural risk
         "category": "Geopolitical",
         "color":   "#2980b9",
-        "last_updated": date(2026, 4, 19),
+        "last_updated": date(2026, 7, 20),
 
         "deadliness":           0.10,   # No active hostilities
         "civilian_danger":      0.10,
