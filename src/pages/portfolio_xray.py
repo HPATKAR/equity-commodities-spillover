@@ -31,6 +31,68 @@ from src.pages.trade_ideas import (
 
 _M = "font-family:'JetBrains Mono',monospace;"
 
+# Common ETFs / funds are not in the S&P 500 constituent list, so name them here.
+_ETF_NAMES = {
+    "SPY": "SPDR S&P 500 ETF Trust", "VOO": "Vanguard S&P 500 ETF",
+    "IVV": "iShares Core S&P 500 ETF", "QQQ": "Invesco QQQ Trust",
+    "DIA": "SPDR Dow Jones Industrial Average ETF", "IWM": "iShares Russell 2000 ETF",
+    "VTI": "Vanguard Total Stock Market ETF", "MDY": "SPDR S&P MidCap 400 ETF",
+    "GLD": "SPDR Gold Shares", "IAU": "iShares Gold Trust", "SLV": "iShares Silver Trust",
+    "USO": "United States Oil Fund", "UNG": "United States Natural Gas Fund",
+    "DBC": "Invesco DB Commodity Index Tracking Fund", "PDBC": "Invesco Optimum Yield Diversified Commodity",
+    "TLT": "iShares 20+ Year Treasury Bond ETF", "IEF": "iShares 7-10 Year Treasury Bond ETF",
+    "SHY": "iShares 1-3 Year Treasury Bond ETF", "AGG": "iShares Core U.S. Aggregate Bond ETF",
+    "BND": "Vanguard Total Bond Market ETF", "TIP": "iShares TIPS Bond ETF",
+    "LQD": "iShares iBoxx Investment Grade Corporate Bond ETF",
+    "HYG": "iShares iBoxx High Yield Corporate Bond ETF",
+    "EEM": "iShares MSCI Emerging Markets ETF", "EFA": "iShares MSCI EAFE ETF",
+    "VEA": "Vanguard FTSE Developed Markets ETF", "VWO": "Vanguard FTSE Emerging Markets ETF",
+    "VNQ": "Vanguard Real Estate ETF", "ARKK": "ARK Innovation ETF",
+    "XLE": "Energy Select Sector SPDR Fund", "XLF": "Financial Select Sector SPDR Fund",
+    "XLK": "Technology Select Sector SPDR Fund", "XLV": "Health Care Select Sector SPDR Fund",
+    "XLI": "Industrial Select Sector SPDR Fund", "XLP": "Consumer Staples Select Sector SPDR Fund",
+    "XLY": "Consumer Discretionary Select Sector SPDR Fund", "XLU": "Utilities Select Sector SPDR Fund",
+    "XLB": "Materials Select Sector SPDR Fund", "XLRE": "Real Estate Select Sector SPDR Fund",
+    "XLC": "Communication Services Select Sector SPDR Fund",
+    "ITA": "iShares U.S. Aerospace & Defense ETF", "UUP": "Invesco DB US Dollar Index Bullish Fund",
+}
+
+
+@st.cache_data(show_spinner=False, ttl=86400, max_entries=8)
+def _resolve_names(tickers: tuple) -> dict:
+    """Map each ticker to a full company / fund name for the tearsheet. Order of
+    resolution: S&P 500 constituents, a static ETF map, then a best-effort yfinance
+    lookup for anything still unknown. Always degrades to the bare ticker; never
+    raises, so a name lookup can never break the PDF."""
+    names: dict[str, str] = {}
+    try:
+        from src.data.loader import get_sp500_constituents
+        sp = get_sp500_constituents()
+        sp_map = {str(t).upper(): str(n) for t, n in zip(sp["ticker"], sp["name"])}
+    except Exception:
+        sp_map = {}
+    for t in tickers:
+        tu = str(t).upper()
+        if tu in sp_map:
+            names[tu] = sp_map[tu]
+        elif tu in _ETF_NAMES:
+            names[tu] = _ETF_NAMES[tu]
+    missing = [t for t in tickers if str(t).upper() not in names]
+    if missing:
+        try:
+            import yfinance as yf
+            for t in missing:
+                try:
+                    info = yf.Ticker(t).get_info()
+                    nm = info.get("longName") or info.get("shortName")
+                    if nm:
+                        names[str(t).upper()] = str(nm)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    return names
+
 
 def _parse_holdings(text: str) -> pd.DataFrame:
     """Parse a 'TICKER, WEIGHT' per-line block into a DataFrame with columns
@@ -255,7 +317,7 @@ def page_portfolio_xray(start: str, end: str, fred_key: str = "") -> None:
                 _pdf = generate_tearsheet(
                     book_rows=[(t, float(w[t] * 100)) for t in good],
                     firm=_firm or "Your Firm", prepared_for=_prep, book_label=_blab,
-                    start=start, end=end,
+                    start=start, end=end, names=_resolve_names(tuple(good)),
                     factor_decomp=_fd, skill_decomp=_sk, rolling_decomp=_ro,
                     cost_decomp=_co, hedge_decomp=_he, hedge_oos_decomp=_oos)
             st.session_state["_pxr_pdf"] = _pdf

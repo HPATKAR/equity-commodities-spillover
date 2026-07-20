@@ -2315,9 +2315,11 @@ def generate_tearsheet(
     cost_decomp: Optional[dict] = None,
     hedge_decomp: Optional[dict] = None,
     hedge_oos_decomp: Optional[dict] = None,
+    names: Optional[dict] = None,
 ) -> bytes:
     """White-label portfolio risk tearsheet for the user's own book. `book_rows` is
-    a list of (ticker, weight_pct). Only the audit sections with data are included."""
+    a list of (ticker, weight_pct); `names` optionally maps ticker -> full company /
+    fund name for the Book Composition table. Only sections with data are included."""
     buf = io.BytesIO()
     S = _S()
     cw = W - 30*mm
@@ -2378,14 +2380,24 @@ def generate_tearsheet(
     # ── Book composition ─────────────────────────────────────────────────────
     if book_rows:
         story.append(Paragraph("Book Composition", S["h3"]))
+        _nm = names or {}
+
+        def _esc(s: str) -> str:
+            return (str(s).replace("&", "&amp;")
+                    .replace("<", "&lt;").replace(">", "&gt;"))
+
         _hdr = [Paragraph("<b>Ticker</b>", S["body_sm"]),
+                Paragraph("<b>Name</b>", S["body_sm"]),
                 Paragraph("<b>Weight</b>", S["body_sm"])]
         _rows = [_hdr]
         for t, w in book_rows:
-            _rows.append([Paragraph(str(t), S["body_sm"]),
+            _tk = str(t)
+            _full = _nm.get(_tk.upper()) or _nm.get(_tk) or ""
+            _rows.append([Paragraph(_esc(_tk), S["body_sm"]),
+                          Paragraph(_esc(_full), S["body_sm"]),
                           Paragraph(f"{float(w):.1f}%", S["body_sm"])])
         story.append(Table(
-            _rows, colWidths=[cw * 0.5, cw * 0.5],
+            _rows, colWidths=[cw * 0.17, cw * 0.63, cw * 0.20],
             style=TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), DARK),
                 ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
@@ -2394,7 +2406,7 @@ def generate_tearsheet(
                 ("INNERGRID", (0, 0), (-1, -1), 0.3, LGRAY),
                 ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("ALIGN", (1, 0), (1, -1), "RIGHT"), ("RIGHTPADDING", (1, 0), (1, -1), 8),
+                ("ALIGN", (2, 0), (2, -1), "RIGHT"), ("RIGHTPADDING", (2, 0), (2, -1), 8),
             ])))
         story.append(Spacer(1, 6))
 
