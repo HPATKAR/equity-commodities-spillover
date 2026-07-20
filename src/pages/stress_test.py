@@ -525,41 +525,41 @@ def page_stress_test(start: str, end: str, fred_key: str = "") -> None:
             except Exception as e:
                 st.warning("Could not parse CSV - check column format.")
 
-        # Build editable weights DataFrame
-        stock_rows = []
+        # Per-stock weight inputs. Plain st.number_inputs, deliberately not
+        # st.data_editor, whose glide-data-grid canvas renders blank under the
+        # terminal's dark theme (Streamlit 1.54). Each input is keyed sw_<ticker>,
+        # the same key the Equal Weight button and CSV upload write to, so both
+        # keep working. Seed each key once; a CSV upload overrides matched tickers.
         for tk in selected_stocks:
-            default_w = (
-                csv_weights.get(tk)
-                or st.session_state.get(f"sw_{tk}")
-                or eq_w
-            )
-            stock_rows.append({
-                "Ticker":     tk,
-                "Company":    sp500_dict.get(tk, tk),
-                "Sector":     sp500_sector.get(tk, ""),
-                "Weight (%)": float(default_w),
-            })
-        stock_df = pd.DataFrame(stock_rows)
+            if f"sw_{tk}" not in st.session_state:
+                st.session_state[f"sw_{tk}"] = float(eq_w)
+        for tk, wv in csv_weights.items():
+            if tk in selected_stocks:
+                try:
+                    st.session_state[f"sw_{tk}"] = float(wv)
+                except (TypeError, ValueError):
+                    pass
 
-        edited_df = st.data_editor(
-            stock_df,
-            width="stretch",
-            hide_index=True,
-            num_rows="fixed",
-            key="stock_weight_editor",
-            column_config={
-                "Ticker":     st.column_config.TextColumn("Ticker", disabled=True, width="small"),
-                "Company":    st.column_config.TextColumn("Company", disabled=True),
-                "Sector":     st.column_config.TextColumn("Sector", disabled=True, width="medium"),
-                "Weight (%)": st.column_config.NumberColumn(
-                    "Weight (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.1f",
-                ),
-            },
-        )
-
-        # Extract weights from edited table
-        for _, row in edited_df.iterrows():
-            weights_b[row["Ticker"]] = float(row["Weight (%)"])
+        st.markdown(
+            '<div style="font-size:.6rem;letter-spacing:.1em;color:#8890a1;'
+            'font-family:\'JetBrains Mono\',monospace;margin:.2rem 0 .1rem">'
+            'HOLDING&nbsp;&nbsp;&middot;&nbsp;&nbsp;WEIGHT %</div>',
+            unsafe_allow_html=True)
+        for tk in selected_stocks:
+            company = sp500_dict.get(tk, tk)
+            sector  = sp500_sector.get(tk, "")
+            _lc, _wc = st.columns([3, 1], gap="small")
+            with _lc:
+                st.markdown(
+                    f'<div style="padding-top:.55rem;font-size:.8rem;color:#c9ccd4">'
+                    f'<b style="color:#e8e9ed">{tk}</b> &middot; {company}'
+                    f'{(" &middot; " + sector) if sector else ""}</div>',
+                    unsafe_allow_html=True)
+            with _wc:
+                weights_b[tk] = float(st.number_input(
+                    f"Weight % for {tk}", min_value=0.0, max_value=100.0,
+                    step=0.5, format="%.1f", key=f"sw_{tk}",
+                    label_visibility="collapsed"))
 
         total_b = sum(weights_b.values())
         st.markdown(
