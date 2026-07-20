@@ -2156,16 +2156,30 @@ def _tearsheet_cover(canvas, doc):
     c.rect(0, 0, W, 9*mm, fill=1, stroke=0)
     c.setFillColor(AGED); c.rect(0, 9*mm, 3.5*mm, H - 18*mm, fill=1, stroke=0)
 
-    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 8)
-    c.drawCentredString(W / 2, H - 6*mm, firm.upper())
+    # Small document-type eyebrow on the top gold bar.
+    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(W / 2, H - 6*mm, "CONFIDENTIAL RISK TEARSHEET")
 
-    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", 30)
-    c.drawString(18*mm, H - 52*mm, "PORTFOLIO RISK")
-    c.drawString(18*mm, H - 66*mm, "TEARSHEET")
-    c.setFillColor(AGED); c.setFont("Helvetica-Bold", 14)
-    c.drawString(18*mm, H - 80*mm, label[:60])
-    c.setStrokeColor(GOLD); c.setLineWidth(1.2)
-    c.line(18*mm, H - 86*mm, W - 18*mm, H - 86*mm)
+    # Masthead: on a white-label document the firm IS the brand, so it leads,
+    # large and auto-fitted to the page width so long names stay on one line.
+    firm_txt = ((firm or "Your Firm").strip() or "Your Firm")[:46]
+    _avail = W - 36*mm
+    _fs = 32.0
+    while _fs > 13 and c.stringWidth(firm_txt, "Helvetica-Bold", _fs) > _avail:
+        _fs -= 0.5
+    c.setFillColor(BLACK); c.setFont("Helvetica-Bold", _fs)
+    c.drawString(18*mm, H - 42*mm, firm_txt)
+
+    c.setStrokeColor(GOLD); c.setLineWidth(1.4)
+    c.line(18*mm, H - 48*mm, W - 18*mm, H - 48*mm)
+
+    # The document type is now the subtitle under the firm, book label below it.
+    c.setFillColor(AGED); c.setFont("Helvetica-Bold", 15)
+    c.drawString(18*mm, H - 60*mm, "Portfolio Risk Tearsheet")
+    c.setFillColor(GRAY); c.setFont("Helvetica", 12)
+    c.drawString(18*mm, H - 71*mm, label[:70])
+    c.setStrokeColor(LGRAY); c.setLineWidth(0.6)
+    c.line(18*mm, H - 78*mm, W - 18*mm, H - 78*mm)
 
     panel_y = H - 128*mm
     c.setFillColor(WHITE); c.setStrokeColor(LGRAY); c.setLineWidth(0.8)
@@ -2213,8 +2227,12 @@ def _tearsheet_interior(canvas, doc):
     c.saveState()
     c.setStrokeColor(LGRAY); c.setLineWidth(0.4)
     c.line(15*mm, H - 14*mm, W - 15*mm, H - 14*mm)
+    _fu = ((firm or "Your Firm").upper())[:44]
+    c.setFillColor(AGED); c.setFont("Helvetica-Bold", 7.5)
+    c.drawString(15*mm, H - 11.5*mm, _fu)
+    _fuw = c.stringWidth(_fu, "Helvetica-Bold", 7.5)
     c.setFillColor(GRAY); c.setFont("Helvetica", 7)
-    c.drawString(15*mm, H - 11.5*mm, (firm.upper() + " · PORTFOLIO RISK TEARSHEET")[:70])
+    c.drawString(15*mm + _fuw + 5, H - 11.5*mm, "· Portfolio Risk Tearsheet")
     c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 7)
     c.drawRightString(W - 15*mm, H - 11.5*mm, label[:40])
     c.setStrokeColor(LGRAY); c.setLineWidth(0.4)
